@@ -10,6 +10,17 @@ by exposing the, still untouched, performance of modern web browsers.
 Not really. It's just another side-project of mine.
 I wanted to have a second attempt at creating a programming language.
 
+## Building
+
+This project uses `premake5` as its build system.
+
+Run `premake5 vs2022` to create solution files for VS.
+
+Alternatively `premake5 gmake2` will create Makefiles.
+
+C++20 is the standard used by the project.
+Supported compilers are `gcc` and `msvc`.
+
 ## Examples
 
 Check out the [examples](examples).
