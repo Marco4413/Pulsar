@@ -100,9 +100,13 @@ size_t Pulsar::Lexer::ParseIdentifier(std::string& ident)
 
 size_t Pulsar::Lexer::ParseIntegerLiteral(int64_t& val)
 {
-    if (!std::isdigit(m_SourceView[0]))
-        return 0;
     size_t count = 0;
+    bool negative = m_SourceView[count] == '-';
+    if (negative && ++count >= m_SourceView.length())
+        return 0;
+    else if (!std::isdigit(m_SourceView[count]))
+        return 0;
+
     for (; count < m_SourceView.length(); count++) {
         if (IsIdentifierStart(m_SourceView[count])) {
             return 0;
@@ -115,18 +119,22 @@ size_t Pulsar::Lexer::ParseIntegerLiteral(int64_t& val)
         val *= 10;
         val += m_SourceView[count] - '0';
     }
+    if (negative)
+        val *= -1;
     m_SourceView.remove_prefix(count);
     return count;
 }
 
 size_t Pulsar::Lexer::ParseDoubleLiteral(double& val)
 {
-    if (!std::isdigit(m_SourceView[0]))
+    size_t count = 0;
+    double exp = m_SourceView[count] == '-' ? -1 : 1;
+    if (exp < 0 && ++count >= m_SourceView.length())
+        return 0;
+    else if (!std::isdigit(m_SourceView[count]))
         return 0;
 
     bool decimal = false;
-    double exp = 1;
-    size_t count = 0;
     for (; count < m_SourceView.length(); count++) {
         if (IsIdentifierStart(m_SourceView[count]))
             return 0;
