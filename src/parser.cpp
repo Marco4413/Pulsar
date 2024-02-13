@@ -1,0 +1,269 @@
+#include "pulsar/parser.h"
+
+#define EXPECT_TOKEN_TYPE(token, type)           \
+    do {                                         \
+        if ((token).Type != type)                \
+            return ParseResult::UnexpectedToken; \
+    } while (false)
+
+Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module)
+{
+    ParseResult result = ParseResult::OK;
+    while (result == ParseResult::OK && !m_Lexer.IsEndOfFile())
+        result = ParseFunctionDefinition(module);
+    module.NativeFunctions.resize(module.NativeBindings.size(), nullptr);
+    return result;
+}
+
+Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module)
+{
+    Token starToken = m_Lexer.NextToken();
+    if (starToken.Type == TokenType::EndOfFile)
+        return ParseResult::OK;
+    else EXPECT_TOKEN_TYPE(starToken, TokenType::Star);
+
+    EXPECT_TOKEN_TYPE(m_Lexer.NextToken(), TokenType::OpenParenth);
+    Token identToken = m_Lexer.NextToken();
+    bool isNative = identToken.Type == TokenType::Star;
+    if (isNative) identToken = m_Lexer.NextToken();
+    EXPECT_TOKEN_TYPE(identToken, TokenType::Identifier);
+
+    Token argToken = m_Lexer.NextToken();
+    LocalsBindings args;
+    for (;;) {
+        if (argToken.Type != TokenType::Identifier)
+            break;
+        args.push_back(std::move(argToken.StringVal));
+        argToken = m_Lexer.NextToken();
+    }
+
+    EXPECT_TOKEN_TYPE(argToken, TokenType::CloseParenth);
+    size_t returnCount = 0;
+    Token bodyStartToken = m_Lexer.NextToken();
+    if (bodyStartToken.Type == TokenType::RightArrow) {
+        Token returnCountToken = m_Lexer.NextToken();
+        EXPECT_TOKEN_TYPE(returnCountToken, TokenType::IntegerLiteral);
+        if (returnCountToken.IntegerVal < 0)
+            return ParseResult::Error;
+        returnCount = (size_t)returnCountToken.IntegerVal;
+        bodyStartToken = m_Lexer.NextToken();
+    }
+
+
+    FunctionDefinition def = { std::move(identToken.StringVal), args.size(), returnCount };
+    if (isNative) {
+        EXPECT_TOKEN_TYPE(bodyStartToken, TokenType::FullStop);
+        module.NativeBindings.push_back(std::move(def));
+    } else {
+        EXPECT_TOKEN_TYPE(bodyStartToken, TokenType::Colon);
+        ParseResult bodyParseResult = ParseFunctionBody(module, def, args);
+        if (bodyParseResult != ParseResult::OK)
+            return bodyParseResult;
+        module.Functions.push_back(std::move(def));
+    }
+
+    return ParseResult::OK;
+}
+
+Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalsBindings& locals)
+{
+    LocalsBindings scopedLocals = locals;
+    for (;;) {
+        Token exprToken = m_Lexer.NextToken();
+        switch (exprToken.Type) {
+        case TokenType::FullStop:
+            func.Code.emplace_back(InstructionCode::Return);
+            if (scopedLocals.size() > func.LocalsCount)
+                func.LocalsCount = scopedLocals.size();
+            return ParseResult::OK;
+        case TokenType::Plus:
+            func.Code.emplace_back(InstructionCode::DynSum);
+            break;
+        case TokenType::Minus:
+            func.Code.emplace_back(InstructionCode::DynSub);
+            break;
+        case TokenType::Star:
+            func.Code.emplace_back(InstructionCode::DynMul);
+            break;
+        case TokenType::IntegerLiteral:
+            func.Code.emplace_back(InstructionCode::PushInt, exprToken.IntegerVal);
+            break;
+        case TokenType::DoubleLiteral:
+            func.Code.emplace_back(InstructionCode::PushDbl, *(int64_t*)&exprToken.DoubleVal);
+            break;
+        case TokenType::RightArrow: {
+            Token identToken = m_Lexer.NextToken();
+            bool forceBinding = identToken.Type == TokenType::Negate;
+            if (forceBinding) identToken = m_Lexer.NextToken();
+            EXPECT_TOKEN_TYPE(identToken, TokenType::Identifier);
+
+            int64_t localIdx = 0;
+            if (forceBinding) {
+                localIdx = scopedLocals.size();
+                scopedLocals.push_back(std::move(identToken.StringVal));
+            } else {
+                localIdx = (int64_t)scopedLocals.size()-1;
+                for (; localIdx >= 0 && scopedLocals[localIdx] != identToken.StringVal; localIdx--);
+                if (localIdx < 0) {
+                    localIdx = scopedLocals.size();
+                    scopedLocals.push_back(std::move(identToken.StringVal));
+                }
+            }
+
+            if (localIdx < 0) return ParseResult::Error;
+            func.Code.emplace_back(InstructionCode::PopIntoLocal, localIdx);
+        } break;
+        case TokenType::Identifier: {
+            int64_t localIdx = (int64_t)scopedLocals.size()-1;
+            for (; localIdx >= 0 && scopedLocals[localIdx] != exprToken.StringVal; localIdx--);
+            if (localIdx < 0)
+                return ParseResult::Error;
+            func.Code.emplace_back(InstructionCode::PushLocal, localIdx);
+        } break;
+        case TokenType::OpenParenth: {
+            Token identToken = m_Lexer.NextToken();
+            bool isNative = identToken.Type == TokenType::Star;
+            if (isNative) identToken = m_Lexer.NextToken();
+            EXPECT_TOKEN_TYPE(identToken, TokenType::Identifier);
+            EXPECT_TOKEN_TYPE(m_Lexer.NextToken(), TokenType::CloseParenth);
+            
+            if (isNative) {
+                int64_t funcIdx = (int64_t)module.NativeBindings.size()-1;
+                for (; funcIdx >= 0 && module.NativeBindings[funcIdx].Name != identToken.StringVal; funcIdx--);
+                if (funcIdx < 0)
+                    return ParseResult::Error;
+                func.Code.emplace_back(InstructionCode::CallNative, funcIdx);
+                break;
+            } else if (identToken.StringVal == func.Name) {
+                func.Code.emplace_back(InstructionCode::Call, (int64_t)module.Functions.size());
+                break;
+            }
+
+            int64_t funcIdx = (int64_t)module.Functions.size()-1;
+            for (; funcIdx >= 0 && module.Functions[funcIdx].Name != identToken.StringVal; funcIdx--);
+            if (funcIdx < 0)
+                return ParseResult::Error;
+            func.Code.emplace_back(InstructionCode::Call, funcIdx);
+        } break;
+        case TokenType::KW_If: {
+            auto res = ParseIfStatement(module, func, scopedLocals);
+            if (res != ParseResult::OK)
+                return res;
+        } break;
+        default:
+            return ParseResult::UnexpectedToken;
+        }
+    }
+}
+
+Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDefinition& func, const LocalsBindings& locals)
+{
+    InstructionCode jmpInstrCode = InstructionCode::JumpIfZero;
+    Token conditionToken(TokenType::None);
+    Token bodyStartToken = m_Lexer.NextToken();
+
+    switch (bodyStartToken.Type) {
+    case TokenType::NotEquals:
+        jmpInstrCode = InstructionCode::JumpIfZero;
+        break;
+    case TokenType::Less:
+        jmpInstrCode = InstructionCode::JumpIfGreaterThanOrEqualToZero;
+        break;
+    case TokenType::LessOrEqual:
+        jmpInstrCode = InstructionCode::JumpIfGreaterThanZero;
+        break;
+    case TokenType::More:
+        jmpInstrCode = InstructionCode::JumpIfLessThanOrEqualToZero;
+        break;
+    case TokenType::MoreOrEqual:
+        jmpInstrCode = InstructionCode::JumpIfLessThanZero;
+        break;
+    case TokenType::Equals:
+    case TokenType::Identifier:
+    case TokenType::DoubleLiteral:
+    case TokenType::IntegerLiteral:
+        jmpInstrCode = InstructionCode::JumpIfNotZero;
+        break;
+    default:
+        break;
+    }
+
+    switch (bodyStartToken.Type) {
+    case TokenType::NotEquals:
+    case TokenType::Equals:
+    case TokenType::Less:
+    case TokenType::LessOrEqual:
+    case TokenType::More:
+    case TokenType::MoreOrEqual:
+        conditionToken = m_Lexer.NextToken();
+        bodyStartToken = m_Lexer.NextToken();
+        break;
+    case TokenType::Identifier:
+    case TokenType::DoubleLiteral:
+    case TokenType::IntegerLiteral:
+        conditionToken = bodyStartToken;
+        bodyStartToken = m_Lexer.NextToken();
+        break;
+    default:
+        break;
+    }
+
+    switch (conditionToken.Type) {
+    case TokenType::Identifier: {
+        int64_t localIdx = (int64_t)locals.size()-1;
+        for (; localIdx >= 0 && locals[localIdx] != conditionToken.StringVal; localIdx--);
+        if (localIdx < 0)
+            return ParseResult::Error;
+        func.Code.emplace_back(InstructionCode::PushLocal, localIdx);
+    } break;
+    case TokenType::DoubleLiteral:
+        func.Code.emplace_back(InstructionCode::PushDbl, *(int64_t*)&conditionToken.DoubleVal);
+        break;
+    case TokenType::IntegerLiteral:
+        func.Code.emplace_back(InstructionCode::PushInt, conditionToken.IntegerVal);
+        break;
+    case TokenType::None:
+        break;
+    default:
+        return ParseResult::UnexpectedToken;
+    }
+
+    if (conditionToken.Type != TokenType::None)
+        func.Code.emplace_back(InstructionCode::Compare);
+    EXPECT_TOKEN_TYPE(bodyStartToken, TokenType::Colon);
+
+    size_t ifIdx = func.Code.size();
+    func.Code.emplace_back(jmpInstrCode, 0);
+    
+    auto res = ParseFunctionBody(module, func, locals);
+    if (res != ParseResult::OK) {
+        if (res != ParseResult::UnexpectedToken)
+            return res;
+        const Token& curToken = m_Lexer.CurrentToken();
+        if (curToken.Type == TokenType::KW_End) {
+            func.Code[ifIdx].Arg0 = func.Code.size() - ifIdx;
+            return ParseResult::OK;
+        } else if (curToken.Type != TokenType::KW_Else)
+            return ParseResult::UnexpectedToken;
+    } else {
+        func.Code[ifIdx].Arg0 = func.Code.size() - ifIdx;
+        return ParseResult::OK;
+    }
+
+    size_t elseIdx = func.Code.size();
+    func.Code.emplace_back(InstructionCode::Jump, 0);
+    func.Code[ifIdx].Arg0 = func.Code.size() - ifIdx;
+
+    EXPECT_TOKEN_TYPE(m_Lexer.NextToken(), TokenType::Colon);
+    res = ParseFunctionBody(module, func, locals);
+    if (res != ParseResult::OK) {
+        if (res != ParseResult::UnexpectedToken)
+            return res;
+        const Token& curToken = m_Lexer.CurrentToken();
+        if (curToken.Type != TokenType::KW_End)
+            return ParseResult::UnexpectedToken;
+    }
+
+    func.Code[elseIdx].Arg0 = func.Code.size() - elseIdx;
+    return ParseResult::OK;
+}
