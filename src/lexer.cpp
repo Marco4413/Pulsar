@@ -27,7 +27,7 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
             continue;
         
         { // Parse non-symbols
-            auto token = ParseIntegerLiteral();
+            Pulsar::Token token = ParseIntegerLiteral();
             if (token.Type != TokenType::None)
                 return token;
             token = ParseDoubleLiteral();
@@ -38,7 +38,8 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
                 auto it = Keywords.find(token.StringVal);
                 if (it == Keywords.end())
                     return token;
-                return token.Type = (*it).second;
+                token.Type = (*it).second;
+                return token;
             }
         }
         
