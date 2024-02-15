@@ -20,100 +20,92 @@ bool Pulsar::IsIdentifierContinuation(int ch)
 
 Pulsar::Token Pulsar::Lexer::ParseNextToken()
 {
-    std::string ident;
-    int64_t intLit = 0;
-    double dblLit = 0;
-    while (m_SourceView.length() > 0) {
+    while (m_SourceView.Length() > 0) {
         if (SkipWhitespaces() > 0)
             continue;
         else if (SkipComments() > 0)
             continue;
-        else if (ParseIntegerLiteral(intLit) > 0)
-            return Token(TokenType::IntegerLiteral, intLit);
-        else if (ParseDoubleLiteral(dblLit) > 0)
-            return Token(TokenType::DoubleLiteral, dblLit);
-        else if (ParseIdentifier(ident) > 0) {
-            auto it = Keywords.find(ident);
-            if (it == Keywords.end())
-                return Token(TokenType::Identifier, std::move(ident));
-            return Token((*it).second);
+        
+        { // Parse non-symbols
+            auto token = ParseIntegerLiteral();
+            if (token.Type != TokenType::None)
+                return token;
+            token = ParseDoubleLiteral();
+            if (token.Type != TokenType::None)
+                return token;
+            token = ParseIdentifier();
+            if (token.Type != TokenType::None) {
+                auto it = Keywords.find(token.StringVal);
+                if (it == Keywords.end())
+                    return token;
+                return token.Type = (*it).second;
+            }
         }
         
         char symbol = m_SourceView[0];
-        m_SourceView.remove_prefix(1);
         switch (symbol) {
         case '*':
-            return Token(TokenType::Star);
+            return TrimToToken(1, TokenType::Star);
         case '(':
-            return Token(TokenType::OpenParenth);
+            return TrimToToken(1, TokenType::OpenParenth);
         case ')':
-            return Token(TokenType::CloseParenth);
+            return TrimToToken(1, TokenType::CloseParenth);
         case ':':
-            return Token(TokenType::Colon);
+            return TrimToToken(1, TokenType::Colon);
         case '!':
-            if (m_SourceView.length() > 0 && m_SourceView[0] == '=') {
-                m_SourceView.remove_prefix(1);
-                return Token(TokenType::NotEquals);
-            }
-            return Token(TokenType::Negate);
+            if (m_SourceView.Length() > 1 && m_SourceView[1] == '=')
+                return TrimToToken(2, TokenType::NotEquals);
+            return TrimToToken(1, TokenType::Negate);
         case '.':
-            return Token(TokenType::FullStop);
+            return TrimToToken(1, TokenType::FullStop);
         case '+':
-            return Token(TokenType::Plus);
+            return TrimToToken(1, TokenType::Plus);
         case '-':
-            if (m_SourceView.length() > 0 && m_SourceView[0] == '>') {
-                m_SourceView.remove_prefix(1);
-                return Token(TokenType::RightArrow);
-            }
-            return Token(TokenType::Minus);
+            if (m_SourceView.Length() > 1 && m_SourceView[1] == '>')
+                return TrimToToken(2, TokenType::RightArrow);
+            return TrimToToken(1, TokenType::Minus);
         case '=':
-            return Token(TokenType::Equals);
+            return TrimToToken(1, TokenType::Equals);
         case '<':
-            if (m_SourceView.length() > 0 && m_SourceView[0] == '=') {
-                m_SourceView.remove_prefix(1);
-                return Token(TokenType::LessOrEqual);
-            }
-            return Token(TokenType::Less);
+            if (m_SourceView.Length() > 1 && m_SourceView[1] == '=')
+                return TrimToToken(2, TokenType::LessOrEqual);
+            return TrimToToken(1, TokenType::Less);
         case '>':
-            if (m_SourceView.length() > 0 && m_SourceView[0] == '=') {
-                m_SourceView.remove_prefix(1);
-                return Token(TokenType::MoreOrEqual);
-            }
-            return Token(TokenType::More);
+            if (m_SourceView.Length() > 1 && m_SourceView[1] == '=')
+                return TrimToToken(2, TokenType::MoreOrEqual);
+            return TrimToToken(1, TokenType::More);
         default:
-            return Token(TokenType::None);
+            return TrimToToken(1, TokenType::None);
         }
     }
-    return Token(TokenType::EndOfFile);
+    return TrimToToken(0, TokenType::EndOfFile);
 }
 
-size_t Pulsar::Lexer::ParseIdentifier(std::string& ident)
+Pulsar::Token Pulsar::Lexer::ParseIdentifier()
 {
     if (!IsIdentifierStart(m_SourceView[0]))
-        return 0;
+        return TrimToToken(0, TokenType::None);
     size_t count = 0;
-    for (; count < m_SourceView.length() && IsIdentifierContinuation(m_SourceView[count]); count++)
-        ident += m_SourceView[count];
-    m_SourceView.remove_prefix(count);
-    return count;
+    for (; count < m_SourceView.Length() && IsIdentifierContinuation(m_SourceView[count]); count++);
+    return TrimToToken(count, TokenType::Identifier, m_SourceView.GetPrefix(count));
 }
 
-size_t Pulsar::Lexer::ParseIntegerLiteral(int64_t& val)
+Pulsar::Token Pulsar::Lexer::ParseIntegerLiteral()
 {
     size_t count = 0;
     bool negative = m_SourceView[count] == '-';
-    if (negative && ++count >= m_SourceView.length())
-        return 0;
+    if (negative && ++count >= m_SourceView.Length())
+        return CreateNoneToken();
     else if (!std::isdigit(m_SourceView[count]))
-        return 0;
-
-    for (; count < m_SourceView.length(); count++) {
+        return CreateNoneToken();
+    int64_t val = 0;
+    for (; count < m_SourceView.Length(); count++) {
         if (IsIdentifierStart(m_SourceView[count])) {
-            return 0;
+            return CreateNoneToken();
         } else if (m_SourceView[count] == '.') {
-            if (m_SourceView.length() <= count+1 || !std::isdigit(m_SourceView[count+1]))
+            if (m_SourceView.Length() <= count+1 || !std::isdigit(m_SourceView[count+1]))
                 break;
-            return 0;
+            return CreateNoneToken();
         } else if (!std::isdigit(m_SourceView[count]))
             break;
         val *= 10;
@@ -121,30 +113,29 @@ size_t Pulsar::Lexer::ParseIntegerLiteral(int64_t& val)
     }
     if (negative)
         val *= -1;
-    m_SourceView.remove_prefix(count);
-    return count;
+    return TrimToToken(count, TokenType::IntegerLiteral, val);
 }
 
-size_t Pulsar::Lexer::ParseDoubleLiteral(double& val)
+Pulsar::Token Pulsar::Lexer::ParseDoubleLiteral()
 {
     size_t count = 0;
     double exp = m_SourceView[count] == '-' ? -1 : 1;
-    if (exp < 0 && ++count >= m_SourceView.length())
-        return 0;
+    if (exp < 0 && ++count >= m_SourceView.Length())
+        return CreateNoneToken();
     else if (!std::isdigit(m_SourceView[count]))
-        return 0;
-
+        return CreateNoneToken();
     bool decimal = false;
-    for (; count < m_SourceView.length(); count++) {
+    double val = 0.0;
+    for (; count < m_SourceView.Length(); count++) {
         if (IsIdentifierStart(m_SourceView[count]))
-            return 0;
+            return CreateNoneToken();
         else if (m_SourceView[count] == '.') {
             if (decimal)
-                return 0;
+                return CreateNoneToken();
             decimal = true;
             count++;
-            if (count >= m_SourceView.length() || !std::isdigit(m_SourceView[count]))
-                return 0;
+            if (count >= m_SourceView.Length() || !std::isdigit(m_SourceView[count]))
+                return CreateNoneToken();
         } if (!std::isdigit(m_SourceView[count]))
             break;
         
@@ -154,27 +145,33 @@ size_t Pulsar::Lexer::ParseDoubleLiteral(double& val)
         val += m_SourceView[count] - '0';
     }
     val *= exp;
-    m_SourceView.remove_prefix(count);
-    return count;
+    return TrimToToken(count, TokenType::DoubleLiteral, val);
 }
 
 size_t Pulsar::Lexer::SkipWhitespaces()
 {
     size_t count = 0;
-    for (; count < m_SourceView.length() && std::isspace(m_SourceView[count]); count++);
-    m_SourceView.remove_prefix(count);
+    for (; count < m_SourceView.Length() && std::isspace(m_SourceView[count]); count++) {
+        if (m_SourceView[count] == '\n') {
+            m_Line++;
+            m_LineStartIdx = m_SourceView.GetStart() + count;
+        }
+    }
+    m_SourceView.RemovePrefix(count);
     return count;
 }
 
 size_t Pulsar::Lexer::SkipComments()
 {
-    if (m_SourceView.length() < 2)
+    if (m_SourceView.Length() < 2)
         return 0;
     else if (m_SourceView[0] != '/' || m_SourceView[1] != '/')
         return 0;
     size_t count = 0;
-    for (; count < m_SourceView.length() && m_SourceView[count] != '\n'; count++);
-    m_SourceView.remove_prefix(count);
+    for (; count < m_SourceView.Length() && m_SourceView[count] != '\n'; count++);
+    m_SourceView.RemovePrefix(count);
+    m_Line++;
+    m_LineStartIdx = m_SourceView.GetStart();
     return count;
 }
 
