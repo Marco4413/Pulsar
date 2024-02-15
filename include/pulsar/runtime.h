@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "pulsar/lexer.h"
+
 namespace Pulsar
 {
     enum class InstructionCode {
