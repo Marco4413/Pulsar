@@ -21,37 +21,34 @@ size_t Pulsar::Module::BindNativeFunction(const FunctionDefinition& def, NativeF
     return bound;
 }
 
-Pulsar::RuntimeState Pulsar::Module::CallFunctionByName(const std::string& name, Stack& stack) const
+Pulsar::RuntimeState Pulsar::Module::CallFunctionByName(const std::string& name, Stack& stack, ExecutionContext& context) const
 {
     for (int64_t i = Functions.size()-1; i >= 0; i--) {
         const FunctionDefinition& other = Functions[i];
         if (other.Name != name)
             continue;
-        return CallFunction(i, stack);
+        return CallFunction(i, stack, context);
     }
     return RuntimeState::FunctionNotFound;
 }
 
-Pulsar::RuntimeState Pulsar::Module::CallFunctionByDefinition(const FunctionDefinition& def, Stack& stack) const
+Pulsar::RuntimeState Pulsar::Module::CallFunctionByDefinition(const FunctionDefinition& def, Stack& stack, ExecutionContext& context) const
 {
     for (int64_t i = Functions.size()-1; i >= 0; i--) {
         const FunctionDefinition& other = Functions[i];
         if (!other.MatchesDeclaration(def))
             continue;
-        return CallFunction(i, stack);
+        return CallFunction(i, stack, context);
     }
     return RuntimeState::FunctionNotFound;
 }
 
-Pulsar::RuntimeState Pulsar::Module::CallFunction(int64_t funcIdx, Stack& stack) const
+Pulsar::RuntimeState Pulsar::Module::CallFunction(int64_t funcIdx, Stack& stack, ExecutionContext& context) const
 {
     if (funcIdx < 0 || (size_t)funcIdx >= Functions.size())
         return RuntimeState::OutOfBoundsFunctionIndex;
 
-    ExecutionContext context{
-        *this, { { Functions[funcIdx] } }
-    };
-
+    context.CallStack.emplace_back(Functions[funcIdx]);
     { // Create Frame
         Frame& thisFrame = context.CallStack[0];
         if (stack.size() < thisFrame.Function.Arity)

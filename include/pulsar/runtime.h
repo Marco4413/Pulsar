@@ -197,9 +197,10 @@ namespace Pulsar
     struct Module
     {
     public:
-        RuntimeState CallFunction(int64_t funcIdx, Stack& stack) const;
-        RuntimeState CallFunctionByName(const std::string& name, Stack& stack) const;
-        RuntimeState CallFunctionByDefinition(const FunctionDefinition& def, Stack& stack) const;
+        ExecutionContext CreateExecutionContext() const { return {*this, { }}; }
+        RuntimeState CallFunction(int64_t funcIdx, Stack& stack, ExecutionContext& context) const;
+        RuntimeState CallFunctionByName(const std::string& name, Stack& stack, ExecutionContext& context) const;
+        RuntimeState CallFunctionByDefinition(const FunctionDefinition& def, Stack& stack, ExecutionContext& context) const;
 
         typedef std::function<RuntimeState(ExecutionContext&)> NativeFunction;
         size_t BindNativeFunction(const FunctionDefinition& def, NativeFunction func);
