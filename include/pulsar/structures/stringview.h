@@ -20,6 +20,7 @@ namespace Pulsar::Structures
         char operator[](size_t idx) const { return m_Data[m_Start+idx]; }
         size_t Length() const { return m_Start >= m_End ? 0 : m_End - m_Start; }
         size_t GetStart() const { return m_Start; }
+        const char* CStringFrom(size_t idx) const { return &m_Data[m_Start+idx]; }
     private:
         const char* m_Data = nullptr;
         size_t m_Start = 0;
