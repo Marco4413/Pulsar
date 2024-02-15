@@ -79,6 +79,18 @@ namespace Pulsar
         int64_t Arg0 = 0;
     };
 
+    struct DebugSymbol
+    {
+        Pulsar::Token Token;
+    };
+
+    struct BlockDebugSymbol : public DebugSymbol
+    {
+        BlockDebugSymbol(const Pulsar::Token& token, size_t startIdx)
+            : DebugSymbol{token}, StartIdx(startIdx) { }
+        size_t StartIdx;
+    };
+
     struct FunctionDefinition
     {
         std::string Name;
@@ -87,6 +99,12 @@ namespace Pulsar
         
         size_t LocalsCount = Arity;
         std::vector<Instruction> Code = {};
+        
+        DebugSymbol FunctionDebugSymbol{Token(TokenType::None)};
+        std::vector<BlockDebugSymbol> CodeDebugSymbols = {};
+
+        bool HasDebugSymbol() const { return FunctionDebugSymbol.Token.Type != TokenType::None; }
+        bool HasCodeDebugSymbols() const { return CodeDebugSymbols.size() > 0; }
 
         bool MatchesDeclaration(const FunctionDefinition& other) const
         {
