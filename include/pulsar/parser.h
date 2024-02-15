@@ -40,6 +40,7 @@ namespace Pulsar
         ParseResult ParseFunctionDefinition(Module& module, bool debugSymbols);
         ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalsBindings& locals, bool debugSymbols);
         ParseResult ParseIfStatement(Module& module, FunctionDefinition& func, const LocalsBindings& locals, bool debugSymbols);
+        ParseResult PushLValue(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const Token& lvalue, bool debugSymbols);
         ParseResult SetError(ParseResult errorType, const Token& token, const char* errorMsg)
         {
             m_LastError = errorType;

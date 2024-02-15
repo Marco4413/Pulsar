@@ -77,67 +77,60 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
 {
     LocalsBindings scopedLocals = locals;
     for (;;) {
-        Token exprToken = m_Lexer.NextToken();
-        switch (exprToken.Type) {
+        const Token& curToken = m_Lexer.NextToken();
+        switch (curToken.Type) {
         case TokenType::FullStop:
-            PUSH_CODE_SYMBOL(debugSymbols, func, exprToken);
+            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
             func.Code.emplace_back(InstructionCode::Return);
             if (scopedLocals.size() > func.LocalsCount)
                 func.LocalsCount = scopedLocals.size();
             return ParseResult::OK;
         case TokenType::Plus:
-            PUSH_CODE_SYMBOL(debugSymbols, func, exprToken);
+            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
             func.Code.emplace_back(InstructionCode::DynSum);
             break;
         case TokenType::Minus:
-            PUSH_CODE_SYMBOL(debugSymbols, func, exprToken);
+            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
             func.Code.emplace_back(InstructionCode::DynSub);
             break;
         case TokenType::Star:
-            PUSH_CODE_SYMBOL(debugSymbols, func, exprToken);
+            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
             func.Code.emplace_back(InstructionCode::DynMul);
             break;
         case TokenType::IntegerLiteral:
-            func.Code.emplace_back(InstructionCode::PushInt, exprToken.IntegerVal);
-            break;
         case TokenType::DoubleLiteral:
-            func.Code.emplace_back(InstructionCode::PushDbl, *(int64_t*)&exprToken.DoubleVal);
-            break;
+        case TokenType::Identifier: {
+            auto res = PushLValue(module, func, scopedLocals, curToken, debugSymbols);
+            if (res != ParseResult::OK)
+                return res;
+        } break;
         case TokenType::RightArrow: {
-            PUSH_CODE_SYMBOL(debugSymbols, func, exprToken);
-            Token identToken = m_Lexer.NextToken();
-            bool forceBinding = identToken.Type == TokenType::Negate;
-            if (forceBinding) identToken = m_Lexer.NextToken();
-            EXPECT_TOKEN_TYPE(identToken, TokenType::Identifier);
+            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
+            m_Lexer.NextToken();
+            bool forceBinding = curToken.Type == TokenType::Negate;
+            if (forceBinding) m_Lexer.NextToken();
+            EXPECT_TOKEN_TYPE(curToken, TokenType::Identifier);
 
             int64_t localIdx = 0;
             if (forceBinding) {
                 localIdx = scopedLocals.size();
-                scopedLocals.push_back(std::move(identToken.StringVal));
+                scopedLocals.push_back(curToken.StringVal);
             } else {
                 localIdx = (int64_t)scopedLocals.size()-1;
-                for (; localIdx >= 0 && scopedLocals[localIdx] != identToken.StringVal; localIdx--);
+                for (; localIdx >= 0 && scopedLocals[localIdx] != curToken.StringVal; localIdx--);
                 if (localIdx < 0) {
                     localIdx = scopedLocals.size();
-                    scopedLocals.push_back(std::move(identToken.StringVal));
+                    scopedLocals.push_back(curToken.StringVal);
                 }
             }
             func.Code.emplace_back(InstructionCode::PopIntoLocal, localIdx);
         } break;
-        case TokenType::Identifier: {
-            PUSH_CODE_SYMBOL(debugSymbols, func, exprToken);
-            int64_t localIdx = (int64_t)scopedLocals.size()-1;
-            for (; localIdx >= 0 && scopedLocals[localIdx] != exprToken.StringVal; localIdx--);
-            if (localIdx < 0)
-                return SetError(ParseResult::UsageOfUndeclaredLocal, exprToken, "Local not declared.");
-            func.Code.emplace_back(InstructionCode::PushLocal, localIdx);
-        } break;
         case TokenType::OpenParenth: {
-            Token identToken = m_Lexer.NextToken();
-            PUSH_CODE_SYMBOL(debugSymbols, func, identToken);
-
-            bool isNative = identToken.Type == TokenType::Star;
-            if (isNative) identToken = m_Lexer.NextToken();
+            m_Lexer.NextToken();
+            bool isNative = curToken.Type == TokenType::Star;
+            if (isNative) m_Lexer.NextToken();
+            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
+            Token identToken = curToken;
             EXPECT_TOKEN_TYPE(identToken, TokenType::Identifier);
             EXPECT_TOKEN_TYPE(m_Lexer.NextToken(), TokenType::CloseParenth);
             
@@ -145,7 +138,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
                 int64_t funcIdx = (int64_t)module.NativeBindings.size()-1;
                 for (; funcIdx >= 0 && module.NativeBindings[funcIdx].Name != identToken.StringVal; funcIdx--);
                 if (funcIdx < 0)
-                    return SetError(ParseResult::UsageOfUndeclaredNativeFunction, exprToken, "Native function not declared.");
+                    return SetError(ParseResult::UsageOfUndeclaredNativeFunction, identToken, "Native function not declared.");
                 func.Code.emplace_back(InstructionCode::CallNative, funcIdx);
                 break;
             } else if (identToken.StringVal == func.Name) {
@@ -156,17 +149,17 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
             int64_t funcIdx = (int64_t)module.Functions.size()-1;
             for (; funcIdx >= 0 && module.Functions[funcIdx].Name != identToken.StringVal; funcIdx--);
             if (funcIdx < 0)
-                return SetError(ParseResult::UsageOfUndeclaredFunction, exprToken, "Function not declared.");
+                return SetError(ParseResult::UsageOfUndeclaredFunction, identToken, "Function not declared.");
             func.Code.emplace_back(InstructionCode::Call, funcIdx);
         } break;
         case TokenType::KW_If: {
-            PUSH_CODE_SYMBOL(debugSymbols, func, exprToken);
+            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
             auto res = ParseIfStatement(module, func, scopedLocals, debugSymbols);
             if (res != ParseResult::OK)
                 return res;
         } break;
         default:
-            return SetError(ParseResult::UnexpectedToken, exprToken, "Expression expected.");
+            return SetError(ParseResult::UnexpectedToken, curToken, "Expression expected.");
         }
     }
 }
@@ -174,83 +167,71 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
 Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDefinition& func, const LocalsBindings& locals, bool debugSymbols)
 {
     Token ifToken = m_Lexer.CurrentToken();
-
+    Token comparisonToken(TokenType::None);
     InstructionCode jmpInstrCode = InstructionCode::JumpIfZero;
-    Token conditionToken(TokenType::None);
-    Token bodyStartToken = m_Lexer.NextToken();
+    // Whether the if condition is fully contained within the statement.
+    bool isSelfContained = false;
 
-    switch (bodyStartToken.Type) {
-    case TokenType::NotEquals:
-        jmpInstrCode = InstructionCode::JumpIfZero;
-        break;
-    case TokenType::Less:
-        jmpInstrCode = InstructionCode::JumpIfGreaterThanOrEqualToZero;
-        break;
-    case TokenType::LessOrEqual:
-        jmpInstrCode = InstructionCode::JumpIfGreaterThanZero;
-        break;
-    case TokenType::More:
-        jmpInstrCode = InstructionCode::JumpIfLessThanOrEqualToZero;
-        break;
-    case TokenType::MoreOrEqual:
-        jmpInstrCode = InstructionCode::JumpIfLessThanZero;
-        break;
-    case TokenType::Equals:
-    case TokenType::Identifier:
-    case TokenType::DoubleLiteral:
-    case TokenType::IntegerLiteral:
-        jmpInstrCode = InstructionCode::JumpIfNotZero;
-        break;
-    default:
-        break;
+    const Token& curToken = m_Lexer.NextToken();
+    if (curToken.Type != TokenType::Colon) {
+        switch (curToken.Type) {
+        case TokenType::IntegerLiteral:
+        case TokenType::DoubleLiteral:
+        case TokenType::Identifier: {
+            isSelfContained = true;
+            jmpInstrCode = InstructionCode::JumpIfNotZero;
+            auto res = PushLValue(module, func, locals, curToken, debugSymbols);
+            if (res != ParseResult::OK)
+                return res;
+            m_Lexer.NextToken();
+        } break;
+        default:
+            break;
+        }
+
+        if (curToken.Type != TokenType::Colon) {
+            switch (curToken.Type) {
+            case TokenType::NotEquals:
+                jmpInstrCode = InstructionCode::JumpIfZero;
+                break;
+            case TokenType::Less:
+                jmpInstrCode = InstructionCode::JumpIfGreaterThanOrEqualToZero;
+                break;
+            case TokenType::LessOrEqual:
+                jmpInstrCode = InstructionCode::JumpIfGreaterThanZero;
+                break;
+            case TokenType::More:
+                jmpInstrCode = InstructionCode::JumpIfLessThanOrEqualToZero;
+                break;
+            case TokenType::MoreOrEqual:
+                jmpInstrCode = InstructionCode::JumpIfLessThanZero;
+                break;
+            default:
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expected block start or comparison operator.");
+            }
+
+            comparisonToken = curToken;
+            m_Lexer.NextToken();
+            switch (curToken.Type) {
+            case TokenType::IntegerLiteral:
+            case TokenType::DoubleLiteral:
+            case TokenType::Identifier: {
+                auto res = PushLValue(module, func, locals, curToken, debugSymbols);
+                if (res != ParseResult::OK)
+                    return res;
+                m_Lexer.NextToken();
+            } break;
+            default:
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expected lvalue after comparison operator.");
+            }
+        } else isSelfContained = false;
     }
 
-    switch (bodyStartToken.Type) {
-    case TokenType::NotEquals:
-    case TokenType::Equals:
-    case TokenType::Less:
-    case TokenType::LessOrEqual:
-    case TokenType::More:
-    case TokenType::MoreOrEqual:
-        conditionToken = m_Lexer.NextToken();
-        bodyStartToken = m_Lexer.NextToken();
-        break;
-    case TokenType::Identifier:
-    case TokenType::DoubleLiteral:
-    case TokenType::IntegerLiteral:
-        conditionToken = bodyStartToken;
-        bodyStartToken = m_Lexer.NextToken();
-        break;
-    default:
-        break;
-    }
-
-    switch (conditionToken.Type) {
-    case TokenType::Identifier: {
-        PUSH_CODE_SYMBOL(debugSymbols, func, conditionToken);
-        int64_t localIdx = (int64_t)locals.size()-1;
-        for (; localIdx >= 0 && locals[localIdx] != conditionToken.StringVal; localIdx--);
-        if (localIdx < 0)
-            return SetError(ParseResult::UsageOfUndeclaredLocal, conditionToken, "Local not declared.");
-        func.Code.emplace_back(InstructionCode::PushLocal, localIdx);
-    } break;
-    case TokenType::DoubleLiteral:
-        func.Code.emplace_back(InstructionCode::PushDbl, *(int64_t*)&conditionToken.DoubleVal);
-        break;
-    case TokenType::IntegerLiteral:
-        func.Code.emplace_back(InstructionCode::PushInt, conditionToken.IntegerVal);
-        break;
-    case TokenType::None:
-        break;
-    default:
-        return SetError(ParseResult::UnexpectedToken, conditionToken, "Identifier or numeric literal expected.");
-    }
-
-    if (conditionToken.Type != TokenType::None) {
+    EXPECT_TOKEN_TYPE(curToken, TokenType::Colon);
+    if (comparisonToken.Type != TokenType::None) {
         PUSH_CODE_SYMBOL(debugSymbols, func, ifToken);
         func.Code.emplace_back(InstructionCode::Compare);
     }
-    EXPECT_TOKEN_TYPE(bodyStartToken, TokenType::Colon);
 
     PUSH_CODE_SYMBOL(debugSymbols, func, ifToken);
     size_t ifIdx = func.Code.size();
@@ -260,8 +241,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDef
     if (res != ParseResult::OK) {
         if (res != ParseResult::UnexpectedToken)
             return res;
-        const Token& curToken = m_Lexer.CurrentToken();
-        if (curToken.Type == TokenType::KW_End) {
+        else if (curToken.Type == TokenType::KW_End) {
             func.Code[ifIdx].Arg0 = func.Code.size() - ifIdx;
             return ParseResult::OK;
         } else if (curToken.Type != TokenType::KW_Else)
@@ -271,21 +251,55 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDef
         return ParseResult::OK;
     }
 
-    PUSH_CODE_SYMBOL(debugSymbols, func, m_Lexer.CurrentToken());
     size_t elseIdx = func.Code.size();
+    PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
     func.Code.emplace_back(InstructionCode::Jump, 0);
     func.Code[ifIdx].Arg0 = func.Code.size() - ifIdx;
+    m_Lexer.NextToken(); // Consume 'else' Token
 
-    EXPECT_TOKEN_TYPE(m_Lexer.NextToken(), TokenType::Colon);
-    res = ParseFunctionBody(module, func, locals, debugSymbols);
-    if (res != ParseResult::OK) {
-        if (res != ParseResult::UnexpectedToken)
-            return res;
-        const Token& curToken = m_Lexer.CurrentToken();
-        if (curToken.Type != TokenType::KW_End)
-            return SetError(ParseResult::UnexpectedToken, curToken, "'end' expected.");
+    if (curToken.Type == TokenType::Colon) {
+        res = ParseFunctionBody(module, func, locals, debugSymbols);
+        if (res != ParseResult::OK) {
+            if (res != ParseResult::UnexpectedToken)
+                return res;
+            const Token& curToken = m_Lexer.CurrentToken();
+            if (curToken.Type != TokenType::KW_End)
+                return SetError(ParseResult::UnexpectedToken, curToken, "'end' expected.");
+        }
+
+        func.Code[elseIdx].Arg0 = func.Code.size() - elseIdx;
+        return ParseResult::OK;
+    } else if (curToken.Type == TokenType::KW_If) {
+        if (!isSelfContained)
+            return SetError(ParseResult::UnexpectedToken, curToken, "Illegal 'else if' statement. Previous condition is not self-contained.");
+        res = ParseIfStatement(module, func, locals, debugSymbols);
+        func.Code[elseIdx].Arg0 = func.Code.size() - elseIdx;
+        return res;
     }
+    return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'else' block start or 'else if' compound statement.");
+}
 
-    func.Code[elseIdx].Arg0 = func.Code.size() - elseIdx;
+Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const Token& lvalue, bool debugSymbols)
+{
+    (void) module;
+    switch (lvalue.Type) {
+    case TokenType::IntegerLiteral:
+        func.Code.emplace_back(InstructionCode::PushInt, lvalue.IntegerVal);
+        break;
+    case TokenType::DoubleLiteral:
+        func.Code.emplace_back(InstructionCode::PushDbl, *(int64_t*)&lvalue.DoubleVal);
+        break;
+    case TokenType::Identifier: {
+        PUSH_CODE_SYMBOL(debugSymbols, func, lvalue);
+        int64_t localIdx = (int64_t)locals.size()-1;
+        for (; localIdx >= 0 && locals[localIdx] != lvalue.StringVal; localIdx--);
+        if (localIdx < 0)
+            return SetError(ParseResult::UsageOfUndeclaredLocal, lvalue, "Local not declared.");
+        func.Code.emplace_back(InstructionCode::PushLocal, localIdx);
+    } break;
+    default:
+        // We should never get here
+        return ParseResult::UnexpectedToken;
+    }
     return ParseResult::OK;
 }
