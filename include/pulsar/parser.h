@@ -31,15 +31,15 @@ namespace Pulsar
         Parser(std::string&& src)
             : m_Lexer(src) { }
 
-        ParseResult ParseIntoModule(Module& module);
+        ParseResult ParseIntoModule(Module& module, bool debugSymbols=false);
         const std::string& GetSource() const    { return m_Lexer.GetSource(); }
         ParseResult GetLastError() const        { return m_LastError; }
         const char* GetLastErrorMessage() const { return m_LastErrorMsg.c_str(); }
         const Token& GetLastErrorToken() const  { return m_LastErrorToken; }
     private:
-        ParseResult ParseFunctionDefinition(Module& module);
-        ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalsBindings& locals);
-        ParseResult ParseIfStatement(Module& module, FunctionDefinition& func, const LocalsBindings& locals);
+        ParseResult ParseFunctionDefinition(Module& module, bool debugSymbols);
+        ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalsBindings& locals, bool debugSymbols);
+        ParseResult ParseIfStatement(Module& module, FunctionDefinition& func, const LocalsBindings& locals, bool debugSymbols);
         ParseResult SetError(ParseResult errorType, const Token& token, const char* errorMsg)
         {
             m_LastError = errorType;
