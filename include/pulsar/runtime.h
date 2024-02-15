@@ -143,7 +143,14 @@ namespace Pulsar
             return &CallStack[CallStack.size()-2];
         }
 
-        Frame& GetCurrentFrame() { return CallStack.back(); }
+        const Frame* GetCallingFrame() const {
+            if (CallStack.size() <= 1)
+                return nullptr;
+            return &CallStack[CallStack.size()-2];
+        }
+
+        Frame& GetCurrentFrame()             { return CallStack.back(); }
+        const Frame& GetCurrentFrame() const { return CallStack.back(); }
         bool IsAtEnd() const {
             return CallStack.size() < 1
                 || (CallStack.size() == 1 && CallStack[0].InstructionIndex >= CallStack[0].Function.Code.size());
