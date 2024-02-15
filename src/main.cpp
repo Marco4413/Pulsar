@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -12,6 +13,22 @@ std::ostream& operator<<(std::ostream& ostream, const Pulsar::Value& val)
     return ostream << val.AsInteger;
 }
 
+void PrintPrettyError(const std::string& source, const char* filepath, const Pulsar::Token& token, const char* message)
+{
+    std::printf("%s:%lu:%lu: Error: %s\n", filepath, token.SourcePos.Line+1, token.SourcePos.Char, message);
+
+    Pulsar::Structures::StringView errorView(source);
+    errorView.RemovePrefix(token.SourcePos.Index-token.SourcePos.Char+1);
+    size_t lineChars = 0;
+    for (; lineChars < errorView.Length() && errorView[lineChars] != '\r' && errorView[lineChars] != '\n'; lineChars++);
+    std::printf("%.*s\n", (int)lineChars, errorView.CStringFrom(0));
+    
+    const std::string tokenUnderline(token.SourcePos.CharSpan-1, '~');
+    if (token.SourcePos.Char > 0)
+        std::printf("%*s", (int)token.SourcePos.Char-1, "");
+    std::printf("^%s\n", tokenUnderline.c_str());
+}
+
 int main(int argc, const char** argv)
 {
     const char* executable = *argv++;
@@ -22,7 +39,7 @@ int main(int argc, const char** argv)
         return 1;
     }
 
-    std::filesystem::path program = *argv;
+    const char* program = *argv;
     if (!std::filesystem::exists(program)) {
         std::cout << program << " not found." << std::endl;
         return 1;
@@ -39,6 +56,7 @@ int main(int argc, const char** argv)
     Pulsar::Parser parser(source);
     auto result = parser.ParseIntoModule(module);
     if (result != Pulsar::ParseResult::OK) {
+        PrintPrettyError(parser.GetSource(), program, parser.GetLastErrorToken(), parser.GetLastErrorMessage());
         std::cout << "Parse Error: " << (int)result << std::endl;
         return 1;
     }
