@@ -163,10 +163,13 @@ size_t Pulsar::Lexer::SkipWhitespaces()
 
 size_t Pulsar::Lexer::SkipComments()
 {
-    if (m_SourceView.Length() < 2)
-        return 0;
-    else if (m_SourceView[0] != '/' || m_SourceView[1] != '/')
-        return 0;
+    if (m_SourceView[0] == ';') {
+        m_SourceView.RemovePrefix(1);
+        return 1;
+    } else if (
+        m_SourceView.Length() < 2
+        || m_SourceView[0] != '/' || m_SourceView[1] != '/'
+    ) return 0;
     size_t count = 0;
     for (; count < m_SourceView.Length() && m_SourceView[count] != '\n'; count++);
     m_SourceView.RemovePrefix(count);
