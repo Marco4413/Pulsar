@@ -47,10 +47,12 @@ Though some type checking can be done by operators/statements.
 And a runtime error may be raised. No error catching is supported
 within the language itself.
 
-|  Type   | Bit Count |
-| :-----: | :-------: |
-| Integer |    64     |
-| Double  |    64     |
+|          Type           | Bit Count |
+| :---------------------: | :-------: |
+|         Integer         |    64     |
+|         Double          |    64     |
+|    FunctionReference    |    64     |
+| NativeFunctionReference |    64     |
 
 Support for unsigned integers and (maybe) strings are planned.
 
@@ -93,8 +95,8 @@ As of now, these are only allowed within if statements.
 ## Special Operators
 
 Special operators are the ones that do not just consume N values and
-push M onto the stack. Like assignment operators or the 'FullStop' operator.
-They modify the state of the execution context.
+push M onto the stack. Like assignment operators or the 'FullStop' (aka Return) operator.
+They modify the state of the execution context and/or are parsed differently to other operators.
 
 ### The RightArrow Operator
 
@@ -130,9 +132,21 @@ name as one that's on its parent scope (shadowing).
 > This operator is the reason why constants and locals are referred to
 as `lvalue`s, because they usually stand to the left of the operator.
 
-### The Return Operator
+### The FullStop/Return Operator
 
 .
+
+### The PushReference Operator
+
+The push reference operator is a very powerful operator. It allows you
+to push a reference to a function onto the stack, then you can call it
+with the [icall!](#icall) keyword instruction.
+
+`<& (function)`
+
+`(*native)` functions can also be passed to the operator.
+
+The provided function follows the [Function Call](#function-calls) syntax.
 
 ## Functions
 
@@ -152,6 +166,13 @@ Only the last M values are returned onto the caller's stack.
 And of course when called, N values must be on the caller's stack.
 
 Return count (and arrow) can be omitted and 0 is implied.
+
+### Function Calls
+
+Functions are called by `(function)`.
+
+> It's like function definitions but without the `*` in front of
+it and the arguments within the parentheses.
 
 ## Native Functions
 
@@ -225,3 +246,19 @@ Finally, if no condition at all is present, `!= 0` is implied.
 
 The `else` branch can be specified within all `if`s. However, the
 "no return" restriction must be met.
+
+## Keyword Instructions
+
+You can see keyword instructions as *blazing fast* functions!
+
+They map directly to VM instructions. So they don't even have the
+overhead of creating a new Frame and Stack.
+
+### ICall!
+
+The `icall!` instruction pops one value from the stack, checks
+if it's a `Native/FunctionReference` (raising an error otherwise)
+and calls the function pointed by the reference. Of course, the called
+function is called like a normal `(function)` call.
+
+See the [references example](examples/references.pls).
