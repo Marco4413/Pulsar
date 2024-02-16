@@ -10,6 +10,10 @@ by exposing the, still untouched, performance of modern web browsers.
 Not really. It's just another side-project of mine.
 I wanted to have a second attempt at creating a programming language.
 
+## Language Documentation
+
+It can be found within the [DOCUMENTATION.md](DOCUMENTATION.md) file.
+
 ## Building
 
 This project uses `premake5` as its build system.
@@ -24,4 +28,3 @@ Supported compilers are `gcc` and `msvc`.
 ## Examples
 
 Check out the [examples](examples).
-
