@@ -261,6 +261,34 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             a.AsInteger *= b.AsInteger;
         }
     } break;
+    case InstructionCode::DynDiv: {
+        if (frame.OperandStack.size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value b = std::move(frame.OperandStack.back());
+        frame.OperandStack.pop_back();
+        Value& a = frame.OperandStack.back();
+        if (!IsNumericValueType(a.Type) || !IsNumericValueType(b.Type))
+            return RuntimeState::TypeError;
+        if (a.Type == ValueType::Double || b.Type == ValueType::Double) {
+            double aVal = a.Type == ValueType::Double ? a.AsDouble : (double)a.AsInteger;
+            double bVal = b.Type == ValueType::Double ? b.AsDouble : (double)b.AsInteger;
+            a.Type = ValueType::Double;
+            a.AsDouble = aVal / bVal;
+        } else {
+            a.AsInteger /= b.AsInteger;
+        }
+    } break;
+    case InstructionCode::Mod: {
+        if (frame.OperandStack.size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value b = std::move(frame.OperandStack.back());
+        frame.OperandStack.pop_back();
+        Value& a = frame.OperandStack.back();
+        if (a.Type != ValueType::Integer || b.Type != ValueType::Integer)
+            return RuntimeState::TypeError;
+        // Apparently %= exists.
+        a.AsInteger %= b.AsInteger;
+    } break;
     case InstructionCode::Jump:
         --frame.InstructionIndex += instr.Arg0;
         break;
