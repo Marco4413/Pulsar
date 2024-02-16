@@ -163,7 +163,7 @@ size_t Pulsar::Lexer::SkipWhitespaces()
     for (; count < m_SourceView.Length() && std::isspace(m_SourceView[count]); count++) {
         if (m_SourceView[count] == '\n') {
             m_Line++;
-            m_LineStartIdx = m_SourceView.GetStart() + count;
+            m_LineStartIdx = m_SourceView.GetStart() + count+1 /* skip new line char */;
         }
     }
     m_SourceView.RemovePrefix(count);
@@ -181,6 +181,7 @@ size_t Pulsar::Lexer::SkipComments()
     ) return 0;
     size_t count = 0;
     for (; count < m_SourceView.Length() && m_SourceView[count] != '\n'; count++);
+    count++; // Skip new line
     m_SourceView.RemovePrefix(count);
     m_Line++;
     m_LineStartIdx = m_SourceView.GetStart();

@@ -16,7 +16,7 @@ std::ostream& operator<<(std::ostream& ostream, const Pulsar::Value& val)
 void PrintTokenView(const std::string& source, const Pulsar::Token& token)
 {
     Pulsar::StringView errorView(source);
-    errorView.RemovePrefix(token.SourcePos.Index-token.SourcePos.Char+1);
+    errorView.RemovePrefix(token.SourcePos.Index-token.SourcePos.Char);
     size_t lineChars = 0;
     for (; lineChars < errorView.Length() && errorView[lineChars] != '\r' && errorView[lineChars] != '\n'; lineChars++);
     std::printf("%.*s\n", (int)lineChars, errorView.CStringFrom(0));
@@ -28,7 +28,7 @@ void PrintPrettyError(const std::string& source, const char* filepath, const Pul
     PrintTokenView(source, token);
     const std::string tokenUnderline(token.SourcePos.CharSpan-1, '~');
     if (token.SourcePos.Char > 0)
-        std::printf("%*s", (int)token.SourcePos.Char-1, "");
+        std::printf("%*s", (int)token.SourcePos.Char, "");
     std::printf("^%s\n", tokenUnderline.c_str());
 }
 
