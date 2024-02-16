@@ -6,6 +6,11 @@ bool Pulsar::IsNumericValueType(ValueType vtype) {
     return vtype == ValueType::Integer || vtype == ValueType::Double;
 }
 
+bool Pulsar::IsReferenceValueType(ValueType vtype) {
+    return vtype == ValueType::FunctionReference
+        || vtype == ValueType::NativeFunctionReference;
+}
+
 size_t Pulsar::Module::BindNativeFunction(const FunctionDefinition& def, NativeFunction func)
 {
     if (NativeFunctions.size() != NativeBindings.size())
@@ -122,6 +127,12 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
     case InstructionCode::PushDbl:
         frame.OperandStack.emplace_back(*(double*)&instr.Arg0);
         break;
+    case InstructionCode::PushFunctionReference:
+        frame.OperandStack.emplace_back(instr.Arg0, ValueType::FunctionReference);
+        break;
+    case InstructionCode::PushNativeFunctionReference:
+        frame.OperandStack.emplace_back(instr.Arg0, ValueType::NativeFunctionReference);
+        break;
     case InstructionCode::PushLocal:
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= frame.Locals.size())
             return RuntimeState::OutOfBoundsLocalIndex;
@@ -165,6 +176,38 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
     case InstructionCode::Return:
         frame.InstructionIndex = frame.Function.Code.size();
         break;
+    case InstructionCode::ICall: {
+        if (frame.OperandStack.size() < 1)
+            return RuntimeState::StackUnderflow;
+        Value funcIdxValue = std::move(frame.OperandStack.back());
+        if (funcIdxValue.Type == ValueType::FunctionReference) {
+            int64_t funcIdx = funcIdxValue.AsInteger;
+            if (funcIdx < 0 || (size_t)funcIdx >= Functions.size())
+                return RuntimeState::OutOfBoundsFunctionIndex;
+            Frame callFrame{ Functions[funcIdx] };
+            auto res = PrepareCallFrame(frame.OperandStack, callFrame);
+            if (res != RuntimeState::OK)
+                return res;
+            eContext.CallStack.push_back(std::move(callFrame));
+            break;
+        } else if (funcIdxValue.Type == ValueType::NativeFunctionReference) {
+            if (NativeBindings.size() != NativeFunctions.size())
+                return RuntimeState::NativeFunctionBindingsMismatch;
+            int64_t funcIdx = funcIdxValue.AsInteger;
+            if (funcIdx < 0 || (size_t)funcIdx >= NativeBindings.size())
+                return RuntimeState::OutOfBoundsFunctionIndex;
+            if (!NativeFunctions[funcIdx])
+                return RuntimeState::UnboundNativeFunction;
+
+            Frame callFrame{ NativeBindings[funcIdx] };
+            auto res = PrepareCallFrame(frame.OperandStack, callFrame);
+            if (res != RuntimeState::OK)
+                return res;
+            eContext.CallStack.push_back(std::move(callFrame));
+            return NativeFunctions[funcIdx](eContext);
+        }
+        return RuntimeState::TypeError;
+    }
     case InstructionCode::DynSum: {
         if (frame.OperandStack.size() < 2)
             return RuntimeState::StackUnderflow;

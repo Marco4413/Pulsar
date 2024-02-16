@@ -11,16 +11,13 @@
 namespace Pulsar
 {
     enum class InstructionCode {
-        PushInt,
-        PushDbl,
-        PushLocal,
-        PopIntoLocal,
-        Call,
-        CallNative,
-        Return,
-        DynSum,
-        DynSub,
-        DynMul,
+        PushInt, PushDbl,
+        PushFunctionReference,
+        PushNativeFunctionReference,
+        PushLocal, PopIntoLocal,
+        Call, CallNative, Return,
+        ICall,
+        DynSum, DynSub, DynMul,
         Compare,
         Jump,
         JumpIfZero,
@@ -119,17 +116,21 @@ namespace Pulsar
 
     enum class ValueType
     {
-        Void, Integer, Double
+        Void, Integer, Double,
+        FunctionReference, NativeFunctionReference
     };
 
     bool IsNumericValueType(ValueType vtype);
+    bool IsReferenceValueType(ValueType vtype);
 
     struct Value
     {
         Value()
             : Type(ValueType::Void), AsInteger(0) { }
         Value(int64_t val)
-            : Type(ValueType::Integer), AsInteger(val) { }
+            : Value(val, ValueType::Integer) { }
+        Value(int64_t val, ValueType type)
+            : Type(type), AsInteger(val) { }
         Value(double val)
             : Type(ValueType::Double), AsDouble(val) { }
 
