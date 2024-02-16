@@ -141,7 +141,7 @@ Functions take some arguments from the caller's stack and return some.
 A function definition looks like this:
 
 ```lisp
-*(func-name arg0 arg1 ... argN) -> M:
+*(func-name arg1 arg2 ... argN) -> M:
     // Do Stuff
     .
 ```
@@ -160,7 +160,7 @@ Then they must be bound before running the Pulsar module
 within the native implementation.
 
 ```lisp
-*(*native-func-name arg0 arg1 ... argN) -> M.
+*(*native-func-name arg1 arg2 ... argN) -> M.
 ```
 
 Signatures must match so that the right amount of arguments
