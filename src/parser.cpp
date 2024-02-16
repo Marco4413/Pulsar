@@ -82,8 +82,6 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
         case TokenType::FullStop:
             PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
             func.Code.emplace_back(InstructionCode::Return);
-            if (scopedLocals.size() > func.LocalsCount)
-                func.LocalsCount = scopedLocals.size();
             return ParseResult::OK;
         case TokenType::Plus:
             PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
@@ -123,6 +121,8 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
                     scopedLocals.push_back(curToken.StringVal);
                 }
             }
+            if (scopedLocals.size() > func.LocalsCount)
+                func.LocalsCount = scopedLocals.size();
             func.Code.emplace_back(InstructionCode::PopIntoLocal, localIdx);
         } break;
         case TokenType::OpenParenth: {
