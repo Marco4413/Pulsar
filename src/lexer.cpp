@@ -65,6 +65,10 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
             if (m_SourceView.Length() > 1 && m_SourceView[1] == '>')
                 return TrimToToken(2, TokenType::RightArrow);
             return TrimToToken(1, TokenType::Minus);
+        case '/':
+            return TrimToToken(1, TokenType::Slash);
+        case '%':
+            return TrimToToken(1, TokenType::Modulus);
         case '=':
             return TrimToToken(1, TokenType::Equals);
         case '<':
@@ -204,6 +208,10 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
         return "Minus";
     case TokenType::Star:
         return "Star";
+    case TokenType::Slash:
+        return "Slash";
+    case TokenType::Modulus:
+        return "Modulus";
     case TokenType::FullStop:
         return "FullStop";
     case TokenType::Negate:
