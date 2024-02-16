@@ -77,8 +77,6 @@ last one to be performed!
 The Modulus operator is the only exception to the rule.
 It only accepts `Integer`s.
 
-The Divide and Modulus operator are planned but yet to be implemented.
-
 ## Comparison Operators
 
 | Symbol |   Name   | Args | Returns |
