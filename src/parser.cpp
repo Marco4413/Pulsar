@@ -191,6 +191,9 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDef
 
         if (curToken.Type != TokenType::Colon) {
             switch (curToken.Type) {
+            case TokenType::Equals:
+                jmpInstrCode = InstructionCode::JumpIfNotZero;
+                break;
             case TokenType::NotEquals:
                 jmpInstrCode = InstructionCode::JumpIfZero;
                 break;
