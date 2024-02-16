@@ -38,6 +38,17 @@ runtime to call functions.
 Now that these premises (and examples) *should* have helped you get the
 gist of Pulsar, we can get to the meat of it.
 
+## Comments
+
+Two types of comments exist.
+
+The line comment `//` which comments out an entire line.
+
+And the character comment `;` which can be used to improve code readability
+by *visually* separating *logical* expressions.
+
+i.e. `10 -> x; x` is more readable than `10 -> x x`.
+
 ## Datatypes
 
 Pulsar is dynamically-typed, any value can be assigned to any local.
