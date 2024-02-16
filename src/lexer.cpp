@@ -68,8 +68,12 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
         case '=':
             return TrimToToken(1, TokenType::Equals);
         case '<':
-            if (m_SourceView.Length() > 1 && m_SourceView[1] == '=')
-                return TrimToToken(2, TokenType::LessOrEqual);
+            if (m_SourceView.Length() > 1) {
+                if (m_SourceView[1] == '=')
+                    return TrimToToken(2, TokenType::LessOrEqual);
+                else if (m_SourceView[1] == '&')
+                    return TrimToToken(2, TokenType::PushReference);
+            }
             return TrimToToken(1, TokenType::Less);
         case '>':
             if (m_SourceView.Length() > 1 && m_SourceView[1] == '=')
@@ -220,12 +224,16 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
         return "More";
     case TokenType::MoreOrEqual:
         return "MoreOrEqual";
+    case TokenType::PushReference:
+        return "PushReference";
     case TokenType::KW_If:
         return "KW_If";
     case TokenType::KW_Else:
         return "KW_Else";
     case TokenType::KW_End:
         return "KW_End";
+    case TokenType::KW_ICall:
+        return "KW_ICall";
     case TokenType::EndOfFile:
         return "EndOfFile";
     }
