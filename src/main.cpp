@@ -15,7 +15,7 @@ std::ostream& operator<<(std::ostream& ostream, const Pulsar::Value& val)
 
 void PrintTokenView(const std::string& source, const Pulsar::Token& token)
 {
-    Pulsar::Structures::StringView errorView(source);
+    Pulsar::StringView errorView(source);
     errorView.RemovePrefix(token.SourcePos.Index-token.SourcePos.Char+1);
     size_t lineChars = 0;
     for (; lineChars < errorView.Length() && errorView[lineChars] != '\r' && errorView[lineChars] != '\n'; lineChars++);

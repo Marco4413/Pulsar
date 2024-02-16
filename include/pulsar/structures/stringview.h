@@ -4,7 +4,7 @@
 #include <cinttypes>
 #include <string>
 
-namespace Pulsar::Structures
+namespace Pulsar
 {
     class StringView
     {

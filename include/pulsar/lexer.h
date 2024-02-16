@@ -116,7 +116,7 @@ namespace Pulsar
         }
     private:
         const std::string m_Source;
-        Structures::StringView m_SourceView;
+        StringView m_SourceView;
         Token m_Token = Token(TokenType::None);
         size_t m_Line = 0;
         size_t m_LineStartIdx = 0;
