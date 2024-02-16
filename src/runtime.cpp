@@ -180,6 +180,7 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         if (frame.OperandStack.size() < 1)
             return RuntimeState::StackUnderflow;
         Value funcIdxValue = std::move(frame.OperandStack.back());
+        frame.OperandStack.pop_back();
         if (funcIdxValue.Type == ValueType::FunctionReference) {
             int64_t funcIdx = funcIdxValue.AsInteger;
             if (funcIdx < 0 || (size_t)funcIdx >= Functions.size())
