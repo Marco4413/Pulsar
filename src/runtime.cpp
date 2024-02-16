@@ -48,16 +48,12 @@ Pulsar::RuntimeState Pulsar::Module::CallFunction(int64_t funcIdx, Stack& stack,
     if (funcIdx < 0 || (size_t)funcIdx >= Functions.size())
         return RuntimeState::OutOfBoundsFunctionIndex;
 
-    context.CallStack.emplace_back(Functions[funcIdx]);
     { // Create Frame
+        context.CallStack.emplace_back(Functions[funcIdx]);
         Frame& thisFrame = context.CallStack[0];
-        if (stack.size() < thisFrame.Function.Arity)
-            return RuntimeState::StackUnderflow;
-        thisFrame.Locals.resize(thisFrame.Function.LocalsCount);
-        for (size_t i = 0; i < thisFrame.Function.Arity; i++) {
-            thisFrame.Locals[thisFrame.Function.Arity-i-1] = std::move(stack.back());
-            stack.pop_back();
-        }
+        auto res = PrepareCallFrame(stack, thisFrame);
+        if (res != RuntimeState::OK)
+            return res;
     }
 
     for (;;) {
@@ -104,6 +100,18 @@ Pulsar::RuntimeState Pulsar::Module::CallFunction(int64_t funcIdx, Stack& stack,
     return RuntimeState::OK;
 }
 
+Pulsar::RuntimeState Pulsar::Module::PrepareCallFrame(Stack& callerStack, Frame& callingFrame) const
+{
+    if (callerStack.size() < callingFrame.Function.Arity)
+        return RuntimeState::StackUnderflow;
+    callingFrame.Locals.resize(callingFrame.Function.LocalsCount);
+    for (size_t i = 0; i < callingFrame.Function.Arity; i++) {
+        callingFrame.Locals[callingFrame.Function.Arity-i-1] = std::move(callerStack.back());
+        callerStack.pop_back();
+    }
+    return RuntimeState::OK;
+}
+
 Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionContext& eContext) const
 {
     const Instruction& instr = frame.Function.Code[frame.InstructionIndex++];
@@ -133,13 +141,9 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             return RuntimeState::OutOfBoundsFunctionIndex;
 
         Frame callFrame{ Functions[funcIdx] };
-        if (frame.OperandStack.size() < callFrame.Function.Arity)
-            return RuntimeState::StackUnderflow;
-        callFrame.Locals.resize(callFrame.Function.LocalsCount);
-        for (size_t i = 0; i < callFrame.Function.Arity; i++) {
-            callFrame.Locals[callFrame.Function.Arity-i-1] = std::move(frame.OperandStack.back());
-            frame.OperandStack.pop_back();
-        }
+        auto res = PrepareCallFrame(frame.OperandStack, callFrame);
+        if (res != RuntimeState::OK)
+            return res;
         eContext.CallStack.push_back(std::move(callFrame));
     } break;
     case InstructionCode::CallNative: {
@@ -152,13 +156,9 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             return RuntimeState::UnboundNativeFunction;
 
         Frame callFrame{ NativeBindings[funcIdx] };
-        if (frame.OperandStack.size() < callFrame.Function.Arity)
-            return RuntimeState::StackUnderflow;
-        callFrame.Locals.resize(callFrame.Function.LocalsCount);
-        for (size_t i = 0; i < callFrame.Function.Arity; i++) {
-            callFrame.Locals[callFrame.Function.Arity-i-1] = std::move(frame.OperandStack.back());
-            frame.OperandStack.pop_back();
-        }
+        auto res = PrepareCallFrame(frame.OperandStack, callFrame);
+        if (res != RuntimeState::OK)
+            return res;
         eContext.CallStack.push_back(std::move(callFrame));
         return NativeFunctions[funcIdx](eContext);
     }

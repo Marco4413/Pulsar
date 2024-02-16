@@ -210,6 +210,7 @@ namespace Pulsar
         std::vector<FunctionDefinition> NativeBindings;
         std::vector<NativeFunction> NativeFunctions;
     private:
+        RuntimeState PrepareCallFrame(Stack& callerStack, Frame& callingFrame) const;
         RuntimeState ExecuteInstruction(Frame& frame, ExecutionContext& eContext) const;
     };
 }
