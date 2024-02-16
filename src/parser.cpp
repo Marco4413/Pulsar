@@ -95,6 +95,14 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
             PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
             func.Code.emplace_back(InstructionCode::DynMul);
             break;
+        case TokenType::Slash:
+            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
+            func.Code.emplace_back(InstructionCode::DynDiv);
+            break;
+        case TokenType::Modulus:
+            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
+            func.Code.emplace_back(InstructionCode::Mod);
+            break;
         case TokenType::PushReference: {
             m_Lexer.NextToken();
             if (curToken.Type == TokenType::Identifier) {
