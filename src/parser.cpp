@@ -1,14 +1,5 @@
 #include "pulsar/parser.h"
 
-#define EXPECT_TOKEN_TYPE(token, type) \
-    do {                                         \
-        if ((token).Type != type)                \
-            return SetError(                     \
-                ParseResult::UnexpectedToken,    \
-                (token),                         \
-                "Unexpected token.");            \
-    } while (false)
-
 Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, bool debugSymbols)
 {
     ParseResult result = ParseResult::OK;
@@ -23,15 +14,18 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, bool
     const Token& curToken = m_Lexer.NextToken();
     if (curToken.Type == TokenType::EndOfFile)
         return ParseResult::OK;
-    else EXPECT_TOKEN_TYPE(curToken, TokenType::Star);
+    else if (curToken.Type != TokenType::Star)
+        return SetError(ParseResult::UnexpectedToken, curToken, "Expected '*' to begin function declaration.");
 
     m_Lexer.NextToken();
-    EXPECT_TOKEN_TYPE(curToken, TokenType::OpenParenth);
+    if (curToken.Type != TokenType::OpenParenth)
+        return SetError(ParseResult::UnexpectedToken, curToken, "Expected '(' to open function name and args declaration.");
     m_Lexer.NextToken();
     bool isNative = curToken.Type == TokenType::Star;
     if (isNative) m_Lexer.NextToken();
 
-    EXPECT_TOKEN_TYPE(curToken, TokenType::Identifier);
+    if (curToken.Type != TokenType::Identifier)
+        return SetError(ParseResult::UnexpectedToken, curToken, "Expected function identifier.");
     FunctionDefinition def = { curToken.StringVal, 0, 0 };
     if (debugSymbols) def.FunctionDebugSymbol = {curToken};
 
@@ -46,22 +40,27 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, bool
     def.Arity = args.size();
     def.LocalsCount = args.size();
 
-    EXPECT_TOKEN_TYPE(curToken, TokenType::CloseParenth);
+    if (curToken.Type != TokenType::CloseParenth)
+        return SetError(ParseResult::UnexpectedToken, curToken, "Expected ')' to close function name and args declaration.");
     m_Lexer.NextToken();
     if (curToken.Type == TokenType::RightArrow) {
         m_Lexer.NextToken();
-        EXPECT_TOKEN_TYPE(curToken, TokenType::IntegerLiteral);
-        if (curToken.IntegerVal < 0)
+        if (curToken.Type != TokenType::IntegerLiteral)
+            return SetError(ParseResult::UnexpectedToken, curToken, "Expected return count.");
+        else if (curToken.IntegerVal < 0)
             return SetError(ParseResult::NegativeResultCount, curToken, "Illegal return count. Return count must be >= 0");
         def.Returns = (size_t)curToken.IntegerVal;
         m_Lexer.NextToken();
     }
 
     if (isNative) {
-        EXPECT_TOKEN_TYPE(curToken, TokenType::FullStop);
+        if (curToken.Type != TokenType::FullStop)
+            return SetError(ParseResult::UnexpectedToken, curToken,
+                "Expected '.' to confirm native function declaration. Native functions can't have a body.");
         module.NativeBindings.push_back(std::move(def));
     } else {
-        EXPECT_TOKEN_TYPE(curToken, TokenType::Colon);
+        if (curToken.Type != TokenType::Colon)
+            return SetError(ParseResult::UnexpectedToken, curToken, "Expected '->' for return count declaration or ':' to begin function body.");
         ParseResult bodyParseResult = ParseFunctionBody(module, def, args, debugSymbols);
         if (bodyParseResult != ParseResult::OK)
             return bodyParseResult;
@@ -150,7 +149,8 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
             m_Lexer.NextToken();
             bool forceBinding = curToken.Type == TokenType::Negate;
             if (forceBinding) m_Lexer.NextToken();
-            EXPECT_TOKEN_TYPE(curToken, TokenType::Identifier);
+            if (curToken.Type != TokenType::Identifier)
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expected identifier to create local binding.");
 
             int64_t localIdx = 0;
             if (forceBinding) {
@@ -174,8 +174,11 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
             if (isNative) m_Lexer.NextToken();
             PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
             Token identToken = curToken;
-            EXPECT_TOKEN_TYPE(identToken, TokenType::Identifier);
-            EXPECT_TOKEN_TYPE(m_Lexer.NextToken(), TokenType::CloseParenth);
+            if (identToken.Type != TokenType::Identifier)
+                return SetError(ParseResult::UnexpectedToken, identToken, "Expected function name for function call.");
+            m_Lexer.NextToken();
+            if (curToken.Type != TokenType::CloseParenth)
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expected ')' to close function call.");
             
             if (isNative) {
                 int64_t funcIdx = (int64_t)module.NativeBindings.size()-1;
@@ -257,7 +260,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDef
                 jmpInstrCode = InstructionCode::JumpIfLessThanZero;
                 break;
             default:
-                return SetError(ParseResult::UnexpectedToken, curToken, "Expected block start or comparison operator.");
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expected if body start ':' or comparison operator.");
             }
 
             comparisonToken = curToken;
@@ -277,8 +280,9 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDef
         } else isSelfContained = false;
     }
 
-    EXPECT_TOKEN_TYPE(curToken, TokenType::Colon);
-    if (comparisonToken.Type != TokenType::None) {
+    if (curToken.Type != TokenType::Colon)
+        return SetError(ParseResult::UnexpectedToken, curToken, "Expected ':' to begin if statement body.");
+    else if (comparisonToken.Type != TokenType::None) {
         PUSH_CODE_SYMBOL(debugSymbols, func, ifToken);
         func.Code.emplace_back(InstructionCode::Compare);
     }
@@ -314,7 +318,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDef
                 return res;
             const Token& curToken = m_Lexer.CurrentToken();
             if (curToken.Type != TokenType::KW_End)
-                return SetError(ParseResult::UnexpectedToken, curToken, "'end' expected.");
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'end'.");
         }
 
         func.Code[elseIdx].Arg0 = func.Code.size() - elseIdx;
@@ -349,7 +353,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
     } break;
     default:
         // We should never get here
-        return ParseResult::UnexpectedToken;
+        return SetError(ParseResult::Error, lvalue, "Pulsar::Parser::PushLValue internal error.");
     }
     return ParseResult::OK;
 }
