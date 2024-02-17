@@ -1,0 +1,4 @@
+[submodule "libs/fmt"]
+	path = libs/fmt
+	url = https://github.com/Marco4413/fmt
+	shallow = true

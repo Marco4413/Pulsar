@@ -9,6 +9,7 @@ workspace "pulsar"
    startproject "pulsar-dev"
 
 include "pulsar"
+include "libs"
 
 project "pulsar-dev"
    kind "ConsoleApp"
@@ -18,9 +19,9 @@ project "pulsar-dev"
    location "build"
    targetdir "%{prj.location}/%{cfg.buildcfg}"
 
-   includedirs "include"
+   includedirs { "include", "libs/fmt/include" }
    files "src/main.cpp"
-   links "pulsar"
+   links { "pulsar", "fmt" }
 
    filter "toolset:gcc"
       buildoptions { "-Wall", "-Wextra", "-Wpedantic", "-Werror" }
