@@ -167,6 +167,19 @@ int main(int argc, const char** argv)
             return Pulsar::RuntimeState::OK;
         });
 
+    module.BindNativeFunction({ "stack-dump", 0, 0 },
+        [](Pulsar::ExecutionContext& eContext)
+        {
+            Pulsar::Frame* frame = eContext.GetCallingFrame();
+            fmt::print("Stack Dump: [");
+            for (size_t i = 0; i < frame->OperandStack.size(); i++) {
+                if (i > 0) fmt::print(",");
+                fmt::print(" {}", frame->OperandStack[i]);
+            }
+            fmt::println(" ]");
+            return Pulsar::RuntimeState::OK;
+        });
+
     Pulsar::Stack stack;
     Pulsar::ExecutionContext context = module.CreateExecutionContext();
     auto runtimeState = module.CallFunctionByName("main", stack, context);
