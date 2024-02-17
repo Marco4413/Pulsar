@@ -14,6 +14,12 @@ I wanted to have a second attempt at creating a programming language.
 
 It can be found within the [DOCUMENTATION.md](DOCUMENTATION.md) file.
 
+## Dependencies
+
+**None!** Except for the `pulsar-dev` project which uses `fmt` for pretty printing.
+
+The Language itself has no dependencies except for the C++20 standard library.
+
 ## Building
 
 This project uses `premake5` as its build system.
