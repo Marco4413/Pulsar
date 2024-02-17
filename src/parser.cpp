@@ -20,47 +20,48 @@ Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, bool debugSy
 
 Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, bool debugSymbols)
 {
-    Token starToken = m_Lexer.NextToken();
-    if (starToken.Type == TokenType::EndOfFile)
+    const Token& curToken = m_Lexer.NextToken();
+    if (curToken.Type == TokenType::EndOfFile)
         return ParseResult::OK;
-    else EXPECT_TOKEN_TYPE(starToken, TokenType::Star);
+    else EXPECT_TOKEN_TYPE(curToken, TokenType::Star);
 
-    EXPECT_TOKEN_TYPE(m_Lexer.NextToken(), TokenType::OpenParenth);
-    Token identToken = m_Lexer.NextToken();
-    bool isNative = identToken.Type == TokenType::Star;
-    if (isNative) identToken = m_Lexer.NextToken();
-    EXPECT_TOKEN_TYPE(identToken, TokenType::Identifier);
+    m_Lexer.NextToken();
+    EXPECT_TOKEN_TYPE(curToken, TokenType::OpenParenth);
+    m_Lexer.NextToken();
+    bool isNative = curToken.Type == TokenType::Star;
+    if (isNative) m_Lexer.NextToken();
 
-    Token argToken = m_Lexer.NextToken();
+    EXPECT_TOKEN_TYPE(curToken, TokenType::Identifier);
+    FunctionDefinition def = { curToken.StringVal, 0, 0 };
+    if (debugSymbols) def.FunctionDebugSymbol = {curToken};
+
+    m_Lexer.NextToken();
     LocalsBindings args;
     for (;;) {
-        if (argToken.Type != TokenType::Identifier)
+        if (curToken.Type != TokenType::Identifier)
             break;
-        args.push_back(std::move(argToken.StringVal));
-        argToken = m_Lexer.NextToken();
+        args.push_back(std::move(curToken.StringVal));
+        m_Lexer.NextToken();
     }
+    def.Arity = args.size();
+    def.LocalsCount = args.size();
 
-    EXPECT_TOKEN_TYPE(argToken, TokenType::CloseParenth);
-    size_t returnCount = 0;
-    Token bodyStartToken = m_Lexer.NextToken();
-    if (bodyStartToken.Type == TokenType::RightArrow) {
-        Token returnCountToken = m_Lexer.NextToken();
-        EXPECT_TOKEN_TYPE(returnCountToken, TokenType::IntegerLiteral);
-        if (returnCountToken.IntegerVal < 0)
-            return SetError(ParseResult::NegativeResultCount, returnCountToken, "Illegal return count. Return count must be >= 0");
-        returnCount = (size_t)returnCountToken.IntegerVal;
-        bodyStartToken = m_Lexer.NextToken();
+    EXPECT_TOKEN_TYPE(curToken, TokenType::CloseParenth);
+    m_Lexer.NextToken();
+    if (curToken.Type == TokenType::RightArrow) {
+        m_Lexer.NextToken();
+        EXPECT_TOKEN_TYPE(curToken, TokenType::IntegerLiteral);
+        if (curToken.IntegerVal < 0)
+            return SetError(ParseResult::NegativeResultCount, curToken, "Illegal return count. Return count must be >= 0");
+        def.Returns = (size_t)curToken.IntegerVal;
+        m_Lexer.NextToken();
     }
-
-    FunctionDefinition def = { "", args.size(), returnCount };
-    if (debugSymbols) def.FunctionDebugSymbol = {identToken};
-    def.Name = std::move(identToken.StringVal);
 
     if (isNative) {
-        EXPECT_TOKEN_TYPE(bodyStartToken, TokenType::FullStop);
+        EXPECT_TOKEN_TYPE(curToken, TokenType::FullStop);
         module.NativeBindings.push_back(std::move(def));
     } else {
-        EXPECT_TOKEN_TYPE(bodyStartToken, TokenType::Colon);
+        EXPECT_TOKEN_TYPE(curToken, TokenType::Colon);
         ParseResult bodyParseResult = ParseFunctionBody(module, def, args, debugSymbols);
         if (bodyParseResult != ParseResult::OK)
             return bodyParseResult;
