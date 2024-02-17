@@ -1,54 +1,100 @@
-#include <cstdio>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <string>
 
+#include "fmt/color.h"
 #include "pulsar/parser.h"
 
-std::ostream& operator<<(std::ostream& ostream, const Pulsar::Value& val)
+template <>
+struct fmt::formatter<Pulsar::Value> : formatter<string_view>
 {
-    if (val.Type == Pulsar::ValueType::Double)
-        return ostream << val.AsDouble;
-    return ostream << val.AsInteger;
-}
+    auto format(const Pulsar::Value& val, format_context& ctx) const
+    {
+        if (val.Type == Pulsar::ValueType::Double)
+            return fmt::format_to(ctx.out(), "{}", val.AsDouble);
+        return fmt::format_to(ctx.out(), "{}", val.AsInteger);
+    }
+};
 
-void PrintTokenView(const std::string& source, const Pulsar::Token& token)
+template <>
+struct fmt::formatter<Pulsar::StringView> : formatter<string_view>
+{
+    auto format(const Pulsar::StringView& val, format_context& ctx) const
+    {
+        return fmt::format_to(ctx.out(), "{:.{}}", val.CStringFrom(0), val.Length());
+    }
+};
+
+struct TokenViewRange { size_t Before; size_t After; };
+#define DEFAULT_VIEW_RANGE TokenViewRange{20, 20}
+
+size_t PrintTokenView(fmt::memory_buffer& out, const std::string& source, const Pulsar::Token& token, TokenViewRange viewRange)
 {
     Pulsar::StringView errorView(source);
     errorView.RemovePrefix(token.SourcePos.Index-token.SourcePos.Char);
     size_t lineChars = 0;
     for (; lineChars < errorView.Length() && errorView[lineChars] != '\r' && errorView[lineChars] != '\n'; lineChars++);
-    std::printf("%.*s\n", (int)lineChars, errorView.CStringFrom(0));
+    errorView.RemoveSuffix(errorView.Length()-lineChars);
+
+    size_t charsAfterToken = errorView.Length()-token.SourcePos.Char - token.SourcePos.CharSpan;
+    size_t trimmedFromStart = 0;
+    if (token.SourcePos.Char > viewRange.Before) {
+        trimmedFromStart = token.SourcePos.Char - viewRange.Before;
+        errorView.RemovePrefix(trimmedFromStart);
+    }
+
+    size_t trimmedFromEnd = 0;
+    if (charsAfterToken > viewRange.After) {
+        trimmedFromEnd = charsAfterToken - viewRange.After;
+        errorView.RemoveSuffix(trimmedFromEnd);
+    }
+    
+    auto outIt = std::back_inserter(out);
+    if (trimmedFromStart > 0)
+        fmt::format_to(outIt, "... ");
+    fmt::format_to(outIt, "{}", errorView);
+    if (trimmedFromEnd > 0)
+        fmt::format_to(outIt, " ...");
+    return trimmedFromStart;
 }
 
-void PrintPrettyError(const std::string& source, const char* filepath, const Pulsar::Token& token, const std::string& message)
+void PrintPrettyError(
+    fmt::memory_buffer& out,
+    const std::string& source, const char* filepath,
+    const Pulsar::Token& token, const std::string& message,
+    TokenViewRange viewRange)
 {
-    std::printf("%s:%lu:%lu: Error: %s\n", filepath, token.SourcePos.Line+1, token.SourcePos.Char, message.c_str());
-    PrintTokenView(source, token);
-    const std::string tokenUnderline(token.SourcePos.CharSpan-1, '~');
-    if (token.SourcePos.Char > 0)
-        std::printf("%*s", (int)token.SourcePos.Char, "");
-    std::printf("^%s\n", tokenUnderline.c_str());
+    fmt::format_to(std::back_inserter(out), "{}:{}:{}: Error: {}\n", filepath, token.SourcePos.Line+1, token.SourcePos.Char, message.c_str());
+    size_t trimmedFromStart = PrintTokenView(out, source, token, viewRange);
+    size_t charsToToken = token.SourcePos.Char-trimmedFromStart + (trimmedFromStart > 0 ? 4 : 0);
+    fmt::format_to(std::back_inserter(out), fmt::fg(fmt::color::red), "\n{0: ^{1}}^{0:~^{2}}", "", charsToToken, token.SourcePos.CharSpan-1);
 }
 
-void PrintPrettyRuntimeError(const std::string& source, const char* filepath, const Pulsar::ExecutionContext& context)
+void PrintPrettyRuntimeError(
+    fmt::memory_buffer& out,
+    const std::string& source, const char* filepath,
+    const Pulsar::ExecutionContext& context,
+    TokenViewRange viewRange)
 {
     if (context.CallStack.size() == 0) {
-        std::cout << "No Runtime Error Information." << std::endl;
+        fmt::format_to(std::back_inserter(out), "No Runtime Error Information.");
         return;
     }
 
     const Pulsar::Frame& frame = context.GetCurrentFrame();
     if (!frame.Function->HasDebugSymbol()) {
-        std::cout << "Error: Within function " << frame.Function->Name << std::endl;
-        std::cout << "    No Code Debug Symbols found." << std::endl;
+        fmt::format_to(
+            std::back_inserter(out),
+            "Error: Within function {}\n"
+            "    No Code Debug Symbols found.",
+            frame.Function->Name);
         return;
     } else if (!frame.Function->HasCodeDebugSymbols()) {
         PrintPrettyError(
-            source, filepath,
+            out, source, filepath,
             frame.Function->FunctionDebugSymbol.Token,
-            "Within function " + frame.Function->Name);
+            "Within function " + frame.Function->Name,
+            viewRange);
         return;
     }
 
@@ -60,7 +106,11 @@ void PrintPrettyRuntimeError(const std::string& source, const char* filepath, co
         symbolIdx = i;
     }
 
-    PrintPrettyError(source, filepath, frame.Function->CodeDebugSymbols[symbolIdx].Token, "In function " + frame.Function->Name);
+    PrintPrettyError(
+        out, source, filepath,
+        frame.Function->CodeDebugSymbols[symbolIdx].Token,
+        "In function " + frame.Function->Name,
+        viewRange);
 }
 
 int main(int argc, const char** argv)
@@ -69,13 +119,13 @@ int main(int argc, const char** argv)
     --argc;
 
     if (argc == 0) {
-        std::cout << "No input file provided to " << executable << "." << std::endl;
+        fmt::println("No input file provided to {}.", executable);
         return 1;
     }
 
     const char* program = *argv;
     if (!std::filesystem::exists(program)) {
-        std::cout << program << " not found." << std::endl;
+        fmt::println("{} not found.", program);
         return 1;
     }
 
@@ -90,8 +140,13 @@ int main(int argc, const char** argv)
     Pulsar::Parser parser(source);
     auto result = parser.ParseIntoModule(module, true);
     if (result != Pulsar::ParseResult::OK) {
-        PrintPrettyError(parser.GetSource(), program, parser.GetLastErrorToken(), parser.GetLastErrorMessage());
-        std::cout << "Parse Error: " << (int)result << std::endl;
+        fmt::memory_buffer prettyError;
+        PrintPrettyError(
+            prettyError, parser.GetSource(), program,
+            parser.GetLastErrorToken(), parser.GetLastErrorMessage(),
+            DEFAULT_VIEW_RANGE);
+        fmt::println("{:.{}}", prettyError.data(), prettyError.size());
+        fmt::println("Parse Error: {}", (int)result);
         return 1;
     }
 
@@ -100,7 +155,7 @@ int main(int argc, const char** argv)
         {
             Pulsar::Frame& frame = eContext.GetCurrentFrame();
             Pulsar::Value& val = frame.Locals[0];
-            std::cout << val << std::endl;
+            fmt::println("{}", val);
             return Pulsar::RuntimeState::OK;
         });
 
@@ -108,7 +163,7 @@ int main(int argc, const char** argv)
         [](Pulsar::ExecutionContext& eContext)
         {
             (void) eContext;
-            std::cout << "Hello from C++!" << std::endl;
+            fmt::println("Hello from C++!");
             return Pulsar::RuntimeState::OK;
         });
 
@@ -116,15 +171,19 @@ int main(int argc, const char** argv)
     Pulsar::ExecutionContext context = module.CreateExecutionContext();
     auto runtimeState = module.CallFunctionByName("main", stack, context);
 
-    std::cout << "Runtime State: " << Pulsar::RuntimeStateToString(runtimeState) << std::endl;
+    fmt::println("Runtime State: {}", Pulsar::RuntimeStateToString(runtimeState));
     if (runtimeState != Pulsar::RuntimeState::OK) {
-        PrintPrettyRuntimeError(parser.GetSource(), program, context);
+        fmt::memory_buffer prettyError;
+        PrintPrettyRuntimeError(
+            prettyError, parser.GetSource(), program,
+            context, DEFAULT_VIEW_RANGE);
+        fmt::println("{:.{}}", prettyError.data(), prettyError.size());
         return 1;
     }
 
-    std::cout << "Stack Dump:" << std::endl;
+    fmt::println("Stack Dump:");
     for (size_t i = 0; i < stack.size(); i++)
-        std::cout << (i+1) << ". " << stack[i] << std::endl;
+        fmt::println("{}. {}", i+1, stack[i]);
 
     return 0;
 }
