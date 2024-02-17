@@ -13,13 +13,13 @@ namespace Pulsar
 
     constexpr bool IsNumericValueType(ValueType vtype)
     {
-        return vtype == ValueType::FunctionReference
-            || vtype == ValueType::NativeFunctionReference;
+        return vtype == ValueType::Integer || vtype == ValueType::Double;
     }
 
     constexpr bool IsReferenceValueType(ValueType vtype)
     {
-        return vtype == ValueType::Integer || vtype == ValueType::Double;
+        return vtype == ValueType::FunctionReference
+            || vtype == ValueType::NativeFunctionReference;
     }
 
     struct Value
