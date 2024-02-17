@@ -40,27 +40,27 @@ void PrintPrettyRuntimeError(const std::string& source, const char* filepath, co
     }
 
     const Pulsar::Frame& frame = context.GetCurrentFrame();
-    if (!frame.Function.HasDebugSymbol()) {
-        std::cout << "Error: Within function " << frame.Function.Name << std::endl;
+    if (!frame.Function->HasDebugSymbol()) {
+        std::cout << "Error: Within function " << frame.Function->Name << std::endl;
         std::cout << "    No Code Debug Symbols found." << std::endl;
         return;
-    } else if (!frame.Function.HasCodeDebugSymbols()) {
+    } else if (!frame.Function->HasCodeDebugSymbols()) {
         PrintPrettyError(
             source, filepath,
-            frame.Function.FunctionDebugSymbol.Token,
-            "Within function " + frame.Function.Name);
+            frame.Function->FunctionDebugSymbol.Token,
+            "Within function " + frame.Function->Name);
         return;
     }
 
     size_t symbolIdx = 0;
-    for (size_t i = 0; i < frame.Function.CodeDebugSymbols.size(); i++) {
+    for (size_t i = 0; i < frame.Function->CodeDebugSymbols.size(); i++) {
         // frame.InstructionIndex points to the NEXT instruction
-        if (frame.Function.CodeDebugSymbols[i].StartIdx >= frame.InstructionIndex)
+        if (frame.Function->CodeDebugSymbols[i].StartIdx >= frame.InstructionIndex)
             break;
         symbolIdx = i;
     }
 
-    PrintPrettyError(source, filepath, frame.Function.CodeDebugSymbols[symbolIdx].Token, "In function " + frame.Function.Name);
+    PrintPrettyError(source, filepath, frame.Function->CodeDebugSymbols[symbolIdx].Token, "In function " + frame.Function->Name);
 }
 
 int main(int argc, const char** argv)
