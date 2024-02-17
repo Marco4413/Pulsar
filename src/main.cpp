@@ -64,7 +64,7 @@ void PrintPrettyError(
     const Pulsar::Token& token, const std::string& message,
     TokenViewRange viewRange)
 {
-    fmt::format_to(std::back_inserter(out), "{}:{}:{}: Error: {}\n", filepath, token.SourcePos.Line+1, token.SourcePos.Char, message.c_str());
+    fmt::format_to(std::back_inserter(out), "{}:{}:{}: Error: {}\n", filepath, token.SourcePos.Line+1, token.SourcePos.Char+1, message.c_str());
     size_t trimmedFromStart = PrintTokenView(out, source, token, viewRange);
     size_t charsToToken = token.SourcePos.Char-trimmedFromStart + (trimmedFromStart > 0 ? 4 : 0);
     fmt::format_to(std::back_inserter(out), fmt::fg(fmt::color::red), "\n{0: ^{1}}^{0:~^{2}}", "", charsToToken, token.SourcePos.CharSpan-1);
