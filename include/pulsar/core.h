@@ -25,4 +25,12 @@
 #define PULSAR_MEMCPY std::memcpy
 #endif // PULSAR_MEMCPY
 
+#ifndef PULSAR_NEW
+#define PULSAR_NEW(T, ...) new T(__VA_ARGS__)
+#endif // PULSAR_NEW
+
+#ifndef PULSAR_DELETE
+#define PULSAR_DELETE(T, ptr) delete (ptr)
+#endif // PULSAR_DELETE
+
 #endif // _PULSAR_CORE_H
