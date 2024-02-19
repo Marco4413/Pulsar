@@ -1,7 +1,7 @@
 #ifndef _PULSAR_RUNTIME_DEBUG_H
 #define _PULSAR_RUNTIME_DEBUG_H
 
-#include <cinttypes>
+#include "pulsar/core.h"
 
 #include "pulsar/lexer.h"
 

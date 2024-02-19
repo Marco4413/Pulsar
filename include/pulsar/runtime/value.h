@@ -1,7 +1,7 @@
 #ifndef _PULSAR_RUNTIME_VALUE_H
 #define _PULSAR_RUNTIME_VALUE_H
 
-#include <cinttypes>
+#include "pulsar/core.h"
 
 namespace Pulsar
 {
