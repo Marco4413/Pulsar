@@ -1,10 +1,7 @@
 #ifndef _PULSAR_PARSER_H
 #define _PULSAR_PARSER_H
 
-#include <cinttypes>
-#include <string>
-#include <unordered_map>
-#include <vector>
+#include "pulsar/core.h"
 
 #include "pulsar/lexer.h"
 #include "pulsar/runtime.h"
@@ -25,16 +22,16 @@ namespace Pulsar
     class Parser
     {
     public:
-        typedef std::vector<std::string> LocalsBindings;
-        Parser(const std::string& src)
+        typedef std::vector<String> LocalsBindings;
+        Parser(const String& src)
             : m_Lexer(src) { }
-        Parser(std::string&& src)
+        Parser(String&& src)
             : m_Lexer(src) { }
 
         ParseResult ParseIntoModule(Module& module, bool debugSymbols=false);
-        const std::string& GetSource() const    { return m_Lexer.GetSource(); }
+        const String& GetSource() const    { return m_Lexer.GetSource(); }
         ParseResult GetLastError() const        { return m_LastError; }
-        const char* GetLastErrorMessage() const { return m_LastErrorMsg.c_str(); }
+        const char* GetLastErrorMessage() const { return m_LastErrorMsg.Data(); }
         const Token& GetLastErrorToken() const  { return m_LastErrorToken; }
     private:
         ParseResult ParseFunctionDefinition(Module& module, bool debugSymbols);
@@ -52,7 +49,7 @@ namespace Pulsar
         Lexer m_Lexer;
         ParseResult m_LastError = ParseResult::OK;
         Token m_LastErrorToken = Token(TokenType::None);
-        std::string m_LastErrorMsg = "";
+        String m_LastErrorMsg = "";
     };
 }
 

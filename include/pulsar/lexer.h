@@ -1,9 +1,7 @@
 #ifndef _PULSAR_LEXER_H
 #define _PULSAR_LEXER_H
 
-#include <cinttypes>
-#include <string>
-#include <unordered_map>
+#include "pulsar/core.h"
 
 #include "pulsar/structures/stringview.h"
 
@@ -33,7 +31,7 @@ namespace Pulsar
         KW_ICall
     };
 
-    static const std::unordered_map<std::string, TokenType> Keywords {
+    static const std::unordered_map<String, TokenType> Keywords {
         { "if", TokenType::KW_If },
         { "else", TokenType::KW_Else },
         { "end", TokenType::KW_End },
@@ -53,9 +51,9 @@ namespace Pulsar
     class Token
     {
     public:
-        Token(TokenType type, const std::string& val)
+        Token(TokenType type, const String& val)
             : Type(type), StringVal(val) { }
-        Token(TokenType type, std::string&& val)
+        Token(TokenType type, String&& val)
             : Type(type), StringVal(val) { }
 
         Token(TokenType type, int64_t val)
@@ -67,7 +65,7 @@ namespace Pulsar
     
     public:
         TokenType Type;
-        std::string StringVal = "";
+        String StringVal = "";
         int64_t IntegerVal = 0;
         double DoubleVal = 0.0;
         SourcePosition SourcePos = {0,0,0,0};
@@ -79,15 +77,15 @@ namespace Pulsar
     class Lexer
     {
     public:
-        Lexer(const std::string& src)
+        Lexer(const String& src)
             : m_Source(src), m_SourceView(m_Source) { }
-        Lexer(std::string&& src)
+        Lexer(String&& src)
             : m_Source(src), m_SourceView(m_Source) { }
 
         const Token& NextToken()             { m_Token = ParseNextToken(); return m_Token; }
         const Token& CurrentToken() const    { return m_Token; }
         bool IsEndOfFile() const             { return m_SourceView.Length() == 0; }
-        const std::string& GetSource() const { return m_Source; }
+        const String& GetSource() const { return m_Source; }
         SourcePosition GetSourcePosition(size_t span=0) const
             { return { m_Line, m_SourceView.GetStart() - m_LineStartIdx, m_SourceView.GetStart(), span }; }
     private:
@@ -115,7 +113,7 @@ namespace Pulsar
             return token;
         }
     private:
-        const std::string m_Source;
+        const String m_Source;
         StringView m_SourceView;
         Token m_Token = Token(TokenType::None);
         size_t m_Line = 0;

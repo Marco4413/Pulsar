@@ -1,9 +1,10 @@
 #include <filesystem>
 #include <fstream>
-#include <string>
 
 #include "fmt/color.h"
 #include "pulsar/parser.h"
+
+#include "pulsar/structures/string.h"
 
 template <>
 struct fmt::formatter<Pulsar::Value> : formatter<string_view>
@@ -13,6 +14,15 @@ struct fmt::formatter<Pulsar::Value> : formatter<string_view>
         if (val.Type == Pulsar::ValueType::Double)
             return fmt::format_to(ctx.out(), "{}", val.AsDouble);
         return fmt::format_to(ctx.out(), "{}", val.AsInteger);
+    }
+};
+
+template <>
+struct fmt::formatter<Pulsar::String> : formatter<string_view>
+{
+    auto format(const Pulsar::String& val, format_context& ctx) const
+    {
+        return fmt::format_to(ctx.out(), "{:.{}}", val.Data(), val.Length());
     }
 };
 
@@ -28,7 +38,7 @@ struct fmt::formatter<Pulsar::StringView> : formatter<string_view>
 struct TokenViewRange { size_t Before; size_t After; };
 #define DEFAULT_VIEW_RANGE TokenViewRange{20, 20}
 
-size_t PrintTokenView(fmt::memory_buffer& out, const std::string& source, const Pulsar::Token& token, TokenViewRange viewRange)
+size_t PrintTokenView(fmt::memory_buffer& out, const Pulsar::String& source, const Pulsar::Token& token, TokenViewRange viewRange)
 {
     Pulsar::StringView errorView(source);
     errorView.RemovePrefix(token.SourcePos.Index-token.SourcePos.Char);
@@ -60,11 +70,11 @@ size_t PrintTokenView(fmt::memory_buffer& out, const std::string& source, const 
 
 void PrintPrettyError(
     fmt::memory_buffer& out,
-    const std::string& source, const char* filepath,
-    const Pulsar::Token& token, const std::string& message,
+    const Pulsar::String& source, const char* filepath,
+    const Pulsar::Token& token, const Pulsar::String& message,
     TokenViewRange viewRange)
 {
-    fmt::format_to(std::back_inserter(out), "{}:{}:{}: Error: {}\n", filepath, token.SourcePos.Line+1, token.SourcePos.Char+1, message.c_str());
+    fmt::format_to(std::back_inserter(out), "{}:{}:{}: Error: {}\n", filepath, token.SourcePos.Line+1, token.SourcePos.Char+1, message.Data());
     size_t trimmedFromStart = PrintTokenView(out, source, token, viewRange);
     size_t charsToToken = token.SourcePos.Char-trimmedFromStart + (trimmedFromStart > 0 ? 4 : 0);
     fmt::format_to(std::back_inserter(out), fmt::fg(fmt::color::red), "\n{0: ^{1}}^{0:~^{2}}", "", charsToToken, token.SourcePos.CharSpan-1);
@@ -72,7 +82,7 @@ void PrintPrettyError(
 
 void PrintPrettyRuntimeError(
     fmt::memory_buffer& out,
-    const std::string& source, const char* filepath,
+    const Pulsar::String& source, const char* filepath,
     const Pulsar::ExecutionContext& context,
     TokenViewRange viewRange)
 {
@@ -132,9 +142,9 @@ int main(int argc, const char** argv)
     std::ifstream file(program, std::ios::binary);
     size_t fileSize = std::filesystem::file_size(program);
 
-    std::string source;
-    source.resize(fileSize);
-    file.read((char*)source.c_str(), fileSize);
+    Pulsar::String source;
+    source.Resize(fileSize);
+    file.read((char*)source.Data(), fileSize);
 
     Pulsar::Module module;
     Pulsar::Parser parser(source);

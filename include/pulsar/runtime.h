@@ -1,10 +1,7 @@
 #ifndef _PULSAR_RUNTIME_H
 #define _PULSAR_RUNTIME_H
 
-#include <cinttypes>
-#include <functional>
-#include <string>
-#include <vector>
+#include "pulsar/core.h"
 
 #include "pulsar/runtime/function.h"
 #include "pulsar/runtime/value.h"
@@ -70,7 +67,7 @@ namespace Pulsar
     public:
         ExecutionContext CreateExecutionContext() const { return {this, { }}; }
         RuntimeState CallFunction(int64_t funcIdx, Stack& stack, ExecutionContext& context) const;
-        RuntimeState CallFunctionByName(const std::string& name, Stack& stack, ExecutionContext& context) const;
+        RuntimeState CallFunctionByName(const String& name, Stack& stack, ExecutionContext& context) const;
         RuntimeState CallFunctionByDefinition(const FunctionDefinition& def, Stack& stack, ExecutionContext& context) const;
 
         typedef std::function<RuntimeState(ExecutionContext&)> NativeFunction;

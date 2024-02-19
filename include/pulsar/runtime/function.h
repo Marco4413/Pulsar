@@ -1,8 +1,7 @@
 #ifndef _PULSAR_RUNTIME_FUNCTION_H
 #define _PULSAR_RUNTIME_FUNCTION_H
 
-#include <string>
-#include <vector>
+#include "pulsar/core.h"
 
 #include "pulsar/runtime/debug.h"
 #include "pulsar/runtime/instruction.h"
@@ -11,7 +10,7 @@ namespace Pulsar
 {
     struct FunctionDefinition
     {
-        std::string Name;
+        String Name;
         size_t Arity;
         size_t Returns;
         

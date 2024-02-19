@@ -17,7 +17,7 @@ size_t Pulsar::Module::BindNativeFunction(const FunctionDefinition& def, NativeF
     return bound;
 }
 
-Pulsar::RuntimeState Pulsar::Module::CallFunctionByName(const std::string& name, Stack& stack, ExecutionContext& context) const
+Pulsar::RuntimeState Pulsar::Module::CallFunctionByName(const String& name, Stack& stack, ExecutionContext& context) const
 {
     for (int64_t i = Functions.size()-1; i >= 0; i--) {
         const FunctionDefinition& other = Functions[i];
