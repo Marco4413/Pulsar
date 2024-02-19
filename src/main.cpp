@@ -4,16 +4,32 @@
 #include "fmt/color.h"
 #include "pulsar/parser.h"
 
-#include "pulsar/structures/string.h"
-
 template <>
 struct fmt::formatter<Pulsar::Value> : formatter<string_view>
 {
     auto format(const Pulsar::Value& val, format_context& ctx) const
     {
-        if (val.Type == Pulsar::ValueType::Double)
-            return fmt::format_to(ctx.out(), "{}", val.AsDouble);
-        return fmt::format_to(ctx.out(), "{}", val.AsInteger);
+        switch (val.Type()) {
+        case Pulsar::ValueType::Void:
+        case Pulsar::ValueType::Integer:
+        case Pulsar::ValueType::FunctionReference:
+        case Pulsar::ValueType::NativeFunctionReference:
+            break;
+        case Pulsar::ValueType::Double:
+            return fmt::format_to(ctx.out(), "{}", val.AsDouble());
+        case Pulsar::ValueType::List: {
+            auto start = val.AsList().Front();
+            if (!start) return fmt::format_to(ctx.out(), "[ ]");
+            fmt::format_to(ctx.out(), "[ {}", start->Value());
+            auto next = start->Next();
+            while (next) {
+                fmt::format_to(ctx.out(), ", {}", next->Value());
+                next = next->Next();
+            }
+            return fmt::format_to(ctx.out(), " ]");
+        }
+        }
+        return fmt::format_to(ctx.out(), "{}", val.AsInteger());
     }
 };
 

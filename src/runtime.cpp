@@ -113,16 +113,16 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
     const Instruction& instr = frame.Function->Code[frame.InstructionIndex++];
     switch (instr.Code) {
     case InstructionCode::PushInt:
-        frame.OperandStack.emplace_back(instr.Arg0);
+        frame.OperandStack.emplace_back().SetInteger(instr.Arg0);
         break;
     case InstructionCode::PushDbl:
-        frame.OperandStack.emplace_back(*(double*)&instr.Arg0);
+        frame.OperandStack.emplace_back().SetDouble(*(double*)&instr.Arg0);
         break;
     case InstructionCode::PushFunctionReference:
-        frame.OperandStack.emplace_back(instr.Arg0, ValueType::FunctionReference);
+        frame.OperandStack.emplace_back().SetFunctionReference(instr.Arg0);
         break;
     case InstructionCode::PushNativeFunctionReference:
-        frame.OperandStack.emplace_back(instr.Arg0, ValueType::NativeFunctionReference);
+        frame.OperandStack.emplace_back().SetNativeFunctionReference(instr.Arg0);
         break;
     case InstructionCode::PushLocal:
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= frame.Locals.size())
@@ -172,8 +172,8 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             return RuntimeState::StackUnderflow;
         Value funcIdxValue = std::move(frame.OperandStack.back());
         frame.OperandStack.pop_back();
-        if (funcIdxValue.Type == ValueType::FunctionReference) {
-            int64_t funcIdx = funcIdxValue.AsInteger;
+        if (funcIdxValue.Type() == ValueType::FunctionReference) {
+            int64_t funcIdx = funcIdxValue.AsInteger();
             if (funcIdx < 0 || (size_t)funcIdx >= Functions.size())
                 return RuntimeState::OutOfBoundsFunctionIndex;
             Frame callFrame{ &Functions[funcIdx] };
@@ -182,10 +182,10 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
                 return res;
             eContext.CallStack.push_back(std::move(callFrame));
             break;
-        } else if (funcIdxValue.Type == ValueType::NativeFunctionReference) {
+        } else if (funcIdxValue.Type() == ValueType::NativeFunctionReference) {
             if (NativeBindings.size() != NativeFunctions.size())
                 return RuntimeState::NativeFunctionBindingsMismatch;
-            int64_t funcIdx = funcIdxValue.AsInteger;
+            int64_t funcIdx = funcIdxValue.AsInteger();
             if (funcIdx < 0 || (size_t)funcIdx >= NativeBindings.size())
                 return RuntimeState::OutOfBoundsFunctionIndex;
             if (!NativeFunctions[funcIdx])
@@ -206,16 +206,13 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         Value b = std::move(frame.OperandStack.back());
         frame.OperandStack.pop_back();
         Value& a = frame.OperandStack.back();
-        if (!IsNumericValueType(a.Type) || !IsNumericValueType(b.Type))
+        if (!IsNumericValueType(a.Type()) || !IsNumericValueType(b.Type()))
             return RuntimeState::TypeError;
-        if (a.Type == ValueType::Double || b.Type == ValueType::Double) {
-            double aVal = a.Type == ValueType::Double ? a.AsDouble : (double)a.AsInteger;
-            double bVal = b.Type == ValueType::Double ? b.AsDouble : (double)b.AsInteger;
-            a.Type = ValueType::Double;
-            a.AsDouble = aVal + bVal;
-        } else {
-            a.AsInteger += b.AsInteger;
-        }
+        if (a.Type() == ValueType::Double || b.Type() == ValueType::Double) {
+            double aVal = a.Type() == ValueType::Double ? a.AsDouble() : (double)a.AsInteger();
+            double bVal = b.Type() == ValueType::Double ? b.AsDouble() : (double)b.AsInteger();
+            a.SetDouble(aVal + bVal);
+        } else a.SetInteger(a.AsInteger() + b.AsInteger());
     } break;
     case InstructionCode::Compare:
     case InstructionCode::DynSub: {
@@ -224,16 +221,13 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         Value b = std::move(frame.OperandStack.back());
         frame.OperandStack.pop_back();
         Value& a = frame.OperandStack.back();
-        if (!IsNumericValueType(a.Type) || !IsNumericValueType(b.Type))
+        if (!IsNumericValueType(a.Type()) || !IsNumericValueType(b.Type()))
             return RuntimeState::TypeError;
-        if (a.Type == ValueType::Double || b.Type == ValueType::Double) {
-            double aVal = a.Type == ValueType::Double ? a.AsDouble : (double)a.AsInteger;
-            double bVal = b.Type == ValueType::Double ? b.AsDouble : (double)b.AsInteger;
-            a.Type = ValueType::Double;
-            a.AsDouble = aVal - bVal;
-        } else {
-            a.AsInteger -= b.AsInteger;
-        }
+        if (a.Type() == ValueType::Double || b.Type() == ValueType::Double) {
+            double aVal = a.Type() == ValueType::Double ? a.AsDouble() : (double)a.AsInteger();
+            double bVal = b.Type() == ValueType::Double ? b.AsDouble() : (double)b.AsInteger();
+            a.SetDouble(aVal - bVal);
+        } else a.SetInteger(a.AsInteger() - b.AsInteger());
     } break;
     case InstructionCode::DynMul: {
         if (frame.OperandStack.size() < 2)
@@ -241,16 +235,13 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         Value b = std::move(frame.OperandStack.back());
         frame.OperandStack.pop_back();
         Value& a = frame.OperandStack.back();
-        if (!IsNumericValueType(a.Type) || !IsNumericValueType(b.Type))
+        if (!IsNumericValueType(a.Type()) || !IsNumericValueType(b.Type()))
             return RuntimeState::TypeError;
-        if (a.Type == ValueType::Double || b.Type == ValueType::Double) {
-            double aVal = a.Type == ValueType::Double ? a.AsDouble : (double)a.AsInteger;
-            double bVal = b.Type == ValueType::Double ? b.AsDouble : (double)b.AsInteger;
-            a.Type = ValueType::Double;
-            a.AsDouble = aVal * bVal;
-        } else {
-            a.AsInteger *= b.AsInteger;
-        }
+        if (a.Type() == ValueType::Double || b.Type() == ValueType::Double) {
+            double aVal = a.Type() == ValueType::Double ? a.AsDouble() : (double)a.AsInteger();
+            double bVal = b.Type() == ValueType::Double ? b.AsDouble() : (double)b.AsInteger();
+            a.SetDouble(aVal * bVal);
+        } else a.SetInteger(a.AsInteger() * b.AsInteger());
     } break;
     case InstructionCode::DynDiv: {
         if (frame.OperandStack.size() < 2)
@@ -258,16 +249,13 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         Value b = std::move(frame.OperandStack.back());
         frame.OperandStack.pop_back();
         Value& a = frame.OperandStack.back();
-        if (!IsNumericValueType(a.Type) || !IsNumericValueType(b.Type))
+        if (!IsNumericValueType(a.Type()) || !IsNumericValueType(b.Type()))
             return RuntimeState::TypeError;
-        if (a.Type == ValueType::Double || b.Type == ValueType::Double) {
-            double aVal = a.Type == ValueType::Double ? a.AsDouble : (double)a.AsInteger;
-            double bVal = b.Type == ValueType::Double ? b.AsDouble : (double)b.AsInteger;
-            a.Type = ValueType::Double;
-            a.AsDouble = aVal / bVal;
-        } else {
-            a.AsInteger /= b.AsInteger;
-        }
+        if (a.Type() == ValueType::Double || b.Type() == ValueType::Double) {
+            double aVal = a.Type() == ValueType::Double ? a.AsDouble() : (double)a.AsInteger();
+            double bVal = b.Type() == ValueType::Double ? b.AsDouble() : (double)b.AsInteger();
+            a.SetDouble(aVal / bVal);
+        } else a.SetInteger(a.AsInteger() / b.AsInteger());
     } break;
     case InstructionCode::Mod: {
         if (frame.OperandStack.size() < 2)
@@ -275,10 +263,9 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         Value b = std::move(frame.OperandStack.back());
         frame.OperandStack.pop_back();
         Value& a = frame.OperandStack.back();
-        if (a.Type != ValueType::Integer || b.Type != ValueType::Integer)
+        if (a.Type() != ValueType::Integer || b.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
-        // Apparently %= exists.
-        a.AsInteger %= b.AsInteger;
+        a.SetInteger(a.AsInteger() % b.AsInteger());
     } break;
     case InstructionCode::Jump:
         --frame.InstructionIndex += instr.Arg0;
@@ -292,14 +279,14 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         if (frame.OperandStack.size() < 1)
             return RuntimeState::StackUnderflow;
         Value truthValue = std::move(frame.OperandStack.back());
-        if (!IsNumericValueType(truthValue.Type))
+        if (!IsNumericValueType(truthValue.Type()))
             return RuntimeState::TypeError;
         frame.OperandStack.pop_back();
         // TODO: Check for bounds
-        if (truthValue.Type == ValueType::Double) {
-            if (ShouldJump(instr.Code, truthValue.AsDouble))
+        if (truthValue.Type() == ValueType::Double) {
+            if (ShouldJump(instr.Code, truthValue.AsDouble()))
                 --frame.InstructionIndex += instr.Arg0;
-        } else if (ShouldJump(instr.Code, truthValue.AsInteger))
+        } else if (ShouldJump(instr.Code, truthValue.AsInteger()))
             --frame.InstructionIndex += instr.Arg0;
     } break;
     }
