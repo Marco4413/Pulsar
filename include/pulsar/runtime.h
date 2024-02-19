@@ -20,7 +20,8 @@ namespace Pulsar
         CallStackUnderflow,
         NativeFunctionBindingsMismatch,
         UnboundNativeFunction,
-        FunctionNotFound
+        FunctionNotFound,
+        ListIndexOutOfBounds
     };
 
     const char* RuntimeStateToString(RuntimeState rstate);

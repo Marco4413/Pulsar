@@ -6,14 +6,18 @@
 namespace Pulsar
 {
     enum class InstructionCode {
+        // Stack and Locals
         PushInt, PushDbl,
         PushFunctionReference,
         PushNativeFunctionReference,
         PushLocal, PopIntoLocal,
+        // Functions
         Call, CallNative, Return,
         ICall,
+        // Math
         DynSum, DynSub, DynMul, DynDiv,
         Mod,
+        // Conditional Jumps
         Compare,
         Jump,
         JumpIfZero,
@@ -22,6 +26,11 @@ namespace Pulsar
         JumpIfGreaterThanOrEqualToZero,
         JumpIfLessThanZero,
         JumpIfLessThanOrEqualToZero,
+        // Lists and Strings
+        Length,
+        PushEmptyList,
+        Prepend, Append, Concat,
+        Head, Tail
     };
 
     struct Instruction

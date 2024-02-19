@@ -289,6 +289,67 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         } else if (ShouldJump(instr.Code, truthValue.AsInteger()))
             --frame.InstructionIndex += instr.Arg0;
     } break;
+    case InstructionCode::Length: {
+        if (frame.OperandStack.size() < 1)
+            return RuntimeState::StackUnderflow;
+        Value list = std::move(frame.OperandStack.back());
+        frame.OperandStack.pop_back();
+        if (list.Type() == ValueType::List) {
+            frame.OperandStack.emplace_back().SetInteger((int64_t)list.AsList().Length());
+        } else return RuntimeState::TypeError;
+    } break;
+    case InstructionCode::PushEmptyList:
+        frame.OperandStack.emplace_back().SetList(ValueList());
+        break;
+    case InstructionCode::Prepend: {
+        if (frame.OperandStack.size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value toPrepend = std::move(frame.OperandStack.back());
+        frame.OperandStack.pop_back();
+        Value& list = frame.OperandStack.back();
+        if (list.Type() == ValueType::List) {
+            list.AsList().Prepend()->Value() = std::move(toPrepend);
+        } else return RuntimeState::TypeError;
+    } break;
+    case InstructionCode::Append: {
+        if (frame.OperandStack.size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value toAppend = std::move(frame.OperandStack.back());
+        frame.OperandStack.pop_back();
+        Value& list = frame.OperandStack.back();
+        if (list.Type() == ValueType::List) {
+            list.AsList().Append()->Value() = std::move(toAppend);
+        } else return RuntimeState::TypeError;
+    } break;
+    case InstructionCode::Concat: {
+        if (frame.OperandStack.size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value toConcat = std::move(frame.OperandStack.back());
+        frame.OperandStack.pop_back();
+        Value& list = frame.OperandStack.back();
+        if (toConcat.Type() == ValueType::List && list.Type() == ValueType::List) {
+            list.AsList().Concat(toConcat.AsList());
+        } else return RuntimeState::TypeError;
+    } break;
+    case InstructionCode::Head: {
+        if (frame.OperandStack.size() < 1)
+            return RuntimeState::StackUnderflow;
+        Value& list = frame.OperandStack.back();
+        if (list.Type() == ValueType::List) {
+            ValueList::NodeType* node = list.AsList().Front();
+            if (!node) return RuntimeState::ListIndexOutOfBounds;
+            Value val(std::move(node->Value()));
+            list = std::move(val);
+        } else return RuntimeState::TypeError;
+    } break;
+    case InstructionCode::Tail: {
+        if (frame.OperandStack.size() < 1)
+            return RuntimeState::StackUnderflow;
+        Value& list = frame.OperandStack.back();
+        if (list.Type() == ValueType::List) {
+            list.AsList().RemoveFront(1);
+        } else return RuntimeState::TypeError;
+    } break;
     }
 
     return RuntimeState::OK;
@@ -319,6 +380,8 @@ const char* Pulsar::RuntimeStateToString(RuntimeState rstate)
         return "UnboundNativeFunction";
     case RuntimeState::FunctionNotFound:
         return "FunctionNotFound";
+    case RuntimeState::ListIndexOutOfBounds:
+        return "ListIndexOutOfBounds";
     }
     return "Unknown";
 }
