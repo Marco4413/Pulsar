@@ -88,6 +88,30 @@ Support for unsigned integers and (maybe) strings are planned.
 items or concatenating another `List` to them doesn't cost much
 performance-wise. However, copying and calculating their length is slow.
 
+#### String Literals
+
+It's your usual double-quoted string which can contain escape characters.
+When a `\` is found within quotes, the next character is parsed as is
+except for some special ones which are turned into control characters:
+
+| Escape Sequence | Control Character |
+| :-------------: | :---------------: |
+|      `\n`       |     New Line      |
+|      `\r`       |  Carriage Return  |
+|      `\t`       |    Tabulation     |
+
+#### List Literals
+
+List literals are comma-separated *lists* defined between brackets of `lvalue`s.
+
+A valid list literal looks something like this: `[ "Hello", "World", 1, 2, 3, ]`
+
+*Where the last comma is optional.*
+
+A list literal (unless it contains only numeric constants) is broken down into the
+[instructions](#instructions) needed to create the specified list. Groups of numeric
+constants are produced in one or two instructions depending on the context.
+
 ## Mathematical Operators
 
 | Symbol |   Name  | Args | Returns |
@@ -205,13 +229,15 @@ to do the same thing. Which was "less readable" and efficient.
 
 The push reference operator is a very powerful operator. It allows you
 to push a reference to a function onto the stack, then you can call it
-with the [icall!](#icall) keyword instruction.
+with the [icall](#icall) instruction.
 
 `<& (function)`
 
 `(*native)` functions can also be passed to the operator.
 
 The provided function follows the [Function Call](#function-calls) syntax.
+
+This operator produces an `lvalue`, which means that it can be used in [`List` literals](#list-literals).
 
 ## Functions
 
@@ -295,7 +321,10 @@ All the variants can be described with the following string:
 
 > Woah, that's A LOT of `if`s.
 
-First of all, if both `lvalue`s (and `comp`) are present the `if` is
+First of all, `lvalue`s that the if statement supports are
+numeric constants and names of locals.
+
+If both `lvalue`s (and `comp`) are present the `if` is
 considered as self-contained. Meaning that it does not consume stack
 values outside of the condition description (which are the ones shown
 in the previous section). And that, for obvious reasons, allows for
