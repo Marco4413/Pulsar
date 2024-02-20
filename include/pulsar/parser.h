@@ -8,6 +8,18 @@
 
 namespace Pulsar
 {
+    struct InstructionDescription { InstructionCode Code; bool MayFail = true; };
+    static const std::unordered_map<String, InstructionDescription> InstructionMappings {
+        { "icall",      { InstructionCode::ICall                } },
+        { "length",     { InstructionCode::Length               } },
+        { "empty-list", { InstructionCode::PushEmptyList, false } },
+        { "prepend",    { InstructionCode::Prepend              } },
+        { "append",     { InstructionCode::Append               } },
+        { "concat",     { InstructionCode::Concat               } },
+        { "head",       { InstructionCode::Head                 } },
+        { "tail",       { InstructionCode::Tail                 } },
+    };
+
     enum class ParseResult
     {
         OK = 0,
@@ -15,6 +27,7 @@ namespace Pulsar
         UnexpectedToken,
         NegativeResultCount,
         UsageOfUndeclaredLocal,
+        UsageOfUnknownInstruction,
         UsageOfUndeclaredFunction,
         UsageOfUndeclaredNativeFunction
     };

@@ -186,16 +186,31 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
         case TokenType::OpenParenth: {
             m_Lexer.NextToken();
             bool isNative = curToken.Type == TokenType::Star;
-            if (isNative) m_Lexer.NextToken();
+            bool isInstruction = curToken.Type == TokenType::Negate;
+            if (isNative || isInstruction) m_Lexer.NextToken();
             PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
             Token identToken = curToken;
+            int64_t arg0 = 0;
             if (identToken.Type != TokenType::Identifier)
                 return SetError(ParseResult::UnexpectedToken, identToken, "Expected function name for function call.");
             m_Lexer.NextToken();
+            if (isInstruction && curToken.Type == TokenType::IntegerLiteral) {
+                arg0 = curToken.IntegerVal;
+                m_Lexer.NextToken();
+            }
             if (curToken.Type != TokenType::CloseParenth)
                 return SetError(ParseResult::UnexpectedToken, curToken, "Expected ')' to close function call.");
             
-            if (isNative) {
+            if (isInstruction) {
+                const auto instrDescIt = InstructionMappings.find(identToken.StringVal);
+                if (instrDescIt == InstructionMappings.end())
+                    return SetError(ParseResult::UsageOfUnknownInstruction, identToken, "Instruction does not exist.");
+                const InstructionDescription& instrDesc = (*instrDescIt).second;
+                if (instrDesc.MayFail)
+                    PUSH_CODE_SYMBOL(debugSymbols, func, identToken);
+                func.Code.emplace_back(instrDesc.Code, arg0);
+                break;
+            } else if (isNative) {
                 int64_t funcIdx = (int64_t)module.NativeBindings.size()-1;
                 for (; funcIdx >= 0 && module.NativeBindings[funcIdx].Name != identToken.StringVal; funcIdx--);
                 if (funcIdx < 0)
@@ -203,6 +218,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
                 func.Code.emplace_back(InstructionCode::CallNative, funcIdx);
                 break;
             } else if (identToken.StringVal == func.Name) {
+                // Self-recursion
                 func.Code.emplace_back(InstructionCode::Call, (int64_t)module.Functions.size());
                 break;
             }
