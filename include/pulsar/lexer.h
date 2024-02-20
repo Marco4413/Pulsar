@@ -15,6 +15,7 @@ namespace Pulsar
         CloseParenth,
         IntegerLiteral,
         DoubleLiteral,
+        StringLiteral,
         Plus, Minus,
         Star, Slash,
         Modulus,
@@ -104,6 +105,7 @@ namespace Pulsar
         Token ParseIdentifier();
         Token ParseIntegerLiteral();
         Token ParseDoubleLiteral();
+        Token ParseStringLiteral();
         size_t SkipWhitespaces();
         size_t SkipComments();
 

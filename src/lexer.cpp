@@ -33,6 +33,9 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
             token = ParseDoubleLiteral();
             if (token.Type != TokenType::None)
                 return token;
+            token = ParseStringLiteral();
+            if (token.Type != TokenType::None)
+                return token;
             token = ParseIdentifier();
             if (token.Type != TokenType::None) {
                 auto it = Keywords.find(token.StringVal);
@@ -163,6 +166,43 @@ Pulsar::Token Pulsar::Lexer::ParseDoubleLiteral()
     return TrimToToken(count, TokenType::DoubleLiteral, val);
 }
 
+Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
+{
+    if (m_SourceView[0] != '"')
+        return CreateNoneToken();
+    size_t count = 1;
+    String val = "";
+    for (; count < m_SourceView.Length(); count++) {
+        if (std::iscntrl(m_SourceView[count]))
+            break;
+        else if (m_SourceView[count] == '"')
+            return TrimToToken(count+1, TokenType::StringLiteral, val);
+        else if (m_SourceView[count] == '\\') {
+            if (m_SourceView.Length()-count < 2)
+                break;
+            char ch = m_SourceView[++count];
+            if (std::iscntrl(ch))
+                break;
+            switch (ch) {
+            case 't':
+                val += '\t';
+                break;
+            case 'r':
+                val += '\r';
+                break;
+            case 'n':
+                val += '\n';
+                break;
+            default:
+                val += ch;
+            }
+            continue;
+        }
+        val += m_SourceView[count];
+    }
+    return CreateNoneToken();
+}
+
 size_t Pulsar::Lexer::SkipWhitespaces()
 {
     size_t count = 0;
@@ -209,6 +249,8 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
         return "IntegerLiteral";
     case TokenType::DoubleLiteral:
         return "DoubleLiteral";
+    case TokenType::StringLiteral:
+        return "StringLiteral";
     case TokenType::Plus:
         return "Plus";
     case TokenType::Minus:
