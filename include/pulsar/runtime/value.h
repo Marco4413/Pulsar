@@ -85,6 +85,40 @@ namespace Pulsar
             return *this;
         }
 
+        bool operator==(const Value& other) const
+        {
+            if (m_Type != other.m_Type)
+                return false;
+            switch (m_Type) {
+            case ValueType::Void:
+                return true;
+            case ValueType::Integer:
+            case ValueType::FunctionReference:
+            case ValueType::NativeFunctionReference:
+                return AsInteger() == other.AsInteger();
+            case ValueType::Double:
+                return AsDouble() == other.AsDouble();
+            case ValueType::String:
+                return AsString() == other.AsString();
+            case ValueType::List:
+                const ValueList::NodeType* aNext = AsList().Front();
+                const ValueList::NodeType* bNext = other.AsList().Front();
+                while (true) {
+                    if (aNext == bNext)
+                        return true;
+                    else if (!aNext || !bNext)
+                        return false;
+                    else if (aNext->Value() != bNext->Value())
+                        return false;
+                    aNext = aNext->Next();
+                    bNext = bNext->Next();
+                }
+            }
+            return false;
+        }
+        
+        bool operator!=(const Value& other) const { return !(*this == other); }
+
         ValueType Type() const    { return m_Type; }
         int64_t AsInteger() const { return m_AsInteger; }
         double AsDouble() const   { return m_AsDouble; }
