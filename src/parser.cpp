@@ -137,6 +137,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
                 func.Code.emplace_back(InstructionCode::PushFunctionReference, funcIdx);
             } else return SetError(ParseResult::UnexpectedToken, curToken, "Expected (function) or local to reference.");
         } break;
+        case TokenType::StringLiteral:
         case TokenType::IntegerLiteral:
         case TokenType::DoubleLiteral:
         case TokenType::Identifier: {
@@ -393,6 +394,17 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
         if (localIdx < 0)
             return SetError(ParseResult::UsageOfUndeclaredLocal, lvalue, "Local not declared.");
         func.Code.emplace_back(InstructionCode::PushLocal, localIdx);
+    } break;
+    case TokenType::StringLiteral: {
+        PUSH_CODE_SYMBOL(debugSymbols, func, lvalue);
+        int64_t constIdx = (int64_t)module.Constants.size()-1;
+        for (; constIdx >= 0 && module.Constants[constIdx].Type() == ValueType::String
+            && module.Constants[constIdx].AsString() != lvalue.StringVal; constIdx--);
+        if (constIdx < 0) {
+            constIdx = module.Constants.size();
+            module.Constants.emplace_back().SetString(lvalue.StringVal);
+        }
+        func.Code.emplace_back(InstructionCode::PushConst, constIdx);
     } break;
     default:
         // We should never get here
