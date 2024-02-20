@@ -79,9 +79,14 @@ Support for unsigned integers and (maybe) strings are planned.
 
 ### Complex Datatypes
 
-| Type |
-| :--: |
-| List |
+|  Type  |
+| :----: |
+|  List  |
+| String |
+
+`List`s are stored as `LinkedList`s. Therefore, appending, prepending
+items or concatenating another `List` to them doesn't cost much
+performance-wise. However, copying and calculating their length is slow.
 
 ## Mathematical Operators
 
@@ -307,86 +312,91 @@ Finally, if no condition at all is present, `!= 0` is implied.
 The `else` branch can be specified within all `if`s. However, the
 "no return" restriction must be met.
 
-## Keyword Instructions
+## Instructions
 
-You can see keyword instructions as *blazing fast* functions!
+You can see instructions as *blazing fast* functions!
 
-They map directly to VM instructions. So they don't even have the
+They are called with `(!instr arg0)`.
+
+Moreover, they map directly to VM instructions. So they don't even have the
 overhead of creating a new Frame and Stack.
 
-### icall!
+Internal arguments MUST be Integer Literals and they're completely optional.
+Most of the time, the instruction doesn't even need arguments to do its job.
 
-The `icall!` instruction pops one value from the stack, checks
+### icall
+
+The `icall` instruction pops one value from the stack, checks
 if it's a `Native/FunctionReference` (raising an error otherwise)
 and calls the function pointed by the reference. Of course, the called
 function is called like a normal `(function)` call.
 
 See the [references example](examples/references.pls).
 
-|         |            S-1             |    S0     |
-| :------ | :------------------------: | :-------: |
-| Pops    | `Native/FunctionReference` | `...Args` |
-| Returns | `...ReturnValues`          |           |
+|        |            S-1             |    S0     |
+| :----- | :------------------------: | :-------: |
+| Pops   | `Native/FunctionReference` | `...Args` |
+| Pushes | `...ReturnValues`          |           |
 
-### length!
+### length
 
-Calculates the length of a list and puts it into the stack.
+Calculates the length of a `List` or `String` and puts it into the stack.
 
-|         |   S0   |    S+1    |
-| :------ | :----: | :-------: |
-| Pops    | `List` |           |
-| Returns | `List` | `Integer` |
+|        |       S0        |    S+1    |
+| :----- | :-------------: | :-------: |
+| Pops   | `List`/`String` |           |
+| Pushes | `List`/`String` | `Integer` |
 
-### empty-list!
+### empty-list
 
-Pushes a new empty list into the stack.
+Pushes a new empty `List` into the stack.
 
-|         |  S+1   |
-| :------ | :----: |
-| Pops    |        |
-| Returns | `List` |
+|        |  S+1   |
+| :----- | :----: |
+| Pops   |        |
+| Pushes | `List` |
 
-### prepend!
+### prepend
 
-Adds a value to the start of a list.
+Adds a value to the start of a `List` or `String`.
 
-|         |  S-1   |  S0   |
-| :------ | :----: | :---: |
-| Pops    | `List` | `Any` |
-| Returns | `List` |       |
+|        |       S-1       |  S0   |
+| :----- | :-------------: | :---: |
+| Pops   | `List`/`String` | `Any` |
+| Pushes | `List`/`String` |       |
 
-### append!
+### append
 
-Adds a value to the end of a list.
+Adds a value to the end of a `List` or `String`.
 
-|         |  S-1   |  S0   |
-| :------ | :----: | :---: |
-| Pops    | `List` | `Any` |
-| Returns | `List` |       |
+|        |       S-1       |  S0   |
+| :----- | :-------------: | :---: |
+| Pops   | `List`/`String` | `Any` |
+| Pushes | `List`/`String` |       |
 
-### concat!
+### concat
 
-Concatenates two lists.
+Concatenates two `List`s.
 
-|         |  S-1   |   S0   |
-| :------ | :----: | :----: |
-| Pops    | `List` | `List` |
-| Returns | `List` |        |
+|        |  S-1   |   S0   |
+| :----- | :----: | :----: |
+| Pops   | `List` | `List` |
+| Pushes | `List` |        |
 
-### head!
+### head
 
-Removes the first value of a list and pushes it into the stack.
+Removes the first value of a `List` and pushes it into the stack.
 
-|         |   S0   |  S+1  |
-| :------ | :----: | :---: |
-| Pops    | `List` |       |
-| Returns | `List` | `Any` |
+|        |   S0   |  S+1  |
+| :----- | :----: | :---: |
+| Pops   | `List` |       |
+| Pushes | `List` | `Any` |
 
-### tail!
+### tail
 
-Removes the first value of a list.
+Removes the first value of a `List`.
 
-|         |   S0   |
-| :------ | :----: |
-| Pops    | `List` |
-| Returns | `List` |
+|        |   S0   |
+| :----- | :----: |
+| Pops   | `List` |
+| Pushes | `List` |
