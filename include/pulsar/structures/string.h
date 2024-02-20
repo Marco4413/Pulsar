@@ -96,6 +96,7 @@ namespace Pulsar
 
         String& operator=(const String& other)
         {
+            Reserve(other.m_Length); // Do not allocate more than needed.
             Resize(other.m_Length);
             PULSAR_MEMCPY((void*)m_Data, other.m_Data, other.m_Length*sizeof(char));
             return *this;
