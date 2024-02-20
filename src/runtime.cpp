@@ -292,10 +292,11 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
     case InstructionCode::Length: {
         if (frame.OperandStack.size() < 1)
             return RuntimeState::StackUnderflow;
-        Value list = std::move(frame.OperandStack.back());
-        frame.OperandStack.pop_back();
+        const Value& list = frame.OperandStack.back();
         if (list.Type() == ValueType::List) {
-            frame.OperandStack.emplace_back().SetInteger((int64_t)list.AsList().Length());
+            Value len;
+            len.SetInteger((int64_t)list.AsList().Length());
+            frame.OperandStack.emplace_back(std::move(len));
         } else return RuntimeState::TypeError;
     } break;
     case InstructionCode::PushEmptyList:
@@ -339,7 +340,8 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             ValueList::NodeType* node = list.AsList().Front();
             if (!node) return RuntimeState::ListIndexOutOfBounds;
             Value val(std::move(node->Value()));
-            list = std::move(val);
+            list.AsList().RemoveFront(1);
+            frame.OperandStack.push_back(std::move(val));
         } else return RuntimeState::TypeError;
     } break;
     case InstructionCode::Tail: {
