@@ -219,37 +219,6 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
             if (res != ParseResult::OK)
                 return res;
         } break;
-        case TokenType::KW_ICall:
-            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
-            func.Code.emplace_back(InstructionCode::ICall);
-            break;
-        case TokenType::KW_Length:
-            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
-            func.Code.emplace_back(InstructionCode::Length);
-            break;
-        case TokenType::KW_EmptyList:
-            func.Code.emplace_back(InstructionCode::PushEmptyList);
-            break;
-        case TokenType::KW_Prepend:
-            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
-            func.Code.emplace_back(InstructionCode::Prepend);
-            break;
-        case TokenType::KW_Append:
-            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
-            func.Code.emplace_back(InstructionCode::Append);
-            break;
-        case TokenType::KW_Concat:
-            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
-            func.Code.emplace_back(InstructionCode::Concat);
-            break;
-        case TokenType::KW_Head:
-            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
-            func.Code.emplace_back(InstructionCode::Head);
-            break;
-        case TokenType::KW_Tail:
-            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
-            func.Code.emplace_back(InstructionCode::Tail);
-            break;
         default:
             return SetError(ParseResult::UnexpectedToken, curToken, "Expression expected.");
         }

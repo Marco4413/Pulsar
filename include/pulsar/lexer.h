@@ -28,26 +28,13 @@ namespace Pulsar
         Less, LessOrEqual,
         More, MoreOrEqual,
         PushReference,
-        KW_If, KW_Else, KW_End,
-        KW_ICall,
-        KW_Length,
-        KW_EmptyList,
-        KW_Prepend, KW_Append, KW_Concat,
-        KW_Head, KW_Tail
+        KW_If, KW_Else, KW_End
     };
 
     static const std::unordered_map<String, TokenType> Keywords {
-        { "if", TokenType::KW_If },
+        { "if",   TokenType::KW_If   },
         { "else", TokenType::KW_Else },
-        { "end", TokenType::KW_End },
-        { "icall!", TokenType::KW_ICall },
-        { "length!", TokenType::KW_Length },
-        { "empty-list!", TokenType::KW_EmptyList },
-        { "prepend!", TokenType::KW_Prepend },
-        { "append!", TokenType::KW_Append },
-        { "concat!", TokenType::KW_Concat },
-        { "head!", TokenType::KW_Head },
-        { "tail!", TokenType::KW_Tail },
+        { "end",  TokenType::KW_End  },
     };
 
     const char* TokenTypeToString(TokenType ttype);

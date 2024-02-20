@@ -293,22 +293,6 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
         return "KW_Else";
     case TokenType::KW_End:
         return "KW_End";
-    case TokenType::KW_ICall:
-        return "KW_ICall";
-    case TokenType::KW_Length:
-        return "KW_Length";
-    case TokenType::KW_EmptyList:
-        return "KW_EmptyList";
-    case TokenType::KW_Prepend:
-        return "KW_Prepend";
-    case TokenType::KW_Append:
-        return "KW_Append";
-    case TokenType::KW_Concat:
-        return "KW_Concat";
-    case TokenType::KW_Head:
-        return "KW_Head";
-    case TokenType::KW_Tail:
-        return "KW_Tail";
     case TokenType::EndOfFile:
         return "EndOfFile";
     }
