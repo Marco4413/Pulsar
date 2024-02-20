@@ -124,6 +124,11 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
     case InstructionCode::PushNativeFunctionReference:
         frame.OperandStack.emplace_back().SetNativeFunctionReference(instr.Arg0);
         break;
+    case InstructionCode::PushConst:
+        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= eContext.OwnerModule->Constants.size())
+            return RuntimeState::OutOfBoundsConstantIndex;
+        frame.OperandStack.emplace_back(eContext.OwnerModule->Constants[(size_t)instr.Arg0]);
+        break;
     case InstructionCode::PushLocal:
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= frame.Locals.size())
             return RuntimeState::OutOfBoundsLocalIndex;
@@ -395,6 +400,8 @@ const char* Pulsar::RuntimeStateToString(RuntimeState rstate)
         return "StackOverflow";
     case RuntimeState::StackUnderflow:
         return "StackUnderflow";
+    case RuntimeState::OutOfBoundsConstantIndex:
+        return "OutOfBoundsConstantIndex";
     case RuntimeState::OutOfBoundsLocalIndex:
         return "OutOfBoundsLocalIndex";
     case RuntimeState::OutOfBoundsFunctionIndex:

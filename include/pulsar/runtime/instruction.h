@@ -10,6 +10,7 @@ namespace Pulsar
         PushInt, PushDbl,
         PushFunctionReference,
         PushNativeFunctionReference,
+        PushConst,
         PushLocal, MoveLocal,
         PopIntoLocal, CopyIntoLocal,
         // Functions

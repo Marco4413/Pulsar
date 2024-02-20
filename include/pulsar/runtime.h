@@ -15,6 +15,7 @@ namespace Pulsar
         TypeError,
         StackOverflow,
         StackUnderflow,
+        OutOfBoundsConstantIndex,
         OutOfBoundsLocalIndex,
         OutOfBoundsFunctionIndex,
         CallStackUnderflow,
