@@ -309,6 +309,10 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             Value len;
             len.SetInteger((int64_t)list.AsList().Length());
             frame.OperandStack.emplace_back(std::move(len));
+        } else if (list.Type() == ValueType::String) {
+            Value len;
+            len.SetInteger((int64_t)list.AsString().Length());
+            frame.OperandStack.emplace_back(std::move(len));
         } else return RuntimeState::TypeError;
     } break;
     case InstructionCode::PushEmptyList:
@@ -322,6 +326,11 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         Value& list = frame.OperandStack.back();
         if (list.Type() == ValueType::List) {
             list.AsList().Prepend()->Value() = std::move(toPrepend);
+        } else if (list.Type() == ValueType::String) {
+            if (toPrepend.Type() != ValueType::String)
+                return RuntimeState::TypeError;
+            toPrepend.AsString() += list.AsString();
+            list.AsString() = std::move(toPrepend.AsString());
         } else return RuntimeState::TypeError;
     } break;
     case InstructionCode::Append: {
@@ -332,6 +341,10 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         Value& list = frame.OperandStack.back();
         if (list.Type() == ValueType::List) {
             list.AsList().Append()->Value() = std::move(toAppend);
+        } else if (list.Type() == ValueType::String) {
+            if (toAppend.Type() != ValueType::String)
+                return RuntimeState::TypeError;
+            list.AsString() += toAppend.AsString();
         } else return RuntimeState::TypeError;
     } break;
     case InstructionCode::Concat: {
