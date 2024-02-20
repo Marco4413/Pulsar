@@ -1,7 +1,7 @@
 *(*hello-from-cpp).
 
 *(call func) -> 1:
-    10 func icall!
+    10 func (!icall)
     .
 
 *(identity x) -> 1: x.

@@ -6,7 +6,7 @@
     if n > 1:
         n 1 -; func; (for)
     end
-    n 1 -; func; icall!
+    n 1 -; func; (!icall)
     (*print!)
     .
 
