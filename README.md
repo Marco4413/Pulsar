@@ -14,6 +14,12 @@ I wanted to have a second attempt at creating a programming language.
 
 It can be found within the [DOCUMENTATION.md](DOCUMENTATION.md) file.
 
+## Editor Extensions
+
+If you want to enable Syntax Highlighting on VSCode for the Pulsar Programming
+Language, you can download and package the official extension found at
+[Marco4413/vscode-pulsar-language](https://github.com/Marco4413/vscode-pulsar-language).
+
 ## Dependencies
 
 **None!** Except for the `pulsar-dev` project which uses `fmt` for pretty printing.
