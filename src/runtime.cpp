@@ -115,9 +115,13 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
     case InstructionCode::PushInt:
         frame.OperandStack.emplace_back().SetInteger(instr.Arg0);
         break;
-    case InstructionCode::PushDbl:
-        frame.OperandStack.emplace_back().SetDouble(*(double*)&instr.Arg0);
-        break;
+    case InstructionCode::PushDbl: {
+        static_assert(sizeof(double) == sizeof(int64_t));
+        void* arg0 = (void*)&instr.Arg0;
+        double val = *(double*)arg0;
+        frame.OperandStack.emplace_back().SetDouble(val);
+        // Don't want to rely on std::bit_cast since my g++ does not have it.
+    } break;
     case InstructionCode::PushFunctionReference:
         frame.OperandStack.emplace_back().SetFunctionReference(instr.Arg0);
         break;

@@ -369,9 +369,13 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
     case TokenType::IntegerLiteral:
         func.Code.emplace_back(InstructionCode::PushInt, lvalue.IntegerVal);
         break;
-    case TokenType::DoubleLiteral:
-        func.Code.emplace_back(InstructionCode::PushDbl, *(int64_t*)&lvalue.DoubleVal);
-        break;
+    case TokenType::DoubleLiteral: {
+        static_assert(sizeof(double) == sizeof(int64_t));
+        void* val = (void*)&lvalue.DoubleVal;
+        int64_t arg0 = *(int64_t*)val;
+        func.Code.emplace_back(InstructionCode::PushDbl, arg0);
+        // Don't want to rely on std::bit_cast since my g++ does not have it.
+    } break;
     case TokenType::Identifier: {
         PUSH_CODE_SYMBOL(debugSymbols, func, lvalue);
         int64_t localIdx = (int64_t)locals.size()-1;
