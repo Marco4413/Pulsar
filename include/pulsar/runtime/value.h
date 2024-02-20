@@ -39,7 +39,7 @@ namespace Pulsar
             : Value() { *this = other; }
 
         Value(Value&& other)
-            : Value() { *this = other; }
+            : Value() { *this = std::move(other); }
 
         Value& operator=(const Value& other)
         {
@@ -89,7 +89,7 @@ namespace Pulsar
         Value& SetDouble(double val)                   { DeleteValue(); m_Type = ValueType::Double; m_AsDouble = val; return *this; }
         Value& SetFunctionReference(int64_t val)       { DeleteValue(); m_Type = ValueType::FunctionReference; m_AsInteger = val; return *this; }
         Value& SetNativeFunctionReference(int64_t val) { DeleteValue(); m_Type = ValueType::NativeFunctionReference; m_AsInteger = val; return *this; }
-        Value& SetList(ValueList&& val)                { DeleteValue(); m_Type = ValueType::List; m_AsList = val; return *this; }
+        Value& SetList(ValueList&& val)                { DeleteValue(); m_Type = ValueType::List; m_AsList = std::move(val); return *this; }
         Value& SetList(const ValueList& val)           { DeleteValue(); m_Type = ValueType::List; m_AsList = val; return *this; }
 
     private:
