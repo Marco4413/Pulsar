@@ -111,8 +111,13 @@ namespace Pulsar
         {
             if (!other.m_Start)
                 return *this;
-            m_End->m_Next = other.m_Start;
-            m_End = other.m_End;
+            else if (!m_Start) {
+                m_Start = other.m_Start;
+                m_End = other.m_End;
+            } else {
+                m_End->m_Next = other.m_Start;
+                m_End = other.m_End;
+            }
             other.m_Start = nullptr;
             other.m_End = nullptr;
             return *this;
