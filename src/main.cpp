@@ -1,3 +1,4 @@
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 
@@ -208,6 +209,7 @@ int main(int argc, const char** argv)
             return Pulsar::RuntimeState::OK;
         });
 
+    auto startTime = std::chrono::high_resolution_clock::now();
     Pulsar::Stack stack;
     {
         Pulsar::ValueList argList;
@@ -217,6 +219,10 @@ int main(int argc, const char** argv)
     }
     Pulsar::ExecutionContext context = module.CreateExecutionContext();
     auto runtimeState = module.CallFunctionByName("main", stack, context);
+    auto stopTime = std::chrono::high_resolution_clock::now();
+
+    auto execTime = std::chrono::duration_cast<std::chrono::microseconds>(stopTime-startTime);
+    fmt::println("Execution took: {}us", execTime.count());
 
     fmt::println("Runtime State: {}", Pulsar::RuntimeStateToString(runtimeState));
     if (runtimeState != Pulsar::RuntimeState::OK) {
