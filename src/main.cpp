@@ -5,35 +5,6 @@
 #include "pulsar/parser.h"
 
 template <>
-struct fmt::formatter<Pulsar::Value> : formatter<string_view>
-{
-    auto format(const Pulsar::Value& val, format_context& ctx) const
-    {
-        switch (val.Type()) {
-        case Pulsar::ValueType::Void:
-        case Pulsar::ValueType::Integer:
-        case Pulsar::ValueType::FunctionReference:
-        case Pulsar::ValueType::NativeFunctionReference:
-            break;
-        case Pulsar::ValueType::Double:
-            return fmt::format_to(ctx.out(), "{}", val.AsDouble());
-        case Pulsar::ValueType::List: {
-            auto start = val.AsList().Front();
-            if (!start) return fmt::format_to(ctx.out(), "[ ]");
-            fmt::format_to(ctx.out(), "[ {}", start->Value());
-            auto next = start->Next();
-            while (next) {
-                fmt::format_to(ctx.out(), ", {}", next->Value());
-                next = next->Next();
-            }
-            return fmt::format_to(ctx.out(), " ]");
-        }
-        }
-        return fmt::format_to(ctx.out(), "{}", val.AsInteger());
-    }
-};
-
-template <>
 struct fmt::formatter<Pulsar::String> : formatter<string_view>
 {
     auto format(const Pulsar::String& val, format_context& ctx) const
@@ -48,6 +19,37 @@ struct fmt::formatter<Pulsar::StringView> : formatter<string_view>
     auto format(const Pulsar::StringView& val, format_context& ctx) const
     {
         return fmt::format_to(ctx.out(), "{:.{}}", val.CStringFrom(0), val.Length());
+    }
+};
+
+template <>
+struct fmt::formatter<Pulsar::Value> : formatter<string_view>
+{
+    auto format(const Pulsar::Value& val, format_context& ctx) const
+    {
+        switch (val.Type()) {
+        case Pulsar::ValueType::Void:
+        case Pulsar::ValueType::Integer:
+        case Pulsar::ValueType::FunctionReference:
+        case Pulsar::ValueType::NativeFunctionReference:
+            break;
+        case Pulsar::ValueType::Double:
+            return fmt::format_to(ctx.out(), "{}", val.AsDouble());
+        case Pulsar::ValueType::String:
+            return fmt::format_to(ctx.out(), "\"{}\"", val.AsString());
+        case Pulsar::ValueType::List: {
+            auto start = val.AsList().Front();
+            if (!start) return fmt::format_to(ctx.out(), "[ ]");
+            fmt::format_to(ctx.out(), "[ {}", start->Value());
+            auto next = start->Next();
+            while (next) {
+                fmt::format_to(ctx.out(), ", {}", next->Value());
+                next = next->Next();
+            }
+            return fmt::format_to(ctx.out(), " ]");
+        }
+        }
+        return fmt::format_to(ctx.out(), "{}", val.AsInteger());
     }
 };
 
@@ -207,6 +209,12 @@ int main(int argc, const char** argv)
         });
 
     Pulsar::Stack stack;
+    {
+        Pulsar::ValueList argList;
+        for (int i = 0; i < argc; i++)
+            argList.Append()->Value().SetString(argv[i]);
+        stack.emplace_back().SetList(std::move(argList));
+    }
     Pulsar::ExecutionContext context = module.CreateExecutionContext();
     auto runtimeState = module.CallFunctionByName("main", stack, context);
 
