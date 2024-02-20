@@ -13,12 +13,8 @@
 *(add-4 x) -> 1: x 4 +.
 
 *(main) -> 1:
-    // Currently there's no list literal.
-    (!empty-list)
-    1 (!append)
-    2 (!append)
-    3 (!append)
-    0 (!prepend)
+    [ 1, 2, 3 ]
+        0 (!prepend)
     <-> list
     list; <- list <& (add-4) (map); (!concat)
     .
