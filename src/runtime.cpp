@@ -129,6 +129,11 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             return RuntimeState::OutOfBoundsLocalIndex;
         frame.OperandStack.push_back(frame.Locals[instr.Arg0]);
         break;
+    case InstructionCode::MoveLocal:
+        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= frame.Locals.size())
+            return RuntimeState::OutOfBoundsLocalIndex;
+        frame.OperandStack.push_back(std::move(frame.Locals[instr.Arg0]));
+        break;
     case InstructionCode::PopIntoLocal: {
         if (frame.OperandStack.size() < 1)
             return RuntimeState::StackUnderflow;
@@ -137,6 +142,13 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         frame.Locals[instr.Arg0] = std::move(frame.OperandStack.back());
         frame.OperandStack.pop_back();
     } break;
+    case InstructionCode::CopyIntoLocal:
+        if (frame.OperandStack.size() < 1)
+            return RuntimeState::StackUnderflow;
+        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= frame.Locals.size())
+            return RuntimeState::OutOfBoundsLocalIndex;
+        frame.Locals[instr.Arg0] = frame.OperandStack.back();
+        break;
     case InstructionCode::Call: {
         int64_t funcIdx = instr.Arg0;
         if (funcIdx < 0 || (size_t)funcIdx >= Functions.size())
