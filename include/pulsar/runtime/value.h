@@ -4,6 +4,7 @@
 #include "pulsar/core.h"
 
 #include "pulsar/structures/linkedlist.h"
+#include "pulsar/structures/string.h"
 
 namespace Pulsar
 {
@@ -12,7 +13,7 @@ namespace Pulsar
         Void = 0,
         Integer, Double,
         FunctionReference, NativeFunctionReference,
-        List
+        List, String
     };
 
     constexpr bool IsNumericValueType(ValueType vtype)
@@ -57,6 +58,8 @@ namespace Pulsar
                 return SetNativeFunctionReference(other.AsInteger());
             case ValueType::List:
                 return SetList(other.AsList());
+            case ValueType::String:
+                return SetString(other.AsString());
             }
             return *this;
         }
@@ -74,6 +77,9 @@ namespace Pulsar
             case ValueType::List:
                 SetList(std::move(other.m_AsList));
                 break;
+            case ValueType::String:
+                SetString(std::move(other.m_AsString));
+                break;
             }
             other.DeleteValue();
             return *this;
@@ -84,6 +90,8 @@ namespace Pulsar
         double AsDouble() const   { return m_AsDouble; }
         ValueList& AsList()             { return m_AsList; }
         const ValueList& AsList() const { return m_AsList; }
+        String& AsString()             { return m_AsString; }
+        const String& AsString() const { return m_AsString; }
 
         Value& SetVoid()                               { DeleteValue(); m_Type = ValueType::Void; m_AsInteger = 0; return *this; }
         Value& SetInteger(int64_t val)                 { DeleteValue(); m_Type = ValueType::Integer; m_AsInteger = val; return *this; }
@@ -92,6 +100,8 @@ namespace Pulsar
         Value& SetNativeFunctionReference(int64_t val) { DeleteValue(); m_Type = ValueType::NativeFunctionReference; m_AsInteger = val; return *this; }
         Value& SetList(ValueList&& val)                { DeleteValue(); m_Type = ValueType::List; m_AsList = std::move(val); return *this; }
         Value& SetList(const ValueList& val)           { DeleteValue(); m_Type = ValueType::List; m_AsList = val; return *this; }
+        Value& SetString(String&& val)                 { DeleteValue(); m_Type = ValueType::String; m_AsString = std::move(val); return *this; }
+        Value& SetString(const String& val)            { DeleteValue(); m_Type = ValueType::String; m_AsString = val; return *this; }
 
     private:
         void DeleteValue()
@@ -108,6 +118,10 @@ namespace Pulsar
                 m_AsList.~LinkedList();
                 PULSAR_MEMSET((void*)&m_AsList, 0, sizeof(ValueList));
                 break;
+            case ValueType::String:
+                m_AsString.~String();
+                PULSAR_MEMSET((void*)&m_AsString, 0, sizeof(String));
+                break;
             }
             m_Type = ValueType::Void;
         }
@@ -118,6 +132,7 @@ namespace Pulsar
             int64_t m_AsInteger;
             double m_AsDouble;
             ValueList m_AsList;
+            String m_AsString;
         };
     };
 }
