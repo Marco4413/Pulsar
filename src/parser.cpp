@@ -104,6 +104,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
             func.Code.emplace_back(InstructionCode::Mod);
             break;
         case TokenType::PushReference:
+        case TokenType::OpenBracket:
         case TokenType::StringLiteral:
         case TokenType::IntegerLiteral:
         case TokenType::DoubleLiteral:
@@ -271,7 +272,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDef
                 m_Lexer.NextToken();
             } break;
             default:
-                return SetError(ParseResult::UnexpectedToken, curToken, "Expected lvalue after comparison operator.");
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expected lvalue of type Integer, Double or Local after comparison operator.");
             }
         } else isSelfContained = false;
     }
@@ -395,6 +396,96 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
                 return SetError(ParseResult::UsageOfUndeclaredFunction, identToken, "Function not declared.");
             func.Code.emplace_back(InstructionCode::PushFunctionReference, funcIdx);
         } else return SetError(ParseResult::UnexpectedToken, curToken, "Expected (function) or local to reference.");
+    } break;
+    case TokenType::OpenBracket: {
+        /**
+         * Given the following list:
+         *   [ 1, 2, 3, foo, bar, "baz", 4, 5, 6 ]
+         * Split the parts which have constant
+         *   numeric values from the other ones:
+         *   [ 1, 2, 3 ], [ foo, bar, "baz", ], [ 4, 5, 6 ]
+         * - Now the ones that only contain numbers
+         *   can be cached in module.Constants and Pushed.
+         * - For the other values we must push them
+         *   individually and then Append those values.
+         * - After a const list is pushed we must concat
+         *   it with the previous one.
+         * - For lists inside lists we can just call recursively.
+         *   And expect a list value to be appended.
+         * PUSH []
+         * CONCAT
+         * PUSH [ 1, 2, 3, ]
+         * APPEND foo
+         * APPEND bar
+         * APPEND "baz"
+         * PUSH [ 4, 5, 6, ]
+         * CONCAT
+         */
+        Value constList;
+        constList.SetList(ValueList());
+        const Token& curToken = m_Lexer.NextToken();
+        func.Code.emplace_back(InstructionCode::PushEmptyList);
+        while (true) {
+            switch (curToken.Type) {
+            case TokenType::PushReference:
+            case TokenType::StringLiteral:
+            case TokenType::Identifier:
+            case TokenType::OpenBracket:
+                // Do not create a new list for consecutive non-const values.
+                if (!constList.AsList().Front())
+                    break;
+                [[fallthrough]];
+            case TokenType::CloseBracket: {
+                if (!constList.AsList().Front())
+                    return ParseResult::OK; // Empty List
+                // Check for an already existing list with the same values.
+                int64_t constIdx = (int64_t)module.Constants.size()-1;
+                for (; constIdx >= 0 && module.Constants[constIdx] != constList; constIdx--);
+                if (constIdx < 0) {
+                    constIdx = module.Constants.size();
+                    module.Constants.emplace_back(constList);
+                }
+                constList.AsList().Clear();
+                PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
+                func.Code.emplace_back(InstructionCode::PushConst, constIdx);
+                func.Code.emplace_back(InstructionCode::Concat);
+                if (curToken.Type == TokenType::CloseBracket)
+                    return ParseResult::OK;
+            } break;
+            case TokenType::IntegerLiteral:
+                constList.AsList().Append()->Value().SetInteger(curToken.IntegerVal);
+                break;
+            case TokenType::DoubleLiteral:
+                constList.AsList().Append()->Value().SetDouble(curToken.DoubleVal);
+                break;
+            default:
+                break;
+            }
+
+            switch (curToken.Type) {
+            case TokenType::PushReference:
+            case TokenType::StringLiteral:
+            case TokenType::Identifier:
+            case TokenType::OpenBracket: {
+                auto res = PushLValue(module, func, locals, curToken, debugSymbols);
+                if (res != ParseResult::OK)
+                    return res;
+                PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
+                func.Code.emplace_back(InstructionCode::Append);
+            } break;
+            case TokenType::IntegerLiteral:
+            case TokenType::DoubleLiteral:
+                break;
+            default:
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expected lvalue.");
+            }
+            
+            m_Lexer.NextToken();
+            if (curToken.Type == TokenType::Comma) {
+                m_Lexer.NextToken();
+            } else if (curToken.Type != TokenType::CloseBracket)
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expected ',' to continue List literal or ']' to close it.");
+        }
     } break;
     default:
         // We should never get here
