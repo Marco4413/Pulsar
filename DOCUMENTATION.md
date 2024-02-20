@@ -58,6 +58,8 @@ Though some type checking can be done by operators/statements.
 And a runtime error may be raised. No error catching is supported
 within the language itself.
 
+### Basic Datatypes
+
 |          Type           | Bit Count |
 | :---------------------: | :-------: |
 |         Integer         |    64     |
@@ -66,6 +68,12 @@ within the language itself.
 | NativeFunctionReference |    64     |
 
 Support for unsigned integers and (maybe) strings are planned.
+
+### Complex Datatypes
+
+| Type |
+| :--: |
+| List |
 
 ## Mathematical Operators
 
@@ -298,7 +306,7 @@ You can see keyword instructions as *blazing fast* functions!
 They map directly to VM instructions. So they don't even have the
 overhead of creating a new Frame and Stack.
 
-### ICall!
+### icall!
 
 The `icall!` instruction pops one value from the stack, checks
 if it's a `Native/FunctionReference` (raising an error otherwise)
@@ -306,3 +314,71 @@ and calls the function pointed by the reference. Of course, the called
 function is called like a normal `(function)` call.
 
 See the [references example](examples/references.pls).
+
+|         |            S-1             |    S0     |
+| :------ | :------------------------: | :-------: |
+| Pops    | `Native/FunctionReference` | `...Args` |
+| Returns | `...ReturnValues`          |           |
+
+### length!
+
+Calculates the length of a list and puts it into the stack.
+
+|         |   S0   |    S+1    |
+| :------ | :----: | :-------: |
+| Pops    | `List` |           |
+| Returns | `List` | `Integer` |
+
+### empty-list!
+
+Pushes a new empty list into the stack.
+
+|         |  S+1   |
+| :------ | :----: |
+| Pops    |        |
+| Returns | `List` |
+
+### prepend!
+
+Adds a value to the start of a list.
+
+|         |  S-1   |  S0   |
+| :------ | :----: | :---: |
+| Pops    | `List` | `Any` |
+| Returns | `List` |       |
+
+### append!
+
+Adds a value to the end of a list.
+
+|         |  S-1   |  S0   |
+| :------ | :----: | :---: |
+| Pops    | `List` | `Any` |
+| Returns | `List` |       |
+
+### concat!
+
+Concatenates two lists.
+
+|         |  S-1   |   S0   |
+| :------ | :----: | :----: |
+| Pops    | `List` | `List` |
+| Returns | `List` |        |
+
+### head!
+
+Removes the first value of a list and pushes it into the stack.
+
+|         |   S0   |  S+1  |
+| :------ | :----: | :---: |
+| Pops    | `List` |       |
+| Returns | `List` | `Any` |
+
+### tail!
+
+Removes the first value of a list.
+
+|         |   S0   |
+| :------ | :----: |
+| Pops    | `List` |
+| Returns | `List` |
