@@ -49,6 +49,14 @@ by *visually* separating *logical* expressions.
 
 i.e. `10 -> x; x` is more readable than `10 -> x x`.
 
+## Identifiers
+
+Identifiers can start with any letter from the alphabeth or the underscore character.
+Then can continue with any starting character or digit and the following symbols:
+`<=>?+-*/!`.
+
+At the moment, identifiers cannot be the same as keywords.
+
 ## Datatypes
 
 Pulsar is dynamically-typed, any value can be assigned to any local.
