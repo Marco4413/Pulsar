@@ -398,11 +398,12 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
     case TokenType::StringLiteral: {
         PUSH_CODE_SYMBOL(debugSymbols, func, lvalue);
         int64_t constIdx = (int64_t)module.Constants.size()-1;
-        for (; constIdx >= 0 && module.Constants[constIdx].Type() == ValueType::String
-            && module.Constants[constIdx].AsString() != lvalue.StringVal; constIdx--);
+        Value constVal;
+        constVal.SetString(lvalue.StringVal);
+        for (; constIdx >= 0 && module.Constants[constIdx] != constVal; constIdx--);
         if (constIdx < 0) {
             constIdx = module.Constants.size();
-            module.Constants.emplace_back().SetString(lvalue.StringVal);
+            module.Constants.emplace_back(std::move(constVal));
         }
         func.Code.emplace_back(InstructionCode::PushConst, constIdx);
     } break;
