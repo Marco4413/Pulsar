@@ -54,6 +54,12 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
             return TrimToToken(1, TokenType::OpenParenth);
         case ')':
             return TrimToToken(1, TokenType::CloseParenth);
+        case '[':
+            return TrimToToken(1, TokenType::OpenBracket);
+        case ']':
+            return TrimToToken(1, TokenType::CloseBracket);
+        case ',':
+            return TrimToToken(1, TokenType::Comma);
         case ':':
             return TrimToToken(1, TokenType::Colon);
         case '!':
@@ -245,6 +251,10 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
         return "OpenParenth";
     case TokenType::CloseParenth:
         return "CloseParenth";
+    case TokenType::OpenBracket:
+        return "OpenBracket";
+    case TokenType::CloseBracket:
+        return "CloseBracket";
     case TokenType::IntegerLiteral:
         return "IntegerLiteral";
     case TokenType::DoubleLiteral:
@@ -267,6 +277,8 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
         return "Negate";
     case TokenType::Colon:
         return "Colon";
+    case TokenType::Comma:
+        return "Comma";
     case TokenType::RightArrow:
         return "RightArrow";
     case TokenType::LeftArrow:
