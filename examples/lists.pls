@@ -1,11 +1,13 @@
 *(*stack-dump).
 
 *(map l f) -> 1:
-    l length! if = 0: l.
-    l tail! f (map)
-    l head! f icall!
-    (*stack-dump)
-    prepend!
+    <- l
+        length! if = 0: .
+        head! f icall! -> v
+        f (map)
+    <- v
+        (*stack-dump)
+        prepend!
     .
 
 *(add-4 x) -> 1: x 4 +.
@@ -17,7 +19,6 @@
     2 append!
     3 append!
     0 prepend!
-    -> list
-    
-    list; list <& (add-4) (map); concat!
+    <-> list
+    list; <- list <& (add-4) (map); concat!
     .
