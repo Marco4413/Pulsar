@@ -262,9 +262,11 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDef
     InstructionCode jmpInstrCode = InstructionCode::JumpIfZero;
     // Whether the if condition is fully contained within the statement.
     bool isSelfContained = false;
+    bool hasComparison = false;
 
     const Token& curToken = m_Lexer.NextToken();
     if (curToken.Type != TokenType::Colon) {
+        hasComparison = true;
         switch (curToken.Type) {
         case TokenType::IntegerLiteral:
         case TokenType::DoubleLiteral:
@@ -323,7 +325,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDef
 
     if (curToken.Type != TokenType::Colon)
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected ':' to begin if statement body.");
-    else if (comparisonToken.Type != TokenType::None) {
+    else if (hasComparison) {
         PUSH_CODE_SYMBOL(debugSymbols, func, ifToken);
         func.Code.emplace_back(InstructionCode::Compare);
     }
