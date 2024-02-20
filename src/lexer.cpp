@@ -77,6 +77,12 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
                     return TrimToToken(2, TokenType::LessOrEqual);
                 else if (m_SourceView[1] == '&')
                     return TrimToToken(2, TokenType::PushReference);
+                else if (m_SourceView[1] == '-') {
+                    if (m_SourceView.Length() > 2
+                        && m_SourceView[2] == '>')
+                        return TrimToToken(3, TokenType::BothArrows);
+                    return TrimToToken(2, TokenType::LeftArrow);
+                }
             }
             return TrimToToken(1, TokenType::Less);
         case '>':
@@ -221,6 +227,10 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
         return "Colon";
     case TokenType::RightArrow:
         return "RightArrow";
+    case TokenType::LeftArrow:
+        return "LeftArrow";
+    case TokenType::BothArrows:
+        return "BothArrows";
     case TokenType::Equals:
         return "Equals";
     case TokenType::NotEquals:

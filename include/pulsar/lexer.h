@@ -21,7 +21,7 @@ namespace Pulsar
         FullStop,
         Negate,
         Colon,
-        RightArrow,
+        RightArrow, LeftArrow, BothArrows,
         EndOfFile,
         Equals, NotEquals,
         Less, LessOrEqual,
