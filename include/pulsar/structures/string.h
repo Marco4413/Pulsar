@@ -46,12 +46,20 @@ namespace Pulsar
             m_Data[m_Capacity] = '\0';
         }
 
-        char operator[](size_t idx) const { return m_Data[idx]; }
+        char operator[](size_t idx) const  { return m_Data[idx]; }
+        const char& operator[](size_t idx) { return m_Data[idx]; }
 
         String operator+(const String& other) const
         {
             String concat = *this;
             concat += other;
+            return concat;
+        }
+
+        String operator+(char ch) const
+        {
+            String concat = *this;
+            concat += ch;
             return concat;
         }
 
@@ -75,6 +83,14 @@ namespace Pulsar
             PULSAR_MEMCPY(
                 (void*)(m_Data+appendIdx), other.m_Data,
                 other.m_Length*sizeof(char));
+            return *this;
+        }
+
+        String& operator+=(char ch)
+        {
+            size_t appendIdx = m_Length;
+            Resize(m_Length+1);
+            m_Data[appendIdx] = ch;
             return *this;
         }
 
