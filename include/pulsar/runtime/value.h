@@ -32,7 +32,8 @@ namespace Pulsar
     class Value
     {
     public:
-        Value() : m_Type(ValueType::Void), m_AsInteger(0) { }
+        // Type = Void
+        Value() { PULSAR_MEMSET((void*)this, 0, sizeof(Value)); }
         ~Value() { DeleteValue(); }
 
         Value(const Value& other)
@@ -105,9 +106,10 @@ namespace Pulsar
                 break;
             case ValueType::List:
                 m_AsList.~LinkedList();
+                PULSAR_MEMSET((void*)&m_AsList, 0, sizeof(ValueList));
                 break;
             }
-            PULSAR_MEMSET((void*)this, 0, sizeof(Value));
+            m_Type = ValueType::Void;
         }
 
         ValueType m_Type;
