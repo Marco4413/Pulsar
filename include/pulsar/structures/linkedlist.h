@@ -73,7 +73,7 @@ namespace Pulsar
             return *this;
         }
 
-        LinkedList(SelfType&& other) { *this = other; }
+        LinkedList(SelfType&& other) { *this = std::move(other); }
         SelfType& operator=(SelfType&& other)
         {
             if (m_Start)
@@ -123,7 +123,7 @@ namespace Pulsar
             NodeType* lastNode = m_Start;
             for (size_t i = 0; i < n-1 && lastNode; i++)
                 lastNode = lastNode->m_Next;
-            if (!lastNode->m_Next) {
+            if (!lastNode || !lastNode->m_Next) {
                 PULSAR_DELETE(NodeType, m_Start);
                 m_Start = nullptr;
                 m_End = nullptr;
