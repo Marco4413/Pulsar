@@ -144,7 +144,9 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
             if (res != ParseResult::OK)
                 return res;
         } break;
-        case TokenType::RightArrow: {
+        case TokenType::RightArrow:
+        case TokenType::BothArrows: {
+            bool copyIntoLocal = curToken.Type == TokenType::BothArrows;
             PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
             m_Lexer.NextToken();
             bool forceBinding = curToken.Type == TokenType::Negate;
@@ -166,7 +168,19 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
             }
             if (scopedLocals.size() > func.LocalsCount)
                 func.LocalsCount = scopedLocals.size();
-            func.Code.emplace_back(InstructionCode::PopIntoLocal, localIdx);
+            func.Code.emplace_back(copyIntoLocal ? InstructionCode::CopyIntoLocal : InstructionCode::PopIntoLocal, localIdx);
+        } break;
+        case TokenType::LeftArrow: {
+            PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
+            m_Lexer.NextToken();
+            if (curToken.Type != TokenType::Identifier)
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expected local name.");
+
+            int64_t localIdx = (int64_t)scopedLocals.size()-1;
+            for (; localIdx >= 0 && scopedLocals[localIdx] != curToken.StringVal; localIdx--);
+            if (localIdx < 0)
+                return SetError(ParseResult::UsageOfUndeclaredLocal, curToken, "Local not declared.");
+            func.Code.emplace_back(InstructionCode::MoveLocal, localIdx);
         } break;
         case TokenType::OpenParenth: {
             m_Lexer.NextToken();
