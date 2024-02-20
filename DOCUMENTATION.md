@@ -141,6 +141,41 @@ name as one that's on its parent scope (shadowing).
 > This operator is the reason why constants and locals are referred to
 as `lvalue`s, because they usually stand to the left of the operator.
 
+### The LeftArrow Operator
+
+As you might have seen, the standard way of putting a local into the stack
+is by using its name. That, however, copies the value of the local into the
+stack, which can get slow if doing so on complex data types (e.g. `List`).
+
+Another way of putting a local into the stack is using the `<-` operator.
+
+```lisp
+*(swap x y) -> 2:
+    // Super fast swap!
+    <- y <- x
+    .
+```
+
+This operator **moves** the local into the stack invalidating its value.
+Use it if you really want to improve the performance of your program, and
+are working with complex data types.
+
+### The BothArrows Operator
+
+Another local-management operator is the `<->` operator. While `->` moves
+the last value on the stack into a local, `<->` copies the value without
+popping it from the stack.
+
+Before the introduction of this operator, you had to write `-> var var`
+to do the same thing. Which was "less readable" and efficient.
+
+```lisp
+*(main) -> 1:
+    // This expression results in the value '2'.
+    1 <-> x x +
+    .
+```
+
 ### The FullStop/Return Operator
 
 .
