@@ -103,40 +103,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
             PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
             func.Code.emplace_back(InstructionCode::Mod);
             break;
-        case TokenType::PushReference: {
-            m_Lexer.NextToken();
-            if (curToken.Type == TokenType::Identifier) {
-                return SetError(ParseResult::UnexpectedToken, curToken, "Local reference is not supported, expected (function).");
-            } else if (curToken.Type == TokenType::OpenParenth) {
-                m_Lexer.NextToken();
-                bool isNative = curToken.Type == TokenType::Star;
-                if (isNative) m_Lexer.NextToken();
-                if (curToken.Type != TokenType::Identifier)
-                    return SetError(ParseResult::UnexpectedToken, curToken, "Expected (function) name.");
-                Token identToken = curToken;
-                m_Lexer.NextToken();
-                if (curToken.Type != TokenType::CloseParenth)
-                    return SetError(ParseResult::UnexpectedToken, curToken, "Expected ')' to close function reference.");
-            
-                if (isNative) {
-                    int64_t funcIdx = (int64_t)module.NativeBindings.size()-1;
-                    for (; funcIdx >= 0 && module.NativeBindings[funcIdx].Name != identToken.StringVal; funcIdx--);
-                    if (funcIdx < 0)
-                        return SetError(ParseResult::UsageOfUndeclaredNativeFunction, identToken, "Native function not declared.");
-                    func.Code.emplace_back(InstructionCode::PushNativeFunctionReference, funcIdx);
-                    break;
-                } else if (identToken.StringVal == func.Name) {
-                    func.Code.emplace_back(InstructionCode::PushFunctionReference, (int64_t)module.Functions.size());
-                    break;
-                }
-
-                int64_t funcIdx = (int64_t)module.Functions.size()-1;
-                for (; funcIdx >= 0 && module.Functions[funcIdx].Name != identToken.StringVal; funcIdx--);
-                if (funcIdx < 0)
-                    return SetError(ParseResult::UsageOfUndeclaredFunction, identToken, "Function not declared.");
-                func.Code.emplace_back(InstructionCode::PushFunctionReference, funcIdx);
-            } else return SetError(ParseResult::UnexpectedToken, curToken, "Expected (function) or local to reference.");
-        } break;
+        case TokenType::PushReference:
         case TokenType::StringLiteral:
         case TokenType::IntegerLiteral:
         case TokenType::DoubleLiteral:
@@ -364,7 +331,6 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDef
 
 Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const Token& lvalue, bool debugSymbols)
 {
-    (void) module;
     switch (lvalue.Type) {
     case TokenType::IntegerLiteral:
         func.Code.emplace_back(InstructionCode::PushInt, lvalue.IntegerVal);
@@ -395,6 +361,40 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
             module.Constants.emplace_back(std::move(constVal));
         }
         func.Code.emplace_back(InstructionCode::PushConst, constIdx);
+    } break;
+    case TokenType::PushReference: {
+        const Token& curToken = m_Lexer.NextToken();
+        if (curToken.Type == TokenType::Identifier) {
+            return SetError(ParseResult::UnexpectedToken, curToken, "Local reference is not supported, expected (function).");
+        } else if (curToken.Type == TokenType::OpenParenth) {
+            m_Lexer.NextToken();
+            bool isNative = curToken.Type == TokenType::Star;
+            if (isNative) m_Lexer.NextToken();
+            if (curToken.Type != TokenType::Identifier)
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expected (function) name.");
+            Token identToken = curToken;
+            m_Lexer.NextToken();
+            if (curToken.Type != TokenType::CloseParenth)
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expected ')' to close function reference.");
+        
+            if (isNative) {
+                int64_t funcIdx = (int64_t)module.NativeBindings.size()-1;
+                for (; funcIdx >= 0 && module.NativeBindings[funcIdx].Name != identToken.StringVal; funcIdx--);
+                if (funcIdx < 0)
+                    return SetError(ParseResult::UsageOfUndeclaredNativeFunction, identToken, "Native function not declared.");
+                func.Code.emplace_back(InstructionCode::PushNativeFunctionReference, funcIdx);
+                break;
+            } else if (identToken.StringVal == func.Name) {
+                func.Code.emplace_back(InstructionCode::PushFunctionReference, (int64_t)module.Functions.size());
+                break;
+            }
+
+            int64_t funcIdx = (int64_t)module.Functions.size()-1;
+            for (; funcIdx >= 0 && module.Functions[funcIdx].Name != identToken.StringVal; funcIdx--);
+            if (funcIdx < 0)
+                return SetError(ParseResult::UsageOfUndeclaredFunction, identToken, "Function not declared.");
+            func.Code.emplace_back(InstructionCode::PushFunctionReference, funcIdx);
+        } else return SetError(ParseResult::UnexpectedToken, curToken, "Expected (function) or local to reference.");
     } break;
     default:
         // We should never get here
