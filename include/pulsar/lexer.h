@@ -10,6 +10,7 @@ namespace Pulsar
     enum class TokenType
     {
         None = 0,
+        EndOfFile = 1,
         Identifier,
         OpenParenth,
         CloseParenth,
@@ -26,7 +27,6 @@ namespace Pulsar
         Colon,
         Comma,
         RightArrow, LeftArrow, BothArrows,
-        EndOfFile,
         Equals, NotEquals,
         Less, LessOrEqual,
         More, MoreOrEqual,
