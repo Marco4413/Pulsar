@@ -222,6 +222,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDef
     if (curToken.Type != TokenType::Colon) {
         hasComparison = true;
         switch (curToken.Type) {
+        case TokenType::StringLiteral:
         case TokenType::IntegerLiteral:
         case TokenType::DoubleLiteral:
         case TokenType::Identifier: {
