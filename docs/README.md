@@ -360,7 +360,7 @@ if it's a `Native/FunctionReference` (raising an error otherwise)
 and calls the function pointed by the reference. Of course, the called
 function is called like a normal `(function)` call.
 
-See the [references example](examples/references.pls).
+See the [references example](../examples/references.pls).
 
 |        |            S-1             |    S0     |
 | :----- | :------------------------: | :-------: |
