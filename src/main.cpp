@@ -30,14 +30,17 @@ struct fmt::formatter<Pulsar::Value> : formatter<string_view>
     {
         switch (val.Type()) {
         case Pulsar::ValueType::Void:
+            return fmt::format_to(ctx.out(), "Void");
         case Pulsar::ValueType::Integer:
+            return fmt::format_to(ctx.out(), "{}", val.AsInteger());
         case Pulsar::ValueType::FunctionReference:
+            return fmt::format_to(ctx.out(), "<&(@{})", val.AsInteger());
         case Pulsar::ValueType::NativeFunctionReference:
-            break;
+            return fmt::format_to(ctx.out(), "<&(*@{})", val.AsInteger());
         case Pulsar::ValueType::Double:
             return fmt::format_to(ctx.out(), "{}", val.AsDouble());
         case Pulsar::ValueType::String:
-            return fmt::format_to(ctx.out(), "\"{}\"", val.AsString());
+            return fmt::format_to(ctx.out(), "{}", Pulsar::ToStringLiteral(val.AsString()));
         case Pulsar::ValueType::List: {
             auto start = val.AsList().Front();
             if (!start) return fmt::format_to(ctx.out(), "[ ]");
@@ -50,7 +53,7 @@ struct fmt::formatter<Pulsar::Value> : formatter<string_view>
             return fmt::format_to(ctx.out(), " ]");
         }
         }
-        return fmt::format_to(ctx.out(), "{}", val.AsInteger());
+        return fmt::format_to(ctx.out(), "FormatError");
     }
 };
 
