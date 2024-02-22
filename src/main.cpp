@@ -147,6 +147,172 @@ void PrintPrettyRuntimeError(
         viewRange);
 }
 
+class ModuleNativeBindings
+{
+public:
+    ModuleNativeBindings() = default;
+    ~ModuleNativeBindings() = default;
+
+    void BindToModule(Pulsar::Module& module)
+    {
+        module.BindNativeFunction({ "module/from-file", 1, 1 },
+            [&](auto& ctx) { return Module_FromFile(ctx); });
+        module.BindNativeFunction({ "module/run", 1, 2 },
+            [&](auto& ctx) { return Module_Run(ctx); });
+        module.BindNativeFunction({ "module/free", 1, 0 },
+            [&](auto& ctx) { return Module_Free(ctx); });
+    }
+
+    Pulsar::RuntimeState Module_FromFile(Pulsar::ExecutionContext& eContext)
+    {
+        Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+        Pulsar::Value& modulePath = frame.Locals[0];
+        if (modulePath.Type() != Pulsar::ValueType::String)
+            return Pulsar::RuntimeState::TypeError;
+
+        std::ifstream file(modulePath.AsString().Data(), std::ios::binary);
+        size_t fileSize = std::filesystem::file_size(modulePath.AsString().Data());
+
+        Pulsar::String source;
+        source.Resize(fileSize);
+        file.read((char*)source.Data(), fileSize);
+
+        Pulsar::Module module;
+        Pulsar::Parser parser(source);
+        auto result = parser.ParseIntoModule(module, true);
+        if (result != Pulsar::ParseResult::OK)
+            return Pulsar::RuntimeState::Error;
+        
+        int64_t handle = m_NextHandle++;
+        frame.Stack.EmplaceBack()
+            .SetCustom({ .Type=0, .Handle=handle });
+        m_Modules[handle] = std::move(module);
+        return Pulsar::RuntimeState::OK;
+    }
+
+    Pulsar::RuntimeState Module_Run(Pulsar::ExecutionContext& eContext) const
+    {
+        Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+        Pulsar::Value& moduleHandle = frame.Locals[0];
+        if (moduleHandle.Type() != Pulsar::ValueType::Custom)
+            return Pulsar::RuntimeState::TypeError;
+
+        const Pulsar::Module& module = (*m_Modules.find(moduleHandle.AsCustom().Handle)).second;
+        Pulsar::ValueStack stack;
+        Pulsar::ExecutionContext context = module.CreateExecutionContext();
+        auto runtimeState = module.CallFunctionByName("main", stack, context);
+        if (runtimeState != Pulsar::RuntimeState::OK)
+            return Pulsar::RuntimeState::Error;
+
+        frame.Stack.EmplaceBack(moduleHandle);
+        Pulsar::ValueList retValues;
+        for (size_t i = 0; i < stack.Size(); i++)
+            retValues.Append()->Value() = std::move(stack[i]);
+        frame.Stack.EmplaceBack()
+            .SetList(std::move(retValues));
+        return Pulsar::RuntimeState::OK;
+    }
+
+    Pulsar::RuntimeState Module_Free(Pulsar::ExecutionContext& eContext)
+    {
+        Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+        Pulsar::Value& moduleHandle = frame.Locals[0];
+        if (moduleHandle.Type() != Pulsar::ValueType::Custom)
+            return Pulsar::RuntimeState::TypeError;
+
+        m_Modules.erase(moduleHandle.AsCustom().Handle);
+        return Pulsar::RuntimeState::OK;
+    }
+
+private:
+    int64_t m_NextHandle = 0;
+    std::unordered_map<int64_t, Pulsar::Module> m_Modules;
+};
+
+class LexerNativeBindings
+{
+public:
+    LexerNativeBindings() = default;
+    ~LexerNativeBindings() = default;
+
+    void BindToModule(Pulsar::Module& module)
+    {
+        module.BindNativeFunction({ "lexer/from-file", 1, 1 },
+            [&](auto& ctx) { return Lexer_FromFile(ctx); });
+        module.BindNativeFunction({ "lexer/next-token", 1, 2 },
+            [&](auto& ctx) { return Lexer_NextToken(ctx); });
+        module.BindNativeFunction({ "lexer/free", 1, 0 },
+            [&](auto& ctx) { return Lexer_Free(ctx); });
+    }
+
+    Pulsar::RuntimeState Lexer_FromFile(Pulsar::ExecutionContext& eContext)
+    {
+        Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+        Pulsar::Value& filePath = frame.Locals[0];
+        if (filePath.Type() != Pulsar::ValueType::String)
+            return Pulsar::RuntimeState::TypeError;
+
+        std::ifstream file(filePath.AsString().Data(), std::ios::binary);
+        size_t fileSize = std::filesystem::file_size(filePath.AsString().Data());
+
+        Pulsar::String source;
+        source.Resize(fileSize);
+        file.read((char*)source.Data(), fileSize);
+
+        int64_t handle = m_NextHandle++;
+        frame.Stack.EmplaceBack()
+            .SetCustom({ .Type=1, .Handle=handle });
+        m_Lexers.emplace(handle, std::move(source));
+        return Pulsar::RuntimeState::OK;
+    }
+
+    Pulsar::RuntimeState Lexer_NextToken(Pulsar::ExecutionContext& eContext)
+    {
+        Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+        Pulsar::Value& lexerHandle = frame.Locals[0];
+        if (lexerHandle.Type() != Pulsar::ValueType::Custom)
+            return Pulsar::RuntimeState::TypeError;
+
+        Pulsar::Lexer& lexer = (*m_Lexers.find(lexerHandle.AsCustom().Handle)).second;
+        Pulsar::Token token = lexer.NextToken();
+        
+        Pulsar::ValueList tokenAsList;
+        tokenAsList.Append()->Value().SetInteger((int64_t)token.Type);
+        tokenAsList.Append()->Value().SetString(Pulsar::TokenTypeToString(token.Type));
+        switch (token.Type) {
+        case Pulsar::TokenType::IntegerLiteral:
+            tokenAsList.Append()->Value().SetInteger(token.IntegerVal);
+            break;
+        case Pulsar::TokenType::DoubleLiteral:
+            tokenAsList.Append()->Value().SetInteger(token.DoubleVal);
+            break;
+        default:
+            if (token.StringVal.Length() > 0)
+                tokenAsList.Append()->Value().SetString(token.StringVal);
+        }
+
+        frame.Stack.EmplaceBack(lexerHandle);
+        frame.Stack.EmplaceBack()
+            .SetList(std::move(tokenAsList));
+
+        return Pulsar::RuntimeState::OK;
+    }
+
+    Pulsar::RuntimeState Lexer_Free(Pulsar::ExecutionContext& eContext)
+    {
+        Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+        Pulsar::Value& lexerHandle = frame.Locals[0];
+        if (lexerHandle.Type() != Pulsar::ValueType::Custom)
+            return Pulsar::RuntimeState::TypeError;
+        m_Lexers.erase(lexerHandle.AsCustom().Handle);
+        return Pulsar::RuntimeState::OK;
+    }
+
+private:
+    int64_t m_NextHandle = 0;
+    std::unordered_map<int64_t, Pulsar::Lexer> m_Lexers;
+};
+
 int main(int argc, const char** argv)
 {
     const char* executable = *argv++;
@@ -183,6 +349,12 @@ int main(int argc, const char** argv)
         fmt::println("Parse Error: {}", (int)result);
         return 1;
     }
+
+    ModuleNativeBindings moduleBindings;
+    moduleBindings.BindToModule(module);
+
+    LexerNativeBindings lexerBindings;
+    lexerBindings.BindToModule(module);
 
     module.BindNativeFunction({ "print!", 1, 0 },
         [](Pulsar::ExecutionContext& eContext)
