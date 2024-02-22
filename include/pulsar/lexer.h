@@ -42,6 +42,8 @@ namespace Pulsar
 
     const char* TokenTypeToString(TokenType ttype);
 
+    String ToStringLiteral(const String& str);
+
     struct SourcePosition
     {
         size_t Line;

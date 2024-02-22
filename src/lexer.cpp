@@ -18,6 +18,32 @@ bool Pulsar::IsIdentifierContinuation(int ch)
     );
 }
 
+Pulsar::String Pulsar::ToStringLiteral(const String& str)
+{
+    String lit(1, '"');
+    for (size_t i = 0; i < str.Length(); i++) {
+        switch (str[i]) {
+        case '"':
+            lit += "\\\"";
+            break;
+        case '\n':
+            lit += "\\n";
+            break;
+        case '\r':
+            lit += "\\r";
+            break;
+        case '\t':
+            lit += "\\t";
+            break;
+        default:
+            if (!std::iscntrl(str[i]))
+                lit += str[i];
+        }
+    }
+    lit += '"';
+    return lit;
+}
+
 Pulsar::Token Pulsar::Lexer::ParseNextToken()
 {
     while (m_SourceView.Length() > 0) {
