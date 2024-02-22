@@ -235,7 +235,6 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             a.SetDouble(aVal + bVal);
         } else a.SetInteger(a.AsInteger() + b.AsInteger());
     } break;
-    case InstructionCode::Compare:
     case InstructionCode::DynSub: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
@@ -287,6 +286,47 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         if (a.Type() != ValueType::Integer || b.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
         a.SetInteger(a.AsInteger() % b.AsInteger());
+    } break;
+    case InstructionCode::Compare: {
+        if (frame.Stack.Size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value b = std::move(frame.Stack.Back());
+        frame.Stack.PopBack();
+        Value& a = frame.Stack.Back();
+
+        if (IsNumericValueType(a.Type()) && IsNumericValueType(b.Type())) {
+            if (a.Type() == ValueType::Double || b.Type() == ValueType::Double) {
+                double aVal = a.Type() == ValueType::Double ? a.AsDouble() : (double)a.AsInteger();
+                double bVal = b.Type() == ValueType::Double ? b.AsDouble() : (double)b.AsInteger();
+                a.SetDouble(aVal - bVal);
+            } else a.SetInteger(a.AsInteger() - b.AsInteger());
+            break;
+        }
+
+        if (a.Type() != b.Type() || a.Type() != ValueType::String)
+            return RuntimeState::TypeError;
+
+        // String Comparison!
+        if (a.AsString().Length() != b.AsString().Length()) {
+            size_t minLength = a.AsString().Length() < b.AsString().Length()
+                ? a.AsString().Length()
+                : b.AsString().Length();
+            int64_t cmp = 0;
+            for (size_t i = 0; i < minLength; i++) {
+                cmp = a.AsString()[i] - b.AsString()[i];
+                if (cmp != 0) break;
+            }
+            if (cmp == 0)
+                cmp = (int64_t)a.AsString().Length() - (int64_t)b.AsString().Length();
+            a.SetInteger(cmp);
+        } else {
+            int64_t cmp = 0;
+            for (size_t i = 0; i < a.AsString().Length(); i++) {
+                cmp = a.AsString()[i] - b.AsString()[i];
+                if (cmp != 0) break;
+            }
+            a.SetInteger(cmp);
+        }
     } break;
     case InstructionCode::Jump:
         --frame.InstructionIndex += instr.Arg0;
