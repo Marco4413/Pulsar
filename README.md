@@ -12,7 +12,7 @@ I wanted to have a second attempt at creating a programming language.
 
 ## Language Documentation
 
-It can be found within the [DOCUMENTATION.md](DOCUMENTATION.md) file.
+It can be found within the [docs](docs) folder.
 
 ## Editor Extensions
 
