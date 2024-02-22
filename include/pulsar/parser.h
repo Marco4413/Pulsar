@@ -11,6 +11,7 @@ namespace Pulsar
 {
     struct InstructionDescription { InstructionCode Code; bool MayFail = true; };
     static const std::unordered_map<String, InstructionDescription> InstructionMappings {
+        { "compare",    { InstructionCode::Compare              } },
         { "icall",      { InstructionCode::ICall                } },
         { "length",     { InstructionCode::Length               } },
         { "empty-list", { InstructionCode::PushEmptyList, false } },
