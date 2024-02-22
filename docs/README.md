@@ -74,8 +74,12 @@ within the language itself.
 |         Double          |    64     |
 |    FunctionReference    |    64     |
 | NativeFunctionReference |    64     |
+|         Custom          |    128    |
 
-Support for unsigned integers and (maybe) strings are planned.
+Support for unsigned integers is planned.
+
+The Custom datatype is mainly intended to be returned by [Native Functions](#native-functions).
+So you can have handle-like objects that can keep a pointer to some state.
 
 ### Complex Datatypes
 
@@ -322,7 +326,7 @@ All the variants can be described with the following string:
 > Woah, that's A LOT of `if`s.
 
 First of all, `lvalue`s that the if statement supports are
-numeric constants and names of locals.
+numeric/string literals and names of locals.
 
 If both `lvalue`s (and `comp`) are present the `if` is
 considered as self-contained. Meaning that it does not consume stack
