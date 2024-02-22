@@ -8,12 +8,19 @@
 
 namespace Pulsar
 {
+    struct CustomData
+    {
+        uint64_t Type;
+        int64_t Handle;
+    };
+    
     enum class ValueType
     {
         Void = 0,
         Integer, Double,
         FunctionReference, NativeFunctionReference,
-        List, String
+        List, String,
+        Custom
     };
 
     constexpr bool IsNumericValueType(ValueType vtype)
@@ -60,6 +67,8 @@ namespace Pulsar
                 return SetList(other.AsList());
             case ValueType::String:
                 return SetString(other.AsString());
+            case ValueType::Custom:
+                return SetCustom(other.AsCustom());
             }
             return *this;
         }
@@ -72,6 +81,7 @@ namespace Pulsar
             case ValueType::Double:
             case ValueType::FunctionReference:
             case ValueType::NativeFunctionReference:
+            case ValueType::Custom:
                 *this = (const Value&)other;
                 break;
             case ValueType::List:
@@ -100,6 +110,9 @@ namespace Pulsar
                 return AsDouble() == other.AsDouble();
             case ValueType::String:
                 return AsString() == other.AsString();
+            case ValueType::Custom:
+                return AsCustom().Type == other.AsCustom().Type
+                    && AsCustom().Handle == other.AsCustom().Handle;
             case ValueType::List:
                 const ValueList::NodeType* aNext = AsList().Front();
                 const ValueList::NodeType* bNext = other.AsList().Front();
@@ -126,6 +139,8 @@ namespace Pulsar
         const ValueList& AsList() const { return m_AsList; }
         String& AsString()             { return m_AsString; }
         const String& AsString() const { return m_AsString; }
+        CustomData& AsCustom()             { return m_AsCustom; }
+        const CustomData& AsCustom() const { return m_AsCustom; }
 
         Value& SetVoid()                               { DeleteValue(); m_Type = ValueType::Void; m_AsInteger = 0; return *this; }
         Value& SetInteger(int64_t val)                 { DeleteValue(); m_Type = ValueType::Integer; m_AsInteger = val; return *this; }
@@ -136,6 +151,7 @@ namespace Pulsar
         Value& SetList(const ValueList& val)           { DeleteValue(); m_Type = ValueType::List; m_AsList = val; return *this; }
         Value& SetString(String&& val)                 { DeleteValue(); m_Type = ValueType::String; m_AsString = std::move(val); return *this; }
         Value& SetString(const String& val)            { DeleteValue(); m_Type = ValueType::String; m_AsString = val; return *this; }
+        Value& SetCustom(const CustomData& val)        { DeleteValue(); m_Type = ValueType::Custom; m_AsCustom = val; return *this; }
 
     private:
         void DeleteValue()
@@ -156,6 +172,9 @@ namespace Pulsar
                 m_AsString.~String();
                 PULSAR_MEMSET((void*)&m_AsString, 0, sizeof(String));
                 break;
+            case ValueType::Custom:
+                PULSAR_MEMSET((void*)&m_AsCustom, 0, sizeof(CustomData));
+                break;
             }
             m_Type = ValueType::Void;
         }
@@ -167,6 +186,7 @@ namespace Pulsar
             double m_AsDouble;
             ValueList m_AsList;
             String m_AsString;
+            CustomData m_AsCustom;
         };
     };
 }
