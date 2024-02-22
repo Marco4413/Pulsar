@@ -5,6 +5,7 @@
 
 #include "pulsar/runtime/debug.h"
 #include "pulsar/runtime/instruction.h"
+#include "pulsar/structures/list.h"
 
 namespace Pulsar
 {
@@ -15,13 +16,13 @@ namespace Pulsar
         size_t Returns;
         
         size_t LocalsCount = Arity;
-        std::vector<Instruction> Code = {};
+        List<Instruction> Code = List<Instruction>();
         
         DebugSymbol FunctionDebugSymbol{Token(TokenType::None)};
-        std::vector<BlockDebugSymbol> CodeDebugSymbols = {};
+        List<BlockDebugSymbol> CodeDebugSymbols = List<BlockDebugSymbol>();
 
         bool HasDebugSymbol() const { return FunctionDebugSymbol.Token.Type != TokenType::None; }
-        bool HasCodeDebugSymbols() const { return CodeDebugSymbols.size() > 0; }
+        bool HasCodeDebugSymbols() const { return !CodeDebugSymbols.IsEmpty(); }
 
         bool MatchesDeclaration(const FunctionDefinition& other) const
         {

@@ -105,12 +105,12 @@ void PrintPrettyRuntimeError(
     const Pulsar::ExecutionContext& context,
     TokenViewRange viewRange)
 {
-    if (context.CallStack.size() == 0) {
+    if (context.CallStack.Size() == 0) {
         fmt::format_to(std::back_inserter(out), "No Runtime Error Information.");
         return;
     }
 
-    const Pulsar::Frame& frame = context.GetCurrentFrame();
+    const Pulsar::Frame& frame = context.CallStack.CurrentFrame();
     if (!frame.Function->HasDebugSymbol()) {
         fmt::format_to(
             std::back_inserter(out),
@@ -128,7 +128,7 @@ void PrintPrettyRuntimeError(
     }
 
     size_t symbolIdx = 0;
-    for (size_t i = 0; i < frame.Function->CodeDebugSymbols.size(); i++) {
+    for (size_t i = 0; i < frame.Function->CodeDebugSymbols.Size(); i++) {
         // frame.InstructionIndex points to the NEXT instruction
         if (frame.Function->CodeDebugSymbols[i].StartIdx >= frame.InstructionIndex)
             break;
@@ -182,7 +182,7 @@ int main(int argc, const char** argv)
     module.BindNativeFunction({ "print!", 1, 0 },
         [](Pulsar::ExecutionContext& eContext)
         {
-            Pulsar::Frame& frame = eContext.GetCurrentFrame();
+            Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
             Pulsar::Value& val = frame.Locals[0];
             fmt::println("{}", val);
             return Pulsar::RuntimeState::OK;
@@ -199,23 +199,23 @@ int main(int argc, const char** argv)
     module.BindNativeFunction({ "stack-dump", 0, 0 },
         [](Pulsar::ExecutionContext& eContext)
         {
-            Pulsar::Frame* frame = eContext.GetCallingFrame();
+            Pulsar::Frame& frame = eContext.CallStack.CallingFrame();
             fmt::print("Stack Dump: [");
-            for (size_t i = 0; i < frame->OperandStack.size(); i++) {
+            for (size_t i = 0; i < frame.Stack.Size(); i++) {
                 if (i > 0) fmt::print(",");
-                fmt::print(" {}", frame->OperandStack[i]);
+                fmt::print(" {}", frame.Stack[i]);
             }
             fmt::println(" ]");
             return Pulsar::RuntimeState::OK;
         });
 
     auto startTime = std::chrono::high_resolution_clock::now();
-    Pulsar::Stack stack;
+    Pulsar::ValueStack stack;
     {
         Pulsar::ValueList argList;
         for (int i = 0; i < argc; i++)
             argList.Append()->Value().SetString(argv[i]);
-        stack.emplace_back().SetList(std::move(argList));
+        stack.EmplaceBack().SetList(std::move(argList));
     }
     Pulsar::ExecutionContext context = module.CreateExecutionContext();
     auto runtimeState = module.CallFunctionByName("main", stack, context);
@@ -235,7 +235,7 @@ int main(int argc, const char** argv)
     }
 
     fmt::println("Stack Dump:");
-    for (size_t i = 0; i < stack.size(); i++)
+    for (size_t i = 0; i < stack.Size(); i++)
         fmt::println("{}. {}", i+1, stack[i]);
 
     return 0;

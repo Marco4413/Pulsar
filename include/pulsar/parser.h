@@ -5,6 +5,7 @@
 
 #include "pulsar/lexer.h"
 #include "pulsar/runtime.h"
+#include "pulsar/structures/list.h"
 
 namespace Pulsar
 {
@@ -35,7 +36,7 @@ namespace Pulsar
     class Parser
     {
     public:
-        typedef std::vector<String> LocalsBindings;
+        typedef List<String> LocalsBindings;
         Parser(const String& src)
             : m_Lexer(src) { }
         Parser(String&& src)

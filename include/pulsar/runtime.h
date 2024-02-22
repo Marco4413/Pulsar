@@ -5,6 +5,7 @@
 
 #include "pulsar/runtime/function.h"
 #include "pulsar/runtime/value.h"
+#include "pulsar/structures/list.h"
 
 namespace Pulsar
 {
@@ -27,39 +28,38 @@ namespace Pulsar
 
     const char* RuntimeStateToString(RuntimeState rstate);
 
-    typedef std::vector<Value> Stack;
+    typedef List<Value> ValueStack;
     struct Frame
     {
         const FunctionDefinition* Function;
-        std::vector<Value> Locals = {};
-        Stack OperandStack = {};
+        List<Value> Locals = List<Value>();
+        ValueStack Stack = ValueStack();
         size_t InstructionIndex = 0;
+    };
+
+    class CallStack : public List<Frame>
+    {
+    public:
+        CallStack()
+            : List<Frame>() { }
+        
+        bool HasCaller() const            { return Size() > 1; }
+        Frame& CallingFrame()             { return (*this)[Size()-2]; }
+        const Frame& CallingFrame() const { return (*this)[Size()-2]; }
+        Frame& CurrentFrame()             { return (*this).Back(); }
+        const Frame& CurrentFrame() const { return (*this).Back(); }
     };
 
     struct Module; // Forward Declaration
     struct ExecutionContext
     {
         const Module* OwnerModule;
-        std::vector<Frame> CallStack;
+        Pulsar::CallStack CallStack;
 
-        Frame* GetCallingFrame() {
-            if (CallStack.size() <= 1)
-                return nullptr;
-            return &CallStack[CallStack.size()-2];
-        }
-
-        const Frame* GetCallingFrame() const {
-            if (CallStack.size() <= 1)
-                return nullptr;
-            return &CallStack[CallStack.size()-2];
-        }
-
-        Frame& GetCurrentFrame()             { return CallStack.back(); }
-        const Frame& GetCurrentFrame() const { return CallStack.back(); }
         bool IsAtEnd() const {
-            return CallStack.size() < 1 || (
-                CallStack.size() == 1 &&
-                CallStack[0].InstructionIndex >= CallStack[0].Function->Code.size()
+            return CallStack.IsEmpty() || (
+                CallStack.Size() == 1 &&
+                CallStack[0].InstructionIndex >= CallStack[0].Function->Code.Size()
             );
         }
     };
@@ -68,20 +68,20 @@ namespace Pulsar
     {
     public:
         ExecutionContext CreateExecutionContext() const { return {this, { }}; }
-        RuntimeState CallFunction(int64_t funcIdx, Stack& stack, ExecutionContext& context) const;
-        RuntimeState CallFunctionByName(const String& name, Stack& stack, ExecutionContext& context) const;
-        RuntimeState CallFunctionByDefinition(const FunctionDefinition& def, Stack& stack, ExecutionContext& context) const;
+        RuntimeState CallFunction(int64_t funcIdx, ValueStack& stack, ExecutionContext& context) const;
+        RuntimeState CallFunctionByName(const String& name, ValueStack& stack, ExecutionContext& context) const;
+        RuntimeState CallFunctionByDefinition(const FunctionDefinition& def, ValueStack& stack, ExecutionContext& context) const;
 
         typedef std::function<RuntimeState(ExecutionContext&)> NativeFunction;
         size_t BindNativeFunction(const FunctionDefinition& def, NativeFunction func);
 
     public:
-        std::vector<FunctionDefinition> Functions;
-        std::vector<FunctionDefinition> NativeBindings;
-        std::vector<NativeFunction> NativeFunctions;
-        std::vector<Value> Constants;
+        List<FunctionDefinition> Functions;
+        List<FunctionDefinition> NativeBindings;
+        List<NativeFunction> NativeFunctions;
+        List<Value> Constants;
     private:
-        RuntimeState PrepareCallFrame(Stack& callerStack, Frame& callingFrame) const;
+        RuntimeState PrepareCallFrame(ValueStack& callerStack, Frame& callingFrame) const;
         RuntimeState ExecuteInstruction(Frame& frame, ExecutionContext& eContext) const;
     };
 }
