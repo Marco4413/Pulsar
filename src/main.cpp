@@ -62,7 +62,7 @@ struct fmt::formatter<Pulsar::Value> : formatter<string_view>
 struct TokenViewRange { size_t Before; size_t After; };
 #define DEFAULT_VIEW_RANGE TokenViewRange{20, 20}
 
-size_t PrintTokenView(fmt::memory_buffer& out, const Pulsar::String& source, const Pulsar::Token& token, TokenViewRange viewRange)
+size_t PrintTokenView(const Pulsar::String& source, const Pulsar::Token& token, TokenViewRange viewRange)
 {
     Pulsar::StringView errorView(source);
     errorView.RemovePrefix(token.SourcePos.Index-token.SourcePos.Char);
@@ -83,50 +83,45 @@ size_t PrintTokenView(fmt::memory_buffer& out, const Pulsar::String& source, con
         errorView.RemoveSuffix(trimmedFromEnd);
     }
     
-    auto outIt = std::back_inserter(out);
     if (trimmedFromStart > 0)
-        fmt::format_to(outIt, "... ");
-    fmt::format_to(outIt, "{}", errorView);
+        fmt::print("... ");
+    fmt::print("{}", errorView);
     if (trimmedFromEnd > 0)
-        fmt::format_to(outIt, " ...");
+        fmt::print(" ...");
     return trimmedFromStart;
 }
 
 void PrintPrettyError(
-    fmt::memory_buffer& out,
-    const Pulsar::String& source, const char* filepath,
+    const Pulsar::String& source, const Pulsar::String& filepath,
     const Pulsar::Token& token, const Pulsar::String& message,
     TokenViewRange viewRange)
 {
-    fmt::format_to(std::back_inserter(out), "{}:{}:{}: Error: {}\n", filepath, token.SourcePos.Line+1, token.SourcePos.Char+1, message.Data());
-    size_t trimmedFromStart = PrintTokenView(out, source, token, viewRange);
+    fmt::print("{}:{}:{}: Error: {}\n", filepath, token.SourcePos.Line+1, token.SourcePos.Char+1, message);
+    size_t trimmedFromStart = PrintTokenView(source, token, viewRange);
     size_t charsToToken = token.SourcePos.Char-trimmedFromStart + (trimmedFromStart > 0 ? 4 : 0);
-    fmt::format_to(std::back_inserter(out), fmt::fg(fmt::color::red), "\n{0: ^{1}}^{0:~^{2}}", "", charsToToken, token.SourcePos.CharSpan-1);
+    fmt::print(fmt::fg(fmt::color::red), "\n{0: ^{1}}^{0:~^{2}}", "", charsToToken, token.SourcePos.CharSpan-1);
 }
 
 void PrintPrettyRuntimeError(
-    fmt::memory_buffer& out,
-    const char* filepath,
     const Pulsar::ExecutionContext& context,
     TokenViewRange viewRange)
 {
     if (context.CallStack.Size() == 0) {
-        fmt::format_to(std::back_inserter(out), "No Runtime Error Information.");
+        fmt::print("No Runtime Error Information.");
         return;
     }
 
     const Pulsar::Frame& frame = context.CallStack.CurrentFrame();
     if (!context.OwnerModule->HasSourceDebugSymbols() || !frame.Function->HasDebugSymbol()) {
-        fmt::format_to(
-            std::back_inserter(out),
+        fmt::print(
             "Error: Within function {}\n"
-            "    No Code Debug Symbols found.",
-            frame.Function->Name);
+            "    No Code Debug Symbols found. {}",
+            frame.Function->Name, frame.Function->HasDebugSymbol());
         return;
     } else if (!frame.Function->HasCodeDebugSymbols()) {
         const auto& srcSymbol = context.OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
         PrintPrettyError(
-            out, srcSymbol.Source, filepath,
+            srcSymbol.Source, srcSymbol.Path,
             frame.Function->DebugSymbol.Token,
             "Within function " + frame.Function->Name,
             viewRange);
@@ -143,7 +138,7 @@ void PrintPrettyRuntimeError(
 
     const auto& srcSymbol = context.OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
     PrintPrettyError(
-        out, srcSymbol.Source, filepath,
+        srcSymbol.Source, srcSymbol.Path,
         frame.Function->CodeDebugSymbols[symbolIdx].Token,
         "In function " + frame.Function->Name,
         viewRange);
@@ -181,7 +176,8 @@ public:
         file.read((char*)source.Data(), fileSize);
 
         Pulsar::Module module;
-        Pulsar::Parser parser(source);
+        Pulsar::Parser parser;
+        parser.AddSource(modulePath.AsString(), std::move(source));
         auto result = parser.ParseIntoModule(module, true);
         if (result != Pulsar::ParseResult::OK)
             return Pulsar::RuntimeState::Error;
@@ -356,31 +352,23 @@ int main(int argc, const char** argv)
         return 1;
     }
 
-    const char* program = *argv;
-    if (!std::filesystem::exists(program)) {
+    const Pulsar::String program(*argv);
+    if (!std::filesystem::exists(program.Data())) {
         fmt::println("{} not found.", program);
         return 1;
     }
 
-    std::ifstream file(program, std::ios::binary);
-    size_t fileSize = std::filesystem::file_size(program);
-
-    Pulsar::String source;
-    source.Resize(fileSize);
-    file.read((char*)source.Data(), fileSize);
-
     Pulsar::Module module;
     { // Parse Module
-        Pulsar::Parser parser(source);
+        Pulsar::Parser parser;
+        parser.AddSourceFile(program);
         auto result = parser.ParseIntoModule(module, true);
         if (result != Pulsar::ParseResult::OK) {
-            fmt::memory_buffer prettyError;
             PrintPrettyError(
-                prettyError, parser.GetSource(), program,
+                parser.GetLastErrorSource(), parser.GetLastErrorPath(),
                 parser.GetLastErrorToken(), parser.GetLastErrorMessage(),
                 DEFAULT_VIEW_RANGE);
-            fmt::println("{:.{}}", prettyError.data(), prettyError.size());
-            fmt::println("Parse Error: {}", (int)result);
+            fmt::println("\nParse Error: {}", (int)result);
             return 1;
         }
     }
@@ -438,11 +426,8 @@ int main(int argc, const char** argv)
 
     fmt::println("Runtime State: {}", Pulsar::RuntimeStateToString(runtimeState));
     if (runtimeState != Pulsar::RuntimeState::OK) {
-        fmt::memory_buffer prettyError;
-        PrintPrettyRuntimeError(
-            prettyError, program,
-            context, DEFAULT_VIEW_RANGE);
-        fmt::println("{:.{}}", prettyError.data(), prettyError.size());
+        PrintPrettyRuntimeError(context, DEFAULT_VIEW_RANGE);
+        fmt::println("");
         return 1;
     }
 
