@@ -7,8 +7,7 @@ project "pulsar"
    targetdir "%{prj.location}/%{cfg.buildcfg}"
 
    includedirs "../include"
-   files { "../src/**.cpp", "../include/**.h" }
-   removefiles "../src/main.cpp"
+   files { "../src/pulsar/**.cpp", "../include/pulsar/**.h" }
 
    filter "toolset:gcc"
       buildoptions { "-Wall", "-Wextra", "-Wpedantic", "-Werror" }
