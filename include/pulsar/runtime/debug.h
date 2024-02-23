@@ -7,15 +7,14 @@
 
 namespace Pulsar
 {
-    struct DebugSymbol
+    struct FunctionDebugSymbol
     {
         Pulsar::Token Token;
     };
 
-    struct BlockDebugSymbol : public DebugSymbol
+    struct BlockDebugSymbol
     {
-        BlockDebugSymbol(const Pulsar::Token& token, size_t startIdx)
-            : DebugSymbol{token}, StartIdx(startIdx) { }
+        Pulsar::Token Token;
         size_t StartIdx;
     };
 }

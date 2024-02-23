@@ -27,7 +27,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, bool
     if (curToken.Type != TokenType::Identifier)
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected function identifier.");
     FunctionDefinition def = { curToken.StringVal, 0, 0 };
-    if (debugSymbols) def.FunctionDebugSymbol = {curToken};
+    if (debugSymbols) def.DebugSymbol = {curToken};
 
     m_Lexer.NextToken();
     LocalsBindings args;

@@ -126,7 +126,7 @@ void PrintPrettyRuntimeError(
     } else if (!frame.Function->HasCodeDebugSymbols()) {
         PrintPrettyError(
             out, source, filepath,
-            frame.Function->FunctionDebugSymbol.Token,
+            frame.Function->DebugSymbol.Token,
             "Within function " + frame.Function->Name,
             viewRange);
         return;
