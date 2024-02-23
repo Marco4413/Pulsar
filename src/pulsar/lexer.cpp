@@ -62,6 +62,9 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
             token = ParseStringLiteral();
             if (token.Type != TokenType::None)
                 return token;
+            token = ParseCompilerDirective();
+            if (token.Type != TokenType::None)
+                return token;
             token = ParseIdentifier();
             if (token.Type != TokenType::None) {
                 auto it = Keywords.find(token.StringVal);
@@ -138,6 +141,26 @@ Pulsar::Token Pulsar::Lexer::ParseIdentifier()
     size_t count = 0;
     for (; count < m_SourceView.Length() && IsIdentifierContinuation(m_SourceView[count]); count++);
     return TrimToToken(count, TokenType::Identifier, m_SourceView.GetPrefix(count));
+}
+
+Pulsar::Token Pulsar::Lexer::ParseCompilerDirective()
+{
+    if (m_SourceView.Length() < 2)
+        return TrimToToken(0, TokenType::None);
+    if (m_SourceView[0] != '#' || !IsIdentifierStart(m_SourceView[1]))
+        return TrimToToken(0, TokenType::None);
+    size_t count = 1;
+    for (; count < m_SourceView.Length() && IsIdentifierContinuation(m_SourceView[count]); count++);
+    
+    StringView idView = m_SourceView;
+    idView.RemovePrefix(1);
+    Token token = TrimToToken(count, TokenType::CompilerDirective, idView.GetPrefix(count-1));
+    token.IntegerVal = TOKEN_CD_GENERIC;
+
+    const auto& it = CompilerDirectives.find(token.StringVal);
+    if (it != CompilerDirectives.end())
+        token.IntegerVal = (*it).second;
+    return token;
 }
 
 Pulsar::Token Pulsar::Lexer::ParseIntegerLiteral()
@@ -331,6 +354,8 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
         return "KW_Else";
     case TokenType::KW_End:
         return "KW_End";
+    case TokenType::CompilerDirective:
+        return "CompilerDirective";
     case TokenType::EndOfFile:
         return "EndOfFile";
     }

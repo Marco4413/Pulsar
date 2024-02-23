@@ -31,13 +31,21 @@ namespace Pulsar
         Less, LessOrEqual,
         More, MoreOrEqual,
         PushReference,
-        KW_If, KW_Else, KW_End
+        KW_If, KW_Else, KW_End,
+        CompilerDirective
     };
+
+    constexpr int64_t TOKEN_CD_GENERIC = 0;
+    constexpr int64_t TOKEN_CD_INCLUDE = 1;
 
     static const std::unordered_map<String, TokenType> Keywords {
         { "if",   TokenType::KW_If   },
         { "else", TokenType::KW_Else },
         { "end",  TokenType::KW_End  },
+    };
+
+    static const std::unordered_map<String, int64_t> CompilerDirectives {
+        { "include", TOKEN_CD_INCLUDE },
     };
 
     const char* TokenTypeToString(TokenType ttype);
@@ -116,6 +124,7 @@ namespace Pulsar
     private:
         Token ParseNextToken();
         Token ParseIdentifier();
+        Token ParseCompilerDirective();
         Token ParseIntegerLiteral();
         Token ParseDoubleLiteral();
         Token ParseStringLiteral();
@@ -139,7 +148,7 @@ namespace Pulsar
             return token;
         }
     private:
-        const String m_Source;
+        String m_Source;
         StringView m_SourceView;
         Token m_Token = Token(TokenType::None);
         size_t m_Line = 0;
