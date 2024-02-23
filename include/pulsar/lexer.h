@@ -86,6 +86,27 @@ namespace Pulsar
         Lexer(String&& src)
             : m_Source(src), m_SourceView(m_Source) { }
 
+        Lexer(const Lexer& other)
+            : m_Source(other.m_Source), m_SourceView(m_Source)
+        {
+            m_SourceView.RemovePrefix(other.m_SourceView.GetStart());
+            m_SourceView.RemoveSuffix(m_SourceView.Length()-other.m_SourceView.Length());
+            m_Token = other.m_Token;
+            m_Line = other.m_Line;
+            m_LineStartIdx = other.m_LineStartIdx;
+        }
+
+        Lexer(Lexer&& other)
+            : m_Source(std::move(other.m_Source)), m_SourceView(m_Source)
+        {
+            m_SourceView.RemovePrefix(other.m_SourceView.GetStart());
+            m_SourceView.RemoveSuffix(m_SourceView.Length()-other.m_SourceView.Length());
+            other.m_SourceView.RemoveSuffix(other.m_SourceView.Length());
+            m_Token = std::move(other.m_Token);
+            m_Line = other.m_Line;
+            m_LineStartIdx = other.m_LineStartIdx;
+        }
+
         const Token& NextToken()             { m_Token = ParseNextToken(); return m_Token; }
         const Token& CurrentToken() const    { return m_Token; }
         bool IsEndOfFile() const             { return m_SourceView.Length() == 0; }
