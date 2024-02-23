@@ -111,8 +111,8 @@ void PrintPrettyRuntimeError(
     if (!context.OwnerModule->HasSourceDebugSymbols() || !frame.Function->HasDebugSymbol()) {
         fmt::print(
             "Error: Within function {}\n"
-            "    No Code Debug Symbols found. {}",
-            frame.Function->Name, frame.Function->HasDebugSymbol());
+            "    No Code Debug Symbols found.",
+            frame.Function->Name);
         return;
     } else if (!frame.Function->HasCodeDebugSymbols()) {
         const auto& srcSymbol = context.OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
