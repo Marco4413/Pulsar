@@ -106,7 +106,7 @@ void PrintPrettyError(
 
 void PrintPrettyRuntimeError(
     fmt::memory_buffer& out,
-    const Pulsar::String& source, const char* filepath,
+    const char* filepath,
     const Pulsar::ExecutionContext& context,
     TokenViewRange viewRange)
 {
@@ -116,7 +116,7 @@ void PrintPrettyRuntimeError(
     }
 
     const Pulsar::Frame& frame = context.CallStack.CurrentFrame();
-    if (!frame.Function->HasDebugSymbol()) {
+    if (!context.OwnerModule->HasSourceDebugSymbols() || !frame.Function->HasDebugSymbol()) {
         fmt::format_to(
             std::back_inserter(out),
             "Error: Within function {}\n"
@@ -124,8 +124,9 @@ void PrintPrettyRuntimeError(
             frame.Function->Name);
         return;
     } else if (!frame.Function->HasCodeDebugSymbols()) {
+        const auto& srcSymbol = context.OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
         PrintPrettyError(
-            out, source, filepath,
+            out, srcSymbol.Source, filepath,
             frame.Function->DebugSymbol.Token,
             "Within function " + frame.Function->Name,
             viewRange);
@@ -140,8 +141,9 @@ void PrintPrettyRuntimeError(
         symbolIdx = i;
     }
 
+    const auto& srcSymbol = context.OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
     PrintPrettyError(
-        out, source, filepath,
+        out, srcSymbol.Source, filepath,
         frame.Function->CodeDebugSymbols[symbolIdx].Token,
         "In function " + frame.Function->Name,
         viewRange);
@@ -368,17 +370,19 @@ int main(int argc, const char** argv)
     file.read((char*)source.Data(), fileSize);
 
     Pulsar::Module module;
-    Pulsar::Parser parser(source);
-    auto result = parser.ParseIntoModule(module, true);
-    if (result != Pulsar::ParseResult::OK) {
-        fmt::memory_buffer prettyError;
-        PrintPrettyError(
-            prettyError, parser.GetSource(), program,
-            parser.GetLastErrorToken(), parser.GetLastErrorMessage(),
-            DEFAULT_VIEW_RANGE);
-        fmt::println("{:.{}}", prettyError.data(), prettyError.size());
-        fmt::println("Parse Error: {}", (int)result);
-        return 1;
+    { // Parse Module
+        Pulsar::Parser parser(source);
+        auto result = parser.ParseIntoModule(module, true);
+        if (result != Pulsar::ParseResult::OK) {
+            fmt::memory_buffer prettyError;
+            PrintPrettyError(
+                prettyError, parser.GetSource(), program,
+                parser.GetLastErrorToken(), parser.GetLastErrorMessage(),
+                DEFAULT_VIEW_RANGE);
+            fmt::println("{:.{}}", prettyError.data(), prettyError.size());
+            fmt::println("Parse Error: {}", (int)result);
+            return 1;
+        }
     }
 
     ModuleNativeBindings moduleBindings;
@@ -419,7 +423,7 @@ int main(int argc, const char** argv)
 
     auto startTime = std::chrono::high_resolution_clock::now();
     Pulsar::ValueStack stack;
-    {
+    { // Push argv into the Stack.
         Pulsar::ValueList argList;
         for (int i = 0; i < argc; i++)
             argList.Append()->Value().SetString(argv[i]);
@@ -436,7 +440,7 @@ int main(int argc, const char** argv)
     if (runtimeState != Pulsar::RuntimeState::OK) {
         fmt::memory_buffer prettyError;
         PrintPrettyRuntimeError(
-            prettyError, parser.GetSource(), program,
+            prettyError, program,
             context, DEFAULT_VIEW_RANGE);
         fmt::println("{:.{}}", prettyError.data(), prettyError.size());
         return 1;

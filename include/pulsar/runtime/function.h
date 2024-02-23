@@ -18,7 +18,7 @@ namespace Pulsar
         size_t LocalsCount = Arity;
         List<Instruction> Code = List<Instruction>();
         
-        FunctionDebugSymbol DebugSymbol{Token(TokenType::None)};
+        FunctionDebugSymbol DebugSymbol{Token(TokenType::None), (size_t)-1};
         List<BlockDebugSymbol> CodeDebugSymbols = List<BlockDebugSymbol>();
 
         bool HasDebugSymbol() const { return DebugSymbol.Token.Type != TokenType::None; }

@@ -4,12 +4,19 @@
 #include "pulsar/core.h"
 
 #include "pulsar/lexer.h"
+#include "pulsar/structures/string.h"
 
 namespace Pulsar
 {
+    struct SourceDebugSymbol
+    {
+        String Source;
+    };
+
     struct FunctionDebugSymbol
     {
         Pulsar::Token Token;
+        size_t SourceIdx;
     };
 
     struct BlockDebugSymbol

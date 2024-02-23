@@ -3,6 +3,8 @@
 Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, bool debugSymbols)
 {
     ParseResult result = ParseResult::OK;
+    if (debugSymbols)
+        module.SourceDebugSymbols.EmplaceBack(m_Lexer.GetSource());
     while (result == ParseResult::OK && !m_Lexer.IsEndOfFile())
         result = ParseFunctionDefinition(module, debugSymbols);
     module.NativeFunctions.Resize(module.NativeBindings.Size(), nullptr);
@@ -27,7 +29,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, bool
     if (curToken.Type != TokenType::Identifier)
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected function identifier.");
     FunctionDefinition def = { curToken.StringVal, 0, 0 };
-    if (debugSymbols) def.DebugSymbol = {curToken};
+    if (debugSymbols) def.DebugSymbol = {curToken, module.SourceDebugSymbols.Size()-1};
 
     m_Lexer.NextToken();
     LocalsBindings args;
