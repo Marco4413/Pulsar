@@ -2,6 +2,7 @@
 *(*module/from-file   path) -> 1.
 *(*module/run       handle) -> 2.
 *(*module/free      handle).
+*(*module/valid?    handle) -> 2.
 
 *(*lexer/from-file    path) -> 1.
 *(*lexer/next-token handle) -> 2.
