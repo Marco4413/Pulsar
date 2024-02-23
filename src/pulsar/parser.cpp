@@ -84,6 +84,22 @@ Pulsar::ParseResult Pulsar::Parser::ParseModuleStatement(Module& module, bool de
     switch (curToken.Type) {
     case TokenType::Star:
         return ParseFunctionDefinition(module, debugSymbols);
+    case TokenType::CompilerDirective: {
+        if (curToken.IntegerVal != TOKEN_CD_INCLUDE)
+            return SetError(ParseResult::UnexpectedToken, curToken, "Unknown compiler directive.");
+        m_Lexer->NextToken();
+        if (curToken.Type != TokenType::StringLiteral)
+            return SetError(ParseResult::UnexpectedToken, curToken, "Expected file path.");
+        std::filesystem::path targetPath(curToken.StringVal.Data());
+        std::filesystem::path workingPath(m_LexerPool.Back().Path.Data());
+        std::filesystem::path filePath = workingPath.parent_path() / targetPath;
+        auto result = AddSourceFile(filePath.generic_string().data());
+        if (result != ParseResult::OK)
+            return result;
+        if (debugSymbols)
+            module.SourceDebugSymbols.EmplaceBack(m_LexerPool.Back().Path, m_LexerPool.Back().Lexer.GetSource());
+        return ParseResult::OK;
+    }
     case TokenType::EndOfFile:
         return ParseResult::OK;
     default:
