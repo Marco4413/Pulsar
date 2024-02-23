@@ -64,7 +64,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, bool debugSy
             module.SourceDebugSymbols.EmplaceBack(m_LexerPool[i].Path, m_LexerPool[i].Lexer.GetSource());
     }
     while (m_LexerPool.Size() > 0) {
-        auto result = ParseFunctionDefinition(module, debugSymbols);
+        auto result = ParseModuleStatement(module, debugSymbols);
         if (result == ParseResult::OK) {
             if (m_Lexer->IsEndOfFile()) {
                 m_LexerPool.PopBack();
@@ -78,12 +78,23 @@ Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, bool debugSy
     return ParseResult::OK;
 }
 
-Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, bool debugSymbols)
+Pulsar::ParseResult Pulsar::Parser::ParseModuleStatement(Module& module, bool debugSymbols)
 {
     const Token& curToken = m_Lexer->NextToken();
-    if (curToken.Type == TokenType::EndOfFile)
+    switch (curToken.Type) {
+    case TokenType::Star:
+        return ParseFunctionDefinition(module, debugSymbols);
+    case TokenType::EndOfFile:
         return ParseResult::OK;
-    else if (curToken.Type != TokenType::Star)
+    default:
+        return SetError(ParseResult::UnexpectedToken, curToken, "Expected function declaration or compiler directive.");
+    }
+}
+
+Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, bool debugSymbols)
+{
+    const Token& curToken = m_Lexer->CurrentToken();
+    if (curToken.Type != TokenType::Star)
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected '*' to begin function declaration.");
 
     m_Lexer->NextToken();
