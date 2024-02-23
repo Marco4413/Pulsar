@@ -6,6 +6,7 @@
 *(*lexer/from-file    path) -> 1.
 *(*lexer/next-token handle) -> 2.
 *(*lexer/free       handle).
+*(*lexer/valid?     handle) -> 2.
 
 *(lex-next handle) -> 2: // [ Handle, Token ]
     handle
@@ -23,11 +24,14 @@
     .
 
 *(lex-file filepath) -> 1:
-    <- filepath
+    filepath
     (*lexer/from-file)
-        (lex-next) -> result
-        (*lexer/free)
-    <- result
+        (*lexer/valid?) if:
+            (lex-next) -> result
+            (*lexer/free)
+            <- result
+            .
+        "Could not read file at " filepath (!append)
     .
 
 *(main args) -> 1:
