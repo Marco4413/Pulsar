@@ -7,6 +7,7 @@
 #include <functional>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 
 #ifndef PULSAR_MALLOC
 #define PULSAR_MALLOC std::malloc

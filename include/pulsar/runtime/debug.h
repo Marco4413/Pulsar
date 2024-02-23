@@ -10,6 +10,7 @@ namespace Pulsar
 {
     struct SourceDebugSymbol
     {
+        String Path;
         String Source;
     };
 

@@ -26,6 +26,7 @@ namespace Pulsar
     {
         OK = 0,
         Error = 1,
+        FileNotRead,
         UnexpectedToken,
         NegativeResultCount,
         UsageOfUndeclaredLocal,
@@ -38,16 +39,18 @@ namespace Pulsar
     {
     public:
         typedef List<String> LocalsBindings;
-        Parser(const String& src)
-            : m_Lexer(src) { }
-        Parser(String&& src)
-            : m_Lexer(src) { }
+        Parser() { }
+
+        bool AddSource(const String& path, const String& src);
+        bool AddSource(const String& path, String&& src);
+        ParseResult AddSourceFile(const String& path);
 
         ParseResult ParseIntoModule(Module& module, bool debugSymbols=false);
-        const String& GetSource() const    { return m_Lexer.GetSource(); }
-        ParseResult GetLastError() const        { return m_LastError; }
-        const char* GetLastErrorMessage() const { return m_LastErrorMsg.Data(); }
-        const Token& GetLastErrorToken() const  { return m_LastErrorToken; }
+        const String& GetLastErrorSource() const { return m_LexerPool.Back().Lexer.GetSource(); }
+        const String& GetLastErrorPath() const   { return m_LexerPool.Back().Path; }
+        ParseResult GetLastError() const         { return m_LastError; }
+        const char* GetLastErrorMessage() const  { return m_LastErrorMsg.Data(); }
+        const Token& GetLastErrorToken() const   { return m_LastErrorToken; }
     private:
         ParseResult ParseFunctionDefinition(Module& module, bool debugSymbols);
         ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalsBindings& locals, bool debugSymbols);
@@ -61,7 +64,16 @@ namespace Pulsar
             return errorType;
         }
     private:
-        Lexer m_Lexer;
+        struct LexerSource
+        {
+            String Path;
+            Pulsar::Lexer Lexer;
+        };
+
+        std::unordered_set<String> m_ParsedSources;
+        List<LexerSource> m_LexerPool;
+
+        Lexer* m_Lexer = nullptr;
         ParseResult m_LastError = ParseResult::OK;
         Token m_LastErrorToken = Token(TokenType::None);
         String m_LastErrorMsg = "";
