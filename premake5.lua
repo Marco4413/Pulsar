@@ -20,7 +20,7 @@ project "pulsar-dev"
    targetdir "%{prj.location}/%{cfg.buildcfg}"
 
    includedirs { "include", "libs/fmt/include" }
-   files { "src/dev/**.cpp", "include/dev/**.h" }
+   files { "src/dev/**.cpp", "src/dev/**.hpp", "include/dev/**.h" }
    links { "pulsar", "fmt" }
 
    filter "toolset:gcc"
