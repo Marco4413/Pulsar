@@ -18,6 +18,8 @@ public:
             [&, type](auto& ctx) { return Module_Run(ctx, type); });
         module.BindNativeFunction({ "module/free", 1, 0 },
             [&, type](auto& ctx) { return Module_Free(ctx, type); });
+        module.BindNativeFunction({ "module/valid?", 1, 2 },
+            [&, type](auto& ctx) { return Module_IsValid(ctx, type); });
     }
 
     Pulsar::RuntimeState Module_FromFile(Pulsar::ExecutionContext& eContext, uint64_t type)
@@ -27,19 +29,21 @@ public:
         if (modulePath.Type() != Pulsar::ValueType::String)
             return Pulsar::RuntimeState::TypeError;
 
-        std::ifstream file(modulePath.AsString().Data(), std::ios::binary);
-        size_t fileSize = std::filesystem::file_size(modulePath.AsString().Data());
-
-        Pulsar::String source;
-        source.Resize(fileSize);
-        file.read((char*)source.Data(), fileSize);
-
-        Pulsar::Module module;
         Pulsar::Parser parser;
-        parser.AddSource(modulePath.AsString(), std::move(source));
-        auto result = parser.ParseIntoModule(module, true);
-        if (result != Pulsar::ParseResult::OK)
-            return Pulsar::RuntimeState::Error;
+        auto result = parser.AddSourceFile(modulePath.AsString());
+        if (result != Pulsar::ParseResult::OK) {
+            frame.Stack.EmplaceBack()
+                .SetCustom({ .Type=type, .Handle=0 });
+            return Pulsar::RuntimeState::OK;
+        }
+        
+        Pulsar::Module module;
+        result = parser.ParseIntoModule(module, true);
+        if (result != Pulsar::ParseResult::OK) {
+            frame.Stack.EmplaceBack()
+                .SetCustom({ .Type=type, .Handle=0 });
+            return Pulsar::RuntimeState::OK;
+        }
         
         int64_t handle = m_NextHandle++;
         frame.Stack.EmplaceBack()
@@ -84,8 +88,21 @@ public:
         return Pulsar::RuntimeState::OK;
     }
 
+    Pulsar::RuntimeState Module_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type)
+    {
+        Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+        Pulsar::Value& moduleHandle = frame.Locals[0];
+        if (moduleHandle.Type() != Pulsar::ValueType::Custom
+            || moduleHandle.AsCustom().Type != type)
+            return Pulsar::RuntimeState::TypeError;
+        frame.Stack.EmplaceBack(moduleHandle);
+        frame.Stack.EmplaceBack()
+            .SetInteger(moduleHandle.AsCustom().Handle);
+        return Pulsar::RuntimeState::OK;
+    }
+
 private:
-    int64_t m_NextHandle = 0;
+    int64_t m_NextHandle = 1;
     std::unordered_map<int64_t, Pulsar::Module> m_Modules;
 };
 
