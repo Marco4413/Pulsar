@@ -39,10 +39,11 @@ Pulsar::ParseResult Pulsar::Parser::AddSourceFile(const String& path)
     if (m_Lexer) token = m_Lexer->CurrentToken();
 
     if (error)
-        return SetError(ParseResult::FileNotRead, token, "Could not normalize path.");
+        return SetError(ParseResult::FileNotRead, token, "Could not normalize path '" + path + "'.");
 
+    String internalPath = relativePath.generic_string().c_str();
     if (!std::filesystem::exists(relativePath))
-        return SetError(ParseResult::FileNotRead, token, "File does not exist.");
+        return SetError(ParseResult::FileNotRead, token, "File '" + internalPath + "' does not exist.");
     
     std::ifstream file(relativePath, std::ios::binary);
     size_t fileSize = std::filesystem::file_size(relativePath);
@@ -50,9 +51,8 @@ Pulsar::ParseResult Pulsar::Parser::AddSourceFile(const String& path)
     Pulsar::String source;
     source.Resize(fileSize);
     if (!file.read((char*)source.Data(), fileSize))
-        return SetError(ParseResult::FileNotRead, token, "Could not read file.");
+        return SetError(ParseResult::FileNotRead, token, "Could not read file '" + internalPath + "'.");
 
-    String internalPath = relativePath.generic_string().c_str();
     AddSource(internalPath, std::move(source));
     return ParseResult::OK;
 }
