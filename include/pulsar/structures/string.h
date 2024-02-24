@@ -122,6 +122,26 @@ namespace Pulsar
         size_t m_Length = 0;
         size_t m_Capacity = 0;
     };
+
+    inline Pulsar::String UIntToString(uint64_t n)
+    {
+        if (n == 0)
+            return "0";
+        Pulsar::String res;
+        while (n > 0) {
+            char digit = '0' + n%10;
+            n /= 10;
+            res += digit;
+        }
+        // Reverse string
+        size_t endIdx = res.Length();
+        for (size_t i = 0; i < res.Length()/2; i++) {
+            char ch = res[i];
+            res[i] = res[--endIdx];
+            res[endIdx] = ch;
+        }
+        return res;
+    }
 }
 
 template<>
