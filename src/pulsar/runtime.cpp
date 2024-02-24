@@ -1,6 +1,59 @@
 #include "pulsar/runtime.h"
 
-#include <memory>
+Pulsar::String Pulsar::ExecutionContext::GetCallTrace(size_t callIdx) const
+{
+    const Frame& frame = CallStack[callIdx];
+    String trace;
+    trace += "at (" + frame.Function->Name + ")";
+    if (frame.Function->HasDebugSymbol() && OwnerModule->HasSourceDebugSymbols()) {
+        const auto& filePath = OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx].Path;
+        if (frame.Function->HasCodeDebugSymbols()) {
+            size_t symbolIdx = 0;
+            for (size_t j = 0; j < frame.Function->CodeDebugSymbols.Size(); j++) {
+                if (frame.Function->CodeDebugSymbols[j].StartIdx >= frame.InstructionIndex)
+                    break;
+                symbolIdx = j;
+            }
+            const auto& token = frame.Function->CodeDebugSymbols[symbolIdx].Token;
+            trace += " '" + filePath;
+            trace += ":" + UIntToString(token.SourcePos.Line+1);
+            trace += ":" + UIntToString(token.SourcePos.Char+1);
+            trace += "'";
+        } else {
+            const auto& token = frame.Function->DebugSymbol.Token;
+            trace += " defined at '" + filePath;
+            trace += ":" + UIntToString(token.SourcePos.Line+1);
+            trace += ":" + UIntToString(token.SourcePos.Char+1);
+            trace += "'";
+        }
+    }
+    return trace;
+}
+
+Pulsar::String Pulsar::ExecutionContext::GetStackTrace(size_t maxDepth) const
+{
+    if (CallStack.Size() == 0 || maxDepth == 0)
+        return "";
+
+    String trace("    ");
+    trace += GetCallTrace(CallStack.Size()-1);
+    if (CallStack.Size() == 1)
+        return trace;
+
+    if (maxDepth > CallStack.Size())
+        maxDepth = CallStack.Size();
+    else if (maxDepth < CallStack.Size()) {
+        trace += "\n    ... other ";
+        trace += UIntToString(CallStack.Size()-maxDepth);
+        trace += " calls";
+    }
+    for (size_t i = 1; i < maxDepth; i++) {
+        trace += "\n    ";
+        trace += GetCallTrace(maxDepth-i-1);
+    }
+
+    return trace;
+}
 
 size_t Pulsar::Module::BindNativeFunction(const FunctionDefinition& def, NativeFunction func)
 {

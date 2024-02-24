@@ -61,6 +61,9 @@ namespace Pulsar
         Pulsar::CallStack CallStack;
         List<GlobalInstance> Globals;
 
+        String GetCallTrace(size_t callIdx) const;
+        String GetStackTrace(size_t maxDepth) const;
+
         bool IsAtEnd() const {
             return CallStack.IsEmpty() || (
                 CallStack.Size() == 1 &&
