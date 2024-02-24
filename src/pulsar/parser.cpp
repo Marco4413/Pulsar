@@ -100,11 +100,65 @@ Pulsar::ParseResult Pulsar::Parser::ParseModuleStatement(Module& module, bool de
             module.SourceDebugSymbols.EmplaceBack(m_LexerPool.Back().Path, m_LexerPool.Back().Lexer.GetSource());
         return ParseResult::OK;
     }
+    case TokenType::KW_Global:
+        return ParseGlobalDefinition(module, debugSymbols);
     case TokenType::EndOfFile:
         return ParseResult::OK;
     default:
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected function declaration or compiler directive.");
     }
+}
+
+Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, bool debugSymbols)
+{
+    const Token& curToken = m_Lexer->CurrentToken();
+    if (curToken.Type != TokenType::KW_Global)
+        return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'global' to begin global definition.");
+    
+    m_Lexer->NextToken();
+    Token constToken = curToken;
+    bool isConstant = constToken.Type == TokenType::KW_Const;
+    if (isConstant) m_Lexer->NextToken();
+
+    FunctionDefinition dummyFunc{"", 0, 1};
+    auto result = PushLValue(module, dummyFunc, LocalsBindings(), curToken, false);
+    if (result != ParseResult::OK)
+        return result;
+    m_Lexer->NextToken();
+    
+    if (curToken.Type != TokenType::RightArrow)
+        return SetError(ParseResult::UnexpectedToken, curToken, "Expected '->' to assign global value.");
+    m_Lexer->NextToken();
+    if (curToken.Type != TokenType::Identifier)
+        return SetError(ParseResult::UnexpectedToken, curToken, "Expected name for global.");
+    dummyFunc.Name = curToken.StringVal;
+
+    for (size_t i = 0; i < module.Globals.Size(); i++) {
+        if (module.Globals[i].Name == curToken.StringVal) {
+            if (module.Globals[i].IsConstant)
+                return SetError(ParseResult::WritingToConstantGlobal, curToken, "Trying to reassign constant global.");
+            else if (isConstant)
+                return SetError(ParseResult::UnexpectedToken, constToken, "Redeclaring global as const.");
+            break;
+        }
+    }
+
+    auto stack = ValueStack();
+    auto context = module.CreateExecutionContext();
+    auto evalResult = module.ExecuteFunction(dummyFunc, stack, context);
+    if (evalResult != RuntimeState::OK || stack.Size() == 0)
+        return SetError(ParseResult::GlobalEvaluationError, curToken, "Error while evaluating value of global.");
+    
+    GlobalDefinition& globalDef = module.Globals.EmplaceBack(std::move(curToken.StringVal), std::move(stack.Back()), isConstant);
+    if (debugSymbols) {
+        const auto& lexSource = m_LexerPool.Back();
+        size_t srcIdx = 0;
+        for (; srcIdx < module.SourceDebugSymbols.Size() && module.SourceDebugSymbols[srcIdx].Path != lexSource.Path; srcIdx++);
+        globalDef.DebugSymbol.Token = curToken;
+        globalDef.DebugSymbol.SourceIdx = srcIdx;
+    }
+
+    return ParseResult::OK;
 }
 
 Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, bool debugSymbols)
@@ -234,13 +288,29 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
                 localIdx = (int64_t)scopedLocals.Size()-1;
                 for (; localIdx >= 0 && scopedLocals[localIdx] != curToken.StringVal; localIdx--);
                 if (localIdx < 0) {
+                    int64_t globalIdx = (int64_t)module.Globals.Size()-1;
+                    for (; globalIdx >= 0 && module.Globals[globalIdx].Name != curToken.StringVal; globalIdx--);
+                    if (globalIdx >= 0) {
+                        if (module.Globals[globalIdx].IsConstant)
+                            return SetError(ParseResult::UnexpectedToken, curToken, "Trying to assign to constant global.");
+                        func.Code.EmplaceBack(
+                            copyIntoLocal
+                                ? InstructionCode::CopyIntoGlobal
+                                : InstructionCode::PopIntoGlobal,
+                            globalIdx);
+                        break;
+                    }
                     localIdx = scopedLocals.Size();
                     scopedLocals.PushBack(curToken.StringVal);
                 }
             }
             if (scopedLocals.Size() > func.LocalsCount)
                 func.LocalsCount = scopedLocals.Size();
-            func.Code.EmplaceBack(copyIntoLocal ? InstructionCode::CopyIntoLocal : InstructionCode::PopIntoLocal, localIdx);
+            func.Code.EmplaceBack(
+                copyIntoLocal
+                    ? InstructionCode::CopyIntoLocal
+                    : InstructionCode::PopIntoLocal,
+                localIdx);
         } break;
         case TokenType::LeftArrow: {
             PUSH_CODE_SYMBOL(debugSymbols, func, curToken);
@@ -250,8 +320,17 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
 
             int64_t localIdx = (int64_t)scopedLocals.Size()-1;
             for (; localIdx >= 0 && scopedLocals[localIdx] != curToken.StringVal; localIdx--);
-            if (localIdx < 0)
+            if (localIdx < 0) {
+                int64_t globalIdx = (int64_t)module.Globals.Size()-1;
+                for (; globalIdx >= 0 && module.Globals[globalIdx].Name != curToken.StringVal; globalIdx--);
+                if (globalIdx >= 0) {
+                    if (module.Globals[globalIdx].IsConstant)
+                        return SetError(ParseResult::WritingToConstantGlobal, curToken, "Cannot move constant global.");
+                    func.Code.EmplaceBack(InstructionCode::MoveGlobal, globalIdx);
+                    break;
+                }
                 return SetError(ParseResult::UsageOfUndeclaredLocal, curToken, "Local not declared.");
+            }
             func.Code.EmplaceBack(InstructionCode::MoveLocal, localIdx);
         } break;
         case TokenType::OpenParenth: {
@@ -451,8 +530,14 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
         PUSH_CODE_SYMBOL(debugSymbols, func, lvalue);
         int64_t localIdx = (int64_t)locals.Size()-1;
         for (; localIdx >= 0 && locals[localIdx] != lvalue.StringVal; localIdx--);
-        if (localIdx < 0)
-            return SetError(ParseResult::UsageOfUndeclaredLocal, lvalue, "Local not declared.");
+        if (localIdx < 0) {
+            int64_t globalIdx = (int64_t)module.Globals.Size()-1;
+            for (; globalIdx >= 0 && module.Globals[globalIdx].Name != lvalue.StringVal; globalIdx--);
+            if (globalIdx < 0)
+                return SetError(ParseResult::UsageOfUndeclaredLocal, lvalue, "Local not declared.");
+            func.Code.EmplaceBack(InstructionCode::PushGlobal, globalIdx);
+            break;
+        }
         func.Code.EmplaceBack(InstructionCode::PushLocal, localIdx);
     } break;
     case TokenType::StringLiteral: {
@@ -592,8 +677,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
         }
     } break;
     default:
-        // We should never get here
-        return SetError(ParseResult::Error, lvalue, "Pulsar::Parser::PushLValue internal error.");
+        return SetError(ParseResult::UnexpectedToken, lvalue, "Expected lvalue.");
     }
     return ParseResult::OK;
 }

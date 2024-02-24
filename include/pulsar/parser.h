@@ -32,7 +32,9 @@ namespace Pulsar
         UsageOfUndeclaredLocal,
         UsageOfUnknownInstruction,
         UsageOfUndeclaredFunction,
-        UsageOfUndeclaredNativeFunction
+        UsageOfUndeclaredNativeFunction,
+        WritingToConstantGlobal,
+        GlobalEvaluationError
     };
 
     class Parser
@@ -53,6 +55,7 @@ namespace Pulsar
         const Token& GetLastErrorToken() const    { return m_LastErrorToken; }
     private:
         ParseResult ParseModuleStatement(Module& module, bool debugSymbols);
+        ParseResult ParseGlobalDefinition(Module& module, bool debugSymbols);
         ParseResult ParseFunctionDefinition(Module& module, bool debugSymbols);
         ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalsBindings& locals, bool debugSymbols);
         ParseResult ParseIfStatement(Module& module, FunctionDefinition& func, const LocalsBindings& locals, bool debugSymbols);
