@@ -26,7 +26,7 @@ namespace Pulsar
         String(const char* data, size_t length)
         {
             Resize(length);
-            PULSAR_MEMCPY(m_Data, data, length*sizeof(char));
+            PULSAR_MEMCPY((void*)m_Data, (void*)data, length*sizeof(char));
         }
 
         void Resize(size_t newLength)
@@ -46,8 +46,8 @@ namespace Pulsar
             m_Data[m_Capacity] = '\0';
         }
 
-        char operator[](size_t idx) const  { return m_Data[idx]; }
-        const char& operator[](size_t idx) { return m_Data[idx]; }
+        char operator[](size_t idx) const { return m_Data[idx]; }
+        char& operator[](size_t idx)      { return m_Data[idx]; }
 
         String operator+(const String& other) const
         {
