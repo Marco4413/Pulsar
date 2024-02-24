@@ -43,9 +43,13 @@ Pulsar::RuntimeState Pulsar::Module::CallFunction(int64_t funcIdx, ValueStack& s
 {
     if (funcIdx < 0 || (size_t)funcIdx >= Functions.Size())
         return RuntimeState::OutOfBoundsFunctionIndex;
+    return ExecuteFunction(Functions[funcIdx], stack, context);
+}
 
+Pulsar::RuntimeState Pulsar::Module::ExecuteFunction(const FunctionDefinition& func, ValueStack& stack, ExecutionContext& context) const
+{
     { // Create Frame
-        context.CallStack.EmplaceBack(&Functions[funcIdx]);
+        context.CallStack.EmplaceBack(&func);
         Frame& thisFrame = context.CallStack[0];
         auto res = PrepareCallFrame(stack, thisFrame);
         if (res != RuntimeState::OK)

@@ -73,6 +73,8 @@ namespace Pulsar
         RuntimeState CallFunctionByName(const String& name, ValueStack& stack, ExecutionContext& context) const;
         RuntimeState CallFunctionByDefinition(const FunctionDefinition& def, ValueStack& stack, ExecutionContext& context) const;
 
+        RuntimeState ExecuteFunction(const FunctionDefinition& def, ValueStack& stack, ExecutionContext& context) const;
+
         typedef std::function<RuntimeState(ExecutionContext&)> NativeFunction;
         size_t BindNativeFunction(const FunctionDefinition& def, NativeFunction func);
         uint64_t BindCustomType(const String& name) { uint64_t idx = (uint64_t)CustomTypes.Size(); CustomTypes.EmplaceBack(name); return idx; }
