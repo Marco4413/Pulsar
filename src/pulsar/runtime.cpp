@@ -39,6 +39,13 @@ Pulsar::RuntimeState Pulsar::Module::CallFunctionByDefinition(const FunctionDefi
     return RuntimeState::FunctionNotFound;
 }
 
+Pulsar::ExecutionContext Pulsar::Module::CreateExecutionContext() const
+{
+    ExecutionContext context;
+    context.OwnerModule = this;
+    return context;
+}
+
 Pulsar::RuntimeState Pulsar::Module::CallFunction(int64_t funcIdx, ValueStack& stack, ExecutionContext& context) const
 {
     if (funcIdx < 0 || (size_t)funcIdx >= Functions.Size())

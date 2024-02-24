@@ -68,7 +68,7 @@ namespace Pulsar
     struct Module
     {
     public:
-        ExecutionContext CreateExecutionContext() const { return {this, { }}; }
+        ExecutionContext CreateExecutionContext() const;
         RuntimeState CallFunction(int64_t funcIdx, ValueStack& stack, ExecutionContext& context) const;
         RuntimeState CallFunctionByName(const String& name, ValueStack& stack, ExecutionContext& context) const;
         RuntimeState CallFunctionByDefinition(const FunctionDefinition& def, ValueStack& stack, ExecutionContext& context) const;
