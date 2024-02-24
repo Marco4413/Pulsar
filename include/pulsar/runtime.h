@@ -5,6 +5,7 @@
 
 #include "pulsar/runtime/debug.h"
 #include "pulsar/runtime/function.h"
+#include "pulsar/runtime/global.h"
 #include "pulsar/runtime/value.h"
 #include "pulsar/structures/list.h"
 
@@ -19,6 +20,8 @@ namespace Pulsar
         StackUnderflow,
         OutOfBoundsConstantIndex,
         OutOfBoundsLocalIndex,
+        OutOfBoundsGlobalIndex,
+        WritingOnConstantGlobal,
         OutOfBoundsFunctionIndex,
         CallStackUnderflow,
         NativeFunctionBindingsMismatch,
@@ -56,6 +59,7 @@ namespace Pulsar
     {
         const Module* OwnerModule;
         Pulsar::CallStack CallStack;
+        List<GlobalInstance> Globals;
 
         bool IsAtEnd() const {
             return CallStack.IsEmpty() || (
@@ -84,6 +88,7 @@ namespace Pulsar
     public:
         List<FunctionDefinition> Functions;
         List<FunctionDefinition> NativeBindings;
+        List<GlobalDefinition> Globals;
         List<NativeFunction> NativeFunctions;
         List<Value> Constants;
         List<String> CustomTypes;

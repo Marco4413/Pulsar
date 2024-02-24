@@ -20,6 +20,12 @@ namespace Pulsar
         size_t SourceIdx;
     };
 
+    struct GlobalDebugSymbol
+    {
+        Pulsar::Token Token;
+        size_t SourceIdx;
+    };
+
     struct BlockDebugSymbol
     {
         Pulsar::Token Token;

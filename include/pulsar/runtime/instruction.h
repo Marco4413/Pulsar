@@ -13,6 +13,8 @@ namespace Pulsar
         PushConst,
         PushLocal, MoveLocal,
         PopIntoLocal, CopyIntoLocal,
+        PushGlobal, MoveGlobal,
+        PopIntoGlobal, CopyIntoGlobal,
         // Functions
         Call, CallNative, Return,
         ICall,

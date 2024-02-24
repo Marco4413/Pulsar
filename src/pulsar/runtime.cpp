@@ -43,6 +43,8 @@ Pulsar::ExecutionContext Pulsar::Module::CreateExecutionContext() const
 {
     ExecutionContext context;
     context.OwnerModule = this;
+    for (size_t i = 0; i < Globals.Size(); i++)
+        context.Globals.EmplaceBack(Globals[i].CreateInstance());
     return context;
 }
 
@@ -154,14 +156,14 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             return RuntimeState::OutOfBoundsLocalIndex;
         frame.Stack.PushBack(std::move(frame.Locals[instr.Arg0]));
         break;
-    case InstructionCode::PopIntoLocal: {
+    case InstructionCode::PopIntoLocal:
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= frame.Locals.Size())
             return RuntimeState::OutOfBoundsLocalIndex;
         frame.Locals[instr.Arg0] = std::move(frame.Stack.Back());
         frame.Stack.PopBack();
-    } break;
+        break;
     case InstructionCode::CopyIntoLocal:
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
@@ -169,6 +171,40 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             return RuntimeState::OutOfBoundsLocalIndex;
         frame.Locals[instr.Arg0] = frame.Stack.Back();
         break;
+    case InstructionCode::PushGlobal:
+        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= eContext.Globals.Size())
+            return RuntimeState::OutOfBoundsGlobalIndex;
+        frame.Stack.PushBack(eContext.Globals[instr.Arg0].Value);
+        break;
+    case InstructionCode::MoveGlobal: {
+        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= eContext.Globals.Size())
+            return RuntimeState::OutOfBoundsGlobalIndex;
+        GlobalInstance& global = eContext.Globals[instr.Arg0];
+        if (global.IsConstant)
+            return RuntimeState::WritingOnConstantGlobal;
+        frame.Stack.PushBack(std::move(global.Value));
+    } break;
+    case InstructionCode::PopIntoGlobal: {
+        if (frame.Stack.Size() < 1)
+            return RuntimeState::StackUnderflow;
+        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= eContext.Globals.Size())
+            return RuntimeState::OutOfBoundsGlobalIndex;
+        GlobalInstance& global = eContext.Globals[instr.Arg0];
+        if (global.IsConstant)
+            return RuntimeState::WritingOnConstantGlobal;
+        global.Value = std::move(frame.Stack.Back());
+        frame.Stack.PopBack();
+    } break;
+    case InstructionCode::CopyIntoGlobal: {
+        if (frame.Stack.Size() < 1)
+            return RuntimeState::StackUnderflow;
+        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= eContext.Globals.Size())
+            return RuntimeState::OutOfBoundsGlobalIndex;
+        GlobalInstance& global = eContext.Globals[instr.Arg0];
+        if (global.IsConstant)
+            return RuntimeState::WritingOnConstantGlobal;
+        global.Value = frame.Stack.Back();
+    } break;
     case InstructionCode::Call: {
         int64_t funcIdx = instr.Arg0;
         if (funcIdx < 0 || (size_t)funcIdx >= Functions.Size())
@@ -459,6 +495,10 @@ const char* Pulsar::RuntimeStateToString(RuntimeState rstate)
         return "OutOfBoundsConstantIndex";
     case RuntimeState::OutOfBoundsLocalIndex:
         return "OutOfBoundsLocalIndex";
+    case RuntimeState::OutOfBoundsGlobalIndex:
+        return "OutOfBoundsGlobalIndex";
+    case RuntimeState::WritingOnConstantGlobal:
+        return "WritingOnConstantGlobal";
     case RuntimeState::OutOfBoundsFunctionIndex:
         return "OutOfBoundsFunctionIndex";
     case RuntimeState::CallStackUnderflow:
