@@ -354,6 +354,10 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
         return "KW_Else";
     case TokenType::KW_End:
         return "KW_End";
+    case TokenType::KW_Global:
+        return "KW_Global";
+    case TokenType::KW_Const:
+        return "KW_Const";
     case TokenType::CompilerDirective:
         return "CompilerDirective";
     case TokenType::EndOfFile:

@@ -32,6 +32,7 @@ namespace Pulsar
         More, MoreOrEqual,
         PushReference,
         KW_If, KW_Else, KW_End,
+        KW_Global, KW_Const,
         CompilerDirective
     };
 
@@ -39,9 +40,11 @@ namespace Pulsar
     constexpr int64_t TOKEN_CD_INCLUDE = 1;
 
     static const std::unordered_map<String, TokenType> Keywords {
-        { "if",   TokenType::KW_If   },
-        { "else", TokenType::KW_Else },
-        { "end",  TokenType::KW_End  },
+        { "if",     TokenType::KW_If     },
+        { "else",   TokenType::KW_Else   },
+        { "end",    TokenType::KW_End    },
+        { "global", TokenType::KW_Global },
+        { "const",  TokenType::KW_Const  },
     };
 
     static const std::unordered_map<String, int64_t> CompilerDirectives {
