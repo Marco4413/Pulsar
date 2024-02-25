@@ -32,7 +32,7 @@ namespace Pulsar
         void Resize(size_t newLength)
         {
             if (!m_Data || newLength > m_Capacity)
-                Reserve(newLength*3/2);
+                Reserve(newLength*3/2+1);
             m_Length = newLength;
             m_Data[m_Length] = '\0';
         }

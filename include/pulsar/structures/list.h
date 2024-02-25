@@ -125,7 +125,7 @@ namespace Pulsar
         void ResizeUninitialized(size_t newSize)
         {
             if (!m_Data || newSize > m_Capacity)
-                Reserve(newSize*3/2);
+                Reserve(newSize*3/2+1);
             m_Size = newSize;
         }
 
