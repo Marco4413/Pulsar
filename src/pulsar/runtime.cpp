@@ -70,6 +70,14 @@ size_t Pulsar::Module::BindNativeFunction(const FunctionDefinition& def, NativeF
     return bound;
 }
 
+size_t Pulsar::Module::DeclareAndBindNativeFunction(FunctionDefinition def, NativeFunction func)
+{
+    NativeBindings.PushBack(def);
+    NativeFunctions.Resize(NativeBindings.Size());
+    NativeFunctions.Back() = func;
+    return NativeBindings.Size()-1;
+}
+
 Pulsar::RuntimeState Pulsar::Module::CallFunctionByName(const String& name, ValueStack& stack, ExecutionContext& context) const
 {
     for (int64_t i = Functions.Size()-1; i >= 0; i--) {

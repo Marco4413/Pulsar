@@ -84,6 +84,7 @@ namespace Pulsar
 
         typedef std::function<RuntimeState(ExecutionContext&)> NativeFunction;
         size_t BindNativeFunction(const FunctionDefinition& def, NativeFunction func);
+        size_t DeclareAndBindNativeFunction(FunctionDefinition def, NativeFunction func);
         uint64_t BindCustomType(const String& name) { uint64_t idx = (uint64_t)CustomTypes.Size(); CustomTypes.EmplaceBack(name); return idx; }
 
         bool HasSourceDebugSymbols() const { return !SourceDebugSymbols.IsEmpty(); }
