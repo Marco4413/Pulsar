@@ -38,7 +38,7 @@ public:
         }
         
         Pulsar::Module module;
-        result = parser.ParseIntoModule(module, true);
+        result = parser.ParseIntoModule(module, Pulsar::ParseSettings_Default);
         if (result != Pulsar::ParseResult::OK) {
             frame.Stack.EmplaceBack()
                 .SetCustom({ .Type=type, .Handle=0 });

@@ -21,10 +21,23 @@ int main(int argc, const char** argv)
     }
 
     Pulsar::Module module;
+    module.DeclareAndBindNativeFunction({ "stack-dump", 0, 0 },
+        [](Pulsar::ExecutionContext& eContext)
+        {
+            Pulsar::Frame& frame = eContext.CallStack.CallingFrame();
+            fmt::print("Stack Dump: [");
+            for (size_t i = 0; i < frame.Stack.Size(); i++) {
+                if (i > 0) fmt::print(",");
+                fmt::print(" {}", frame.Stack[i]);
+            }
+            fmt::println(" ]");
+            return Pulsar::RuntimeState::OK;
+        });
+
     { // Parse Module
         Pulsar::Parser parser;
         parser.AddSourceFile(program);
-        auto result = parser.ParseIntoModule(module, true);
+        auto result = parser.ParseIntoModule(module, Pulsar::ParseSettings_Default);
         if (result != Pulsar::ParseResult::OK) {
             PrintPrettyError(
                 parser.GetLastErrorSource(), parser.GetLastErrorPath(),
@@ -55,19 +68,6 @@ int main(int argc, const char** argv)
         {
             (void) eContext;
             fmt::println("Hello from C++!");
-            return Pulsar::RuntimeState::OK;
-        });
-
-    module.BindNativeFunction({ "stack-dump", 0, 0 },
-        [](Pulsar::ExecutionContext& eContext)
-        {
-            Pulsar::Frame& frame = eContext.CallStack.CallingFrame();
-            fmt::print("Stack Dump: [");
-            for (size_t i = 0; i < frame.Stack.Size(); i++) {
-                if (i > 0) fmt::print(",");
-                fmt::print(" {}", frame.Stack[i]);
-            }
-            fmt::println(" ]");
             return Pulsar::RuntimeState::OK;
         });
 
