@@ -125,7 +125,10 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, const 
 
     LocalsBindings locals;
     if (!isProducer) {
-        auto result = PushLValue(module, dummyFunc, locals, curToken, ParseSettings_Default);
+        ParseSettings subSettings = settings;
+        // We want to know where, within the body of the global, the runtime failed.
+        subSettings.StoreDebugSymbols = true;
+        auto result = PushLValue(module, dummyFunc, locals, curToken, subSettings);
         if (result != ParseResult::OK)
             return result;
         m_Lexer->NextToken();
@@ -152,7 +155,10 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, const 
         m_Lexer->NextToken();
         if (curToken.Type != TokenType::Colon)
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected ':' to begin global producer body.");
-        auto result = ParseFunctionBody(module, dummyFunc, locals, ParseSettings_Default);
+        ParseSettings subSettings = settings;
+        // We want to know where, within the body of the global, the runtime failed.
+        subSettings.StoreDebugSymbols = true;
+        auto result = ParseFunctionBody(module, dummyFunc, locals, subSettings);
         if (result != ParseResult::OK)
             return result;
     }
