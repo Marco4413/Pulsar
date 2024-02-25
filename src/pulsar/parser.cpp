@@ -173,8 +173,11 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, const 
             symbolIdx = i;
         }
 
-        String errorMsg = String("Error while evaluating value of global (") + RuntimeStateToString(evalResult) + ").\n" + context.GetStackTrace(10);
-        if (evalResult == RuntimeState::NativeFunctionBindingsMismatch)
+        String errorMsg = String("Error while evaluating value of global (") + RuntimeStateToString(evalResult) + ").";
+        if (settings.AppendStackTraceToErrorMessage)
+            errorMsg += "\n" + context.GetStackTrace(settings.StackTraceMaxDepth);
+        if (settings.AppendNotesToErrorMessage
+            && evalResult == RuntimeState::NativeFunctionBindingsMismatch)
             errorMsg += "\nNote: Native functions may not be bound during parsing.";
         return SetError(
             ParseResult::GlobalEvaluationError,

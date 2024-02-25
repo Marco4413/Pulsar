@@ -25,6 +25,9 @@ namespace Pulsar
     struct ParseSettings
     {
         bool StoreDebugSymbols = true;
+        bool AppendStackTraceToErrorMessage = true;
+        size_t StackTraceMaxDepth = 10;
+        bool AppendNotesToErrorMessage = true;
     };
     
     constexpr ParseSettings ParseSettings_Default{};
