@@ -121,40 +121,71 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, bool d
     if (isConstant) m_Lexer->NextToken();
 
     FunctionDefinition dummyFunc{"", 0, 1};
-    auto result = PushLValue(module, dummyFunc, LocalsBindings(), curToken, false);
-    if (result != ParseResult::OK)
-        return result;
-    m_Lexer->NextToken();
+    bool isProducer = curToken.Type == TokenType::RightArrow;
+
+    LocalsBindings locals;
+    if (!isProducer) {
+        auto result = PushLValue(module, dummyFunc, locals, curToken, true);
+        if (result != ParseResult::OK)
+            return result;
+        m_Lexer->NextToken();
+    }
     
     if (curToken.Type != TokenType::RightArrow)
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected '->' to assign global value.");
     m_Lexer->NextToken();
     if (curToken.Type != TokenType::Identifier)
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected name for global.");
-    dummyFunc.Name = curToken.StringVal;
+    Token identToken = curToken;
 
     for (size_t i = 0; i < module.Globals.Size(); i++) {
-        if (module.Globals[i].Name == curToken.StringVal) {
+        if (module.Globals[i].Name == identToken.StringVal) {
             if (module.Globals[i].IsConstant)
-                return SetError(ParseResult::WritingToConstantGlobal, curToken, "Trying to reassign constant global.");
+                return SetError(ParseResult::WritingToConstantGlobal, identToken, "Trying to reassign constant global.");
             else if (isConstant)
                 return SetError(ParseResult::UnexpectedToken, constToken, "Redeclaring global as const.");
             break;
         }
     }
 
+    if (isProducer) {
+        m_Lexer->NextToken();
+        if (curToken.Type != TokenType::Colon)
+            return SetError(ParseResult::UnexpectedToken, curToken, "Expected ':' to begin global producer body.");
+        auto result = ParseFunctionBody(module, dummyFunc, locals, true);
+        if (result != ParseResult::OK)
+            return result;
+    }
+
+    // Assign name after ParseFunctionBody to prevent self-recursion
+    dummyFunc.Name = identToken.StringVal;
     auto stack = ValueStack();
     auto context = module.CreateExecutionContext();
     auto evalResult = module.ExecuteFunction(dummyFunc, stack, context);
-    if (evalResult != RuntimeState::OK || stack.Size() == 0)
-        return SetError(ParseResult::GlobalEvaluationError, curToken, "Error while evaluating value of global.");
+    if (evalResult != RuntimeState::OK || stack.Size() == 0) {
+        size_t instrIdx = context.CallStack[0].InstructionIndex;
+        size_t symbolIdx = 0;
+        for (size_t i = 0; i < dummyFunc.CodeDebugSymbols.Size(); i++) {
+            if (dummyFunc.CodeDebugSymbols[i].StartIdx >= instrIdx)
+                break;
+            symbolIdx = i;
+        }
+
+        String errorMsg = String("Error while evaluating value of global (") + RuntimeStateToString(evalResult) + ").\n" + context.GetStackTrace(10);
+        if (evalResult == RuntimeState::NativeFunctionBindingsMismatch)
+            errorMsg += "\nNote: Native functions may not be bound during parsing.";
+        return SetError(
+            ParseResult::GlobalEvaluationError,
+            dummyFunc.CodeDebugSymbols[symbolIdx].Token,
+            std::move(errorMsg));
+    }
     
-    GlobalDefinition& globalDef = module.Globals.EmplaceBack(std::move(curToken.StringVal), std::move(stack.Back()), isConstant);
+    GlobalDefinition& globalDef = module.Globals.EmplaceBack(std::move(identToken.StringVal), std::move(stack.Back()), isConstant);
     if (debugSymbols) {
         const auto& lexSource = m_LexerPool.Back();
         size_t srcIdx = 0;
         for (; srcIdx < module.SourceDebugSymbols.Size() && module.SourceDebugSymbols[srcIdx].Path != lexSource.Path; srcIdx++);
-        globalDef.DebugSymbol.Token = curToken;
+        globalDef.DebugSymbol.Token = identToken;
         globalDef.DebugSymbol.SourceIdx = srcIdx;
     }
 
