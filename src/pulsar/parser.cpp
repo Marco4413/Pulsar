@@ -158,7 +158,9 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, bool d
     }
 
     // Assign name after ParseFunctionBody to prevent self-recursion
-    dummyFunc.Name = identToken.StringVal;
+    dummyFunc.Name = "{g";
+    dummyFunc.Name += identToken.StringVal;
+    dummyFunc.Name += '}';
     auto stack = ValueStack();
     auto context = module.CreateExecutionContext();
     auto evalResult = module.ExecuteFunction(dummyFunc, stack, context);
