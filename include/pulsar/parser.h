@@ -22,6 +22,13 @@ namespace Pulsar
         { "tail",       { InstructionCode::Tail                 } },
     };
 
+    struct ParseSettings
+    {
+        bool StoreDebugSymbols = true;
+    };
+    
+    constexpr ParseSettings ParseSettings_Default{};
+
     enum class ParseResult
     {
         OK = 0,
@@ -47,21 +54,23 @@ namespace Pulsar
         bool AddSource(const String& path, String&& src);
         ParseResult AddSourceFile(const String& path);
 
-        ParseResult ParseIntoModule(Module& module, bool debugSymbols=false);
-        const String& GetLastErrorSource() const  { return m_LexerPool.Back().Lexer.GetSource(); }
-        const String& GetLastErrorPath() const    { return m_LexerPool.Back().Path; }
+        ParseResult ParseIntoModule(Module& module, const ParseSettings& settings=ParseSettings_Default);
+        const String& GetLastErrorSource() const  { return *m_LastErrorSource; }
+        const String& GetLastErrorPath() const    { return *m_LastErrorPath; }
         ParseResult GetLastError() const          { return m_LastError; }
         const String& GetLastErrorMessage() const { return m_LastErrorMsg; }
         const Token& GetLastErrorToken() const    { return m_LastErrorToken; }
     private:
-        ParseResult ParseModuleStatement(Module& module, bool debugSymbols);
-        ParseResult ParseGlobalDefinition(Module& module, bool debugSymbols);
-        ParseResult ParseFunctionDefinition(Module& module, bool debugSymbols);
-        ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalsBindings& locals, bool debugSymbols);
-        ParseResult ParseIfStatement(Module& module, FunctionDefinition& func, const LocalsBindings& locals, bool debugSymbols);
-        ParseResult PushLValue(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const Token& lvalue, bool debugSymbols);
+        ParseResult ParseModuleStatement(Module& module, const ParseSettings& settings);
+        ParseResult ParseGlobalDefinition(Module& module, const ParseSettings& settings);
+        ParseResult ParseFunctionDefinition(Module& module, const ParseSettings& settings);
+        ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings);
+        ParseResult ParseIfStatement(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings);
+        ParseResult PushLValue(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const Token& lvalue, const ParseSettings& settings);
         ParseResult SetError(ParseResult errorType, const Token& token, const String& errorMsg)
         {
+            m_LastErrorSource = &m_LexerPool.Back().Lexer.GetSource();
+            m_LastErrorPath = &m_LexerPool.Back().Path;
             m_LastError = errorType;
             m_LastErrorToken = token;
             m_LastErrorMsg = errorMsg;
@@ -78,6 +87,8 @@ namespace Pulsar
         List<LexerSource> m_LexerPool;
 
         Lexer* m_Lexer = nullptr;
+        const String* m_LastErrorSource = nullptr;
+        const String* m_LastErrorPath = nullptr;
         ParseResult m_LastError = ParseResult::OK;
         Token m_LastErrorToken = Token(TokenType::None);
         String m_LastErrorMsg = "";
