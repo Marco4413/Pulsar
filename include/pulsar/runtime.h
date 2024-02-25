@@ -36,6 +36,7 @@ namespace Pulsar
     struct Frame
     {
         const FunctionDefinition* Function;
+        bool IsNative = false;
         List<Value> Locals = List<Value>();
         ValueStack Stack = ValueStack();
         size_t InstructionIndex = 0;

@@ -286,7 +286,7 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         if (!NativeFunctions[funcIdx])
             return RuntimeState::UnboundNativeFunction;
 
-        Frame callFrame{ &NativeBindings[funcIdx] };
+        Frame callFrame{ &NativeBindings[funcIdx], true };
         auto res = PrepareCallFrame(frame.Stack, callFrame);
         if (res != RuntimeState::OK)
             return res;
@@ -320,7 +320,7 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             if (!NativeFunctions[funcIdx])
                 return RuntimeState::UnboundNativeFunction;
 
-            Frame callFrame{ &NativeBindings[funcIdx] };
+            Frame callFrame{ &NativeBindings[funcIdx], true };
             auto res = PrepareCallFrame(frame.Stack, callFrame);
             if (res != RuntimeState::OK)
                 return res;
