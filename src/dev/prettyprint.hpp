@@ -107,12 +107,12 @@ void PrintPrettyRuntimeError(
         return;
     }
 
+    Pulsar::String stackTrace = context.GetStackTrace(10);
     const Pulsar::Frame& frame = context.CallStack.CurrentFrame();
     if (!context.OwnerModule->HasSourceDebugSymbols() || !frame.Function->HasDebugSymbol()) {
         fmt::print(
-            "Error: Within function {}\n"
-            "    No Code Debug Symbols found.",
-            frame.Function->Name);
+            "Error: Within function {}\n{}",
+            frame.Function->Name, stackTrace);
         return;
     } else if (!frame.Function->HasCodeDebugSymbols()) {
         const auto& srcSymbol = context.OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
@@ -121,6 +121,7 @@ void PrintPrettyRuntimeError(
             frame.Function->DebugSymbol.Token,
             "Within function " + frame.Function->Name,
             viewRange);
+        fmt::print("\n{}", stackTrace);
         return;
     }
 
@@ -138,4 +139,5 @@ void PrintPrettyRuntimeError(
         frame.Function->CodeDebugSymbols[symbolIdx].Token,
         "In function " + frame.Function->Name,
         viewRange);
+    fmt::print("\n{}", stackTrace);
 }
