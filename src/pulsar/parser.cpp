@@ -247,7 +247,13 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, bool
         if (curToken.Type != TokenType::FullStop)
             return SetError(ParseResult::UnexpectedToken, curToken,
                 "Expected '.' to confirm native function declaration. Native functions can't have a body.");
-        module.NativeBindings.PushBack(std::move(def));
+        // If the native already exists push symbols (the function may have been defined outside the Parser)
+        int64_t nativeIdx = (int64_t)module.NativeBindings.Size()-1;
+        for (; nativeIdx >= 0 && !module.NativeBindings[nativeIdx].MatchesDeclaration(def); nativeIdx--);
+        if (nativeIdx < 0)
+            module.NativeBindings.PushBack(std::move(def));
+        else if (debugSymbols)
+            module.NativeBindings[nativeIdx].DebugSymbol = def.DebugSymbol;
     } else {
         if (curToken.Type != TokenType::Colon)
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected '->' for return count declaration or ':' to begin function body.");
