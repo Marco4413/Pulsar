@@ -4,7 +4,10 @@ Pulsar::String Pulsar::ExecutionContext::GetCallTrace(size_t callIdx) const
 {
     const Frame& frame = CallStack[callIdx];
     String trace;
-    trace += "at (" + frame.Function->Name + ")";
+    trace += "at (";
+    if (frame.IsNative)
+        trace += '*';
+    trace += frame.Function->Name + ')';
     if (frame.Function->HasDebugSymbol() && OwnerModule->HasSourceDebugSymbols()) {
         const auto& filePath = OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx].Path;
         if (frame.Function->HasCodeDebugSymbols()) {
