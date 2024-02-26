@@ -57,6 +57,26 @@ Then can continue with any starting character or digit and the following symbols
 
 At the moment, identifiers cannot be the same as keywords.
 
+## Compiler Directives
+
+Compiler Directives are special statements that are executed by the compiler (it's
+actually the parser, compiler sounds cooler though).
+
+A directive is composed by an identifier preceded by the `#` character (e.g.
+`#mydirective`). Some may accept arguments. THEY ARE CASE SENSITIVE.
+
+### \#include
+
+`#include "path/to/my/file.pls"`
+
+The `include` directive allows you to specify another file which will be **parsed
+as if it was copy-pasted** where the directive was used.
+
+The parser won't allow a file to be parsed more than once, it will just ignore the
+other directive. So you don't have to worry about what other files include.
+
+The path to the file is relative to the including file.
+
 ## Datatypes
 
 Pulsar is dynamically-typed, any value can be assigned to any local.
@@ -96,13 +116,16 @@ performance-wise. However, copying and calculating their length is slow.
 
 It's your usual double-quoted string which can contain escape characters.
 When a `\` is found within quotes, the next character is parsed as is
-except for some special ones which are turned into control characters:
+except for some special ones which are turned into other characters:
 
-| Escape Sequence | Control Character |
+| Escape Sequence |     Character     |
 | :-------------: | :---------------: |
 |      `\n`       |     New Line      |
 |      `\r`       |  Carriage Return  |
 |      `\t`       |    Tabulation     |
+|    `\xHH;`      |  Char Code 0xHH   |
+
+Where H is an hex digit.
 
 #### List Literals
 
@@ -115,6 +138,18 @@ A valid list literal looks something like this: `[ "Hello", "World", 1, 2, 3, ]`
 A list literal (unless it contains only numeric constants) is broken down into the
 [instructions](#instructions) needed to create the specified list. Groups of numeric
 constants are produced in one or two instructions depending on the context.
+
+#### "Character Literals"
+
+Character literals aren't really character literals. They're a convenient way of
+writing an **Integer Literal that matches the ASCII code of a character**.
+
+They're single-quoted: `'c'`
+
+All escape sequences which produce a single character in a [String Literal](#string-literals)
+are also valid in Character Literals.
+
+i.e. `'\''`, `'\xFF;'` are valid.
 
 ## Mathematical Operators
 
@@ -148,7 +183,7 @@ It only accepts `Integer`s.
 |   >    |   More   |  2   |    1    |
 |   >=   | MoreOrEq |  2   |    1    |
 
-As of now, these are only allowed within if statements.
+As of now, these are only allowed within [if statements](#if-statement).
 
 ## Special Operators
 
@@ -269,6 +304,16 @@ Functions are called by `(function)`.
 > It's like function definitions but without the `*` in front of
 it and the arguments within the parentheses.
 
+### Function Naming
+
+Function names are [indetifiers](#identifiers) and they allow the `/`
+character to be used after the first character. So if you plan to make
+an [\#include](#include)-able file, you should probably use a
+"namespaced" name like `my-module/function-name`.
+
+The rest is up to you! You can use `?` for value-checking functions,
+`!` for procedures, ...
+
 ## Native Functions
 
 Native functions must be declared within a Pulsar source file.
@@ -345,6 +390,43 @@ Finally, if no condition at all is present, `!= 0` is implied.
 The `else` branch can be specified within all `if`s. However, the
 "no return" restriction must be met.
 
+## Globals
+
+Globals can be useful to store some state between functions,
+**pre-compute** values during parsing and as a configuration.
+
+```lisp
+global const [0, 1, 2, 3] -> my-global
+global my-global -> my-global2
+```
+
+Global variables are defined as follows:
+
+`global [const] [lvalue] -> name`
+
+They're treated like locals within functions, so you can copy,
+move or set them like you would normally do with locals. However,
+if a global is defined as `const` you'll only be able to copy it.
+
+Though as you might have noticed, there's that '**pre-compute**'
+word that's VERY important. And now we'll get to why.
+
+### Global producers!
+
+```lisp
+global [const] -> name:
+    // Do Function Stuff
+    .
+```
+
+As seen in the [globals example](../examples/globals.pls), you can do
+performance-heavy tasks during parsing. That means increasing compile
+time to improve runtime efficiency!
+
+That example goes from ~700ms of runtime to ~50us just by pre-computing
+the lists it uses (granted that sorting algorithm has its worst case
+scenario to deal with, pure nightmare if you ask me).
+
 ## Instructions
 
 You can see instructions as *blazing fast* functions!
@@ -356,6 +438,42 @@ overhead of creating a new Frame and Stack.
 
 Internal arguments MUST be Integer Literals and they're completely optional.
 Most of the time, the instruction doesn't even need arguments to do its job.
+
+### floor
+
+Truncates the last number on the stack converting it to an `Integer`.
+
+|        |         S0         |
+| :----- | :----------------: |
+| Pops   | `Integer`/`Double` |
+| Pushes |     `Integer`      |
+
+### ceil
+
+Calculates the length of a `List` or `String` and puts it into the stack.
+
+|        |       S0        |    S+1    |
+| :----- | :-------------: | :-------: |
+| Pops   | `List`/`String` |           |
+| Pushes | `List`/`String` | `Integer` |
+
+### compare
+
+Compares the last two elements on the stack,
+pushing a value < 0 if a < b, 0 if a = b, > 0 if a > b.
+
+Let `Numeric` be `Integer` or `Double`.
+
+If both values are either `Numeric` it acts like the [*Sub operator*](#mathematical-operators).
+meaning that the returned value may be either an `Integer` or `Double`.
+
+If both values are `String`s then the returned value is an `Integer`.
+`String` comparison can be used to check for `String` equality or to sort them alphabetically.
+
+|        |        S-1         |         S0         |
+| :----- | :----------------: | :----------------: |
+| Pops   | `Numeric`/`String` | `Numeric`/`String` |
+| Pushes |     `Numeric`      |                    |
 
 ### icall
 
@@ -393,6 +511,9 @@ Pushes a new empty `List` into the stack.
 
 Adds a value to the start of a `List` or `String`.
 
+Only `Integer`s or `String`s can be prepended to `String`s.
+`Integer`s are converted to ASCII characters.
+
 |        |       S-1       |  S0   |
 | :----- | :-------------: | :---: |
 | Pops   | `List`/`String` | `Any` |
@@ -401,6 +522,9 @@ Adds a value to the start of a `List` or `String`.
 ### append
 
 Adds a value to the end of a `List` or `String`.
+
+Only `Integer`s or `String`s can be appended to `String`s.
+`Integer`s are converted to ASCII characters.
 
 |        |       S-1       |  S0   |
 | :----- | :-------------: | :---: |
@@ -433,3 +557,14 @@ Removes the first value of a `List`.
 | :----- | :----: |
 | Pops   | `List` |
 | Pushes | `List` |
+
+### index
+
+Copies the value at a specific index of a `String` or a `List`.
+
+`String` characters are converted to `Integer`s.
+
+|        |       S-1       |    S0     |
+| :----- | :-------------: | :-------: |
+| Pops   | `List`/`String` | `Integer` |
+| Pushes | `List`/`String` |   `Any`   |
