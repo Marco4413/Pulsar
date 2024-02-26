@@ -20,8 +20,20 @@ Pulsar::String Pulsar::ToStringLiteral(const String& str)
             lit += "\\t";
             break;
         default:
-            if (!IsControlCharacter(str[i]))
-                lit += str[i];
+            if (IsControlCharacter(str[i])) {
+                lit += "\\x";
+                uint8_t digit2 = (str[i] >> 8) & 0x0F;
+                if (digit2 < 0xA)
+                    lit += (char)('0'+digit2);
+                else lit += (char)('A'+digit2-0xA);
+                uint8_t digit1 = str[i] & 0x0F;
+                if (digit1 < 0xA)
+                    lit += (char)('0'+digit1);
+                else lit += (char)('A'+digit1-0xA);
+                lit += ';';
+                break;
+            }
+            lit += str[i];
         }
     }
     lit += '"';
@@ -232,6 +244,31 @@ Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
             case 'n':
                 val += '\n';
                 break;
+            case 'x': {
+                size_t digits = 2;
+                if (m_SourceView.Length() - (count+1) < digits)
+                    digits = m_SourceView.Length()- (count+1);
+                uint8_t code = 0;
+                for (size_t i = 0; i < digits; i++) {
+                    char digit = ToLowerCase(m_SourceView[count+1+i]);
+                    if (digit >= 'a' && digit <= 'f') {
+                        code = (code << 4) + digit-'a'+10;
+                    } else if (digit >= '0' && digit <= '9') {
+                        code = (code << 4) + digit-'0';
+                    } else {
+                        digits = i;
+                        break;
+                    }
+                }
+                if (digits == 0) {
+                    val += ch;
+                    break;
+                }
+                val += (char)(code);
+                count += digits;
+                if (count+1 < m_SourceView.Length() && m_SourceView[count+1] == ';')
+                    count++;
+            } break;
             default:
                 val += ch;
             }
