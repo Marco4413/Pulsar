@@ -555,6 +555,30 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             list.AsList().RemoveFront(1);
         } else return RuntimeState::TypeError;
     } break;
+    case InstructionCode::Index: {
+        if (frame.Stack.Size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value& list = frame.Stack[frame.Stack.Size()-2];
+        Value& index = frame.Stack[frame.Stack.Size()-1];
+        if (index.Type() != ValueType::Integer)
+            return RuntimeState::TypeError;
+
+        if (list.Type() == ValueType::List) {
+            if (index.AsInteger() < 0)
+                return RuntimeState::ListIndexOutOfBounds;
+            ValueList::NodeType* node = list.AsList().Front();
+            for (size_t i = 0; i < (size_t)index.AsInteger() && node; i++)
+                node = node->Next();
+            if (!node)
+                return RuntimeState::ListIndexOutOfBounds;
+            index = node->Value();
+        } else if (list.Type() == ValueType::String) {
+            if (index.AsInteger() < 0 || (size_t)index.AsInteger() >= list.AsString().Length())
+                return RuntimeState::StringIndexOutOfBounds;
+            int64_t ch = list.AsString()[(size_t)index.AsInteger()];
+            index.SetInteger(ch);
+        } else return RuntimeState::TypeError;
+    } break;
     }
 
     return RuntimeState::OK;
@@ -593,6 +617,8 @@ const char* Pulsar::RuntimeStateToString(RuntimeState rstate)
         return "FunctionNotFound";
     case RuntimeState::ListIndexOutOfBounds:
         return "ListIndexOutOfBounds";
+    case RuntimeState::StringIndexOutOfBounds:
+        return "StringIndexOutOfBounds";
     }
     return "Unknown";
 }
