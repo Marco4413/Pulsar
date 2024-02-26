@@ -450,12 +450,12 @@ Truncates the last number on the stack converting it to an `Integer`.
 
 ### ceil
 
-Calculates the length of a `List` or `String` and puts it into the stack.
+Adds 1 and truncates the last number on the stack converting it to an `Integer`.
 
-|        |       S0        |    S+1    |
-| :----- | :-------------: | :-------: |
-| Pops   | `List`/`String` |           |
-| Pushes | `List`/`String` | `Integer` |
+|        |         S0         |
+| :----- | :----------------: |
+| Pops   | `Integer`/`Double` |
+| Pushes |     `Integer`      |
 
 ### compare
 
