@@ -11,6 +11,8 @@ namespace Pulsar
 {
     struct InstructionDescription { InstructionCode Code; bool MayFail = true; };
     static const std::unordered_map<String, InstructionDescription> InstructionMappings {
+        { "floor",      { InstructionCode::Floor                } },
+        { "ceil",       { InstructionCode::Ceil                 } },
         { "compare",    { InstructionCode::Compare              } },
         { "icall",      { InstructionCode::ICall                } },
         { "length",     { InstructionCode::Length               } },
@@ -20,6 +22,7 @@ namespace Pulsar
         { "concat",     { InstructionCode::Concat               } },
         { "head",       { InstructionCode::Head                 } },
         { "tail",       { InstructionCode::Tail                 } },
+        { "index",      { InstructionCode::Index                } },
     };
 
     struct ParseSettings
