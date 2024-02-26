@@ -2,22 +2,6 @@
 
 #include <cctype>
 
-bool Pulsar::IsIdentifierStart(int ch)
-{
-    return std::isalpha(ch) || ch == '_';
-}
-
-bool Pulsar::IsIdentifierContinuation(int ch)
-{
-    return (
-        IsIdentifierStart(ch) || std::isdigit(ch)
-            || (ch >= 60 && ch <= 63) // < = > ?
-            || ch == '+' || ch == '-'
-            || ch == '*' || ch == '/'
-            || ch == '!'
-    );
-}
-
 Pulsar::String Pulsar::ToStringLiteral(const String& str)
 {
     String lit(1, '"');
@@ -36,7 +20,7 @@ Pulsar::String Pulsar::ToStringLiteral(const String& str)
             lit += "\\t";
             break;
         default:
-            if (!std::iscntrl(str[i]))
+            if (!IsControlCharacter(str[i]))
                 lit += str[i];
         }
     }
@@ -169,17 +153,17 @@ Pulsar::Token Pulsar::Lexer::ParseIntegerLiteral()
     bool negative = m_SourceView[count] == '-';
     if (negative && ++count >= m_SourceView.Length())
         return CreateNoneToken();
-    else if (!std::isdigit(m_SourceView[count]))
+    else if (!IsDigit(m_SourceView[count]))
         return CreateNoneToken();
     int64_t val = 0;
     for (; count < m_SourceView.Length(); count++) {
         if (IsIdentifierStart(m_SourceView[count])) {
             return CreateNoneToken();
         } else if (m_SourceView[count] == '.') {
-            if (m_SourceView.Length() <= count+1 || !std::isdigit(m_SourceView[count+1]))
+            if (m_SourceView.Length() <= count+1 || !IsDigit(m_SourceView[count+1]))
                 break;
             return CreateNoneToken();
-        } else if (!std::isdigit(m_SourceView[count]))
+        } else if (!IsDigit(m_SourceView[count]))
             break;
         val *= 10;
         val += m_SourceView[count] - '0';
@@ -195,7 +179,7 @@ Pulsar::Token Pulsar::Lexer::ParseDoubleLiteral()
     double exp = m_SourceView[count] == '-' ? -1 : 1;
     if (exp < 0 && ++count >= m_SourceView.Length())
         return CreateNoneToken();
-    else if (!std::isdigit(m_SourceView[count]))
+    else if (!IsDigit(m_SourceView[count]))
         return CreateNoneToken();
     bool decimal = false;
     double val = 0.0;
@@ -207,9 +191,9 @@ Pulsar::Token Pulsar::Lexer::ParseDoubleLiteral()
                 return CreateNoneToken();
             decimal = true;
             count++;
-            if (count >= m_SourceView.Length() || !std::isdigit(m_SourceView[count]))
+            if (count >= m_SourceView.Length() || !IsDigit(m_SourceView[count]))
                 return CreateNoneToken();
-        } if (!std::isdigit(m_SourceView[count]))
+        } if (!IsDigit(m_SourceView[count]))
             break;
         
         if (decimal)
@@ -228,7 +212,7 @@ Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
     size_t count = 1;
     String val = "";
     for (; count < m_SourceView.Length(); count++) {
-        if (std::iscntrl(m_SourceView[count]))
+        if (IsControlCharacter(m_SourceView[count]))
             break;
         else if (m_SourceView[count] == '"')
             return TrimToToken(count+1, TokenType::StringLiteral, val);
@@ -236,7 +220,7 @@ Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
             if (m_SourceView.Length()-count < 2)
                 break;
             char ch = m_SourceView[++count];
-            if (std::iscntrl(ch))
+            if (IsControlCharacter(ch))
                 break;
             switch (ch) {
             case 't':
@@ -261,7 +245,7 @@ Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
 size_t Pulsar::Lexer::SkipWhitespaces()
 {
     size_t count = 0;
-    for (; count < m_SourceView.Length() && std::isspace(m_SourceView[count]); count++) {
+    for (; count < m_SourceView.Length() && IsSpace(m_SourceView[count]); count++) {
         if (m_SourceView[count] == '\n') {
             m_Line++;
             m_LineStartIdx = m_SourceView.GetStart() + count+1 /* skip new line char */;

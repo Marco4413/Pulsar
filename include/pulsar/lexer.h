@@ -86,8 +86,23 @@ namespace Pulsar
         SourcePosition SourcePos = {0,0,0,0};
     };
 
-    bool IsIdentifierStart(int ch);
-    bool IsIdentifierContinuation(int ch);
+    inline bool IsControlCharacter(char ch)      { return ch <= 0x1F || ch >= 0x7F; }
+    inline bool IsSpace(char ch)                 { return ch == ' ' || (ch >= '\t' && ch <= '\r'); }
+    inline bool IsAlphaCharacter(char ch)        { return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'); }
+    inline bool IsDigit(char ch)                 { return ch >= '0' && ch <= '9'; }
+    inline bool IsHexDigit(char ch)              { return IsDigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F'); }
+    inline bool IsAlphaNumericCharacter(char ch) { return IsAlphaCharacter(ch) || IsDigit(ch); }
+    inline char ToLowerCase(char ch)             { return (ch >= 'A' && ch <= 'Z') ? ch+('a'-'A') : ch; }
+
+    inline bool IsIdentifierStart(char ch) { return IsAlphaCharacter(ch) || ch == '_'; }
+    inline bool IsIdentifierContinuation(int ch)
+    {
+        return IsIdentifierStart(ch) || IsDigit(ch)
+            || (ch >= '<' && ch <= '?') // < = > ?
+            || ch == '+' || ch == '-'
+            || ch == '*' || ch == '/'
+            || ch == '!';
+    }
 
     class Lexer
     {
