@@ -146,6 +146,7 @@ namespace Pulsar
         Token ParseIntegerLiteral();
         Token ParseDoubleLiteral();
         Token ParseStringLiteral();
+        Token ParseCharacterLiteral();
         size_t SkipWhitespaces();
         size_t SkipComments();
 

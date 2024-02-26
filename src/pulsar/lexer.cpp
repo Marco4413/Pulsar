@@ -58,6 +58,9 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
             token = ParseStringLiteral();
             if (token.Type != TokenType::None)
                 return token;
+            token = ParseCharacterLiteral();
+            if (token.Type != TokenType::None)
+                return token;
             token = ParseCompilerDirective();
             if (token.Type != TokenType::None)
                 return token;
@@ -277,6 +280,70 @@ Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
         val += m_SourceView[count];
     }
     return CreateNoneToken();
+}
+
+Pulsar::Token Pulsar::Lexer::ParseCharacterLiteral()
+{
+    // TODO: Either switch to this style of lexing or the other way around.
+    if (m_SourceView.Length() < 3
+        || m_SourceView[0] != '\'')
+        return CreateNoneToken();
+    StringView view = m_SourceView;
+    view.RemovePrefix(1);
+    char ch = view[0];
+    view.RemovePrefix(1);
+    // There must be either another ' or an escaped character
+    if (view.Empty())
+        return CreateNoneToken();
+    else if (ch == '\\') {
+        ch = view[0];
+        view.RemovePrefix(1);
+        if (IsControlCharacter(ch))
+            return CreateNoneToken();
+        switch (ch) {
+        case 'n':
+            ch = '\n';
+            break;
+        case 'r':
+            ch = '\r';
+            break;
+        case 't':
+            ch = '\t';
+            break;
+        case 'x': {
+            size_t digits = 2;
+            if (view.Length() < digits)
+                digits = view.Length();
+            uint8_t code = 0;
+            for (size_t i = 0; i < digits; i++) {
+                char digit = ToLowerCase(view[0]);
+                if (digit >= 'a' && digit <= 'f') {
+                    code = (code << 4) + digit-'a'+10;
+                    view.RemovePrefix(1);
+                } else if (digit >= '0' && digit <= '9') {
+                    code = (code << 4) + digit-'0';
+                    view.RemovePrefix(1);
+                } else {
+                    digits = i;
+                    break;
+                }
+            }
+            if (digits == 0)
+                break;
+            ch = (char)(code);
+            if (!view.Empty() && view[0] == ';')
+                view.RemovePrefix(1);
+        } break;
+        default:
+            break;
+        }
+    } else if (IsControlCharacter(ch))
+        return CreateNoneToken();
+
+    if (view.Empty() || view[0] != '\'')
+        return CreateNoneToken();
+    view.RemovePrefix(1);
+    return TrimToToken(view.GetStart()-m_SourceView.GetStart(), TokenType::IntegerLiteral, (int64_t)ch);
 }
 
 size_t Pulsar::Lexer::SkipWhitespaces()
