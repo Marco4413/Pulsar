@@ -398,6 +398,24 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             return RuntimeState::TypeError;
         a.SetInteger(a.AsInteger() % b.AsInteger());
     } break;
+    case InstructionCode::Floor: {
+        if (frame.Stack.Size() < 1)
+            return RuntimeState::StackUnderflow;
+        Value& val = frame.Stack.Back();
+        if (!IsNumericValueType(val.Type()))
+            return RuntimeState::TypeError;
+        if (val.Type() == ValueType::Double)
+            val.SetInteger((int64_t)val.AsDouble());
+    } break;
+    case InstructionCode::Ceil: {
+        if (frame.Stack.Size() < 1)
+            return RuntimeState::StackUnderflow;
+        Value& val = frame.Stack.Back();
+        if (!IsNumericValueType(val.Type()))
+            return RuntimeState::TypeError;
+        if (val.Type() == ValueType::Double)
+            val.SetInteger((int64_t)(val.AsDouble()+1.0));
+    } break;
     case InstructionCode::Compare: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
