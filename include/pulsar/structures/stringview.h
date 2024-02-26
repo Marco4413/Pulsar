@@ -15,11 +15,17 @@ namespace Pulsar
         StringView(const char* str, size_t length)
             : m_Data(str), m_End(length) { }
         
+        StringView(const StringView&) = default;
+        StringView(StringView&&) = default;
+        StringView& operator=(const StringView&) = default;
+        StringView& operator=(StringView&&) = default;
+        
         String GetPrefix(size_t count) const { return String(m_Data+m_Start, count); }
-        void RemovePrefix(size_t count) { m_Start += count; };
-        void RemoveSuffix(size_t count) { m_End -= count; };
-        char operator[](size_t idx) const { return m_Data[m_Start+idx]; }
-        size_t Length() const { return m_Start >= m_End ? 0 : m_End - m_Start; }
+        void RemovePrefix(size_t count)      { m_Start += count; };
+        void RemoveSuffix(size_t count)      { m_End -= count; };
+        char operator[](size_t idx) const    { return m_Data[m_Start+idx]; }
+        size_t Length() const   { return Empty() ? 0 : m_End - m_Start; }
+        bool Empty() const      { return m_Start >= m_End; }
         size_t GetStart() const { return m_Start; }
         const char* CStringFrom(size_t idx) const { return &m_Data[m_Start+idx]; }
     private:
