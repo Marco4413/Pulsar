@@ -1,7 +1,7 @@
 #ifndef _PULSAR_CORE_H
 #define _PULSAR_CORE_H
 
-// All std includes are in this file.
+// All std includes from header files are here.
 #include <cinttypes>
 #include <cstring>
 #include <functional>
