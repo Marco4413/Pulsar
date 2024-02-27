@@ -158,7 +158,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, const 
         ParseSettings subSettings = settings;
         // We want to know where, within the body of the global, the runtime failed.
         subSettings.StoreDebugSymbols = true;
-        auto result = ParseFunctionBody(module, dummyFunc, locals, subSettings);
+        auto result = ParseFunctionBody(module, dummyFunc, locals, nullptr, subSettings);
         if (result != ParseResult::OK)
             return result;
     }
@@ -266,7 +266,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, cons
     } else {
         if (curToken.Type != TokenType::Colon)
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected '->' for return count declaration or ':' to begin function body.");
-        ParseResult bodyParseResult = ParseFunctionBody(module, def, args, settings);
+        ParseResult bodyParseResult = ParseFunctionBody(module, def, args, nullptr, settings);
         if (bodyParseResult != ParseResult::OK)
             return bodyParseResult;
         module.Functions.PushBack(std::move(def));
@@ -278,7 +278,10 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, cons
 #define PUSH_CODE_SYMBOL(cond, func, token) \
     if (cond) (func).CodeDebugSymbols.EmplaceBack((token), (func).Code.Size())
 
-Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings)
+Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
+    Module& module, FunctionDefinition& func,
+    const LocalsBindings& locals, SkippableBlock* skippableBlock,
+    const ParseSettings& settings)
 {
     LocalsBindings scopedLocals = locals;
     for (;;) {
@@ -288,6 +291,25 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
             func.Code.EmplaceBack(InstructionCode::Return);
             return ParseResult::OK;
+        case TokenType::KW_Break:
+            if (!skippableBlock || !skippableBlock->AllowBreak)
+                return SetError(ParseResult::UnexpectedToken, curToken, "Trying to break out of an un-breakable block.");
+            PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
+            skippableBlock->BreakStatements.PushBack(func.Code.Size());
+            func.Code.EmplaceBack(InstructionCode::Jump, 0);
+            return ParseResult::OK;
+        case TokenType::KW_Continue:
+            if (!skippableBlock || !skippableBlock->AllowContinue)
+                return SetError(ParseResult::UnexpectedToken, curToken, "Trying to repeat an un-repeatable block.");
+            PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
+            func.Code.EmplaceBack(InstructionCode::Jump, (int64_t)skippableBlock->StartIdx - (int64_t)func.Code.Size());
+            return ParseResult::OK;
+        case TokenType::KW_While: {
+            PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
+            auto res = ParseWhileLoop(module, func, scopedLocals, settings);
+            if (res != ParseResult::OK)
+                return res;
+        } break;
         case TokenType::Plus:
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
             func.Code.EmplaceBack(InstructionCode::DynSum);
@@ -429,17 +451,22 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(Module& module, FunctionDe
         } break;
         case TokenType::KW_If: {
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
-            auto res = ParseIfStatement(module, func, scopedLocals, settings);
+            auto res = ParseIfStatement(module, func, scopedLocals, skippableBlock, settings);
             if (res != ParseResult::OK)
                 return res;
         } break;
         default:
-            return SetError(ParseResult::UnexpectedToken, curToken, "Expression expected.");
+            if (settings.AppendNotesToErrorMessage)
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expression expected.\nNote: You may have forgotten to return from function '" + func.Name + "' or end some block within it.");
+            else return SetError(ParseResult::UnexpectedToken, curToken, "Expression expected.");
         }
     }
 }
 
-Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings)
+Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
+    Module& module, FunctionDefinition& func,
+    const LocalsBindings& locals, SkippableBlock* skippableBlock,
+    const ParseSettings& settings)
 {
     Token ifToken = m_Lexer->CurrentToken();
     Token comparisonToken(TokenType::None);
@@ -520,7 +547,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDef
     size_t ifIdx = func.Code.Size();
     func.Code.EmplaceBack(jmpInstrCode, 0);
     
-    auto res = ParseFunctionBody(module, func, locals, settings);
+    auto res = ParseFunctionBody(module, func, locals, skippableBlock, settings);
     if (res != ParseResult::OK) {
         if (res != ParseResult::UnexpectedToken)
             return res;
@@ -541,7 +568,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDef
     m_Lexer->NextToken(); // Consume 'else' Token
 
     if (curToken.Type == TokenType::Colon) {
-        res = ParseFunctionBody(module, func, locals, settings);
+        res = ParseFunctionBody(module, func, locals, skippableBlock, settings);
         if (res != ParseResult::OK) {
             if (res != ParseResult::UnexpectedToken)
                 return res;
@@ -555,11 +582,114 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDef
     } else if (curToken.Type == TokenType::KW_If) {
         if (!isSelfContained)
             return SetError(ParseResult::UnexpectedToken, curToken, "Illegal 'else if' statement. Previous condition is not self-contained.");
-        res = ParseIfStatement(module, func, locals, settings);
+        res = ParseIfStatement(module, func, locals, skippableBlock, settings);
         func.Code[elseIdx].Arg0 = func.Code.Size() - elseIdx;
         return res;
     }
     return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'else' block start or 'else if' compound statement.");
+}
+
+Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings)
+{
+    Token whileToken = m_Lexer->CurrentToken();
+    Token comparisonToken(TokenType::None);
+    InstructionCode jmpInstrCode = InstructionCode::JumpIfZero;
+    bool hasComparison = false;
+    bool whileTrue = false;
+
+    size_t whileIdx = func.Code.Size();
+    const Token& curToken = m_Lexer->NextToken();
+    if (curToken.Type == TokenType::Colon) {
+        whileTrue = true;
+    } else {
+        switch (curToken.Type) {
+        case TokenType::StringLiteral:
+        case TokenType::IntegerLiteral:
+        case TokenType::DoubleLiteral:
+        case TokenType::Identifier: {
+            // jmpInstrCode = InstructionCode::JumpIfZero;
+            auto res = PushLValue(module, func, locals, curToken, settings);
+            if (res != ParseResult::OK)
+                return res;
+            m_Lexer->NextToken();
+        } break;
+        default:
+            break;
+        }
+
+        if (curToken.Type != TokenType::Colon) {
+            hasComparison = true;
+            switch (curToken.Type) {
+            case TokenType::Equals:
+                jmpInstrCode = InstructionCode::JumpIfNotZero;
+                break;
+            case TokenType::NotEquals:
+                jmpInstrCode = InstructionCode::JumpIfZero;
+                break;
+            case TokenType::Less:
+                jmpInstrCode = InstructionCode::JumpIfGreaterThanOrEqualToZero;
+                break;
+            case TokenType::LessOrEqual:
+                jmpInstrCode = InstructionCode::JumpIfGreaterThanZero;
+                break;
+            case TokenType::More:
+                jmpInstrCode = InstructionCode::JumpIfLessThanOrEqualToZero;
+                break;
+            case TokenType::MoreOrEqual:
+                jmpInstrCode = InstructionCode::JumpIfLessThanZero;
+                break;
+            default:
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expected while loop body start ':' or comparison operator.");
+            }
+
+            comparisonToken = curToken;
+            m_Lexer->NextToken();
+            switch (curToken.Type) {
+            case TokenType::StringLiteral:
+            case TokenType::IntegerLiteral:
+            case TokenType::DoubleLiteral:
+            case TokenType::Identifier: {
+                auto res = PushLValue(module, func, locals, curToken, settings);
+                if (res != ParseResult::OK)
+                    return res;
+                m_Lexer->NextToken();
+            } break;
+            default:
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expected lvalue of type String, Integer, Double or Local after comparison operator.");
+            }
+        }
+    }
+
+    if (curToken.Type != TokenType::Colon)
+        return SetError(ParseResult::UnexpectedToken, curToken, "Expected ':' to begin while loop body.");
+    else if (hasComparison) {
+        PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, comparisonToken);
+        func.Code.EmplaceBack(InstructionCode::Compare);
+    }
+
+    SkippableBlock block{
+        .AllowBreak = true,
+        .AllowContinue = true,
+        .StartIdx = whileIdx,
+    };
+
+    if (!whileTrue) {
+        block.BreakStatements.PushBack(func.Code.Size());
+        PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, whileToken);
+        func.Code.EmplaceBack(jmpInstrCode, 0);
+    }
+    
+    auto res = ParseFunctionBody(module, func, locals, &block, settings);
+    if (res != ParseResult::OK && (res != ParseResult::UnexpectedToken || curToken.Type != TokenType::KW_End))
+        return res;
+
+    size_t endIdx = func.Code.Size();
+    func.Code.EmplaceBack(InstructionCode::Jump, (int64_t)(whileIdx-endIdx));
+
+    size_t breakIdx = func.Code.Size();
+    for (size_t i = 0; i < block.BreakStatements.Size(); i++)
+        func.Code[block.BreakStatements[i]].Arg0 = (int64_t)(breakIdx-block.BreakStatements[i]);
+    return ParseResult::OK;
 }
 
 Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const Token& lvalue, const ParseSettings& settings)

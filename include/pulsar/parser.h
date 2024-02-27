@@ -25,6 +25,15 @@ namespace Pulsar
         { "index",      { InstructionCode::Index                } },
     };
 
+    struct SkippableBlock
+    {
+        const bool AllowBreak = false;
+        const bool AllowContinue = false;
+        const size_t StartIdx = 0;
+        // Used for back-patching jump addresses.
+        List<size_t> BreakStatements = List<size_t>();
+    };
+
     struct ParseSettings
     {
         bool StoreDebugSymbols = true;
@@ -70,8 +79,9 @@ namespace Pulsar
         ParseResult ParseModuleStatement(Module& module, const ParseSettings& settings);
         ParseResult ParseGlobalDefinition(Module& module, const ParseSettings& settings);
         ParseResult ParseFunctionDefinition(Module& module, const ParseSettings& settings);
-        ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings);
-        ParseResult ParseIfStatement(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings);
+        ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalsBindings& locals, SkippableBlock* skippableBlock, const ParseSettings& settings);
+        ParseResult ParseIfStatement(Module& module, FunctionDefinition& func, const LocalsBindings& locals, SkippableBlock* skippableBlock, const ParseSettings& settings);
+        ParseResult ParseWhileLoop(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings);
         ParseResult PushLValue(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const Token& lvalue, const ParseSettings& settings);
         ParseResult SetError(ParseResult errorType, const Token& token, const String& errorMsg)
         {
