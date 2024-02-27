@@ -494,6 +494,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(Module& module, FunctionDef
             comparisonToken = curToken;
             m_Lexer->NextToken();
             switch (curToken.Type) {
+            case TokenType::StringLiteral:
             case TokenType::IntegerLiteral:
             case TokenType::DoubleLiteral:
             case TokenType::Identifier: {
