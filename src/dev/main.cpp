@@ -59,7 +59,20 @@ int main(int argc, const char** argv)
         {
             Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
             Pulsar::Value& val = frame.Locals[0];
-            fmt::println("{}", val);
+            if (val.Type() == Pulsar::ValueType::String)
+                fmt::print("{}", val.AsString());
+            else fmt::print("{}", val);
+            return Pulsar::RuntimeState::OK;
+        });
+
+    module.BindNativeFunction({ "println!", 1, 0 },
+        [](Pulsar::ExecutionContext& eContext)
+        {
+            Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+            Pulsar::Value& val = frame.Locals[0];
+            if (val.Type() == Pulsar::ValueType::String)
+                fmt::println("{}", val.AsString());
+            else fmt::println("{}", val);
             return Pulsar::RuntimeState::OK;
         });
 
