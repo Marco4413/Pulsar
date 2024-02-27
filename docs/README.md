@@ -18,7 +18,7 @@ Constants and locals, also referred to as `lvalue`s, are pushed onto it all the 
     // The . operator is the equivalent of the return statement.
     .
 
-*(main) -> 1:
+*(main args) -> 1:
     // The constants 2 and 3 are pushed onto the stack.
     // Then (do-sum) is called and consumes those two values
     //   because it accepts two arguments.
@@ -256,7 +256,7 @@ Before the introduction of this operator, you had to write `-> var var`
 to do the same thing. Which was "less readable" and efficient.
 
 ```lisp
-*(main) -> 1:
+*(main args) -> 1:
     // This expression results in the value '2'.
     1 <-> x x +
     .
@@ -339,7 +339,7 @@ Before getting into details about it, I'll explain the most
 straightforward one.
 
 ```lisp
-*(main) -> 1:
+*(main args) -> 1:
     10 -> x
     if x > 8:
         8
