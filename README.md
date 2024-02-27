@@ -41,4 +41,13 @@ Supported compilers are `gcc` and `msvc`.
 
 ## Examples
 
-Check out the [examples](examples).
+They're within the [examples](examples) folder.
+
+### Running Examples
+
+The current way of running examples is by compiling the `pulsar-dev` project
+and passing the example to run as an argument. Other arguments are passed to the
+main function of the example.
+
+See the [Building](#building) section.
+
