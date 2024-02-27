@@ -33,6 +33,7 @@ namespace Pulsar
         PushReference,
         KW_If, KW_Else, KW_End,
         KW_Global, KW_Const,
+        KW_While, KW_Break, KW_Continue,
         CompilerDirective
     };
 
@@ -40,11 +41,14 @@ namespace Pulsar
     constexpr int64_t TOKEN_CD_INCLUDE = 1;
 
     static const std::unordered_map<String, TokenType> Keywords {
-        { "if",     TokenType::KW_If     },
-        { "else",   TokenType::KW_Else   },
-        { "end",    TokenType::KW_End    },
-        { "global", TokenType::KW_Global },
-        { "const",  TokenType::KW_Const  },
+        { "if",       TokenType::KW_If       },
+        { "else",     TokenType::KW_Else     },
+        { "end",      TokenType::KW_End      },
+        { "global",   TokenType::KW_Global   },
+        { "const",    TokenType::KW_Const    },
+        { "while",    TokenType::KW_While    },
+        { "break",    TokenType::KW_Break    },
+        { "continue", TokenType::KW_Continue },
     };
 
     static const std::unordered_map<String, int64_t> CompilerDirectives {

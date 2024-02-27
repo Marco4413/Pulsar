@@ -446,6 +446,12 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
         return "KW_Global";
     case TokenType::KW_Const:
         return "KW_Const";
+    case TokenType::KW_While:
+        return "KW_While";
+    case TokenType::KW_Break:
+        return "KW_Break";
+    case TokenType::KW_Continue:
+        return "KW_Continue";
     case TokenType::CompilerDirective:
         return "CompilerDirective";
     case TokenType::EndOfFile:
