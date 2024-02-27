@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="500"
+   height="500"
+   viewBox="0 0 132.29166 132.29167"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2 (dc2aedaf03, 2022-05-15)"
+   sodipodi:docname="logo.svg"
+   inkscape:export-filename="..\logo.png"
+   inkscape:export-xdpi="48"
+   inkscape:export-ydpi="48"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="1.829812"
+     inkscape:cx="81.42913"
+     inkscape:cy="233.90381"
+     inkscape:window-width="2560"
+     inkscape:window-height="1369"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid3750" />
+    <sodipodi:guide
+       position="0,66.14583"
+       orientation="0,250.00001"
+       id="guide5994"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="66.145835,66.14583"
+       orientation="-250.00001,0"
+       id="guide5996"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <defs
+     id="defs2">
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient7778">
+      <stop
+         style="stop-color:#a854de;stop-opacity:1;"
+         offset="0.40394974"
+         id="stop7774" />
+      <stop
+         style="stop-color:#c792ea;stop-opacity:1;"
+         offset="1"
+         id="stop7776" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient6318">
+      <stop
+         style="stop-color:#3374ff;stop-opacity:1;"
+         offset="0.39856374"
+         id="stop6314" />
+      <stop
+         style="stop-color:#82aaff;stop-opacity:1;"
+         offset="1"
+         id="stop6316" />
+    </linearGradient>
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient6318"
+       id="radialGradient6320"
+       cx="66.418591"
+       cy="63.26975"
+       fx="66.418591"
+       fy="63.26975"
+       r="36.677062"
+       gradientTransform="matrix(1,0,0,0.97358491,0,1.6712764)"
+       gradientUnits="userSpaceOnUse" />
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient7778"
+       id="radialGradient7780"
+       cx="82.608523"
+       cy="-39.634562"
+       fx="82.608523"
+       fy="-39.634562"
+       r="64.882623"
+       gradientTransform="matrix(1,0,0,0.36231868,0,-25.274219)"
+       gradientUnits="userSpaceOnUse" />
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient6318"
+       id="radialGradient3912"
+       cx="66.418591"
+       cy="63.26975"
+       fx="66.418591"
+       fy="63.26975"
+       r="36.677062"
+       gradientTransform="matrix(1,0,0,0.97358491,0,1.6712764)"
+       gradientUnits="userSpaceOnUse" />
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient7778"
+       id="radialGradient3924"
+       cx="82.608523"
+       cy="-39.634562"
+       fx="82.608523"
+       fy="-39.634562"
+       r="64.882623"
+       gradientTransform="matrix(1,0,0,0.36231868,0,-25.274219)"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:75.2262px;line-height:1.25;font-family:'JetBrains Mono';-inkscape-font-specification:'JetBrains Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;display:inline;mix-blend-mode:normal;fill:url(#radialGradient7780);fill-opacity:1;stroke:none;stroke-width:1.88066"
+       x="17.725901"
+       y="-16.126375"
+       id="text190"
+       transform="rotate(69.893831)"><tspan
+         sodipodi:role="line"
+         id="tspan188"
+         x="0"
+         y="0"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:75.2262px;font-family:'JetBrains Mono';-inkscape-font-specification:'JetBrains Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:url(#radialGradient7780);fill-opacity:1;stroke-width:1.88066">&lt;-&gt;</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:138.404px;line-height:1.25;font-family:'JetBrains Mono';-inkscape-font-specification:'JetBrains Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;display:inline;fill:url(#radialGradient6320);fill-opacity:1;stroke:none;stroke-width:3.46009"
+       x="24.897388"
+       y="111.98796"
+       id="text186"><tspan
+         sodipodi:role="line"
+         id="tspan184"
+         x="0"
+         y="0"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:138.404px;font-family:'JetBrains Mono';-inkscape-font-specification:'JetBrains Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:url(#radialGradient6320);fill-opacity:1;stroke-width:3.46009">*</tspan></text>
+    <path
+       id="logo-border"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:75.2262px;line-height:1.25;font-family:'JetBrains Mono';-inkscape-font-specification:'JetBrains Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;display:inline;mix-blend-mode:normal;fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.52916667;stroke-opacity:1;stroke-dasharray:none;stroke-linejoin:round"
+       d="M 23.368078 -40.95074 L 40.745461 -18.759435 L 48.719262 -18.759262 L 33.523592 -37.941898 L 78.721579 -37.942171 C 77.323739 -37.067442 75.818043 -36.002386 74.192405 -34.726148 C 72.31327 -33.35064 70.489392 -31.85688 68.720112 -30.244642 C 66.895905 -28.750769 65.347208 -27.204946 64.074596 -25.607408 L 55.728946 -15.692452 L 65.088677 -7.8444644 L 73.434813 -17.759242 C 74.707425 -19.356781 75.98454 -21.100468 77.265662 -22.989663 C 78.491856 -24.997223 79.615143 -26.993015 80.636326 -28.977366 C 81.570864 -30.993435 82.426511 -32.792963 83.202455 -34.375802 L 84.254501 -34.432571 C 84.850195 -32.838903 85.58326 -30.949479 86.453592 -28.763988 C 87.268995 -26.696861 88.214346 -24.582056 89.289688 -22.419774 C 90.278384 -20.28921 91.389819 -18.359173 92.623754 -16.630121 L 100.19248 -5.900981 L 110.11624 -12.879645 L 102.5477 -23.609271 C 101.40041 -25.306604 100.00526 -26.996484 98.361308 -28.679118 C 96.74907 -30.448398 95.08874 -32.087685 93.381346 -33.597027 C 91.705672 -35.193015 90.183766 -36.536613 88.814447 -37.627423 L 88.92956 -37.941879 L 137.41065 -37.942165 L 122.13995 -18.759403 L 130.03887 -18.759126 L 147.49127 -40.950766 L 130.11407 -63.142556 L 122.13978 -63.142907 L 137.41082 -43.960197 L 121.3195 -43.960322 L 118.31956 -55.419033 L 105.56507 -51.982134 C 103.62482 -51.513314 101.58928 -50.784512 99.45872 -49.795816 C 97.273228 -48.925485 95.18594 -47.920838 93.19695 -46.782059 C 91.216803 -45.793482 89.490101 -44.853676 88.005883 -43.960219 L 87.77586 -43.960227 L 87.008641 -44.773224 C 87.438001 -46.482937 87.946395 -48.409584 88.534348 -50.552527 C 89.035655 -52.727189 89.450488 -54.933102 89.778502 -57.171202 C 90.051589 -59.527665 90.202074 -61.683778 90.229923 -63.63873 L 90.304969 -76.728238 L 78.090509 -76.777916 L 78.014978 -63.688587 C 77.955411 -61.646989 78.124177 -59.423231 78.52105 -57.018029 C 78.862995 -54.731192 79.307297 -52.456343 79.854253 -50.192715 C 80.346281 -48.047452 80.858536 -46.09119 81.390793 -44.324229 L 80.790318 -43.960176 L 80.506829 -43.959946 C 79.079692 -45.055498 77.451843 -46.224856 75.615279 -47.470287 C 73.639438 -48.783128 71.588612 -50.025007 69.462687 -51.196274 C 67.250117 -52.399259 65.147051 -53.365472 63.15419 -54.094999 L 50.807433 -58.614778 L 46.620558 -47.177419 L 55.409306 -43.960121 L 33.448394 -43.960004 L 48.719094 -63.142766 L 40.820658 -63.142865 L 23.368078 -40.95074 z "
+       transform="rotate(69.893831)" />
+  </g>
+  <metadata
+     id="metadata6144">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>Marco4413 (https://github.com/Marco4413)</dc:title>
+          </cc:Agent>
+        </dc:creator>
+        <dc:rights>
+          <cc:Agent>
+            <dc:title>MIT Copyright (c) 2024</dc:title>
+          </cc:Agent>
+        </dc:rights>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+</svg>

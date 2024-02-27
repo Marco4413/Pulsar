@@ -1,5 +1,7 @@
 # Pulsar
 
+![logo](logo.png)
+
 *A small stack-based dynamically-typed interpreted scripting language.*
 
 > The main purpose of this language is to be an alternative to CSS

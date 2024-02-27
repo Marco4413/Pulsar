@@ -1,5 +1,7 @@
 # The Pulsar Programming Language Documentation
 
+![logo](../logo.png)
+
 ## It's stack-based!
 
 An important part of the Pulsar programming language is its stack-based nature.
