@@ -12,7 +12,7 @@
 
 *(add-4 x) -> 1: x 4 +.
 
-*(main) -> 1:
+*(main args) -> 1:
     [ 1, 2, 3 ]
         0 (!prepend)
     <-> list

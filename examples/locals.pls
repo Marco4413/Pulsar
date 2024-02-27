@@ -9,4 +9,4 @@
     n 1 +
     .
 
-*(main) -> 5: 1 (gen_n->n+5) .
+*(main args) -> 5: 1 (gen_n->n+5) .

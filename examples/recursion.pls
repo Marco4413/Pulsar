@@ -11,6 +11,8 @@
 
 *(fib-list x) -> 1:
     x if <= 1:
+        // [ x ]; x 1 -; (!append)
+        // Would produce the same bytecode
         (!empty-list)
         x 1 - (!prepend)
         x     (!prepend)
@@ -30,7 +32,7 @@
     x *
     .
 
-*(main) -> 3:
+*(main args) -> 3:
     // Both numbers should(tm) fit within a 64 bit signed integer.
     92 (fib-list)
     92 (fib)

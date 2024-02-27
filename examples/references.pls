@@ -6,7 +6,7 @@
 
 *(identity x) -> 1: x.
 
-*(main) -> 1:
+*(main args) -> 1:
     <& (identity) (call)
     <& (*hello-from-cpp) (call)
     .
