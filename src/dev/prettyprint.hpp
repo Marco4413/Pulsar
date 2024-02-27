@@ -95,7 +95,8 @@ void PrintPrettyError(
     fmt::print("{}:{}:{}: Error: {}\n", filepath, token.SourcePos.Line+1, token.SourcePos.Char+1, message);
     size_t trimmedFromStart = PrintTokenView(source, token, viewRange);
     size_t charsToToken = token.SourcePos.Char-trimmedFromStart + (trimmedFromStart > 0 ? 4 : 0);
-    fmt::print(fmt::fg(fmt::color::red), "\n{0: ^{1}}^{0:~^{2}}", "", charsToToken, token.SourcePos.CharSpan-1);
+    if (token.SourcePos.CharSpan > 0)
+        fmt::print(fmt::fg(fmt::color::red), "\n{0: ^{1}}^{0:~^{2}}", "", charsToToken, token.SourcePos.CharSpan-1);
 }
 
 void PrintPrettyRuntimeError(
