@@ -337,7 +337,7 @@ Pulsar::Token Pulsar::Lexer::ParseCharacterLiteral()
         default:
             break;
         }
-    } else if (IsControlCharacter(ch))
+    } else if (IsControlCharacter(ch) || ch == '\'')
         return CreateNoneToken();
 
     if (view.Empty() || view[0] != '\'')
