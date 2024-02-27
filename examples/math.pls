@@ -1,4 +1,4 @@
-*(*print! v).
+*(*println! v).
 
 *(dup x) -> 2: x x.
 
@@ -7,14 +7,14 @@
         n 1 -; func; (for)
     end
     n 1 -; func; (!icall)
-    (*print!)
+    (*println!)
     .
 
 *(is-even x) -> 1: x 1 +; 2 %.
 *(int-div-by-2 x) -> 1: x 2 /.
 *(dbl-div-by-2 x) -> 1: x 2.0 /.
 
-*(main):
+*(main args):
     // Comment out to see the differences.
     // It's a bit of a mess how things are printed.
     5; <& (is-even); (for)

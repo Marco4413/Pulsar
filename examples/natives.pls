@@ -1,11 +1,11 @@
 // Native Bindings
-*(*print! v).
+*(*println! v).
 *(*hello-from-cpp).
 *(*stack-dump).
 
-*(main) -> 0:
+*(main args):
     (*hello-from-cpp)
     0.2 3
     (*stack-dump) // [ 0.2, 3 ]
-    (*print!) (*print!)
+    (*println!) (*println!)
     .
