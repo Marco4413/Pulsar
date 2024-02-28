@@ -33,7 +33,7 @@ namespace Pulsar
         PushReference,
         KW_If, KW_Else, KW_End,
         KW_Global, KW_Const,
-        KW_While, KW_Break, KW_Continue,
+        KW_Do, KW_While, KW_Break, KW_Continue,
         CompilerDirective
     };
 
@@ -46,6 +46,7 @@ namespace Pulsar
         { "end",      TokenType::KW_End      },
         { "global",   TokenType::KW_Global   },
         { "const",    TokenType::KW_Const    },
+        { "do",       TokenType::KW_Do       },
         { "while",    TokenType::KW_While    },
         { "break",    TokenType::KW_Break    },
         { "continue", TokenType::KW_Continue },
