@@ -302,7 +302,8 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
             if (!skippableBlock || !skippableBlock->AllowContinue)
                 return SetError(ParseResult::UnexpectedToken, curToken, "Trying to repeat an un-repeatable block.");
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
-            func.Code.EmplaceBack(InstructionCode::Jump, (int64_t)skippableBlock->StartIdx - (int64_t)func.Code.Size());
+            skippableBlock->ContinueStatements.PushBack(func.Code.Size());
+            func.Code.EmplaceBack(InstructionCode::Jump, 0);
             return ParseResult::OK;
         case TokenType::KW_While: {
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
@@ -591,14 +592,17 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
 
 Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings)
 {
-    Token whileToken = m_Lexer->CurrentToken();
+    const Token& curToken = m_Lexer->CurrentToken();
+    if (curToken.Type != TokenType::KW_While)
+        return SetError(ParseResult::UnexpectedToken, curToken, "Expected while loop");
+    Token whileToken = curToken;
     Token comparisonToken(TokenType::None);
     InstructionCode jmpInstrCode = InstructionCode::JumpIfZero;
     bool hasComparison = false;
     bool whileTrue = false;
 
     size_t whileIdx = func.Code.Size();
-    const Token& curToken = m_Lexer->NextToken();
+    m_Lexer->NextToken();
     if (curToken.Type == TokenType::Colon) {
         whileTrue = true;
     } else {
@@ -670,7 +674,6 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
     SkippableBlock block{
         .AllowBreak = true,
         .AllowContinue = true,
-        .StartIdx = whileIdx,
     };
 
     if (!whileTrue) {
@@ -682,6 +685,9 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
     auto res = ParseFunctionBody(module, func, locals, &block, settings);
     if (res != ParseResult::OK && (res != ParseResult::UnexpectedToken || curToken.Type != TokenType::KW_End))
         return res;
+    
+    for (size_t i = 0; i < block.ContinueStatements.Size(); i++)
+        func.Code[block.ContinueStatements[i]].Arg0 = (int64_t)(whileIdx-block.ContinueStatements[i]);
 
     size_t endIdx = func.Code.Size();
     func.Code.EmplaceBack(InstructionCode::Jump, (int64_t)(whileIdx-endIdx));

@@ -29,9 +29,9 @@ namespace Pulsar
     {
         const bool AllowBreak = false;
         const bool AllowContinue = false;
-        const size_t StartIdx = 0;
         // Used for back-patching jump addresses.
         List<size_t> BreakStatements = List<size_t>();
+        List<size_t> ContinueStatements = List<size_t>();
     };
 
     struct ParseSettings
