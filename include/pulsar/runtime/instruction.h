@@ -15,6 +15,7 @@ namespace Pulsar
         PopIntoLocal, CopyIntoLocal,
         PushGlobal, MoveGlobal,
         PopIntoGlobal, CopyIntoGlobal,
+        Pop, Swap, Dup,
         // Functions
         Call, CallNative, Return,
         ICall,

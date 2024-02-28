@@ -269,6 +269,30 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             return RuntimeState::WritingOnConstantGlobal;
         global.Value = frame.Stack.Back();
     } break;
+    case InstructionCode::Pop: {
+        size_t popCount = (size_t)(instr.Arg0 > 0 ? instr.Arg0 : 1);
+        if (frame.Stack.Size() < popCount)
+            return RuntimeState::StackUnderflow;
+        for (size_t i = 0; i < popCount; i++)
+            frame.Stack.PopBack();
+    } break;
+    case InstructionCode::Swap: {
+        if (frame.Stack.Size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value back(std::move(frame.Stack.Back()));
+        size_t secondToLastIdx = frame.Stack.Size()-2;
+        frame.Stack.Back() = std::move(frame.Stack[secondToLastIdx]);
+        frame.Stack[secondToLastIdx] = std::move(back);
+    } break;
+    case InstructionCode::Dup: {
+        if (frame.Stack.Size() < 1)
+            return RuntimeState::StackUnderflow;
+        size_t dupCount = (size_t)(instr.Arg0 > 0 ? instr.Arg0 : 1);
+        Value val(frame.Stack.Back());
+        for (size_t i = 0; i < dupCount-1; i++)
+            frame.Stack.PushBack(val);
+        frame.Stack.EmplaceBack(std::move(val));
+    } break;
     case InstructionCode::Call: {
         int64_t funcIdx = instr.Arg0;
         if (funcIdx < 0 || (size_t)funcIdx >= Functions.Size())
