@@ -615,6 +615,34 @@ overhead of creating a new Frame and Stack.
 Internal arguments MUST be Integer Literals and they're completely optional.
 Most of the time, the instruction doesn't even need arguments to do its job.
 
+### pop
+
+Pops the last value on the stack.
+
+Accepts `arg0`: if <= 1, 1 value is popped. If > 1 `arg0`, values are popped.
+
+### swap
+
+Swaps the last two values on the stack.
+
+Let `T` and `U` be any type:
+
+|        | S-1 | S0  |
+| :----- | :-: | :-: |
+| Pops   | `T` | `U` |
+| Pushes | `U` | `T` |
+
+### dup
+
+Duplicates the last value on the stack.
+
+Accepts `arg0`: if <= 1, 1 copy is pushed. If > 1 `arg0`, copies are pushed.
+
+|        |         S0         |
+| :----- | :----------------: |
+| Pops   | `Integer`/`Double` |
+| Pushes |     `Integer`      |
+
 ### floor
 
 Truncates the last number on the stack converting it to an `Integer`.
