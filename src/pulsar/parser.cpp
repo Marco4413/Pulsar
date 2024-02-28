@@ -305,6 +305,11 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
             skippableBlock->ContinueStatements.PushBack(func.Code.Size());
             func.Code.EmplaceBack(InstructionCode::Jump, 0);
             return ParseResult::OK;
+        case TokenType::KW_Do: {
+            auto res = ParseDoBlock(module, func, scopedLocals, settings);
+            if (res != ParseResult::OK)
+                return res;
+        } break;
         case TokenType::KW_While: {
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
             auto res = ParseWhileLoop(module, func, scopedLocals, settings);
@@ -691,6 +696,36 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
 
     size_t endIdx = func.Code.Size();
     func.Code.EmplaceBack(InstructionCode::Jump, (int64_t)(whileIdx-endIdx));
+
+    size_t breakIdx = func.Code.Size();
+    for (size_t i = 0; i < block.BreakStatements.Size(); i++)
+        func.Code[block.BreakStatements[i]].Arg0 = (int64_t)(breakIdx-block.BreakStatements[i]);
+    return ParseResult::OK;
+}
+
+Pulsar::ParseResult Pulsar::Parser::ParseDoBlock(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings)
+{
+    const Token& curToken = m_Lexer->CurrentToken();
+    if (curToken.Type != TokenType::KW_Do)
+        return SetError(ParseResult::UnexpectedToken, curToken, "Expected do block.");
+    Token doToken = curToken;
+
+    size_t doIdx = func.Code.Size();
+    m_Lexer->NextToken();
+    if (curToken.Type != TokenType::Colon)
+        return SetError(ParseResult::UnexpectedToken, curToken, "Expected ':' to begin do block body.");
+
+    SkippableBlock block{
+        .AllowBreak = true,
+        .AllowContinue = true,
+    };
+
+    auto res = ParseFunctionBody(module, func, locals, &block, settings);
+    if (res != ParseResult::OK && (res != ParseResult::UnexpectedToken || curToken.Type != TokenType::KW_End))
+        return res;
+    
+    for (size_t i = 0; i < block.ContinueStatements.Size(); i++)
+        func.Code[block.ContinueStatements[i]].Arg0 = (int64_t)(doIdx-block.ContinueStatements[i]);
 
     size_t breakIdx = func.Code.Size();
     for (size_t i = 0; i < block.BreakStatements.Size(); i++)
