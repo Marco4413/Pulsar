@@ -304,10 +304,6 @@ to do the same thing. Which was "less readable" and efficient.
     .
 ```
 
-### The FullStop/Return Operator
-
-.
-
 ### The PushReference Operator
 
 The push reference operator is a very powerful operator. It allows you
@@ -321,6 +317,69 @@ with the [icall](#icall) instruction.
 The provided function follows the [Function Call](#function-calls) syntax.
 
 This operator produces an `lvalue`, which means that it can be used in [`List` literals](#list-literals).
+
+## Control Flow Statements
+
+### The Return Statement
+
+The return statement (aka `.`) is used to mark the end of functions or to end them early
+(return) if within a block (ifs and loops).
+
+### The Break Statement
+
+The break statement is used to break out of a code block, jumping to the end of it.
+
+It breaks out of **the last skippable block** if supported.
+
+```lisp
+*(*println! val).
+
+*(main args):
+    0 -> i
+    while:
+        if i >= 10:
+            break
+        i (*println!)
+        i 1 + -> i
+    end
+    .
+```
+
+### The Continue Statement
+
+The continue statement is used to repeat a code block, which means jumping back to its start.
+
+It repeats **the last skippable block** if supported.
+
+```lisp
+*(*println! val).
+
+*(main args):
+    0 -> i
+    while:
+        i (*println!)
+        i 1 + -> i
+        if i < 10:
+            continue
+        break
+    .
+```
+
+### The End Statement
+
+The end statement marks the end of a block if no other Control Flow Statement is encountered.
+
+```lisp
+*(*println! val).
+
+*(main args):
+    0 -> i
+    while i < 10:
+        i (*println!)
+        i 1 + -> i
+    end
+    .
+```
 
 ## Functions
 
@@ -399,12 +458,12 @@ straightforward one.
 
 It's your typical if statement! You can't go wrong with it.
 
-The only difference is that if there's a return operator at the end
-of a branch, an `else` or `else if` CANNOT be chained.
+The only difference is that if there's a [**control flow statement**](#control-flow-statements)
+at the end of a branch, an `else` or `else if` CANNOT be chained.
 Though you can just add more `if`s after it (which is the same thing).
 
-The `end` keyword must be specified when no return operator is provided
-to mark the end of the branch.
+The `end` keyword must be specified when no other [**control flow statement**](#control-flow-statements)
+is provided to mark the end of the branch.
 
 ### Weird cool variants?!?!
 
@@ -432,7 +491,80 @@ Moreover, if only `<lvalue>` is provided then `= <lvalue>` is implied.
 Finally, if no condition at all is present, `!= 0` is implied.
 
 The `else` branch can be specified within all `if`s. However, the
-"no return" restriction must be met.
+"no control flow statement" restriction must be met.
+
+## Skippable Blocks
+
+### While Loop
+
+The while loop is the one you know and love from other programming languages:
+
+```lisp
+*(*println! val).
+
+*(main args):
+    0 -> i
+    while i < 10:     // Loop while i < 10
+        i (*println!) // Print i
+        i 1 + -> i    // Increment i
+    end
+    .
+```
+
+It behaves the same way as you'd expect.
+
+All [comparison operators](#comparison-operators) are supported as well as all
+datatypes from the [if statement](#if-statement).
+
+If no condition and only an lvalue is provided then it's the same as writing
+`while <lvalue> != 0`
+
+If the condition is empty it behaves the same way as `while 1` (a while true loop).
+
+All [Control Flow Statements](#control-flow-statements) are supported.
+As with all blocks you must have a control flow statement that marks its end.
+
+### Do Block
+
+The do block is a special skippable block. It can be used to create custom loops
+or generate a new scope to hide variables from the other ones.
+
+`continue` loops back to the start:
+```lisp
+*(*println! val).
+
+*(main args):
+    // Has the same behaviour as 'while i < 10'
+    0 -> i do:
+        i (*println!)
+        i 1 + -> i
+        if i < 10:
+            continue
+    end
+    .
+```
+
+`break` ends the block early:
+```lisp
+*(*println! val).
+
+*(to-odd n) -> 1:
+    n do:
+        n 2 % if 1:
+            break
+        1 +
+    end
+    .
+
+*(main args):
+    0 -> i do:
+        i (to-odd) (*println!)
+        i 1 + -> i
+        if i < 10:
+            continue
+    end
+    .
+```
 
 ## Globals
 
