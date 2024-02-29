@@ -9,14 +9,14 @@ workspace "pulsar"
    startproject "pulsar-dev"
 
 include "pulsar"
-include "libs"
+include "libs/fmt"
 
 project "pulsar-dev"
    kind "ConsoleApp"
    language "C++"
    cppdialect "C++20"
 
-   location "build"
+   location "build/dev"
    targetdir "%{prj.location}/%{cfg.buildcfg}"
 
    includedirs { "include", "libs/fmt/include" }

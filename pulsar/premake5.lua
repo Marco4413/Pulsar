@@ -3,7 +3,7 @@ project "pulsar"
    language "C++"
    cppdialect "C++20"
 
-   location "../build"
+   location "../build/pulsar"
    targetdir "%{prj.location}/%{cfg.buildcfg}"
 
    includedirs "../include"
