@@ -100,7 +100,7 @@ namespace Pulsar
     inline char ToLowerCase(char ch)             { return (ch >= 'A' && ch <= 'Z') ? ch+('a'-'A') : ch; }
 
     inline bool IsIdentifierStart(char ch) { return IsAlphaCharacter(ch) || ch == '_'; }
-    inline bool IsIdentifierContinuation(int ch)
+    inline bool IsIdentifierContinuation(char ch)
     {
         return IsIdentifierStart(ch) || IsDigit(ch)
             || (ch >= '<' && ch <= '?') // < = > ?
