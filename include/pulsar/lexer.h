@@ -138,6 +138,9 @@ namespace Pulsar
             m_LineStartIdx = other.m_LineStartIdx;
         }
 
+        Lexer& operator=(const Lexer&) = delete;
+        Lexer& operator=(Lexer&&) = delete;
+
         const Token& NextToken()             { m_Token = ParseNextToken(); return m_Token; }
         const Token& CurrentToken() const    { return m_Token; }
         bool IsEndOfFile() const             { return m_SourceView.Length() == 0; }
