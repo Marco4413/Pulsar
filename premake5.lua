@@ -27,7 +27,7 @@ project "pulsar-dev"
       buildoptions { "-Wall", "-Wextra", "-Wpedantic", "-Werror" }
 
    filter "toolset:msc"
-      buildoptions { "/Wall", "/WX" }
+      buildoptions { "/W3" }
 
    filter "configurations:Debug"
       defines "PULSAR_DEBUG"
