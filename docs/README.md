@@ -145,6 +145,27 @@ Support for unsigned integers is planned.
 The Custom datatype is mainly intended to be returned by [Native Functions](#native-functions).
 So you can have handle-like objects that can keep a pointer to some state.
 
+#### Integer Literals
+
+There exist 4 types of Integer Literals:
+
+1. The decimal literal (e.g. +40 where '+' is optional, -20)
+2. The hex literal (e.g. 0xFF, 0xff)
+3. The octal literal (e.g. 0o77)
+4. The binary literal (e.g. 0b11)
+
+You should be familiar with all of them.
+
+#### Double Literals
+
+Double Literals MUST start with a digit, they can't start with '.' because it could
+be confused with the [return statement](#the-return-statement).
+
+They must have a '.' between two sets of digits to separate the fractional part, otherwise
+it would be an [integer literal](#integer-literals).
+
+Currently there's no support for exponential notation (i.e. 0.1E4).
+
 ### Complex Datatypes
 
 |  Type  |
@@ -203,7 +224,6 @@ i.e. `'\''`, `'\xFF;'` are valid.
 |   +    |   Add   |  2   |    1    |
 |   -    |   Sub   |  2   |    1    |
 |   /    |  Divide |  2   |    1    |
-|   %    | Modulus |  2   |    1    |
 
 All these operators are self-explainatory.
 They're your usual mathematical operations.
@@ -213,8 +233,15 @@ last one to be performed!
 
 `Double` is stronger than `Integer`, so `1 1.0 +` turns into `2.0`.
 
-The Modulus operator is the only exception to the rule.
-It only accepts `Integer`s.
+The following ones only operate on `Integer`s:
+
+| Symbol |   Name  | Args | Returns |
+| :----: | :-----: | :--: | :-----: |
+|   %    | Modulus |  2   |    1    |
+|   &    | BitAnd  |  2   |    1    |
+|  \|    |  BitOr  |  2   |    1    |
+|   ~    | BitNot  |  2   |    1    |
+|   ^    | BitXor  |  2   |    1    |
 
 ## Comparison Operators
 
@@ -638,10 +665,10 @@ Duplicates the last value on the stack.
 
 Accepts `arg0`: if <= 1, 1 copy is pushed. If > 1 `arg0`, copies are pushed.
 
-|        |         S0         |
-| :----- | :----------------: |
-| Pops   | `Integer`/`Double` |
-| Pushes |     `Integer`      |
+|        |  S0   |   S+1   |
+| :----- | :---: | :-----: |
+| Pops   |  `T`  |         |
+| Pushes |  `T`  |  `...T` |
 
 ### floor
 
