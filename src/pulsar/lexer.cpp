@@ -48,29 +48,43 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
         else if (SkipComments() > 0)
             continue;
         
-        { // Parse non-symbols
+        // Parse non-symbols
+        // Try to predict what's next to prevent unnecessary function calls
+        // This is better than what we had before, but needs to be kept up to date
+        if (IsDigit(m_SourceView[0]) || m_SourceView[0] == '+' || m_SourceView[0] == '-') {
             Pulsar::Token token = ParseIntegerLiteral();
             if (token.Type != TokenType::None)
                 return token;
             token = ParseDoubleLiteral();
             if (token.Type != TokenType::None)
                 return token;
-            token = ParseStringLiteral();
-            if (token.Type != TokenType::None)
-                return token;
-            token = ParseCharacterLiteral();
-            if (token.Type != TokenType::None)
-                return token;
-            token = ParseCompilerDirective();
-            if (token.Type != TokenType::None)
-                return token;
-            token = ParseIdentifier();
-            if (token.Type != TokenType::None) {
-                auto it = Keywords.find(token.StringVal);
-                if (it == Keywords.end())
+        } else {
+            switch (m_SourceView[0]) {
+            case '"': {
+                Pulsar::Token token = ParseStringLiteral();
+                if (token.Type != TokenType::None)
                     return token;
-                token.Type = (*it).second;
-                return token;
+            } break;
+            case '\'': {
+                Pulsar::Token token = ParseCharacterLiteral();
+                if (token.Type != TokenType::None)
+                    return token;
+            } break;
+            case '#': {
+                Pulsar::Token token = ParseCompilerDirective();
+                if (token.Type != TokenType::None)
+                    return token;
+            } break;
+            default: {
+                Pulsar::Token token = ParseIdentifier();
+                if (token.Type != TokenType::None) {
+                    auto it = Keywords.find(token.StringVal);
+                    if (it == Keywords.end())
+                        return token;
+                    token.Type = (*it).second;
+                    return token;
+                }
+            }
             }
         }
         
