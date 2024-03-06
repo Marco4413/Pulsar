@@ -422,6 +422,44 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             return RuntimeState::TypeError;
         a.SetInteger(a.AsInteger() % b.AsInteger());
     } break;
+    case InstructionCode::BitAnd: {
+        if (frame.Stack.Size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value b = std::move(frame.Stack.Back());
+        frame.Stack.PopBack();
+        Value& a = frame.Stack.Back();
+        if (a.Type() != ValueType::Integer || b.Type() != ValueType::Integer)
+            return RuntimeState::TypeError;
+        a.SetInteger(a.AsInteger() & b.AsInteger());
+    } break;
+    case InstructionCode::BitOr: {
+        if (frame.Stack.Size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value b = std::move(frame.Stack.Back());
+        frame.Stack.PopBack();
+        Value& a = frame.Stack.Back();
+        if (a.Type() != ValueType::Integer || b.Type() != ValueType::Integer)
+            return RuntimeState::TypeError;
+        a.SetInteger(a.AsInteger() | b.AsInteger());
+    } break;
+    case InstructionCode::BitNot: {
+        if (frame.Stack.Size() < 1)
+            return RuntimeState::StackUnderflow;
+        Value& a = frame.Stack.Back();
+        if (a.Type() != ValueType::Integer)
+            return RuntimeState::TypeError;
+        a.SetInteger(~a.AsInteger());
+    } break;
+    case InstructionCode::BitXor: {
+        if (frame.Stack.Size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value b = std::move(frame.Stack.Back());
+        frame.Stack.PopBack();
+        Value& a = frame.Stack.Back();
+        if (a.Type() != ValueType::Integer || b.Type() != ValueType::Integer)
+            return RuntimeState::TypeError;
+        a.SetInteger(a.AsInteger() ^ b.AsInteger());
+    } break;
     case InstructionCode::Floor: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;

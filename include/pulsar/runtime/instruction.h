@@ -22,6 +22,7 @@ namespace Pulsar
         // Math
         DynSum, DynSub, DynMul, DynDiv,
         Mod,
+        BitAnd, BitOr, BitNot, BitXor,
         Floor, Ceil,
         // Conditional Jumps
         Compare,
