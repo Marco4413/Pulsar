@@ -180,7 +180,7 @@ Pulsar::Token Pulsar::Lexer::ParseIntegerLiteral()
 {
     size_t count = 0;
     bool negative = m_SourceView[count] == '-';
-    if (negative && ++count >= m_SourceView.Length())
+    if ((negative || m_SourceView[count] == '+') && ++count >= m_SourceView.Length())
         return CreateNoneToken();
     else if (!IsDigit(m_SourceView[count]))
         return CreateNoneToken();
@@ -206,7 +206,7 @@ Pulsar::Token Pulsar::Lexer::ParseDoubleLiteral()
 {
     size_t count = 0;
     double exp = m_SourceView[count] == '-' ? -1 : 1;
-    if (exp < 0 && ++count >= m_SourceView.Length())
+    if ((exp < 0 || m_SourceView[count] == '+') && ++count >= m_SourceView.Length())
         return CreateNoneToken();
     else if (!IsDigit(m_SourceView[count]))
         return CreateNoneToken();
