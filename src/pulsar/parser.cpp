@@ -336,6 +336,22 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
             func.Code.EmplaceBack(InstructionCode::Mod);
             break;
+        case TokenType::BitAnd:
+            PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
+            func.Code.EmplaceBack(InstructionCode::BitAnd);
+            break;
+        case TokenType::BitOr:
+            PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
+            func.Code.EmplaceBack(InstructionCode::BitOr);
+            break;
+        case TokenType::BitNot:
+            PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
+            func.Code.EmplaceBack(InstructionCode::BitNot);
+            break;
+        case TokenType::BitXor:
+            PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
+            func.Code.EmplaceBack(InstructionCode::BitXor);
+            break;
         case TokenType::PushReference:
         case TokenType::OpenBracket:
         case TokenType::StringLiteral:
