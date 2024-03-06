@@ -129,6 +129,14 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
             return TrimToToken(1, TokenType::Slash);
         case '%':
             return TrimToToken(1, TokenType::Modulus);
+        case '&':
+            return TrimToToken(1, TokenType::BitAnd);
+        case '|':
+            return TrimToToken(1, TokenType::BitOr);
+        case '~':
+            return TrimToToken(1, TokenType::BitNot);
+        case '^':
+            return TrimToToken(1, TokenType::BitXor);
         case '=':
             return TrimToToken(1, TokenType::Equals);
         case '<':
@@ -494,6 +502,14 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
         return "Slash";
     case TokenType::Modulus:
         return "Modulus";
+    case TokenType::BitAnd:
+        return "BitAnd";
+    case TokenType::BitOr:
+        return "BitOr";
+    case TokenType::BitNot:
+        return "BitNot";
+    case TokenType::BitXor:
+        return "BitXor";
     case TokenType::FullStop:
         return "FullStop";
     case TokenType::Negate:

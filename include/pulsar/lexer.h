@@ -22,6 +22,7 @@ namespace Pulsar
         Plus, Minus,
         Star, Slash,
         Modulus,
+        BitAnd, BitOr, BitNot, BitXor,
         FullStop,
         Negate,
         Colon,
