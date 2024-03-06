@@ -96,6 +96,8 @@ namespace Pulsar
     inline bool IsAlphaCharacter(char ch)        { return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'); }
     inline bool IsDigit(char ch)                 { return ch >= '0' && ch <= '9'; }
     inline bool IsHexDigit(char ch)              { return IsDigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F'); }
+    inline bool IsOctDigit(char ch)              { return ch >= '0' && ch <= '7'; }
+    inline bool IsBinDigit(char ch)              { return ch == '0' || ch == '1'; }
     inline bool IsAlphaNumericCharacter(char ch) { return IsAlphaCharacter(ch) || IsDigit(ch); }
     inline char ToLowerCase(char ch)             { return (ch >= 'A' && ch <= 'Z') ? ch+('a'-'A') : ch; }
 
@@ -152,6 +154,9 @@ namespace Pulsar
         Token ParseIdentifier();
         Token ParseCompilerDirective();
         Token ParseIntegerLiteral();
+        Token ParseHexIntegerLiteral();
+        Token ParseOctIntegerLiteral();
+        Token ParseBinIntegerLiteral();
         Token ParseDoubleLiteral();
         Token ParseStringLiteral();
         Token ParseCharacterLiteral();

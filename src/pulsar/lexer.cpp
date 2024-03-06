@@ -55,6 +55,15 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
             Pulsar::Token token = ParseIntegerLiteral();
             if (token.Type != TokenType::None)
                 return token;
+            token = ParseHexIntegerLiteral();
+            if (token.Type != TokenType::None)
+                return token;
+            token = ParseOctIntegerLiteral();
+            if (token.Type != TokenType::None)
+                return token;
+            token = ParseBinIntegerLiteral();
+            if (token.Type != TokenType::None)
+                return token;
             token = ParseDoubleLiteral();
             if (token.Type != TokenType::None)
                 return token;
@@ -199,6 +208,69 @@ Pulsar::Token Pulsar::Lexer::ParseIntegerLiteral()
     }
     if (negative)
         val *= -1;
+    return TrimToToken(count, TokenType::IntegerLiteral, val);
+}
+
+Pulsar::Token Pulsar::Lexer::ParseHexIntegerLiteral()
+{
+    if (m_SourceView.Length() < 3)
+        return CreateNoneToken();
+    else if (m_SourceView[0] != '0' || m_SourceView[1] != 'x' || !IsHexDigit(m_SourceView[2]))
+        return CreateNoneToken();
+    size_t count = 2;
+    int64_t val = 0;
+    for (; count < m_SourceView.Length(); count++) {
+        char ch = ToLowerCase(m_SourceView[count]);
+        if (!IsHexDigit(ch)) {
+            if (IsIdentifierStart(ch))
+                return CreateNoneToken();
+            break;
+        }
+        val *= 16;
+        if (ch >= 'a')
+            val += ch - 'a' + 10;
+        else val += ch - '0';
+    }
+    return TrimToToken(count, TokenType::IntegerLiteral, val);
+}
+
+Pulsar::Token Pulsar::Lexer::ParseOctIntegerLiteral()
+{
+    if (m_SourceView.Length() < 3)
+        return CreateNoneToken();
+    else if (m_SourceView[0] != '0' || m_SourceView[1] != 'o' || !IsOctDigit(m_SourceView[2]))
+        return CreateNoneToken();
+    size_t count = 2;
+    int64_t val = 0;
+    for (; count < m_SourceView.Length(); count++) {
+        char ch = ToLowerCase(m_SourceView[count]);
+        if (IsIdentifierStart(ch))
+            return CreateNoneToken();
+        else if (!IsOctDigit(ch))
+            break;
+        val *= 8;
+        val += ch - '0';
+    }
+    return TrimToToken(count, TokenType::IntegerLiteral, val);
+}
+
+Pulsar::Token Pulsar::Lexer::ParseBinIntegerLiteral()
+{
+    if (m_SourceView.Length() < 3)
+        return CreateNoneToken();
+    else if (m_SourceView[0] != '0' || m_SourceView[1] != 'b' || !IsBinDigit(m_SourceView[2]))
+        return CreateNoneToken();
+    size_t count = 2;
+    int64_t val = 0;
+    for (; count < m_SourceView.Length(); count++) {
+        char ch = ToLowerCase(m_SourceView[count]);
+        if (IsIdentifierStart(ch))
+            return CreateNoneToken();
+        else if (!IsBinDigit(ch))
+            break;
+        val *= 2;
+        val += ch - '0';
+    }
     return TrimToToken(count, TokenType::IntegerLiteral, val);
 }
 
