@@ -139,7 +139,7 @@ public:
         }
 
         std::ifstream file(filePath.AsString().Data(), std::ios::binary);
-        size_t fileSize = std::filesystem::file_size(filePath.AsString().Data());
+        size_t fileSize = (size_t)std::filesystem::file_size(filePath.AsString().Data());
 
         Pulsar::String source;
         source.Resize(fileSize);
@@ -175,7 +175,7 @@ public:
             tokenAsList.Append()->Value().SetInteger(token.IntegerVal);
             break;
         case Pulsar::TokenType::DoubleLiteral:
-            tokenAsList.Append()->Value().SetInteger(token.DoubleVal);
+            tokenAsList.Append()->Value().SetDouble(token.DoubleVal);
             break;
         default:
             if (token.StringVal.Length() > 0)
