@@ -84,7 +84,7 @@ size_t Pulsar::Module::DeclareAndBindNativeFunction(FunctionDefinition def, Nati
 Pulsar::RuntimeState Pulsar::Module::CallFunctionByName(const String& name, ValueStack& stack, ExecutionContext& context) const
 {
     for (int64_t i = Functions.Size()-1; i >= 0; i--) {
-        const FunctionDefinition& other = Functions[i];
+        const FunctionDefinition& other = Functions[(size_t)i];
         if (other.Name != name)
             continue;
         return CallFunction(i, stack, context);
@@ -95,7 +95,7 @@ Pulsar::RuntimeState Pulsar::Module::CallFunctionByName(const String& name, Valu
 Pulsar::RuntimeState Pulsar::Module::CallFunctionByDefinition(const FunctionDefinition& def, ValueStack& stack, ExecutionContext& context) const
 {
     for (int64_t i = Functions.Size()-1; i >= 0; i--) {
-        const FunctionDefinition& other = Functions[i];
+        const FunctionDefinition& other = Functions[(size_t)i];
         if (!other.MatchesDeclaration(def))
             continue;
         return CallFunction(i, stack, context);
@@ -116,7 +116,7 @@ Pulsar::RuntimeState Pulsar::Module::CallFunction(int64_t funcIdx, ValueStack& s
 {
     if (funcIdx < 0 || (size_t)funcIdx >= Functions.Size())
         return RuntimeState::OutOfBoundsFunctionIndex;
-    return ExecuteFunction(Functions[funcIdx], stack, context);
+    return ExecuteFunction(Functions[(size_t)funcIdx], stack, context);
 }
 
 Pulsar::RuntimeState Pulsar::Module::ExecuteFunction(const FunctionDefinition& func, ValueStack& stack, ExecutionContext& context) const
@@ -213,19 +213,19 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
     case InstructionCode::PushLocal:
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= frame.Locals.Size())
             return RuntimeState::OutOfBoundsLocalIndex;
-        frame.Stack.PushBack(frame.Locals[instr.Arg0]);
+        frame.Stack.PushBack(frame.Locals[(size_t)instr.Arg0]);
         break;
     case InstructionCode::MoveLocal:
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= frame.Locals.Size())
             return RuntimeState::OutOfBoundsLocalIndex;
-        frame.Stack.PushBack(std::move(frame.Locals[instr.Arg0]));
+        frame.Stack.PushBack(std::move(frame.Locals[(size_t)instr.Arg0]));
         break;
     case InstructionCode::PopIntoLocal:
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= frame.Locals.Size())
             return RuntimeState::OutOfBoundsLocalIndex;
-        frame.Locals[instr.Arg0] = std::move(frame.Stack.Back());
+        frame.Locals[(size_t)instr.Arg0] = std::move(frame.Stack.Back());
         frame.Stack.PopBack();
         break;
     case InstructionCode::CopyIntoLocal:
@@ -233,17 +233,17 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             return RuntimeState::StackUnderflow;
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= frame.Locals.Size())
             return RuntimeState::OutOfBoundsLocalIndex;
-        frame.Locals[instr.Arg0] = frame.Stack.Back();
+        frame.Locals[(size_t)instr.Arg0] = frame.Stack.Back();
         break;
     case InstructionCode::PushGlobal:
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= eContext.Globals.Size())
             return RuntimeState::OutOfBoundsGlobalIndex;
-        frame.Stack.PushBack(eContext.Globals[instr.Arg0].Value);
+        frame.Stack.PushBack(eContext.Globals[(size_t)instr.Arg0].Value);
         break;
     case InstructionCode::MoveGlobal: {
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= eContext.Globals.Size())
             return RuntimeState::OutOfBoundsGlobalIndex;
-        GlobalInstance& global = eContext.Globals[instr.Arg0];
+        GlobalInstance& global = eContext.Globals[(size_t)instr.Arg0];
         if (global.IsConstant)
             return RuntimeState::WritingOnConstantGlobal;
         frame.Stack.PushBack(std::move(global.Value));
@@ -253,7 +253,7 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             return RuntimeState::StackUnderflow;
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= eContext.Globals.Size())
             return RuntimeState::OutOfBoundsGlobalIndex;
-        GlobalInstance& global = eContext.Globals[instr.Arg0];
+        GlobalInstance& global = eContext.Globals[(size_t)instr.Arg0];
         if (global.IsConstant)
             return RuntimeState::WritingOnConstantGlobal;
         global.Value = std::move(frame.Stack.Back());
@@ -264,7 +264,7 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             return RuntimeState::StackUnderflow;
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= eContext.Globals.Size())
             return RuntimeState::OutOfBoundsGlobalIndex;
-        GlobalInstance& global = eContext.Globals[instr.Arg0];
+        GlobalInstance& global = eContext.Globals[(size_t)instr.Arg0];
         if (global.IsConstant)
             return RuntimeState::WritingOnConstantGlobal;
         global.Value = frame.Stack.Back();
@@ -298,7 +298,7 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         if (funcIdx < 0 || (size_t)funcIdx >= Functions.Size())
             return RuntimeState::OutOfBoundsFunctionIndex;
 
-        Frame callFrame{ &Functions[funcIdx] };
+        Frame callFrame{ &Functions[(size_t)funcIdx] };
         auto res = PrepareCallFrame(frame.Stack, callFrame);
         if (res != RuntimeState::OK)
             return res;
@@ -310,15 +310,15 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         int64_t funcIdx = instr.Arg0;
         if (funcIdx < 0 || (size_t)funcIdx >= NativeBindings.Size())
             return RuntimeState::OutOfBoundsFunctionIndex;
-        if (!NativeFunctions[funcIdx])
+        if (!NativeFunctions[(size_t)funcIdx])
             return RuntimeState::UnboundNativeFunction;
 
-        Frame callFrame{ &NativeBindings[funcIdx], true };
+        Frame callFrame{ &NativeBindings[(size_t)funcIdx], true };
         auto res = PrepareCallFrame(frame.Stack, callFrame);
         if (res != RuntimeState::OK)
             return res;
         eContext.CallStack.PushBack(std::move(callFrame));
-        return NativeFunctions[funcIdx](eContext);
+        return NativeFunctions[(size_t)funcIdx](eContext);
     }
     case InstructionCode::Return:
         frame.InstructionIndex = frame.Function->Code.Size();
@@ -332,7 +332,7 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             int64_t funcIdx = funcIdxValue.AsInteger();
             if (funcIdx < 0 || (size_t)funcIdx >= Functions.Size())
                 return RuntimeState::OutOfBoundsFunctionIndex;
-            Frame callFrame{ &Functions[funcIdx] };
+            Frame callFrame{ &Functions[(size_t)funcIdx] };
             auto res = PrepareCallFrame(frame.Stack, callFrame);
             if (res != RuntimeState::OK)
                 return res;
@@ -344,15 +344,15 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             int64_t funcIdx = funcIdxValue.AsInteger();
             if (funcIdx < 0 || (size_t)funcIdx >= NativeBindings.Size())
                 return RuntimeState::OutOfBoundsFunctionIndex;
-            if (!NativeFunctions[funcIdx])
+            if (!NativeFunctions[(size_t)funcIdx])
                 return RuntimeState::UnboundNativeFunction;
 
-            Frame callFrame{ &NativeBindings[funcIdx], true };
+            Frame callFrame{ &NativeBindings[(size_t)funcIdx], true };
             auto res = PrepareCallFrame(frame.Stack, callFrame);
             if (res != RuntimeState::OK)
                 return res;
             eContext.CallStack.PushBack(std::move(callFrame));
-            return NativeFunctions[funcIdx](eContext);
+            return NativeFunctions[(size_t)funcIdx](eContext);
         }
         return RuntimeState::TypeError;
     }
@@ -520,7 +520,7 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         }
     } break;
     case InstructionCode::Jump:
-        --frame.InstructionIndex += instr.Arg0;
+        frame.InstructionIndex = (size_t)((frame.InstructionIndex-1) + instr.Arg0);
         break;
     case InstructionCode::JumpIfZero:
     case InstructionCode::JumpIfNotZero:
@@ -534,12 +534,12 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         if (!IsNumericValueType(truthValue.Type()))
             return RuntimeState::TypeError;
         frame.Stack.PopBack();
-        // TODO: Check for bounds
+        // TODO: Check for bounds (maybe not)
         if (truthValue.Type() == ValueType::Double) {
             if (ShouldJump(instr.Code, truthValue.AsDouble()))
-                --frame.InstructionIndex += instr.Arg0;
+                frame.InstructionIndex = (size_t)((frame.InstructionIndex-1) + instr.Arg0);
         } else if (ShouldJump(instr.Code, truthValue.AsInteger()))
-            --frame.InstructionIndex += instr.Arg0;
+            frame.InstructionIndex = (size_t)((frame.InstructionIndex-1) + instr.Arg0);
     } break;
     case InstructionCode::Length: {
         if (frame.Stack.Size() < 1)
