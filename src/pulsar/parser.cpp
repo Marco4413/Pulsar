@@ -46,7 +46,7 @@ Pulsar::ParseResult Pulsar::Parser::AddSourceFile(const String& path)
         return SetError(ParseResult::FileNotRead, token, "File '" + internalPath + "' does not exist.");
     
     std::ifstream file(relativePath, std::ios::binary);
-    size_t fileSize = std::filesystem::file_size(relativePath);
+    size_t fileSize = (size_t)std::filesystem::file_size(relativePath);
 
     Pulsar::String source;
     source.Resize(fileSize);
@@ -258,11 +258,11 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, cons
                 "Expected '.' to confirm native function declaration. Native functions can't have a body.");
         // If the native already exists push symbols (the function may have been defined outside the Parser)
         int64_t nativeIdx = (int64_t)module.NativeBindings.Size()-1;
-        for (; nativeIdx >= 0 && !module.NativeBindings[nativeIdx].MatchesDeclaration(def); nativeIdx--);
+        for (; nativeIdx >= 0 && !module.NativeBindings[(size_t)nativeIdx].MatchesDeclaration(def); nativeIdx--);
         if (nativeIdx < 0)
             module.NativeBindings.PushBack(std::move(def));
         else if (settings.StoreDebugSymbols)
-            module.NativeBindings[nativeIdx].DebugSymbol = def.DebugSymbol;
+            module.NativeBindings[(size_t)nativeIdx].DebugSymbol = def.DebugSymbol;
     } else {
         if (curToken.Type != TokenType::Colon)
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected '->' for return count declaration or ':' to begin function body.");
@@ -378,12 +378,12 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                 scopedLocals.PushBack(curToken.StringVal);
             } else {
                 localIdx = (int64_t)scopedLocals.Size()-1;
-                for (; localIdx >= 0 && scopedLocals[localIdx] != curToken.StringVal; localIdx--);
+                for (; localIdx >= 0 && scopedLocals[(size_t)localIdx] != curToken.StringVal; localIdx--);
                 if (localIdx < 0) {
                     int64_t globalIdx = (int64_t)module.Globals.Size()-1;
-                    for (; globalIdx >= 0 && module.Globals[globalIdx].Name != curToken.StringVal; globalIdx--);
+                    for (; globalIdx >= 0 && module.Globals[(size_t)globalIdx].Name != curToken.StringVal; globalIdx--);
                     if (globalIdx >= 0) {
-                        if (module.Globals[globalIdx].IsConstant)
+                        if (module.Globals[(size_t)globalIdx].IsConstant)
                             return SetError(ParseResult::UnexpectedToken, curToken, "Trying to assign to constant global.");
                         func.Code.EmplaceBack(
                             copyIntoLocal
@@ -411,12 +411,12 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                 return SetError(ParseResult::UnexpectedToken, curToken, "Expected local name.");
 
             int64_t localIdx = (int64_t)scopedLocals.Size()-1;
-            for (; localIdx >= 0 && scopedLocals[localIdx] != curToken.StringVal; localIdx--);
+            for (; localIdx >= 0 && scopedLocals[(size_t)localIdx] != curToken.StringVal; localIdx--);
             if (localIdx < 0) {
                 int64_t globalIdx = (int64_t)module.Globals.Size()-1;
-                for (; globalIdx >= 0 && module.Globals[globalIdx].Name != curToken.StringVal; globalIdx--);
+                for (; globalIdx >= 0 && module.Globals[(size_t)globalIdx].Name != curToken.StringVal; globalIdx--);
                 if (globalIdx >= 0) {
-                    if (module.Globals[globalIdx].IsConstant)
+                    if (module.Globals[(size_t)globalIdx].IsConstant)
                         return SetError(ParseResult::WritingToConstantGlobal, curToken, "Cannot move constant global.");
                     func.Code.EmplaceBack(InstructionCode::MoveGlobal, globalIdx);
                     break;
@@ -454,7 +454,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                 break;
             } else if (isNative) {
                 int64_t funcIdx = (int64_t)module.NativeBindings.Size()-1;
-                for (; funcIdx >= 0 && module.NativeBindings[funcIdx].Name != identToken.StringVal; funcIdx--);
+                for (; funcIdx >= 0 && module.NativeBindings[(size_t)funcIdx].Name != identToken.StringVal; funcIdx--);
                 if (funcIdx < 0)
                     return SetError(ParseResult::UsageOfUndeclaredNativeFunction, identToken, "Native function not declared.");
                 func.Code.EmplaceBack(InstructionCode::CallNative, funcIdx);
@@ -466,7 +466,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
             }
 
             int64_t funcIdx = (int64_t)module.Functions.Size()-1;
-            for (; funcIdx >= 0 && module.Functions[funcIdx].Name != identToken.StringVal; funcIdx--);
+            for (; funcIdx >= 0 && module.Functions[(size_t)funcIdx].Name != identToken.StringVal; funcIdx--);
             if (funcIdx < 0)
                 return SetError(ParseResult::UsageOfUndeclaredFunction, identToken, "Function not declared.");
             func.Code.EmplaceBack(InstructionCode::Call, funcIdx);
@@ -594,7 +594,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
         if (res != ParseResult::OK) {
             if (res != ParseResult::UnexpectedToken)
                 return res;
-            const Token& curToken = m_Lexer->CurrentToken();
+            // m_Lexer is not swapped by ParseFunctionBody, so it's safe to still reference curToken
             if (curToken.Type != TokenType::KW_End)
                 return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'end'.");
         }
@@ -765,10 +765,10 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
     case TokenType::Identifier: {
         PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, lvalue);
         int64_t localIdx = (int64_t)locals.Size()-1;
-        for (; localIdx >= 0 && locals[localIdx] != lvalue.StringVal; localIdx--);
+        for (; localIdx >= 0 && locals[(size_t)localIdx] != lvalue.StringVal; localIdx--);
         if (localIdx < 0) {
             int64_t globalIdx = (int64_t)module.Globals.Size()-1;
-            for (; globalIdx >= 0 && module.Globals[globalIdx].Name != lvalue.StringVal; globalIdx--);
+            for (; globalIdx >= 0 && module.Globals[(size_t)globalIdx].Name != lvalue.StringVal; globalIdx--);
             if (globalIdx < 0)
                 return SetError(ParseResult::UsageOfUndeclaredLocal, lvalue, "Local not declared.");
             func.Code.EmplaceBack(InstructionCode::PushGlobal, globalIdx);
@@ -781,7 +781,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
         int64_t constIdx = (int64_t)module.Constants.Size()-1;
         Value constVal;
         constVal.SetString(lvalue.StringVal);
-        for (; constIdx >= 0 && module.Constants[constIdx] != constVal; constIdx--);
+        for (; constIdx >= 0 && module.Constants[(size_t)constIdx] != constVal; constIdx--);
         if (constIdx < 0) {
             constIdx = module.Constants.Size();
             module.Constants.EmplaceBack(std::move(constVal));
@@ -805,7 +805,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
         
             if (isNative) {
                 int64_t funcIdx = (int64_t)module.NativeBindings.Size()-1;
-                for (; funcIdx >= 0 && module.NativeBindings[funcIdx].Name != identToken.StringVal; funcIdx--);
+                for (; funcIdx >= 0 && module.NativeBindings[(size_t)funcIdx].Name != identToken.StringVal; funcIdx--);
                 if (funcIdx < 0)
                     return SetError(ParseResult::UsageOfUndeclaredNativeFunction, identToken, "Native function not declared.");
                 func.Code.EmplaceBack(InstructionCode::PushNativeFunctionReference, funcIdx);
@@ -816,7 +816,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
             }
 
             int64_t funcIdx = (int64_t)module.Functions.Size()-1;
-            for (; funcIdx >= 0 && module.Functions[funcIdx].Name != identToken.StringVal; funcIdx--);
+            for (; funcIdx >= 0 && module.Functions[(size_t)funcIdx].Name != identToken.StringVal; funcIdx--);
             if (funcIdx < 0)
                 return SetError(ParseResult::UsageOfUndeclaredFunction, identToken, "Function not declared.");
             func.Code.EmplaceBack(InstructionCode::PushFunctionReference, funcIdx);
@@ -865,7 +865,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
                     return ParseResult::OK; // Empty List
                 // Check for an already existing list with the same values.
                 int64_t constIdx = (int64_t)module.Constants.Size()-1;
-                for (; constIdx >= 0 && module.Constants[constIdx] != constList; constIdx--);
+                for (; constIdx >= 0 && module.Constants[(size_t)constIdx] != constList; constIdx--);
                 if (constIdx < 0) {
                     constIdx = module.Constants.Size();
                     module.Constants.EmplaceBack(constList);
