@@ -799,3 +799,39 @@ Copies the value at a specific index of a `String` or a `List`.
 | :----- | :-------------: | :-------: |
 | Pops   | `List`/`String` | `Integer` |
 | Pushes | `List`/`String` |   `Any`   |
+
+### prefix
+
+Given a `String` and an `Integer` on the stack, takes the **first**
+N characters of the `String` and pushes the result to the Stack.
+Removes the new `String` from the old one.
+
+|        |   S-1    |    S0     |
+| :----- | :------: | :-------: |
+| Pops   | `String` | `Integer` |
+| Pushes | `String` | `String`  |
+
+### suffix
+
+Given a `String` and an `Integer` on the stack, takes the **last**
+N characters of the `String` and pushes the result to the Stack.
+Removes the new `String` from the old one.
+
+|        |   S-1    |    S0     |
+| :----- | :------: | :-------: |
+| Pops   | `String` | `Integer` |
+| Pushes | `String` | `String`  |
+
+### substr
+
+Given a `String` and two `Integer`s on the stack:
+`[str, start-idx, end-idx]`
+
+Pushes the substring which starts from `start-idx` and ends at `end-idx`.
+
+Does not change the original `String`.
+
+|        |   S-2    |    S-1    |    S0     |
+| :----- | :------: | :-------: | :-------: |
+| Pops   | `String` | `Integer` | `Integer` |
+| Pushes | `String` | `String`  |           |
