@@ -26,6 +26,9 @@ namespace Pulsar
         { "head",       { InstructionCode::Head                 } },
         { "tail",       { InstructionCode::Tail                 } },
         { "index",      { InstructionCode::Index                } },
+        { "prefix",     { InstructionCode::Prefix               } },
+        { "suffix",     { InstructionCode::Suffix               } },
+        { "substr",     { InstructionCode::Substr               } },
     };
 
     struct SkippableBlock
