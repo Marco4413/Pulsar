@@ -1,9 +1,10 @@
+
 *(*println! val).
 
-*(list-println list):
+*(list-println! list):
   <- list (!length) if 0: .
   (!head) (*println!)
-  (list-println)
+  (list-println!)
   .
 
 *(main args):
@@ -37,5 +38,5 @@
     "                    55555555,",
     "                          4",
     "       Welcome to Pulsar!",
-  ] (list-println)
+  ] (list-println!)
   .
