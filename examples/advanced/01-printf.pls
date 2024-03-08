@@ -5,6 +5,15 @@ global 2 -> printf/default-precision
 global 0 -> printf/print-to-buffer?
 global "" -> printf/buffer
 
+// Functions meant for public use:
+// (printf/save-ctx!)
+// (printf/restore-ctx!)
+// (printf/flush-buffer!)
+// (printf fmt args) -> 1
+// (printf! fmt args)
+// (printf-box fmt args) -> 1
+// (printf-box! fmt args)
+
 *(printf/save-ctx!):
   <- printf/context-stack
     [ printf/default-precision, printf/print-to-buffer? ]
@@ -78,6 +87,7 @@ global "" -> printf/buffer
   .
 
 *(printf/str-rep str n) -> 1:
+  n if 0: "" .
   str
     1 -> i while i < n:
       str (!append)
@@ -103,7 +113,9 @@ global "" -> printf/buffer
     (!append)
   .
 
-*(printf! fmt args):
+// Printf which returns args that are not consumed
+// Use (printf!) if you don't care about this feature
+*(printf fmt args) -> 1:
   <- args <- fmt
     do: '%' (printf/index-of) (!prefix) (printf/print!)
       (!length) if 0: break
@@ -155,29 +167,69 @@ global "" -> printf/buffer
       end
       (!swap) // [ args, fmt ]
       continue
+    (!pop) // Pops fmt
   .
 
-// Doesn't support multi-line
-*(printf/box! fmt args):
+*(printf! fmt args):
+  <- fmt <- args (printf)
+  .
+
+// Printf-Box which returns args that are not consumed
+// Use (printf-box!) if you don't care about this feature
+*(printf-box fmt args) -> 1:
+  [] -> lines
+  0  -> lines-len
+  0  -> max-line-len
   (printf/save-ctx!)
-  1 -> printf/print-to-buffer?
-  <- fmt <- args (printf!)
-  <- printf/buffer (!length)
-    -> buf-len
-  (!empty-list) (!swap) (!append)
-    (printf/restore-ctx!)
-    "+%.*s+\n" [ buf-len, "-" ] (printf!)
-     "|%s|\n"      (!swap)      (printf!)
-    "+%.*s+"   [ buf-len, "-" ] (printf!)
+    1  -> printf/print-to-buffer?
+    <- fmt do:
+      '\n' (printf/index-of) (!prefix)
+        <- args (printf) -> args
+      <- lines <- printf/buffer
+        (!length) if > max-line-len:
+          (!length) -> max-line-len
+        end
+        (!append) -> lines
+        lines-len 1 + -> lines-len
+      "" -> printf/buffer
+      (!length) if 0: break
+      1 (!prefix) (!pop) // Remove '\n'
+      continue
+  (printf/restore-ctx!)
+  "+%.*s+\n" [ max-line-len, "-" ] (printf!)
+  <- lines 0 -> i while i < lines-len:
+    (!head)
+      (!length) max-line-len (!swap) -
+        -> padding-len
+      [ padding-len, " " ]
+        (!swap) (!prepend)
+    "|%s%.*s|\n" (!swap) (printf!)
+    i 1 + -> i
+  end
+  "+%.*s+" [ max-line-len, "-" ] (printf!)
+  <- args
+  .
+
+*(printf-box! fmt args):
+  <- fmt <- args (printf-box)
   .
 
 *(main args):
-  1 -> printf/print-to-buffer?
-  4 -> printf/default-precision // Change global default precision
-  "%s, %s%c\n%.*sPI=%f\n" ["Hello", "World", '!', 8, " ", 3.1415]
-    (printf!)
-  "%s, %s%c" ["Hello", "World", '!']
-    (printf/box!)
-  "\n" (printf/print!)
-  (printf/flush-buffer!)
+  (printf/save-ctx!)
+    // All printf/* globals are saved
+    // (except for printf/context-stack)
+    1 -> printf/print-to-buffer?
+    4 -> printf/default-precision
+    "%s, %s%c\n%.*sPI=%f\n" [
+      "Hello", "World", '!',
+      8, " ", 3.1415
+    ] (printf!)
+    "I'm %s in here!\n%.*sHelp me!" [
+      "trapped",
+      4, " "
+    ] (printf-box!)
+    "\n" (printf/print!)
+    (printf/flush-buffer!)
+  (printf/restore-ctx!)
+  // All printf/* globals are restored
   .
