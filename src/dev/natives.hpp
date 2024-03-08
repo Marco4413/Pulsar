@@ -16,7 +16,7 @@ public:
             [&, type](auto& ctx) { return Module_FromFile(ctx, type); });
         module.BindNativeFunction({ "module/run", 1, 2 },
             [&, type](auto& ctx) { return Module_Run(ctx, type); });
-        module.BindNativeFunction({ "module/free", 1, 0 },
+        module.BindNativeFunction({ "module/free!", 1, 0 },
             [&, type](auto& ctx) { return Module_Free(ctx, type); });
         module.BindNativeFunction({ "module/valid?", 1, 2 },
             [&, type](auto& ctx) { return Module_IsValid(ctx, type); });
@@ -119,7 +119,7 @@ public:
             [&, type](auto& ctx) { return Lexer_FromFile(ctx, type); });
         module.BindNativeFunction({ "lexer/next-token", 1, 2 },
             [&, type](auto& ctx) { return Lexer_NextToken(ctx, type); });
-        module.BindNativeFunction({ "lexer/free", 1, 0 },
+        module.BindNativeFunction({ "lexer/free!", 1, 0 },
             [&, type](auto& ctx) { return Lexer_Free(ctx, type); });
         module.BindNativeFunction({ "lexer/valid?", 1, 2 },
             [&, type](auto& ctx) { return Lexer_IsValid(ctx, type); });

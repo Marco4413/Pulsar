@@ -21,7 +21,7 @@ int main(int argc, const char** argv)
     }
 
     Pulsar::Module module;
-    module.DeclareAndBindNativeFunction({ "stack-dump", 0, 0 },
+    module.DeclareAndBindNativeFunction({ "stack-dump!", 0, 0 },
         [](Pulsar::ExecutionContext& eContext)
         {
             Pulsar::Frame& frame = eContext.CallStack.CallingFrame();
@@ -76,7 +76,7 @@ int main(int argc, const char** argv)
             return Pulsar::RuntimeState::OK;
         });
 
-    module.BindNativeFunction({ "hello-from-cpp", 0, 0 },
+    module.BindNativeFunction({ "hello-from-cpp!", 0, 0 },
         [](Pulsar::ExecutionContext& eContext)
         {
             (void) eContext;
