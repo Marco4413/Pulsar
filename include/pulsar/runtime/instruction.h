@@ -38,7 +38,8 @@ namespace Pulsar
         PushEmptyList,
         Prepend, Append, Concat,
         Head, Tail,
-        Index
+        Index,
+        Prefix, Suffix, Substr
     };
 
     struct Instruction

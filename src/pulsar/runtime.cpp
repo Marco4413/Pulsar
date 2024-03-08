@@ -649,6 +649,72 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             index.SetInteger(ch);
         } else return RuntimeState::TypeError;
     } break;
+    case InstructionCode::Prefix: {
+        if (frame.Stack.Size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value& str = frame.Stack[frame.Stack.Size()-2];
+        Value& length = frame.Stack[frame.Stack.Size()-1];
+        if (length.Type() != ValueType::Integer)
+            return RuntimeState::TypeError;
+
+        if (str.Type() == ValueType::String) {
+            if (length.AsInteger() == 0) {
+                length.SetString("");
+                break;
+            } else if (length.AsInteger() < 0 || (size_t)length.AsInteger() > str.AsString().Length())
+                return RuntimeState::StringIndexOutOfBounds;
+            size_t prefLen = (size_t)length.AsInteger();
+            String prefix(str.AsString().Data(), prefLen);
+            String postPrefix(&str.AsString().Data()[prefLen], str.AsString().Length()-prefLen);
+            str.SetString(std::move(postPrefix));
+            length.SetString(std::move(prefix));
+        } else return RuntimeState::TypeError;
+    } break;
+    case InstructionCode::Suffix: {
+        if (frame.Stack.Size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value& str = frame.Stack[frame.Stack.Size()-2];
+        Value& length = frame.Stack[frame.Stack.Size()-1];
+        if (length.Type() != ValueType::Integer)
+            return RuntimeState::TypeError;
+
+        if (str.Type() == ValueType::String) {
+            if (length.AsInteger() == 0) {
+                length.SetString("");
+                break;
+            } else if (length.AsInteger() < 0 || (size_t)length.AsInteger() > str.AsString().Length())
+                return RuntimeState::StringIndexOutOfBounds;
+            size_t sufLen = (size_t)length.AsInteger();
+            String suffix(&str.AsString().Data()[str.AsString().Length()-sufLen], sufLen);
+            String preSuffix(str.AsString().Data(), str.AsString().Length()-sufLen);
+            str.SetString(std::move(preSuffix));
+            length.SetString(std::move(suffix));
+        } else return RuntimeState::TypeError;
+    } break;
+    case InstructionCode::Substr: {
+        if (frame.Stack.Size() < 3)
+            return RuntimeState::StackUnderflow;
+        Value endIdx = frame.Stack.Back();
+        if (endIdx.Type() != ValueType::Integer)
+            return RuntimeState::TypeError;
+        frame.Stack.PopBack();
+        Value& startIdx = frame.Stack[frame.Stack.Size()-1];
+        if (startIdx.Type() != ValueType::Integer)
+            return RuntimeState::TypeError;
+        Value& str = frame.Stack[frame.Stack.Size()-2];
+
+        if (str.Type() == ValueType::String) {
+            if (startIdx.AsInteger() >= endIdx.AsInteger()) {
+                startIdx.SetString("");
+                break;
+            } else if (
+                startIdx.AsInteger() < 0 || (size_t)startIdx.AsInteger() >= str.AsString().Length() ||
+                endIdx.AsInteger() < 0 || (size_t)endIdx.AsInteger() >= str.AsString().Length())
+                return RuntimeState::StringIndexOutOfBounds;
+            String substr(&str.AsString().Data()[(size_t)startIdx.AsInteger()], (size_t)(endIdx.AsInteger()-startIdx.AsInteger()));
+            startIdx.SetString(std::move(substr));
+        } else return RuntimeState::TypeError;
+    } break;
     }
 
     return RuntimeState::OK;
