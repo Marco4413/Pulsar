@@ -4,44 +4,44 @@
 *(*println! val).
 
 *(list-println list):
-    <- list (!length) if 0: .
-    (!head) (*println!)
-    (list-println)
-    .
+  <- list (!length) if 0: .
+  (!head) (*println!)
+  (list-println)
+  .
 
 *(main args):
-    [
-        "       3",
-        "     -44444454",
-        "    !44331  2445555:",
-        "   343  33c       45",
-        "  541    22",
-        ",55c     =21  44443",
-        "=5.       ?1!_22222",
-        "           11111111",
-        "            100000?",
-        "            :?????b",
-        ";33221       ?!!!!_       ;22334",
-        "43221100??.   ?!!!    b??01122333",
-        " !22110??!!!!+_!!  a!!!!?001123-",
-        "       b?!!!!!!!!!!!!!!!?-",
-        "              !!!!a",
-        "           =!!!, !!!!",
-        "         :???!;  _!!???",
-        "        11000a    b?0001?",
-        "      a22211a      0111222",
-        "     443332,        1223334a",
-        "     04443          +134444,",
-        "        b            ?23:      ,5-",
-        "                      23=     a55.",
-        "                       33    255",
-        "              53       b43  553",
-        "              ;5555542  34455!",
-        "                    55555555,",
-        "                          4",
-        "       Welcome to Pulsar!",
-    ] (list-println)
-    .
+  [
+    "       3",
+    "     -44444454",
+    "    !44331  2445555:",
+    "   343  33c       45",
+    "  541    22",
+    ",55c     =21  44443",
+    "=5.       ?1!_22222",
+    "           11111111",
+    "            100000?",
+    "            :?????b",
+    ";33221       ?!!!!_       ;22334",
+    "43221100??.   ?!!!    b??01122333",
+    " !22110??!!!!+_!!  a!!!!?001123-",
+    "       b?!!!!!!!!!!!!!!!?-",
+    "              !!!!a",
+    "           =!!!, !!!!",
+    "         :???!;  _!!???",
+    "        11000a    b?0001?",
+    "      a22211a      0111222",
+    "     443332,        1223334a",
+    "     04443          +134444,",
+    "        b            ?23:      ,5-",
+    "                      23=     a55.",
+    "                       33    255",
+    "              53       b43  553",
+    "              ;5555542  34455!",
+    "                    55555555,",
+    "                          4",
+    "       Welcome to Pulsar!",
+  ] (list-println)
+  .
 ```
 
 ## It's stack-based!
@@ -52,20 +52,20 @@ Constants and locals, also referred to as `lvalue`s, are pushed onto it all the 
 
 ```lisp
 *(do-sum a b) -> 1:
-    // The values taken from the caller are bound to the locals
-    //   'a' and 'b', a special kind of local called argument.
-    // 'a' and 'b' are pushed onto the stack by their name.
-    // Then the + operator pops the two values and outputs their sum.
-    a b +
-    // The . operator is the equivalent of the return statement.
-    .
+  // The values taken from the caller are bound to the locals
+  //   'a' and 'b', a special kind of local called argument.
+  // 'a' and 'b' are pushed onto the stack by their name.
+  // Then the + operator pops the two values and outputs their sum.
+  a b +
+  // The . operator is the equivalent of the return statement.
+  .
 
 *(main args) -> 1:
-    // The constants 2 and 3 are pushed onto the stack.
-    // Then (do-sum) is called and consumes those two values
-    //   because it accepts two arguments.
-    2 3 (do-sum)
-    .
+  // The constants 2 and 3 are pushed onto the stack.
+  // Then (do-sum) is called and consumes those two values
+  //   because it accepts two arguments.
+  2 3 (do-sum)
+  .
 ```
 
 ## Functions, functions and more functions.
@@ -269,13 +269,13 @@ values of already-existing locals. It assigns to the specified local
 the last value on the stack and pops it.
 
 ```lisp
-*(func x y) -> 0:
-    // 'x' already exists so its value will be updated.
-    10 -> x
-    // 'a' doesn't exist so it's created and assigned to
-    //  the top-most value on the stack.
-    11 -> a
-    .
+*(func! x y) -> 0:
+  // 'x' already exists so its value will be updated.
+  10 -> x
+  // 'a' doesn't exist so it's created and assigned to
+  //  the top-most value on the stack.
+  11 -> a
+  .
 ```
 
 Creation of a new local can be forced by adding `!` in front of its
@@ -283,14 +283,14 @@ name. This can be useful to create scope-specific locals with the same
 name as one that's on its parent scope (shadowing).
 
 ```lisp
-*(func x y) -> 0:
-    if 0 = 0:
-        // 'x' within this if statement has the value 10.
-        10 -> !x
-    end
-    // 'x' keeps its original value.
-    x -> y
-    .
+*(func! x y) -> 0:
+  if 0 = 0:
+    // 'x' within this if statement has the value 10.
+    10 -> !x
+  end
+  // 'x' keeps its original value.
+  x -> y
+  .
 ```
 
 > This operator is the reason why constants and locals are referred to
@@ -306,9 +306,9 @@ Another way of putting a local into the stack is using the `<-` operator.
 
 ```lisp
 *(swap x y) -> 2:
-    // Super fast swap!
-    <- y <- x
-    .
+  // Super fast functional swap!
+  <- y <- x
+  .
 ```
 
 This operator **moves** the local into the stack invalidating its value.
@@ -326,9 +326,9 @@ to do the same thing. Which was "less readable" and efficient.
 
 ```lisp
 *(main args) -> 1:
-    // This expression results in the value '2'.
-    1 <-> x x +
-    .
+  // This expression results in the value '2'.
+  1 <-> x x +
+  .
 ```
 
 ### The PushReference Operator
@@ -362,14 +362,14 @@ It breaks out of **the last skippable block** if supported.
 *(*println! val).
 
 *(main args):
-    0 -> i
-    while:
-        if i >= 10:
-            break
-        i (*println!)
-        i 1 + -> i
-    end
-    .
+  0 -> i
+  while:
+    if i >= 10:
+      break
+    i (*println!)
+    i 1 + -> i
+  end
+  .
 ```
 
 ### The Continue Statement
@@ -382,14 +382,14 @@ It repeats **the last skippable block** if supported.
 *(*println! val).
 
 *(main args):
-    0 -> i
-    while:
-        i (*println!)
-        i 1 + -> i
-        if i < 10:
-            continue
-        break
-    .
+  0 -> i
+  while:
+    i (*println!)
+    i 1 + -> i
+    if i < 10:
+      continue
+    break
+  .
 ```
 
 ### The End Statement
@@ -400,12 +400,12 @@ The end statement marks the end of a block if no other Control Flow Statement is
 *(*println! val).
 
 *(main args):
-    0 -> i
-    while i < 10:
-        i (*println!)
-        i 1 + -> i
-    end
-    .
+  0 -> i
+  while i < 10:
+    i (*println!)
+    i 1 + -> i
+  end
+  .
 ```
 
 ## Functions
@@ -416,8 +416,8 @@ A function definition looks like this:
 
 ```lisp
 *(func-name arg1 arg2 ... argN) -> M:
-    // Do Stuff
-    .
+  // Do Stuff
+  .
 ```
 
 When the function returns, at least M values must be on its stack.
@@ -468,19 +468,19 @@ straightforward one.
 
 ```lisp
 *(main args) -> 1:
-    10 -> x
-    if x > 8:
-        8
-    else if x > 6:
-        6
-    else if x > 4:
-        4
-    else if x > 2:
-        2
-    else:
-        0
-    end
-    .
+  10 -> x
+  if x > 8:
+    8
+  else if x > 6:
+    6
+  else if x > 4:
+    4
+  else if x > 2:
+    2
+  else:
+    0
+  end
+  .
 ```
 
 It's your typical if statement! You can't go wrong with it.
@@ -530,12 +530,12 @@ The while loop is the one you know and love from other programming languages:
 *(*println! val).
 
 *(main args):
-    0 -> i
-    while i < 10:     // Loop while i < 10
-        i (*println!) // Print i
-        i 1 + -> i    // Increment i
-    end
-    .
+  0 -> i
+  while i < 10:   // Loop while i < 10
+    i (*println!) // Print i
+    i 1 + -> i    // Increment i
+  end
+  .
 ```
 
 It behaves the same way as you'd expect.
@@ -561,14 +561,14 @@ or generate a new scope to hide variables from the other ones.
 *(*println! val).
 
 *(main args):
-    // Has the same behaviour as 'while i < 10'
-    0 -> i do:
-        i (*println!)
-        i 1 + -> i
-        if i < 10:
-            continue
-    end
-    .
+  // Has the same behaviour as 'while i < 10'
+  0 -> i do:
+    i (*println!)
+    i 1 + -> i
+    if i < 10:
+      continue
+  end
+  .
 ```
 
 `break` ends the block early:
@@ -576,21 +576,21 @@ or generate a new scope to hide variables from the other ones.
 *(*println! val).
 
 *(to-odd n) -> 1:
-    n do:
-        n 2 % if 1:
-            break
-        1 +
-    end
-    .
+  n do:
+    n 2 % if 1:
+      break
+    1 +
+  end
+  .
 
 *(main args):
-    0 -> i do:
-        i (to-odd) (*println!)
-        i 1 + -> i
-        if i < 10:
-            continue
-    end
-    .
+  0 -> i do:
+    i (to-odd) (*println!)
+    i 1 + -> i
+    if i < 10:
+      continue
+  end
+  .
 ```
 
 ## Globals
@@ -618,8 +618,8 @@ word that's VERY important. And now we'll get to why.
 
 ```lisp
 global [const] -> name:
-    // Do Function Stuff
-    .
+  // Do Function Stuff
+  .
 ```
 
 As seen in the [globals example](../examples/globals.pls), you can do
