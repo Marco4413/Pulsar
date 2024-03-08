@@ -436,7 +436,7 @@ it and the arguments within the parentheses.
 
 ### Function Naming
 
-Function names are [indetifiers](#identifiers) and they allow the `/`
+Function names are [identifiers](#identifiers) and they allow the `/`
 character to be used after the first character. So if you plan to make
 an [\#include](#include)-able file, you should probably use a
 "namespaced" name like `my-module/function-name`.
