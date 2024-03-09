@@ -24,7 +24,10 @@ Language, you can download and package the official extension found at
 
 ## Dependencies
 
-**None!** Except for the `pulsar-dev` project which uses `fmt` for pretty printing.
+**None!**
+
+Except for the `pulsar-dev` and `pulsar-tools` projects
+which use `fmt` for pretty printing.
 
 The Language itself has no dependencies except for the C++20 standard library.
 
@@ -45,9 +48,22 @@ They're within the [examples](examples) folder.
 
 ### Running Examples
 
-The current way of running examples is by compiling the `pulsar-dev` project
+~~The current way of running examples is by compiling the `pulsar-dev` project
 and passing the example to run as an argument. Other arguments are passed to the
-main function of the example.
+main function of the example.~~
+
+The new `pulsar-tools` project is the preferred way of running examples.
+In fact, it's the CLI tool for Pulsar.
 
 See the [Building](#building) section.
 
+After building `pulsar-tools`, you'll be able to run it with no arguments to
+print its usage. The default settings are the ones used for the examples.
+
+**TL;DR: After building `pulsar-tools`, you'll be able to:**
+
+```sh
+$ pulsar-tools run path/to/pulsar/file.pls
+```
+
+If an example requires external arguments, just append them to the command.
