@@ -33,10 +33,12 @@ struct FlagOption
 constexpr uint32_t P_DEBUG_SYMBOLS = 1;
 constexpr uint32_t P_STACK_TRACE   = 2;
 constexpr uint32_t P_ERROR_NOTES   = 4;
+constexpr uint32_t P_ALLOW_INCLUDE = 8;
 constexpr uint32_t P_DEFAULT       =
       P_DEBUG_SYMBOLS
     | P_STACK_TRACE
-    | P_ERROR_NOTES;
+    | P_ERROR_NOTES
+    | P_ALLOW_INCLUDE;
 
 constexpr uint32_t R_BIND_DEBUG  = 1 << 16;
 constexpr uint32_t R_BIND_LEXER  = 2 << 16;
@@ -67,7 +69,8 @@ constexpr uint32_t R_BIND_ALL    =
 PULSARTOOLS_FLAG_OPTIONS(ParserOptions,
     PULSARTOOLS_FLAG_OPTION("--parser", "-p", "debug-symbols", "debug", P_DEBUG_SYMBOLS, "Store debug symbols for better runtime error information."),
     PULSARTOOLS_FLAG_OPTION("--parser", "-p", "stack-trace",   "st",    P_STACK_TRACE,   "Enable stack trace for compile-time evaluation errors."),
-    PULSARTOOLS_FLAG_OPTION_LONG("--parser", "-p", "error-notes", P_ERROR_NOTES,   "Enable notes about errors."),
+    PULSARTOOLS_FLAG_OPTION_LONG("--parser", "-p", "error-notes",   P_ERROR_NOTES,   "Enable notes about errors."),
+    PULSARTOOLS_FLAG_OPTION_LONG("--parser", "-p", "allow-include", P_ALLOW_INCLUDE, "Allow the usage of the include directive."),
 )
 
 PULSARTOOLS_FLAG_OPTIONS(RuntimeOptions,
@@ -142,6 +145,7 @@ bool Command_Check(const char* executable, int argc, const char** argv)
     parserSettings.StoreDebugSymbols              = (flagOptions & P_DEBUG_SYMBOLS) != 0;
     parserSettings.AppendStackTraceToErrorMessage = (flagOptions & P_STACK_TRACE) != 0;
     parserSettings.AppendNotesToErrorMessage      = (flagOptions & P_ERROR_NOTES) != 0;
+    parserSettings.AllowIncludeDirective          = (flagOptions & P_ALLOW_INCLUDE) != 0;
 
     Pulsar::Module module;
     // Add debug bindings
@@ -243,6 +247,7 @@ bool Command_Run(const char* executable, int argc, const char** argv)
     parserSettings.StoreDebugSymbols              = (flagOptions & P_DEBUG_SYMBOLS) != 0;
     parserSettings.AppendStackTraceToErrorMessage = (flagOptions & P_STACK_TRACE) != 0;
     parserSettings.AppendNotesToErrorMessage      = (flagOptions & P_ERROR_NOTES) != 0;
+    parserSettings.AllowIncludeDirective          = (flagOptions & P_ALLOW_INCLUDE) != 0;
 
     Pulsar::Module module;
     // Debug bindings are declared before parsing so they can be used in compile-time evaluations
