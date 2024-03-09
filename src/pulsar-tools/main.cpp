@@ -292,6 +292,7 @@ bool Command_Run(const char* executable, int argc, const char** argv)
         Pulsar::ValueStack stack;
         { // Push argv into the Stack.
             Pulsar::ValueList argList;
+            argList.Append()->Value().SetString(filepath);
             for (int i = 0; i < argc; i++)
                 argList.Append()->Value().SetString(argv[i]);
             stack.EmplaceBack().SetList(std::move(argList));
