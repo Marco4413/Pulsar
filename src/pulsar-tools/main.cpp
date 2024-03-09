@@ -340,8 +340,8 @@ int main(int argc, const char** argv)
     PULSARTOOLS_ASSERT(argc >= 1, "pulsar-tools executable not in argv.");
     const char* executable = ShiftArgs(argc, argv);
     if (argc <= 0) {
-        PULSARTOOLS_ERRORF("{}: No command provided.", executable);
         PrintProgramUsage(executable);
+        PULSARTOOLS_ERRORF("{}: No command provided.", executable);
         return 1;
     }
 
@@ -353,8 +353,8 @@ int main(int argc, const char** argv)
         if (!Command_Run(executable, argc, argv))
             return 1;
     } else {
-        PULSARTOOLS_ERRORF("{}: '{}' is not a valid command.", executable, command);
         PrintProgramUsage(executable);
+        PULSARTOOLS_ERRORF("{}: '{}' is not a valid command.", executable, command);
         return 1;
     }
 
