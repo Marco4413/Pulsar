@@ -310,6 +310,13 @@ bool Command_Run(const char* executable, int argc, const char** argv)
         }
 
         PULSARTOOLS_INFOF("Runtime State: {}", Pulsar::RuntimeStateToString(runtimeState));
+        if (stack.Size() > 0) {
+            PULSARTOOLS_INFOF("Stack after ({}) call:", entryPoint);
+            for (size_t i = 0; i < stack.Size(); i++)
+                PULSARTOOLS_INFOF("{}. {}", i+1, stack[i]);
+        } else {
+            PULSARTOOLS_INFOF("Stack after ({}) call: []", entryPoint);
+        }
     }
 
     return true;
