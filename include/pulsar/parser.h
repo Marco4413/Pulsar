@@ -67,6 +67,8 @@ namespace Pulsar
         IllegalDirective
     };
 
+    const char* ParseResultToString(ParseResult presult);
+
     class Parser
     {
     public:

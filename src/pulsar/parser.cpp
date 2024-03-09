@@ -919,3 +919,34 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
     }
     return ParseResult::OK;
 }
+
+const char* Pulsar::ParseResultToString(ParseResult presult)
+{
+    switch (presult) {
+    case ParseResult::OK:
+        return "OK";
+    case ParseResult::Error:
+        return "Error";
+    case ParseResult::FileNotRead:
+        return "FileNotRead";
+    case ParseResult::UnexpectedToken:
+        return "UnexpectedToken";
+    case ParseResult::NegativeResultCount:
+        return "NegativeResultCount";
+    case ParseResult::UsageOfUndeclaredLocal:
+        return "UsageOfUndeclaredLocal";
+    case ParseResult::UsageOfUnknownInstruction:
+        return "UsageOfUnknownInstruction";
+    case ParseResult::UsageOfUndeclaredFunction:
+        return "UsageOfUndeclaredFunction";
+    case ParseResult::UsageOfUndeclaredNativeFunction:
+        return "UsageOfUndeclaredNativeFunction";
+    case ParseResult::WritingToConstantGlobal:
+        return "WritingToConstantGlobal";
+    case ParseResult::GlobalEvaluationError:
+        return "GlobalEvaluationError";
+    case ParseResult::IllegalDirective:
+        return "IllegalDirective";
+    }
+    return "Unknown";
+}
