@@ -42,10 +42,11 @@ namespace Pulsar
 
     struct ParseSettings
     {
-        bool StoreDebugSymbols = true;
+        bool StoreDebugSymbols              = true;
         bool AppendStackTraceToErrorMessage = true;
-        size_t StackTraceMaxDepth = 10;
-        bool AppendNotesToErrorMessage = true;
+        size_t StackTraceMaxDepth           = 10;
+        bool AppendNotesToErrorMessage      = true;
+        bool AllowIncludeDirective          = true;
     };
     
     constexpr ParseSettings ParseSettings_Default{};
@@ -62,7 +63,8 @@ namespace Pulsar
         UsageOfUndeclaredFunction,
         UsageOfUndeclaredNativeFunction,
         WritingToConstantGlobal,
-        GlobalEvaluationError
+        GlobalEvaluationError,
+        IllegalDirective
     };
 
     class Parser

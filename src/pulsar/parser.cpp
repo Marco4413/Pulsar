@@ -87,6 +87,8 @@ Pulsar::ParseResult Pulsar::Parser::ParseModuleStatement(Module& module, const P
     case TokenType::CompilerDirective: {
         if (curToken.IntegerVal != TOKEN_CD_INCLUDE)
             return SetError(ParseResult::UnexpectedToken, curToken, "Unknown compiler directive.");
+        else if (!settings.AllowIncludeDirective)
+            return SetError(ParseResult::IllegalDirective, curToken, "Include compiler directive was disabled.");
         m_Lexer->NextToken();
         if (curToken.Type != TokenType::StringLiteral)
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected file path.");
