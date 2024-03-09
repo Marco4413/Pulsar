@@ -11,6 +11,31 @@ workspace "pulsar"
 include "pulsar"
 include "libs/fmt"
 
+project "pulsar-tools"
+   kind "ConsoleApp"
+   language "C++"
+   cppdialect "C++20"
+
+   location "build/pulsar-tools"
+   targetdir "%{prj.location}/%{cfg.buildcfg}"
+
+   includedirs { "include", "libs/fmt/include" }
+   files { "src/pulsar-tools/**.cpp", "include/pulsar-tools/**.h" }
+   links { "pulsar", "fmt" }
+
+   filter "toolset:gcc"
+      buildoptions { "-Wall", "-Wextra", "-Wpedantic", "-Werror" }
+
+   filter "toolset:msc"
+      buildoptions { "/W4", "/WX" }
+
+   filter "configurations:Debug"
+      defines "PULSAR_DEBUG"
+      symbols "On"
+
+   filter "configurations:Release"
+      optimize "Speed"
+
 project "pulsar-dev"
    kind "ConsoleApp"
    language "C++"
