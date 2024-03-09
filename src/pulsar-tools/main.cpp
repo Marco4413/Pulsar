@@ -163,7 +163,7 @@ bool Command_Check(const char* executable, int argc, const char** argv)
         PULSARTOOLS_INFOF("Parsing took: {}us", parseTime.count());
 
         if (parseResult != Pulsar::ParseResult::OK) {
-            PULSARTOOLS_ERRORF("Parse Error: {}", (int)parseResult);
+            PULSARTOOLS_ERRORF("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
             PulsarTools::PrintPrettyError(
                 parser.GetLastErrorSource(), parser.GetLastErrorPath(),
                 parser.GetLastErrorToken(), parser.GetLastErrorMessage());
@@ -266,7 +266,7 @@ bool Command_Run(const char* executable, int argc, const char** argv)
         PULSARTOOLS_INFOF("Parsing took: {}us", parseTime.count());
 
         if (parseResult != Pulsar::ParseResult::OK) {
-            PULSARTOOLS_ERRORF("Parse Error: {}", (int)parseResult);
+            PULSARTOOLS_ERRORF("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
             PulsarTools::PrintPrettyError(
                 parser.GetLastErrorSource(), parser.GetLastErrorPath(),
                 parser.GetLastErrorToken(), parser.GetLastErrorMessage());
