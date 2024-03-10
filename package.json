@@ -1,0 +1,24 @@
+{
+  "name": "pulsar",
+  "version": "1.0.0",
+  "description": "A small stack-based dynamically-typed interpreted scripting language.",
+  "directories": {
+    "doc": "docs",
+    "example": "examples"
+  },
+  "scripts": { },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Marco4413/Pulsar.git"
+  },
+  "keywords": [
+    "programming",
+    "language"
+  ],
+  "author": "Marco4413",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Marco4413/Pulsar/issues"
+  },
+  "homepage": "https://github.com/Marco4413/Pulsar#readme"
+}
