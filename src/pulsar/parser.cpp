@@ -72,6 +72,8 @@ Pulsar::ParseResult Pulsar::Parser::AddSourceFile(const String& path)
 
     if (error)
         return SetError(ParseResult::FileNotRead, token, "Could not normalize path '" + path + "'.");
+    else if (relativePath.empty())
+        return SetError(ParseResult::FileNotRead, token, "Could not resolve file '" + path + "'.");
 
     String internalPath = relativePath.generic_string().c_str();
     if (!std::filesystem::exists(relativePath))
