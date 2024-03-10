@@ -123,14 +123,20 @@ Pulsar::ParseResult Pulsar::Parser::ParseModuleStatement(Module& module, const P
         else if (!settings.AllowIncludeDirective)
             return SetError(ParseResult::IllegalDirective, curToken, "Include compiler directive was disabled.");
         m_Lexer->NextToken();
-        if (curToken.Type != TokenType::StringLiteral)
+        if (curToken.Type != TokenType::StringLiteral) {
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected file path.");
-        std::filesystem::path targetPath(curToken.StringVal.Data());
-        std::filesystem::path workingPath(m_LexerPool.Back().Path.Data());
-        std::filesystem::path filePath = workingPath.parent_path() / targetPath;
-        auto result = AddSourceFile(filePath.generic_string().data());
-        if (result != ParseResult::OK)
-            return result;
+        } else if (settings.IncludeResolver) {
+            auto res = settings.IncludeResolver(*this, m_LexerPool.Back().Path, curToken);
+            if (res != ParseResult::OK)
+                return res;
+        } else {
+            std::filesystem::path targetPath(curToken.StringVal.Data());
+            std::filesystem::path workingPath(m_LexerPool.Back().Path.Data());
+            std::filesystem::path filePath = workingPath.parent_path() / targetPath;
+            auto result = AddSourceFile(filePath.generic_string().data());
+            if (result != ParseResult::OK)
+                return result;
+        }
         if (settings.StoreDebugSymbols)
             module.SourceDebugSymbols.EmplaceBack(m_LexerPool.Back().Path, m_LexerPool.Back().Lexer.GetSource());
         return ParseResult::OK;

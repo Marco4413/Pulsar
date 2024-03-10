@@ -40,17 +40,6 @@ namespace Pulsar
         List<size_t> ContinueStatements = List<size_t>();
     };
 
-    struct ParseSettings
-    {
-        bool StoreDebugSymbols              = true;
-        bool AppendStackTraceToErrorMessage = true;
-        size_t StackTraceMaxDepth           = 10;
-        bool AppendNotesToErrorMessage      = true;
-        bool AllowIncludeDirective          = true;
-    };
-    
-    constexpr ParseSettings ParseSettings_Default{};
-
     enum class ParseResult
     {
         OK = 0,
@@ -69,6 +58,26 @@ namespace Pulsar
 
     const char* ParseResultToString(ParseResult presult);
 
+    class Parser; // Forward Declaration
+    struct ParseSettings
+    {
+        bool StoreDebugSymbols              = true;
+        bool AppendStackTraceToErrorMessage = true;
+        size_t StackTraceMaxDepth           = 10;
+        bool AppendNotesToErrorMessage      = true;
+        bool AllowIncludeDirective          = true;
+        /**
+         * @brief (parser, cwd, token) -> ParseResult
+         * @param parser The Parser that called the function.
+         *     Parser#AddSource or #AddSourceFile should be called to add the source.
+         * @param cwd The path to the current file.
+         * @param token The StringLiteral Token containing the path to the file to include.
+         */
+        std::function<ParseResult(Parser&, Pulsar::String, Token)> IncludeResolver = nullptr;
+    };
+
+    inline const ParseSettings ParseSettings_Default{};
+
     class Parser
     {
     public:
@@ -79,7 +88,6 @@ namespace Pulsar
         bool AddSource(const String& path, String&& src);
         ParseResult AddSourceFile(const String& path);
 
-        // TODO: Add custom include resolution.
         ParseResult ParseIntoModule(Module& module, const ParseSettings& settings=ParseSettings_Default);
         void Reset(); // Call Reset after ParseIntoModule to reuse the Parser
 
