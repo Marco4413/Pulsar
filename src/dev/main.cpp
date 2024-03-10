@@ -40,8 +40,8 @@ int main(int argc, const char** argv)
         auto result = parser.ParseIntoModule(module, Pulsar::ParseSettings_Default);
         if (result != Pulsar::ParseResult::OK) {
             PrintPrettyError(
-                parser.GetLastErrorSource(), parser.GetLastErrorPath(),
-                parser.GetLastErrorToken(), parser.GetLastErrorMessage(),
+                *parser.GetErrorSource(), *parser.GetErrorPath(),
+                parser.GetErrorToken(), parser.GetErrorMessage(),
                 DEFAULT_VIEW_RANGE);
             fmt::println("\nParse Error: {}", (int)result);
             return 1;

@@ -165,8 +165,8 @@ bool Command_Check(const char* executable, int argc, const char** argv)
         if (parseResult != Pulsar::ParseResult::OK) {
             PULSARTOOLS_ERRORF("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
             PulsarTools::PrintPrettyError(
-                parser.GetLastErrorSource(), parser.GetLastErrorPath(),
-                parser.GetLastErrorToken(), parser.GetLastErrorMessage());
+                *parser.GetErrorSource(), *parser.GetErrorPath(),
+                parser.GetErrorToken(), parser.GetErrorMessage());
             PULSARTOOLS_PRINTF("\n");
             return false;
         }
@@ -268,8 +268,8 @@ bool Command_Run(const char* executable, int argc, const char** argv)
         if (parseResult != Pulsar::ParseResult::OK) {
             PULSARTOOLS_ERRORF("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
             PulsarTools::PrintPrettyError(
-                parser.GetLastErrorSource(), parser.GetLastErrorPath(),
-                parser.GetLastErrorToken(), parser.GetLastErrorMessage());
+                *parser.GetErrorSource(), *parser.GetErrorPath(),
+                parser.GetErrorToken(), parser.GetErrorMessage());
             PULSARTOOLS_PRINTF("\n");
             return false;
         }

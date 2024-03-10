@@ -79,12 +79,17 @@ namespace Pulsar
         bool AddSource(const String& path, String&& src);
         ParseResult AddSourceFile(const String& path);
 
+        // TODO: Add custom include resolution.
         ParseResult ParseIntoModule(Module& module, const ParseSettings& settings=ParseSettings_Default);
-        const String& GetLastErrorSource() const  { return *m_LastErrorSource; }
-        const String& GetLastErrorPath() const    { return *m_LastErrorPath; }
-        ParseResult GetLastError() const          { return m_LastError; }
-        const String& GetLastErrorMessage() const { return m_LastErrorMsg; }
-        const Token& GetLastErrorToken() const    { return m_LastErrorToken; }
+        void Reset(); // Call Reset after ParseIntoModule to reuse the Parser
+
+        const String* GetErrorSource() const  { return m_ErrorSource; }
+        const String* GetErrorPath() const    { return m_ErrorPath; }
+        ParseResult GetError() const          { return m_Error; }
+        const String& GetErrorMessage() const { return m_ErrorMsg; }
+        const Token& GetErrorToken() const    { return m_ErrorToken; }
+        ParseResult SetError(ParseResult errorType, const Token& token, const String& errorMsg);
+        void ClearError();
     private:
         ParseResult ParseModuleStatement(Module& module, const ParseSettings& settings);
         ParseResult ParseGlobalDefinition(Module& module, const ParseSettings& settings);
@@ -94,15 +99,6 @@ namespace Pulsar
         ParseResult ParseWhileLoop(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings);
         ParseResult ParseDoBlock(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings);
         ParseResult PushLValue(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const Token& lvalue, const ParseSettings& settings);
-        ParseResult SetError(ParseResult errorType, const Token& token, const String& errorMsg)
-        {
-            m_LastErrorSource = &m_LexerPool.Back().Lexer.GetSource();
-            m_LastErrorPath = &m_LexerPool.Back().Path;
-            m_LastError = errorType;
-            m_LastErrorToken = token;
-            m_LastErrorMsg = errorMsg;
-            return errorType;
-        }
     private:
         struct LexerSource
         {
@@ -114,11 +110,11 @@ namespace Pulsar
         List<LexerSource> m_LexerPool;
 
         Lexer* m_Lexer = nullptr;
-        const String* m_LastErrorSource = nullptr;
-        const String* m_LastErrorPath = nullptr;
-        ParseResult m_LastError = ParseResult::OK;
-        Token m_LastErrorToken = Token(TokenType::None);
-        String m_LastErrorMsg = "";
+        const String* m_ErrorSource = nullptr;
+        const String* m_ErrorPath = nullptr;
+        ParseResult m_Error = ParseResult::OK;
+        Token m_ErrorToken = Token(TokenType::None);
+        String m_ErrorMsg = "";
     };
 }
 

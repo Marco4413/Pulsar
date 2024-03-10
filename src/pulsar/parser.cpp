@@ -3,8 +3,39 @@
 #include <filesystem>
 #include <fstream>
 
+Pulsar::ParseResult Pulsar::Parser::SetError(ParseResult errorType, const Token& token, const String& errorMsg)
+{
+    m_ErrorSource = nullptr;
+    m_ErrorPath = nullptr;
+    if (m_LexerPool.Size() > 0) {
+        m_ErrorSource = &m_LexerPool.Back().Lexer.GetSource();
+        m_ErrorPath = &m_LexerPool.Back().Path;
+    }
+    m_Error = errorType;
+    m_ErrorToken = token;
+    m_ErrorMsg = errorMsg;
+    return errorType;
+}
+
+void Pulsar::Parser::ClearError()
+{
+    m_ErrorSource = nullptr;
+    m_ErrorPath = nullptr;
+    m_Error = ParseResult::OK;
+    m_ErrorToken = Token(TokenType::None);
+    m_ErrorMsg.Resize(0);
+}
+
+void Pulsar::Parser::Reset()
+{
+    ClearError();
+    m_ParsedSources.clear();
+    m_LexerPool.Clear();
+}
+
 bool Pulsar::Parser::AddSource(const String& path, const String& src)
 {
+    ClearError();
     if (path.Length() > 0) {
         if (m_ParsedSources.contains(path))
             return false;
@@ -18,6 +49,7 @@ bool Pulsar::Parser::AddSource(const String& path, const String& src)
 
 bool Pulsar::Parser::AddSource(const String& path, String&& src)
 {
+    ClearError();
     if (path.Length() > 0) {
         if (m_ParsedSources.contains(path))
             return false;
@@ -59,6 +91,7 @@ Pulsar::ParseResult Pulsar::Parser::AddSourceFile(const String& path)
 
 Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, const ParseSettings& settings)
 {
+    ClearError();
     if (settings.StoreDebugSymbols) {
         for (size_t i = 0; i < m_LexerPool.Size(); i++)
             module.SourceDebugSymbols.EmplaceBack(m_LexerPool[i].Path, m_LexerPool[i].Lexer.GetSource());
