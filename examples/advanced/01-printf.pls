@@ -17,19 +17,19 @@ global "" -> printf/buffer
 *(printf/save-ctx!):
   <- printf/context-stack
     [ printf/default-precision, printf/print-to-buffer? ]
-    <- printf/buffer (!append)
-    "" -> printf/buffer
-    (!prepend)
+      <- printf/buffer (!append)
+      "" -> printf/buffer
+      (!prepend)
   -> printf/context-stack
   .
 
 *(printf/restore-ctx!):
   <- printf/context-stack
     (!head)
-    (!head) -> printf/default-precision
-    (!head) -> printf/print-to-buffer?
-    (!head) -> printf/buffer
-    (!pop)
+      (!head) -> printf/default-precision
+      (!head) -> printf/print-to-buffer?
+      (!head) -> printf/buffer
+      (!pop)
   -> printf/context-stack
   .
 
