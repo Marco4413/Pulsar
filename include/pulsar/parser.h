@@ -103,7 +103,7 @@ namespace Pulsar
         ParseResult ParseGlobalDefinition(Module& module, const ParseSettings& settings);
         ParseResult ParseFunctionDefinition(Module& module, const ParseSettings& settings);
         ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalsBindings& locals, SkippableBlock* skippableBlock, const ParseSettings& settings);
-        ParseResult ParseIfStatement(Module& module, FunctionDefinition& func, const LocalsBindings& locals, SkippableBlock* skippableBlock, const ParseSettings& settings);
+        ParseResult ParseIfStatement(Module& module, FunctionDefinition& func, const LocalsBindings& locals, SkippableBlock* skippableBlock, bool isChained, const ParseSettings& settings);
         ParseResult ParseWhileLoop(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings);
         ParseResult ParseDoBlock(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings);
         ParseResult PushLValue(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const Token& lvalue, const ParseSettings& settings);

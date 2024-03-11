@@ -516,7 +516,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
         } break;
         case TokenType::KW_If: {
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
-            auto res = ParseIfStatement(module, func, scopedLocals, skippableBlock, settings);
+            auto res = ParseIfStatement(module, func, scopedLocals, skippableBlock, false, settings);
             if (res != ParseResult::OK)
                 return res;
         } break;
@@ -531,7 +531,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
 Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
     Module& module, FunctionDefinition& func,
     const LocalsBindings& locals, SkippableBlock* skippableBlock,
-    const ParseSettings& settings)
+    bool isChained, const ParseSettings& settings)
 {
     Token ifToken = m_Lexer->CurrentToken();
     Token comparisonToken(TokenType::None);
@@ -601,6 +601,9 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
         } else isSelfContained = false;
     }
 
+    if (isChained && !isSelfContained)
+        return SetError(ParseResult::Error, ifToken, "Chained if statement must have a self-contained condition.");
+
     if (curToken.Type != TokenType::Colon)
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected ':' to begin if statement body.");
     else if (hasComparison) {
@@ -647,7 +650,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
     } else if (curToken.Type == TokenType::KW_If) {
         if (!isSelfContained)
             return SetError(ParseResult::UnexpectedToken, curToken, "Illegal 'else if' statement. Previous condition is not self-contained.");
-        res = ParseIfStatement(module, func, locals, skippableBlock, settings);
+        res = ParseIfStatement(module, func, locals, skippableBlock, true, settings);
         func.Code[elseIdx].Arg0 = func.Code.Size() - elseIdx;
         return res;
     }
