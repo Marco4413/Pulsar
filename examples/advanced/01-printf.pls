@@ -162,11 +162,13 @@ global "" -> printf/buffer
             (!swap) // [ "%." "...f" ]
             (!append) (printf/print!)
           continue
+        end
       else:
         "%" ch (!append) (printf/print!)
       end
       (!swap) // [ args, fmt ]
       continue
+    end
     (!pop) // Pops fmt
   .
 
@@ -195,6 +197,7 @@ global "" -> printf/buffer
       (!length) if 0: break
       1 (!prefix) (!pop) // Remove '\n'
       continue
+    end
   (printf/restore-ctx!)
   "+%.*s+\n" [ max-line-len, "-" ] (printf!)
   <- lines 0 -> i while i < lines-len:
