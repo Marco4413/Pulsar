@@ -364,7 +364,7 @@ It breaks out of **the last skippable block** if supported.
 *(main args):
   0 -> i
   while:
-    if i >= 10:
+    i if >= 10:
       break
     i (*println!)
     i 1 + -> i
@@ -386,24 +386,9 @@ It repeats **the last skippable block** if supported.
   while:
     i (*println!)
     i 1 + -> i
-    if i < 10:
+    i if < 10:
       continue
     break
-  .
-```
-
-### The End Statement
-
-The end statement marks the end of a block if no other Control Flow Statement is encountered.
-
-```lisp
-*(*println! val).
-
-*(main args):
-  0 -> i
-  while i < 10:
-    i (*println!)
-    i 1 + -> i
   end
   .
 ```
@@ -485,12 +470,7 @@ straightforward one.
 
 It's your typical if statement! You can't go wrong with it.
 
-The only difference is that if there's a [**control flow statement**](#control-flow-statements)
-at the end of a branch, an `else` or `else if` CANNOT be chained.
-Though you can just add more `if`s after it (which is the same thing).
-
-The `end` keyword must be specified when no other [**control flow statement**](#control-flow-statements)
-is provided to mark the end of the branch.
+The `end` keyword must be specified at the end of the last branch.
 
 ### Weird cool variants?!?!
 
@@ -517,8 +497,10 @@ Moreover, if only `<lvalue>` is provided then `= <lvalue>` is implied.
 
 Finally, if no condition at all is present, `!= 0` is implied.
 
-The `else` branch can be specified within all `if`s. However, the
-"no control flow statement" restriction must be met.
+The `else` branch can be specified within almost all `if`s.
+
+When an `if` statement is not self-contained a [control flow statement](#control-flow-statements)
+may replace the `end` keyword, thus an explicit `else` branch cannot exist.
 
 ## Skippable Blocks
 
@@ -549,7 +531,8 @@ If no condition and only an lvalue is provided then it's the same as writing
 If the condition is empty it behaves the same way as `while 1` (a while true loop).
 
 All [Control Flow Statements](#control-flow-statements) are supported.
-As with all blocks you must have a control flow statement that marks its end.
+
+The `end` keyword marks the end of the loop.
 
 ### Do Block
 
@@ -561,11 +544,11 @@ or generate a new scope to hide variables from the other ones.
 *(*println! val).
 
 *(main args):
-  // Has the same behaviour as 'while i < 10'
+  // Has the same behaviour as 'do { ... } while(i < 10)'
   0 -> i do:
     i (*println!)
     i 1 + -> i
-    if i < 10:
+    i if < 10:
       continue
   end
   .
@@ -587,7 +570,7 @@ or generate a new scope to hide variables from the other ones.
   0 -> i do:
     i (to-odd) (*println!)
     i 1 + -> i
-    if i < 10:
+    i if < 10:
       continue
   end
   .
