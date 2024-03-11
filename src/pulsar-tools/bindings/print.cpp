@@ -31,7 +31,7 @@ Pulsar::RuntimeState PulsarTools::PrintNativeBindings::Print_Println(Pulsar::Exe
     Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
     Pulsar::Value& val = frame.Locals[0];
     if (val.Type() == Pulsar::ValueType::String)
-        PULSARTOOLS_PRINTF("{}", val.AsString());
-    else PULSARTOOLS_PRINTF("{}", val);
+        PULSARTOOLS_PRINTF("{}\n", val.AsString());
+    else PULSARTOOLS_PRINTF("{}\n", val);
     return Pulsar::RuntimeState::OK;
 }
