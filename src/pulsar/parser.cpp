@@ -616,18 +616,32 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
     func.Code.EmplaceBack(jmpInstrCode, 0);
     
     auto res = ParseFunctionBody(module, func, locals, skippableBlock, settings);
-    if (res != ParseResult::OK) {
-        if (res != ParseResult::UnexpectedToken)
-            return res;
-        else if (curToken.Type == TokenType::KW_End) {
-            func.Code[ifIdx].Arg0 = func.Code.Size() - ifIdx;
+    func.Code[ifIdx].Arg0 = func.Code.Size() - ifIdx;
+    if (res == ParseResult::UnexpectedToken) {
+        switch (curToken.Type) {
+        case TokenType::KW_End:
+            ClearError();
             return ParseResult::OK;
-        } else if (curToken.Type != TokenType::KW_Else)
-            return SetError(ParseResult::UnexpectedToken, curToken, "'else' or 'end' expected.");
-    } else {
-        func.Code[ifIdx].Arg0 = func.Code.Size() - ifIdx;
-        return ParseResult::OK;
-    }
+        case TokenType::KW_Else:
+            ClearError();
+            break;
+        default:
+            return res;
+        }
+    } else if (res == ParseResult::OK) {
+        if (!isSelfContained)
+            return ParseResult::OK;
+        m_Lexer->NextToken();
+        switch (curToken.Type) {
+        case TokenType::KW_End:
+            return ParseResult::OK;
+        case TokenType::KW_Else:
+            break;
+        default:
+            return SetError(ParseResult::UnexpectedToken, curToken,
+                "Expected 'end' to close or 'else' to create a new branch of a self-contained if statement.");
+        }
+    } else return res;
 
     size_t elseIdx = func.Code.Size();
     PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
@@ -637,14 +651,16 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
 
     if (curToken.Type == TokenType::Colon) {
         res = ParseFunctionBody(module, func, locals, skippableBlock, settings);
-        if (res != ParseResult::OK) {
-            if (res != ParseResult::UnexpectedToken)
-                return res;
-            // m_Lexer is not swapped by ParseFunctionBody, so it's safe to still reference curToken
-            if (curToken.Type != TokenType::KW_End)
-                return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'end'.");
-        }
+        if (res == ParseResult::OK) {
+            if (isSelfContained) {
+                m_Lexer->NextToken();
+                if (curToken.Type != TokenType::KW_End)
+                    return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'end' to close else branch.");
+            }
+        } else if (res != ParseResult::UnexpectedToken || curToken.Type != TokenType::KW_End)
+            return res;
 
+        ClearError();
         func.Code[elseIdx].Arg0 = func.Code.Size() - elseIdx;
         return ParseResult::OK;
     } else if (curToken.Type == TokenType::KW_If) {
