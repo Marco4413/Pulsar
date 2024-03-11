@@ -750,8 +750,13 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
     }
     
     auto res = ParseFunctionBody(module, func, locals, &block, settings);
-    if (res != ParseResult::OK && (res != ParseResult::UnexpectedToken || curToken.Type != TokenType::KW_End))
+    if (res == ParseResult::OK) {
+        m_Lexer->NextToken();
+        if (curToken.Type != TokenType::KW_End)
+            return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'end' to close while loop body.");
+    } else if (res != ParseResult::UnexpectedToken || curToken.Type != TokenType::KW_End)
         return res;
+    ClearError();
     
     for (size_t i = 0; i < block.ContinueStatements.Size(); i++)
         func.Code[block.ContinueStatements[i]].Arg0 = (int64_t)(whileIdx-block.ContinueStatements[i]);
@@ -783,8 +788,13 @@ Pulsar::ParseResult Pulsar::Parser::ParseDoBlock(Module& module, FunctionDefinit
     };
 
     auto res = ParseFunctionBody(module, func, locals, &block, settings);
-    if (res != ParseResult::OK && (res != ParseResult::UnexpectedToken || curToken.Type != TokenType::KW_End))
+    if (res == ParseResult::OK) {
+        m_Lexer->NextToken();
+        if (curToken.Type != TokenType::KW_End)
+            return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'end' to close do block body.");
+    } else if (res != ParseResult::UnexpectedToken || curToken.Type != TokenType::KW_End)
         return res;
+    ClearError();
     
     for (size_t i = 0; i < block.ContinueStatements.Size(); i++)
         func.Code[block.ContinueStatements[i]].Arg0 = (int64_t)(doIdx-block.ContinueStatements[i]);
