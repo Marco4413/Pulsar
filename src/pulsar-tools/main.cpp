@@ -301,6 +301,7 @@ bool Command_Run(const char* executable, int argc, const char** argv)
         auto runtimeState = module.CallFunctionByName(entryPoint, stack, context);
         auto endTime = std::chrono::high_resolution_clock::now();
         auto execTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
+        PULSARTOOLS_PRINTF("\n"); // Add new line after script output
         PULSARTOOLS_INFOF("Execution took: {}us", execTime.count());
 
         if (runtimeState != Pulsar::RuntimeState::OK) {
