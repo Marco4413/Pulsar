@@ -315,6 +315,8 @@ This operator **moves** the local into the stack invalidating its value.
 Use it if you really want to improve the performance of your program, and
 are working with complex data types.
 
+This operator produces an `lvalue`, which means that it can be used in [`List` literals](#list-literals).
+
 ### The BothArrows Operator
 
 Another local-management operator is the `<->` operator. While `->` moves
