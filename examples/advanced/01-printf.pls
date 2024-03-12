@@ -184,16 +184,14 @@ global "" -> printf/buffer
   0  -> max-line-len
   (printf/save-ctx!)
     1  -> printf/print-to-buffer?
-    <- fmt do:
+    <- fmt <- args (printf) -> args
+    <- printf/buffer do:
       '\n' (printf/index-of) (!prefix)
-        <- args (printf) -> args
-      <- lines <- printf/buffer
         (!length) if > max-line-len:
           (!length) -> max-line-len
         end
-        (!append) -> lines
+        <- lines (!swap) (!append) -> lines
         lines-len 1 + -> lines-len
-      "" -> printf/buffer
       (!length) if 0: break
       1 (!prefix) (!pop) // Remove '\n'
       continue
