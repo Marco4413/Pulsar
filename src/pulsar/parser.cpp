@@ -395,6 +395,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
             func.Code.EmplaceBack(InstructionCode::BitXor);
             break;
+        case TokenType::LeftArrow:
         case TokenType::PushReference:
         case TokenType::OpenBracket:
         case TokenType::StringLiteral:
@@ -446,27 +447,6 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                     ? InstructionCode::CopyIntoLocal
                     : InstructionCode::PopIntoLocal,
                 localIdx);
-        } break;
-        case TokenType::LeftArrow: {
-            PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
-            m_Lexer->NextToken();
-            if (curToken.Type != TokenType::Identifier)
-                return SetError(ParseResult::UnexpectedToken, curToken, "Expected local name.");
-
-            int64_t localIdx = (int64_t)scopedLocals.Size()-1;
-            for (; localIdx >= 0 && scopedLocals[(size_t)localIdx] != curToken.StringVal; localIdx--);
-            if (localIdx < 0) {
-                int64_t globalIdx = (int64_t)module.Globals.Size()-1;
-                for (; globalIdx >= 0 && module.Globals[(size_t)globalIdx].Name != curToken.StringVal; globalIdx--);
-                if (globalIdx >= 0) {
-                    if (module.Globals[(size_t)globalIdx].IsConstant)
-                        return SetError(ParseResult::WritingToConstantGlobal, curToken, "Cannot move constant global.");
-                    func.Code.EmplaceBack(InstructionCode::MoveGlobal, globalIdx);
-                    break;
-                }
-                return SetError(ParseResult::UsageOfUndeclaredLocal, curToken, "Local not declared.");
-            }
-            func.Code.EmplaceBack(InstructionCode::MoveLocal, localIdx);
         } break;
         case TokenType::OpenParenth: {
             m_Lexer->NextToken();
@@ -894,6 +874,27 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
             func.Code.EmplaceBack(InstructionCode::PushFunctionReference, funcIdx);
         } else return SetError(ParseResult::UnexpectedToken, curToken, "Expected (function) or local to reference.");
     } break;
+    case TokenType::LeftArrow: {
+        PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, lvalue);
+        const Token& curToken = m_Lexer->NextToken();
+        if (curToken.Type != TokenType::Identifier)
+            return SetError(ParseResult::UnexpectedToken, curToken, "Expected local name.");
+
+        int64_t localIdx = (int64_t)locals.Size()-1;
+        for (; localIdx >= 0 && locals[(size_t)localIdx] != curToken.StringVal; localIdx--);
+        if (localIdx < 0) {
+            int64_t globalIdx = (int64_t)module.Globals.Size()-1;
+            for (; globalIdx >= 0 && module.Globals[(size_t)globalIdx].Name != curToken.StringVal; globalIdx--);
+            if (globalIdx >= 0) {
+                if (module.Globals[(size_t)globalIdx].IsConstant)
+                    return SetError(ParseResult::WritingToConstantGlobal, curToken, "Cannot move constant global.");
+                func.Code.EmplaceBack(InstructionCode::MoveGlobal, globalIdx);
+                break;
+            }
+            return SetError(ParseResult::UsageOfUndeclaredLocal, curToken, "Local not declared.");
+        }
+        func.Code.EmplaceBack(InstructionCode::MoveLocal, localIdx);
+    } break;
     case TokenType::OpenBracket: {
         /**
          * Given the following list:
@@ -924,6 +925,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
         func.Code.EmplaceBack(InstructionCode::PushEmptyList);
         while (true) {
             switch (curToken.Type) {
+            case TokenType::LeftArrow:
             case TokenType::PushReference:
             case TokenType::StringLiteral:
             case TokenType::Identifier:
@@ -960,6 +962,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
             }
 
             switch (curToken.Type) {
+            case TokenType::LeftArrow:
             case TokenType::PushReference:
             case TokenType::StringLiteral:
             case TokenType::Identifier:
