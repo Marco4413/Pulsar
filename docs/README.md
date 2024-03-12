@@ -607,7 +607,7 @@ global [const] -> name:
   .
 ```
 
-As seen in the [globals example](../examples/globals.pls), you can do
+As seen in the [globals example](../examples/intermediate/02-globals.pls), you can do
 performance-heavy tasks during parsing. That means increasing compile
 time to improve runtime efficiency!
 
@@ -698,7 +698,7 @@ if it's a `Native/FunctionReference` (raising an error otherwise)
 and calls the function pointed by the reference. Of course, the called
 function is called like a normal `(function)` call.
 
-See the [references example](../examples/references.pls).
+See the [references example](../examples/basic/05-references.pls).
 
 |        |            S-1             |    S0     |
 | :----- | :------------------------: | :-------: |
