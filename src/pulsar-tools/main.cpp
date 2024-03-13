@@ -162,8 +162,9 @@ bool Command_Check(const char* executable, int argc, const char** argv)
         PULSARTOOLS_INFOF("Parsing '{}'.", filepath);
         auto startTime = std::chrono::high_resolution_clock::now();
         Pulsar::Parser parser;
-        parser.AddSourceFile(filepath);
-        auto parseResult = parser.ParseIntoModule(module, parserSettings);
+        auto parseResult = parser.AddSourceFile(filepath);
+        if (parseResult == Pulsar::ParseResult::OK)
+            parseResult = parser.ParseIntoModule(module, parserSettings);
         auto endTime = std::chrono::high_resolution_clock::now();
         auto parseTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
         PULSARTOOLS_INFOF("Parsing took: {}us", parseTime.count());
@@ -171,7 +172,7 @@ bool Command_Check(const char* executable, int argc, const char** argv)
         if (parseResult != Pulsar::ParseResult::OK) {
             PULSARTOOLS_ERRORF("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
             PulsarTools::PrintPrettyError(
-                *parser.GetErrorSource(), *parser.GetErrorPath(),
+                parser.GetErrorSource(), parser.GetErrorPath(),
                 parser.GetErrorToken(), parser.GetErrorMessage());
             PULSARTOOLS_PRINTF("\n");
             return false;
@@ -265,8 +266,9 @@ bool Command_Run(const char* executable, int argc, const char** argv)
         PULSARTOOLS_INFOF("Parsing '{}'.", filepath);
         auto startTime = std::chrono::high_resolution_clock::now();
         Pulsar::Parser parser;
-        parser.AddSourceFile(filepath);
-        auto parseResult = parser.ParseIntoModule(module, parserSettings);
+        auto parseResult = parser.AddSourceFile(filepath);
+        if (parseResult == Pulsar::ParseResult::OK)
+            parseResult = parser.ParseIntoModule(module, parserSettings);
         auto endTime = std::chrono::high_resolution_clock::now();
         auto parseTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
         PULSARTOOLS_INFOF("Parsing took: {}us", parseTime.count());
@@ -274,7 +276,7 @@ bool Command_Run(const char* executable, int argc, const char** argv)
         if (parseResult != Pulsar::ParseResult::OK) {
             PULSARTOOLS_ERRORF("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
             PulsarTools::PrintPrettyError(
-                *parser.GetErrorSource(), *parser.GetErrorPath(),
+                parser.GetErrorSource(), parser.GetErrorPath(),
                 parser.GetErrorToken(), parser.GetErrorMessage());
             PULSARTOOLS_PRINTF("\n");
             return false;

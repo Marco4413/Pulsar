@@ -15,7 +15,7 @@ namespace PulsarTools
 
     size_t PrintTokenView(const Pulsar::String& source, const Pulsar::Token& token, TokenViewRange viewRange = TokenViewRange_Default);
     void PrintPrettyError(
-        const Pulsar::String& source, const Pulsar::String& filepath,
+        const Pulsar::String* source, const Pulsar::String* filepath,
         const Pulsar::Token& token, const Pulsar::String& message,
         TokenViewRange viewRange = TokenViewRange_Default);
     void PrintPrettyRuntimeError(const Pulsar::ExecutionContext& context, TokenViewRange viewRange = TokenViewRange_Default);

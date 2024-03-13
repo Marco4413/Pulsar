@@ -30,15 +30,23 @@ size_t PulsarTools::PrintTokenView(const Pulsar::String& source, const Pulsar::T
 }
 
 void PulsarTools::PrintPrettyError(
-    const Pulsar::String& source, const Pulsar::String& filepath,
+    const Pulsar::String* source, const Pulsar::String* filepath,
     const Pulsar::Token& token, const Pulsar::String& message,
     TokenViewRange viewRange)
 {
-    PULSARTOOLS_PRINTF("{}:{}:{}: Error: {}\n", filepath, token.SourcePos.Line+1, token.SourcePos.Char+1, message);
-    size_t trimmedFromStart = PrintTokenView(source, token, viewRange);
-    size_t charsToToken = token.SourcePos.Char-trimmedFromStart + (trimmedFromStart > 0 ? 4 : 0);
-    if (token.SourcePos.CharSpan > 0)
-        PULSARTOOLS_PRINTF(fmt::fg(fmt::color::red), "\n{0: ^{1}}^{0:~^{2}}", "", charsToToken, token.SourcePos.CharSpan-1);
+    if (filepath) {
+        PULSARTOOLS_PRINTF("{}:{}:{}: Error: {}\n", *filepath, token.SourcePos.Line+1, token.SourcePos.Char+1, message);
+    } else {
+        PULSARTOOLS_PRINTF("Error: {}\n", token.SourcePos.Line+1, token.SourcePos.Char+1, message);
+    }
+    if (source) {
+        size_t trimmedFromStart = PrintTokenView(*source, token, viewRange);
+        size_t charsToToken = token.SourcePos.Char-trimmedFromStart + (trimmedFromStart > 0 ? 4 : 0);
+        if (token.SourcePos.CharSpan > 0)
+            PULSARTOOLS_PRINTF(fmt::fg(fmt::color::red), "\n{0: ^{1}}^{0:~^{2}}", "", charsToToken, token.SourcePos.CharSpan-1);
+    } else {
+        PULSARTOOLS_PRINTF("No source to show.\n", token.SourcePos.Line+1, token.SourcePos.Char+1, message);
+    }
 }
 
 void PulsarTools::PrintPrettyRuntimeError(const Pulsar::ExecutionContext& context, TokenViewRange viewRange)
@@ -58,7 +66,7 @@ void PulsarTools::PrintPrettyRuntimeError(const Pulsar::ExecutionContext& contex
     } else if (!frame.Function->HasCodeDebugSymbols()) {
         const auto& srcSymbol = context.OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
         PrintPrettyError(
-            srcSymbol.Source, srcSymbol.Path,
+            &srcSymbol.Source, &srcSymbol.Path,
             frame.Function->DebugSymbol.Token,
             "Within function " + frame.Function->Name,
             viewRange);
@@ -77,13 +85,13 @@ void PulsarTools::PrintPrettyRuntimeError(const Pulsar::ExecutionContext& contex
     const auto& srcSymbol = context.OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
     if (symbolIdx > 0) {
         PrintPrettyError(
-            srcSymbol.Source, srcSymbol.Path,
+            &srcSymbol.Source, &srcSymbol.Path,
             frame.Function->CodeDebugSymbols[symbolIdx].Token,
             "In function " + frame.Function->Name,
             viewRange);
     } else {
         PrintPrettyError(
-            srcSymbol.Source, srcSymbol.Path,
+            &srcSymbol.Source, &srcSymbol.Path,
             frame.Function->DebugSymbol.Token,
             "In function call " + frame.Function->Name,
             viewRange);
