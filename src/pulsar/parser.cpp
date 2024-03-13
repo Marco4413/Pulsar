@@ -184,9 +184,10 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, const 
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected name for global.");
     Token identToken = curToken;
 
-    for (size_t i = 0; i < module.Globals.Size(); i++) {
-        if (module.Globals[i].Name == identToken.StringVal) {
-            if (module.Globals[i].IsConstant)
+    int64_t globalIdx = (int64_t)module.Globals.Size()-1;
+    for (; globalIdx >= 0; globalIdx--) {
+        if (module.Globals[(size_t)globalIdx].Name == identToken.StringVal) {
+            if (module.Globals[(size_t)globalIdx].IsConstant)
                 return SetError(ParseResult::WritingToConstantGlobal, identToken, "Trying to reassign constant global.");
             else if (isConstant)
                 return SetError(ParseResult::UnexpectedToken, constToken, "Redeclaring global as const.");
@@ -233,14 +234,21 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, const 
             dummyFunc.CodeDebugSymbols[symbolIdx].Token,
             std::move(errorMsg));
     }
-    
-    GlobalDefinition& globalDef = module.Globals.EmplaceBack(std::move(identToken.StringVal), std::move(stack.Back()), isConstant);
+
+    GlobalDefinition* globalDef = nullptr;
+    if (globalIdx < 0) // New Global
+        globalDef = &module.Globals.EmplaceBack(std::move(identToken.StringVal), std::move(stack.Back()), isConstant);
+    else { // Redefinition of Global
+        globalDef = &module.Globals[(size_t)globalIdx];
+        globalDef->InitialValue = std::move(stack.Back());
+    }
+
     if (settings.StoreDebugSymbols) {
         const auto& lexSource = m_LexerPool.Back();
         size_t srcIdx = 0;
         for (; srcIdx < module.SourceDebugSymbols.Size() && module.SourceDebugSymbols[srcIdx].Path != lexSource.Path; srcIdx++);
-        globalDef.DebugSymbol.Token = identToken;
-        globalDef.DebugSymbol.SourceIdx = srcIdx;
+        globalDef->DebugSymbol.Token = identToken;
+        globalDef->DebugSymbol.SourceIdx = srcIdx;
     }
 
     return ParseResult::OK;
