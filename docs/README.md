@@ -454,8 +454,13 @@ can be taken and added to the caller's stack.
 
 As always, return count (and arrow) can be omitted to imply 0.
 
-**Duplicate names are treated like normal [functions](#functions).
-As with those, the feature may be deprecated. So avoid using it.**
+**Native function can't be redefined with a different signature\*.**
+
+\* You can't have two native functions with the same name and different
+argument and return counts.
+
+But you can redefine one if you provide the same signature. Which is
+useful when you don't know whether an included file defined it or not.
 
 ## If Statement
 
