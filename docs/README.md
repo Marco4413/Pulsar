@@ -414,12 +414,20 @@ And of course when called, N values must be on the caller's stack.
 
 Return count (and arrow) can be omitted and 0 is implied.
 
+**Functions with the same name may exist. See below to understand
+what function will be called.**
+
+**NOTE: I don't know how to feel about this feature. I may either
+add Parser warnings or remove it entirely in the future.**
+
 ### Function Calls
 
 Functions are called by `(function)`.
 
 > It's like function definitions but without the `*` in front of
 it and the arguments within the parentheses.
+
+**If two functions have the same name, the most-recent one is used.**
 
 ### Function Naming
 
@@ -445,6 +453,9 @@ Signatures must match so that the right amount of arguments
 can be taken and added to the caller's stack.
 
 As always, return count (and arrow) can be omitted to imply 0.
+
+**Duplicate names are treated like normal [functions](#functions).
+As with those, the feature may be deprecated. So avoid using it.**
 
 ## If Statement
 
@@ -591,6 +602,12 @@ global my-global -> my-global2
 Global variables are defined as follows:
 
 `global [const] [lvalue] -> name`
+
+**Redefinition of const globals is not allowed.**
+
+**Redefinition of non-const globals will change the previous value.**
+
+The last definition of a global dictates its runtime value.
 
 They're treated like locals within functions, so you can copy,
 move or set them like you would normally do with locals. However,
