@@ -1,7 +1,5 @@
 #include "pulsar/lexer.h"
 
-#include <cctype>
-
 Pulsar::String Pulsar::ToStringLiteral(const String& str)
 {
     String lit(1, '"');
