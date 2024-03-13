@@ -190,6 +190,8 @@ namespace Pulsar
             }
         }
 
+        void Clear() { m_Buckets.Clear(); }
+
         size_t Count() const
         {
             size_t count = 0;
