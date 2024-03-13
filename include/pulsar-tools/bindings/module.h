@@ -1,11 +1,10 @@
 #ifndef _PULSARTOOLS_BINDINGS_MODULE_H
 #define _PULSARTOOLS_BINDINGS_MODULE_H
 
-#include <unordered_map>
-
 #include "pulsar-tools/core.h"
 
 #include "pulsar/runtime.h"
+#include "pulsar/structures/hashmap.h"
 
 namespace PulsarTools
 {
@@ -24,7 +23,7 @@ namespace PulsarTools
 
     private:
         int64_t m_NextHandle = 1;
-        std::unordered_map<int64_t, Pulsar::Module> m_Modules;
+        Pulsar::HashMap<int64_t, Pulsar::Module> m_Modules;
     };
 }
 

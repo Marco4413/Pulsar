@@ -8,12 +8,11 @@
 
 #include "pulsar/runtime.h"
 #include "pulsar/parser.h"
+#include "pulsar/structures/hashmap.h"
+#include "pulsar/structures/string.h"
 
 #include <chrono>
 #include <filesystem>
-#include <string>
-#include <vector>
-#include <unordered_map>
 
 inline const char* ShiftArgs(int& argc, const char**& argv)
 {
@@ -50,9 +49,15 @@ constexpr uint32_t R_BIND_ALL    =
     | R_BIND_MODULE
     | R_BIND_PRINT;
 
-#define PULSARTOOLS_FLAG_OPTIONS(optName, ...)                                                  \
-    const std::vector<std::pair<Pulsar::String, FlagOption>> optName##_Ordered { __VA_ARGS__ }; \
-    const std::unordered_map<Pulsar::String, FlagOption> optName { __VA_ARGS__ };
+struct NamedFlagOption
+{
+    Pulsar::String Name;
+    FlagOption Option;
+};
+
+#define PULSARTOOLS_FLAG_OPTIONS(optName, ...)                                 \
+    const Pulsar::List<NamedFlagOption> optName##_Ordered { __VA_ARGS__ };     \
+    const Pulsar::HashMap<Pulsar::String, FlagOption> optName { __VA_ARGS__ };
 
 #define PULSARTOOLS_FLAG_OPTION_LONG(cLong, cShort, sLong, flag, desc) \
     { cShort "/"    sLong, { (flag) } },                               \
@@ -81,12 +86,13 @@ PULSARTOOLS_FLAG_OPTIONS(RuntimeOptions,
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-all",    "b-all",    R_BIND_ALL,    "Bind all available natives."),
 )
 
-void PrintFlagOptions(const std::vector<std::pair<Pulsar::String, FlagOption>>& opts)
+void PrintFlagOptions(const Pulsar::List<NamedFlagOption>& opts)
 {
-    for (const auto& kv : opts) {
-        PULSARTOOLS_INFOF("    {}", kv.first);
-        if (kv.second.Description) {
-            PULSARTOOLS_INFOF("        {}", kv.second.Description);
+    for (size_t i = 0; i < opts.Size(); i++) {
+        const NamedFlagOption& namedOption = opts[i];
+        PULSARTOOLS_INFOF("    {}", namedOption.Name);
+        if (namedOption.Option.Description) {
+            PULSARTOOLS_INFOF("        {}", namedOption.Option.Description);
             PULSARTOOLS_INFO("");
         }
     }
@@ -116,10 +122,10 @@ bool Command_Check(const char* executable, int argc, const char** argv)
             break;
 
         const FlagOption* opt = nullptr;
-        const auto& parseOptIt = ParserOptions.find(filepath);
+        auto nameOptPair = ParserOptions.Find(filepath);
         
-        if (parseOptIt != ParserOptions.end()) {
-            opt = &parseOptIt->second;
+        if (nameOptPair) {
+            opt = nameOptPair.Value;
         } else {
             PrintCheckCommandUsage(executable);
             PULSARTOOLS_ERRORF("{} check: Invalid option '{}'.", executable, filepath);
@@ -207,13 +213,13 @@ bool Command_Run(const char* executable, int argc, const char** argv)
             break;
 
         const FlagOption* opt = nullptr;
-        const auto& parseOptIt = ParserOptions.find(filepath);
-        const auto& runOptIt = RuntimeOptions.find(filepath);
+        auto parseNameOptPair = ParserOptions.Find(filepath);
+        auto runNameOptPair = RuntimeOptions.Find(filepath);
         
-        if (parseOptIt != ParserOptions.end()) {
-            opt = &parseOptIt->second;
-        } else if (runOptIt != RuntimeOptions.end()) {
-            opt = &runOptIt->second;
+        if (parseNameOptPair) {
+            opt = parseNameOptPair.Value;
+        } else if (runNameOptPair) {
+            opt = runNameOptPair.Value;
         } else if (filepath == "-r/entry" || filepath == "--runtime/entry") {
             if (argc <= 0) {
                 PrintRunCommandUsage(executable);
@@ -346,7 +352,7 @@ int main(int argc, const char** argv)
         return 1;
     }
 
-    std::string command = ShiftArgs(argc, argv);
+    Pulsar::String command = ShiftArgs(argc, argv);
     if (command == "check") {
         if (!Command_Check(executable, argc, argv))
             return 1;

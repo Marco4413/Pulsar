@@ -1,12 +1,11 @@
 #ifndef _PULSARTOOLS_BINDINGS_LEXER_H
 #define _PULSARTOOLS_BINDINGS_LEXER_H
 
-#include <unordered_map>
-
 #include "pulsar-tools/core.h"
 
 #include "pulsar/lexer.h"
 #include "pulsar/runtime.h"
+#include "pulsar/structures/hashmap.h"
 
 namespace PulsarTools
 {
@@ -25,7 +24,7 @@ namespace PulsarTools
 
     private:
         int64_t m_NextHandle = 1;
-        std::unordered_map<int64_t, Pulsar::Lexer> m_Lexers;
+        Pulsar::HashMap<int64_t, Pulsar::Lexer> m_Lexers;
     };
 }
 

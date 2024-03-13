@@ -1,8 +1,6 @@
 #ifndef _PULSARTOOLS_BINDINGS_PRINT_H
 #define _PULSARTOOLS_BINDINGS_PRINT_H
 
-#include <unordered_map>
-
 #include "pulsar-tools/core.h"
 
 #include "pulsar/runtime.h"

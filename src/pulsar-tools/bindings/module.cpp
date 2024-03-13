@@ -41,7 +41,7 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_FromFile(Pulsar::
     int64_t handle = m_NextHandle++;
     frame.Stack.EmplaceBack()
         .SetCustom({ .Type=type, .Handle=handle });
-    m_Modules[handle] = std::move(module);
+    m_Modules.Emplace(handle, std::move(module));
     return Pulsar::RuntimeState::OK;
 }
 
@@ -53,7 +53,11 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_Run(Pulsar::Execu
         || moduleHandle.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
 
-    const Pulsar::Module& module = (*m_Modules.find(moduleHandle.AsCustom().Handle)).second;
+    auto handleModulePair = m_Modules.Find(moduleHandle.AsCustom().Handle);
+    if (!handleModulePair)
+        return Pulsar::RuntimeState::Error;
+
+    const Pulsar::Module& module = *handleModulePair.Value;
     Pulsar::ValueStack stack;
     Pulsar::ExecutionContext context = module.CreateExecutionContext();
     auto runtimeState = module.CallFunctionByName("main", stack, context);
@@ -77,7 +81,7 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_Free(Pulsar::Exec
         || moduleHandle.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
 
-    m_Modules.erase(moduleHandle.AsCustom().Handle);
+    m_Modules.Remove(moduleHandle.AsCustom().Handle);
     return Pulsar::RuntimeState::OK;
 }
 
