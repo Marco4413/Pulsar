@@ -70,6 +70,11 @@ namespace Pulsar
     public:
         typedef HashMap<K, V> SelfType;
         typedef HashMapBucket<K, V> BucketType;
+        struct Pair
+        {
+            K Key;
+            V Value;
+        };
         struct PairRef
         {
             const K* Key = nullptr;
@@ -84,6 +89,13 @@ namespace Pulsar
         };
 
         HashMap() { m_Buckets.Resize(1); }
+        HashMap(std::initializer_list<Pair> init)
+            : HashMap()
+        {
+            for (auto it = init.begin(); it != init.end(); it++)
+                Insert(it->Key, it->Value);
+        }
+
         ~HashMap() = default;
 
         void Reserve(size_t newCapacity)
