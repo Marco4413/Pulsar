@@ -5,11 +5,13 @@
 
 #include "pulsar/lexer.h"
 #include "pulsar/runtime.h"
+#include "pulsar/structures/hashmap.h"
 #include "pulsar/structures/list.h"
 
 namespace Pulsar
 {
     struct InstructionDescription { InstructionCode Code; bool MayFail = true; };
+    // TODO: Replace with Pulsar::HashMap
     static const std::unordered_map<String, InstructionDescription> InstructionMappings {
         { "pop",        { InstructionCode::Pop                  } },
         { "swap",       { InstructionCode::Swap                 } },
@@ -38,6 +40,22 @@ namespace Pulsar
         // Used for back-patching jump addresses.
         List<size_t> BreakStatements = List<size_t>();
         List<size_t> ContinueStatements = List<size_t>();
+    };
+
+    struct GlobalScope
+    {
+        // Path -> Idx map
+        HashMap<String, size_t> SourceDebugSymbols;
+        // Name -> Idx maps
+        HashMap<String, size_t> Functions;
+        HashMap<String, size_t> NativeFunctions;
+        HashMap<String, size_t> Globals;
+    };
+
+    struct LocalScope
+    {
+        const GlobalScope& Global;
+        List<String> Locals = List<String>();
     };
 
     enum class ParseResult
@@ -81,7 +99,6 @@ namespace Pulsar
     class Parser
     {
     public:
-        typedef List<String> LocalsBindings;
         Parser() { }
 
         bool AddSource(const String& path, const String& src);
@@ -99,14 +116,14 @@ namespace Pulsar
         ParseResult SetError(ParseResult errorType, const Token& token, const String& errorMsg);
         void ClearError();
     private:
-        ParseResult ParseModuleStatement(Module& module, const ParseSettings& settings);
-        ParseResult ParseGlobalDefinition(Module& module, const ParseSettings& settings);
-        ParseResult ParseFunctionDefinition(Module& module, const ParseSettings& settings);
-        ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalsBindings& locals, SkippableBlock* skippableBlock, const ParseSettings& settings);
-        ParseResult ParseIfStatement(Module& module, FunctionDefinition& func, const LocalsBindings& locals, SkippableBlock* skippableBlock, bool isChained, const ParseSettings& settings);
-        ParseResult ParseWhileLoop(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings);
-        ParseResult ParseDoBlock(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const ParseSettings& settings);
-        ParseResult PushLValue(Module& module, FunctionDefinition& func, const LocalsBindings& locals, const Token& lvalue, const ParseSettings& settings);
+        ParseResult ParseModuleStatement(Module& module, GlobalScope& globalScope, const ParseSettings& settings);
+        ParseResult ParseGlobalDefinition(Module& module, GlobalScope& globalScope, const ParseSettings& settings);
+        ParseResult ParseFunctionDefinition(Module& module, GlobalScope& globalScope, const ParseSettings& settings);
+        ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalScope& localScope, SkippableBlock* skippableBlock, const ParseSettings& settings);
+        ParseResult ParseIfStatement(Module& module, FunctionDefinition& func, const LocalScope& localScope, SkippableBlock* skippableBlock, bool isChained, const ParseSettings& settings);
+        ParseResult ParseWhileLoop(Module& module, FunctionDefinition& func, const LocalScope& localScope, const ParseSettings& settings);
+        ParseResult ParseDoBlock(Module& module, FunctionDefinition& func, const LocalScope& localScope, const ParseSettings& settings);
+        ParseResult PushLValue(Module& module, FunctionDefinition& func, const LocalScope& localScope, const Token& lvalue, const ParseSettings& settings);
     private:
         struct LexerSource
         {
