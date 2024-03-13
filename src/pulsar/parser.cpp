@@ -323,7 +323,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
             size_t nativeIdx = (int64_t)*nameIdxPair.Value;
             FunctionDefinition& nativeFunc = module.NativeBindings[nativeIdx];
             if (!nativeFunc.MatchesDeclaration(def))
-                return SetError(ParseResult::Error, identToken, "Redeclaration of Native Function with different signature.");
+                return SetError(ParseResult::NativeFunctionRedeclaration, identToken, "Redeclaration of Native Function with different signature.");
             nativeFunc.DebugSymbol = def.DebugSymbol;
         }
     } else {
@@ -602,7 +602,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
     }
 
     if (isChained && !isSelfContained)
-        return SetError(ParseResult::Error, ifToken, "Chained if statement must have a self-contained condition.");
+        return SetError(ParseResult::UnsafeChainedIfStatement, ifToken, "Chained if statement must have a self-contained condition.");
 
     if (curToken.Type != TokenType::Colon)
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected ':' to begin if statement body.");
@@ -1032,6 +1032,10 @@ const char* Pulsar::ParseResultToString(ParseResult presult)
         return "GlobalEvaluationError";
     case ParseResult::IllegalDirective:
         return "IllegalDirective";
+    case ParseResult::NativeFunctionRedeclaration:
+        return "NativeFunctionRedeclaration";
+    case ParseResult::UnsafeChainedIfStatement:
+        return "UnsafeChainedIfStatement";
     }
     return "Unknown";
 }

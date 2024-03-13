@@ -71,7 +71,9 @@ namespace Pulsar
         UsageOfUndeclaredNativeFunction,
         WritingToConstantGlobal,
         GlobalEvaluationError,
-        IllegalDirective
+        IllegalDirective,
+        NativeFunctionRedeclaration,
+        UnsafeChainedIfStatement,
     };
 
     const char* ParseResultToString(ParseResult presult);
