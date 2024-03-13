@@ -6,8 +6,6 @@
 #include <cstring>
 #include <functional>
 #include <memory>
-#include <unordered_map>
-#include <unordered_set>
 #include <initializer_list>
 
 #ifndef PULSAR_MALLOC

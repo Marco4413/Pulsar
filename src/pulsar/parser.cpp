@@ -29,7 +29,7 @@ void Pulsar::Parser::ClearError()
 void Pulsar::Parser::Reset()
 {
     ClearError();
-    m_ParsedSources.clear();
+    m_ParsedSources.Clear();
     m_LexerPool.Clear();
 }
 
@@ -37,9 +37,9 @@ bool Pulsar::Parser::AddSource(const String& path, const String& src)
 {
     ClearError();
     if (path.Length() > 0) {
-        if (m_ParsedSources.contains(path))
+        if (m_ParsedSources.Find(path))
             return false;
-        m_ParsedSources.emplace(path);
+        m_ParsedSources.Emplace(path);
     }
 
     m_LexerPool.EmplaceBack(path, src);
@@ -51,9 +51,9 @@ bool Pulsar::Parser::AddSource(const String& path, String&& src)
 {
     ClearError();
     if (path.Length() > 0) {
-        if (m_ParsedSources.contains(path))
+        if (m_ParsedSources.Find(path))
             return false;
-        m_ParsedSources.emplace(path);
+        m_ParsedSources.Emplace(path);
     }
 
     m_LexerPool.EmplaceBack(path, std::move(src));
@@ -490,10 +490,10 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                 return SetError(ParseResult::UnexpectedToken, curToken, "Expected ')' to close function call.");
             
             if (isInstruction) {
-                const auto instrDescIt = InstructionMappings.find(identToken.StringVal);
-                if (instrDescIt == InstructionMappings.end())
+                auto instrNameDescPair = InstructionMappings.Find(identToken.StringVal);
+                if (!instrNameDescPair)
                     return SetError(ParseResult::UsageOfUnknownInstruction, identToken, "Instruction does not exist.");
-                const InstructionDescription& instrDesc = (*instrDescIt).second;
+                const InstructionDescription& instrDesc = *instrNameDescPair.Value;
                 if (instrDesc.MayFail)
                     PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, identToken);
                 func.Code.EmplaceBack(instrDesc.Code, arg0);

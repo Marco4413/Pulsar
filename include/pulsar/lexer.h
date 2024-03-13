@@ -3,6 +3,7 @@
 
 #include "pulsar/core.h"
 
+#include "pulsar/structures/hashmap.h"
 #include "pulsar/structures/stringview.h"
 
 namespace Pulsar
@@ -41,7 +42,7 @@ namespace Pulsar
     constexpr int64_t TOKEN_CD_GENERIC = 0;
     constexpr int64_t TOKEN_CD_INCLUDE = 1;
 
-    static const std::unordered_map<String, TokenType> Keywords {
+    static const HashMap<String, TokenType> Keywords {
         { "if",       TokenType::KW_If       },
         { "else",     TokenType::KW_Else     },
         { "end",      TokenType::KW_End      },
@@ -53,7 +54,7 @@ namespace Pulsar
         { "continue", TokenType::KW_Continue },
     };
 
-    static const std::unordered_map<String, int64_t> CompilerDirectives {
+    static const HashMap<String, int64_t> CompilerDirectives {
         { "include", TOKEN_CD_INCLUDE },
     };
 

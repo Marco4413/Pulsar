@@ -87,10 +87,10 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
             default: {
                 Pulsar::Token token = ParseIdentifier();
                 if (token.Type != TokenType::None) {
-                    auto it = Keywords.find(token.StringVal);
-                    if (it == Keywords.end())
+                    auto kwNameTypePair = Keywords.Find(token.StringVal);
+                    if (!kwNameTypePair)
                         return token;
-                    token.Type = (*it).second;
+                    token.Type = *kwNameTypePair.Value;
                     return token;
                 }
             }
@@ -187,9 +187,9 @@ Pulsar::Token Pulsar::Lexer::ParseCompilerDirective()
     Token token = TrimToToken(count, TokenType::CompilerDirective, idView.GetPrefix(count-1));
     token.IntegerVal = TOKEN_CD_GENERIC;
 
-    const auto& it = CompilerDirectives.find(token.StringVal);
-    if (it != CompilerDirectives.end())
-        token.IntegerVal = (*it).second;
+    auto cdNameValPair = CompilerDirectives.Find(token.StringVal);
+    if (cdNameValPair)
+        token.IntegerVal = *cdNameValPair.Value;
     return token;
 }
 

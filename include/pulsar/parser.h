@@ -11,8 +11,7 @@
 namespace Pulsar
 {
     struct InstructionDescription { InstructionCode Code; bool MayFail = true; };
-    // TODO: Replace with Pulsar::HashMap
-    static const std::unordered_map<String, InstructionDescription> InstructionMappings {
+    static const HashMap<String, InstructionDescription> InstructionMappings {
         { "pop",        { InstructionCode::Pop                  } },
         { "swap",       { InstructionCode::Swap                 } },
         { "dup",        { InstructionCode::Dup                  } },
@@ -133,7 +132,7 @@ namespace Pulsar
             Pulsar::Lexer Lexer;
         };
 
-        std::unordered_set<String> m_ParsedSources;
+        HashMap<String, nullptr_t> m_ParsedSources;
         List<LexerSource> m_LexerPool;
 
         Lexer* m_Lexer = nullptr;
