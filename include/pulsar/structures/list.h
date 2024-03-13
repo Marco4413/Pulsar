@@ -13,6 +13,11 @@ namespace Pulsar
 
         List() = default;
         List(size_t initCapacity) { Reserve(initCapacity); }
+        List(std::initializer_list<T> init)
+        {
+            for (auto it = init.begin(); it != init.end(); it++)
+                PushBack(*it);
+        }
 
         ~List()
         {
