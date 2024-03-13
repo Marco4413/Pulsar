@@ -73,6 +73,7 @@ namespace Pulsar
         IllegalDirective,
         NativeFunctionRedeclaration,
         UnsafeChainedIfStatement,
+        FileSystemNotAvailable,
     };
 
     const char* ParseResultToString(ParseResult presult);

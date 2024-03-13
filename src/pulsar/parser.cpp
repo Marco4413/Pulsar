@@ -1,7 +1,9 @@
 #include "pulsar/parser.h"
 
+#ifndef PULSAR_NO_FILESYSTEM
 #include <filesystem>
 #include <fstream>
+#endif // PULSAR_NO_FILESYSTEM
 
 Pulsar::ParseResult Pulsar::Parser::SetError(ParseResult errorType, const Token& token, const String& errorMsg)
 {
@@ -63,6 +65,11 @@ bool Pulsar::Parser::AddSource(const String& path, String&& src)
 
 Pulsar::ParseResult Pulsar::Parser::AddSourceFile(const String& path)
 {
+#ifdef PULSAR_NO_FILESYSTEM
+    Token token(TokenType::None);
+    if (m_Lexer) token = m_Lexer->CurrentToken();
+    return SetError(ParseResult::FileSystemNotAvailable, token, "Could not read '" + path + "' because filesystem was disabled.");
+#else // PULSAR_NO_FILESYSTEM
     auto fsPath = std::filesystem::path(path.Data());
     std::error_code error;
     auto relativePath = std::filesystem::relative(fsPath, error);
@@ -89,6 +96,7 @@ Pulsar::ParseResult Pulsar::Parser::AddSourceFile(const String& path)
 
     AddSource(internalPath, std::move(source));
     return ParseResult::OK;
+#endif // PULSAR_NO_FILESYSTEM
 }
 
 Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, const ParseSettings& settings)
@@ -142,12 +150,16 @@ Pulsar::ParseResult Pulsar::Parser::ParseModuleStatement(Module& module, GlobalS
             if (res != ParseResult::OK)
                 return res;
         } else {
+#ifdef PULSAR_NO_FILESYSTEM
+            return SetError(ParseResult::FileSystemNotAvailable, curToken, "No custom include resolver provided.");
+#else // PULSAR_NO_FILESYSTEM
             std::filesystem::path targetPath(curToken.StringVal.Data());
             std::filesystem::path workingPath(m_LexerPool.Back().Path.Data());
             std::filesystem::path filePath = workingPath.parent_path() / targetPath;
             auto result = AddSourceFile(filePath.generic_string().data());
             if (result != ParseResult::OK)
                 return result;
+#endif // PULSAR_NO_FILESYSTEM
         }
         if (settings.StoreDebugSymbols) {
             globalScope.SourceDebugSymbols.Emplace(m_LexerPool.Back().Path, module.SourceDebugSymbols.Size());
@@ -1036,6 +1048,8 @@ const char* Pulsar::ParseResultToString(ParseResult presult)
         return "NativeFunctionRedeclaration";
     case ParseResult::UnsafeChainedIfStatement:
         return "UnsafeChainedIfStatement";
+    case ParseResult::FileSystemNotAvailable:
+        return "FileSystemNotAvailable";
     }
     return "Unknown";
 }
