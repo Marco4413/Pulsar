@@ -1,10 +1,11 @@
-*(gen_n->n+5 n) -> 5:
-  // This is highly inefficient.
-  n
-  n 1 + (!dup) -> n
-  n 1 + (!dup) -> n
-  n 1 + (!dup) -> n
-  n 1 +
-  .
+*(*stack-dump!).
 
-*(main args) -> 5: 1 (gen_n->n+5) .
+*(main args) -> 2:
+  0 -> n
+  1 if:
+    1 -> !n
+    n * (!stack 1)
+  end
+  n
+  // Stack [ 1, 0 ]
+  .
