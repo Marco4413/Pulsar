@@ -736,6 +736,26 @@ Calculates the length of a `List` or `String` and puts it into the stack.
 | Pops   | `List`/`String` |           |
 | Pushes | `List`/`String` | `Integer` |
 
+### empty?
+
+Checks if a `List` or `String` is empty and pushes the boolean value into the stack.
+
+Checking for empty on big lists is faster than checking for their length.
+
+```lisp
+<- my-list
+  (!empty?) if:
+    // Do stuff if empty
+  else:
+    // Do stuff if not empty
+  end
+```
+
+|        |       S0        |    S+1    |
+| :----- | :-------------: | :-------: |
+| Pops   | `List`/`String` |           |
+| Pushes | `List`/`String` | `Integer` |
+
 ### empty-list
 
 Pushes a new empty `List` into the stack.
