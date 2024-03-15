@@ -88,10 +88,10 @@ namespace Pulsar
         bool AppendNotesToErrorMessage      = true;
         bool AllowIncludeDirective          = true;
         /**
-         * @brief (parser, cwd, token) -> ParseResult
+         * @brief (parser, cwf, token) -> ParseResult
          * @param parser The Parser that called the function.
          *     Parser#AddSource or #AddSourceFile should be called to add the source.
-         * @param cwd The path to the current file.
+         * @param cwf The path to the current file.
          * @param token The StringLiteral Token containing the path to the file to include.
          */
         std::function<ParseResult(Parser&, Pulsar::String, Token)> IncludeResolver = nullptr;
