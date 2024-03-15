@@ -1,6 +1,8 @@
 #ifndef _PULSARTOOLS_BINDINGS_LEXER_H
 #define _PULSARTOOLS_BINDINGS_LEXER_H
 
+#include <mutex>
+
 #include "pulsar-tools/core.h"
 
 #include "pulsar/lexer.h"
@@ -23,6 +25,7 @@ namespace PulsarTools
         Pulsar::RuntimeState Lexer_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
 
     private:
+        std::mutex m_Mutex;
         int64_t m_NextHandle = 1;
         Pulsar::HashMap<int64_t, Pulsar::Lexer> m_Lexers;
     };
