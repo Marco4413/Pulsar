@@ -555,6 +555,18 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             frame.Stack.EmplaceBack(std::move(len));
         } else return RuntimeState::TypeError;
     } break;
+    case InstructionCode::IsEmpty: {
+        if (frame.Stack.Size() < 1)
+            return RuntimeState::StackUnderflow;
+        const Value& list = frame.Stack.Back();
+        Value isEmpty;
+        if (list.Type() == ValueType::List) {
+            isEmpty.SetInteger(list.AsList().Front() ? 0 : 1);
+        } else if (list.Type() == ValueType::String) {
+            isEmpty.SetInteger(list.AsString().Length() == 0 ? 1 : 0);
+        } else return RuntimeState::TypeError;
+        frame.Stack.EmplaceBack(std::move(isEmpty));
+    } break;
     case InstructionCode::PushEmptyList:
         frame.Stack.EmplaceBack().SetList(ValueList());
         break;

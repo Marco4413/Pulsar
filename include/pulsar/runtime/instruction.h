@@ -34,7 +34,7 @@ namespace Pulsar
         JumpIfLessThanZero,
         JumpIfLessThanOrEqualToZero,
         // Lists and Strings
-        Length,
+        Length, IsEmpty,
         PushEmptyList,
         Prepend, Append, Concat,
         Head, Tail,
