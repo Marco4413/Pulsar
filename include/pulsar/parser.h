@@ -20,6 +20,7 @@ namespace Pulsar
         { "compare",    { InstructionCode::Compare              } },
         { "icall",      { InstructionCode::ICall                } },
         { "length",     { InstructionCode::Length               } },
+        { "empty?",     { InstructionCode::IsEmpty              } },
         { "empty-list", { InstructionCode::PushEmptyList, false } },
         { "prepend",    { InstructionCode::Prepend              } },
         { "append",     { InstructionCode::Append               } },
