@@ -32,6 +32,9 @@ project "pulsar-tools"
    filter "toolset:msc"
       buildoptions { "/W4", "/WX" }
 
+   filter "system:linux"
+      links "pthread"
+
    filter "configurations:Debug"
       defines "PULSAR_DEBUG"
       symbols "On"

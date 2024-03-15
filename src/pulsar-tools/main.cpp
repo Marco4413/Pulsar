@@ -5,6 +5,7 @@
 #include "pulsar-tools/bindings/lexer.h"
 #include "pulsar-tools/bindings/module.h"
 #include "pulsar-tools/bindings/print.h"
+#include "pulsar-tools/bindings/thread.h"
 
 #include "pulsar/runtime.h"
 #include "pulsar/parser.h"
@@ -39,15 +40,17 @@ constexpr uint32_t P_DEFAULT       =
     | P_ERROR_NOTES
     | P_ALLOW_INCLUDE;
 
-constexpr uint32_t R_BIND_DEBUG  = 1 << 16;
-constexpr uint32_t R_BIND_LEXER  = 2 << 16;
-constexpr uint32_t R_BIND_MODULE = 4 << 16;
-constexpr uint32_t R_BIND_PRINT  = 8 << 16;
+constexpr uint32_t R_BIND_DEBUG  =  1 << 16;
+constexpr uint32_t R_BIND_LEXER  =  2 << 16;
+constexpr uint32_t R_BIND_MODULE =  4 << 16;
+constexpr uint32_t R_BIND_PRINT  =  8 << 16;
+constexpr uint32_t R_BIND_THREAD = 16 << 16;
 constexpr uint32_t R_BIND_ALL    =
       R_BIND_DEBUG
     | R_BIND_LEXER
     | R_BIND_MODULE
-    | R_BIND_PRINT;
+    | R_BIND_PRINT
+    | R_BIND_THREAD;
 
 struct NamedFlagOption
 {
@@ -80,9 +83,10 @@ PULSARTOOLS_FLAG_OPTIONS(ParserOptions,
 
 PULSARTOOLS_FLAG_OPTIONS(RuntimeOptions,
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-debug",  "b-debug",  R_BIND_DEBUG,  "Bind Debug natives."),
-    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-lexer",  "b-lexer",  R_BIND_LEXER,  "Bind Lexer natives."),
-    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-module", "b-module", R_BIND_MODULE, "Bind Module natives."),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-lexer",  "b-lexer",  R_BIND_LEXER,  "Bind Lexer natives. (handles are not thread-safe)"),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-module", "b-module", R_BIND_MODULE, "Bind Module natives. (handles are not thread-safe)"),
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-print",  "b-print",  R_BIND_PRINT,  "Bind Print natives."),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-thread", "b-thread", R_BIND_THREAD,  "Bind Thread natives."),
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-all",    "b-all",    R_BIND_ALL,    "Bind all available natives."),
 )
 
@@ -287,12 +291,15 @@ bool Command_Run(const char* executable, int argc, const char** argv)
     PulsarTools::LexerNativeBindings lexerBindings;
     PulsarTools::ModuleNativeBindings moduleBindings;
     PulsarTools::PrintNativeBindings printBindings;
+    PulsarTools::ThreadNativeBindings threadBindings;
     if (flagOptions & R_BIND_LEXER)
         lexerBindings.BindToModule(module);
     if (flagOptions & R_BIND_MODULE)
         moduleBindings.BindToModule(module);
     if (flagOptions & R_BIND_PRINT)
         printBindings.BindToModule(module);
+    if (flagOptions & R_BIND_THREAD)
+        threadBindings.BindToModule(module);
 
     { // Run Module
         PULSARTOOLS_INFOF("Running '{}'.", filepath);
