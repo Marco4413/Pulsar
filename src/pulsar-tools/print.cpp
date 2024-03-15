@@ -37,7 +37,7 @@ void PulsarTools::PrintPrettyError(
     if (filepath) {
         PULSARTOOLS_PRINTF("{}:{}:{}: Error: {}\n", *filepath, token.SourcePos.Line+1, token.SourcePos.Char+1, message);
     } else {
-        PULSARTOOLS_PRINTF("Error: {}\n", token.SourcePos.Line+1, token.SourcePos.Char+1, message);
+        PULSARTOOLS_PRINTF("Error: {}\n", message);
     }
     if (source) {
         size_t trimmedFromStart = PrintTokenView(*source, token, viewRange);
