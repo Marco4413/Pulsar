@@ -143,6 +143,8 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
                     return TrimToToken(2, TokenType::LessOrEqual);
                 else if (m_SourceView[1] == '&')
                     return TrimToToken(2, TokenType::PushReference);
+                else if (m_SourceView[1] == '<')
+                    return TrimToToken(2, TokenType::BitShiftLeft);
                 else if (m_SourceView[1] == '-') {
                     if (m_SourceView.Length() > 2
                         && m_SourceView[2] == '>')
@@ -152,8 +154,12 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
             }
             return TrimToToken(1, TokenType::Less);
         case '>':
-            if (m_SourceView.Length() > 1 && m_SourceView[1] == '=')
-                return TrimToToken(2, TokenType::MoreOrEqual);
+            if (m_SourceView.Length() > 1) {
+                if (m_SourceView[1] == '=')
+                    return TrimToToken(2, TokenType::MoreOrEqual);
+                else if (m_SourceView[1] == '>')
+                    return TrimToToken(2, TokenType::BitShiftRight);
+            }
             return TrimToToken(1, TokenType::More);
         default:
             return TrimToToken(1, TokenType::None);
@@ -508,6 +514,10 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
         return "BitNot";
     case TokenType::BitXor:
         return "BitXor";
+    case TokenType::BitShiftLeft:
+        return "BitShiftLeft";
+    case TokenType::BitShiftRight:
+        return "BitShiftRight";
     case TokenType::FullStop:
         return "FullStop";
     case TokenType::Negate:
