@@ -235,13 +235,17 @@ last one to be performed!
 
 The following ones only operate on `Integer`s:
 
-| Symbol |   Name  | Args | Returns |
-| :----: | :-----: | :--: | :-----: |
-|   %    | Modulus |  2   |    1    |
-|   &    | BitAnd  |  2   |    1    |
-|  \|    |  BitOr  |  2   |    1    |
-|   ~    | BitNot  |  2   |    1    |
-|   ^    | BitXor  |  2   |    1    |
+| Symbol |      Name     | Args | Returns |
+| :----: | :-----------: | :--: | :-----: |
+|   %    |    Modulus    |  2   |    1    |
+|   &    |    BitAnd     |  2   |    1    |
+|  \|    |     BitOr     |  2   |    1    |
+|   ~    |    BitNot     |  2   |    1    |
+|   ^    |    BitXor     |  2   |    1    |
+|   <<   | BitShiftLeft  |  2   |    1    |
+|   >>   | BitShiftRight |  2   |    1    |
+
+Bit Shifts are logical shifts. Negative shifts swap the direction.
 
 ## Comparison Operators
 
