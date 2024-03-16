@@ -81,7 +81,7 @@ size_t Pulsar::Module::DeclareAndBindNativeFunction(FunctionDefinition def, Nati
     return NativeBindings.Size()-1;
 }
 
-size_t Pulsar::Module::BindCustomType(const String& name, CustomType::DataFactory_T dataFactory)
+uint64_t Pulsar::Module::BindCustomType(const String& name, CustomType::DataFactory_T dataFactory)
 {
     uint64_t typeId = (uint64_t)CustomTypes.Size();
     CustomTypes.EmplaceBack(name, dataFactory);
