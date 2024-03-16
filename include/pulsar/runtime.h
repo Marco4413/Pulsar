@@ -56,12 +56,40 @@ namespace Pulsar
         const Frame& CurrentFrame() const { return (*this).Back(); }
     };
 
+    // Extend this class to store your custom type's data
+    class CustomTypeData
+    {
+    public:
+        typedef std::shared_ptr<Pulsar::CustomTypeData> Ptr_T;
+        virtual ~CustomTypeData() = default;
+    };
+
+    struct CustomType
+    {
+        typedef std::function<CustomTypeData::Ptr_T()> DataFactory_T;
+        String Name;
+        // Method that generates a new instance of a derived class from CustomTypeData
+        DataFactory_T DataFactory = nullptr;
+    };
+
     struct Module; // Forward Declaration
     struct ExecutionContext
     {
         const Module* OwnerModule;
         Pulsar::CallStack CallStack;
         List<GlobalInstance> Globals;
+        // Don't access this directly, use the GetCustomTypeData method
+        HashMap<uint64_t, Pulsar::CustomTypeData::Ptr_T> CustomTypeData;
+
+        // Retrieves and casts to the correct type an instance of CustomTypeData
+        template<typename T>
+        std::shared_ptr<T> GetCustomTypeData(uint64_t type)
+        {
+            auto typeDataPair = CustomTypeData.Find(type);
+            if (!typeDataPair)
+                return nullptr;
+            return std::static_pointer_cast<T>(*typeDataPair.Value);
+        }
 
         String GetCallTrace(size_t callIdx) const;
         String GetStackTrace(size_t maxDepth) const;
@@ -87,7 +115,7 @@ namespace Pulsar
         typedef std::function<RuntimeState(ExecutionContext&)> NativeFunction;
         size_t BindNativeFunction(const FunctionDefinition& def, NativeFunction func);
         size_t DeclareAndBindNativeFunction(FunctionDefinition def, NativeFunction func);
-        uint64_t BindCustomType(const String& name) { uint64_t idx = (uint64_t)CustomTypes.Size(); CustomTypes.EmplaceBack(name); return idx; }
+        uint64_t BindCustomType(const String& name, CustomType::DataFactory_T dataFactory = nullptr);
 
         bool HasSourceDebugSymbols() const { return !SourceDebugSymbols.IsEmpty(); }
 
@@ -97,7 +125,7 @@ namespace Pulsar
         List<GlobalDefinition> Globals;
         List<NativeFunction> NativeFunctions;
         List<Value> Constants;
-        List<String> CustomTypes;
+        List<CustomType> CustomTypes;
 
         List<SourceDebugSymbol> SourceDebugSymbols;
     private:

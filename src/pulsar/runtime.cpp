@@ -81,6 +81,13 @@ size_t Pulsar::Module::DeclareAndBindNativeFunction(FunctionDefinition def, Nati
     return NativeBindings.Size()-1;
 }
 
+size_t Pulsar::Module::BindCustomType(const String& name, CustomType::DataFactory_T dataFactory)
+{
+    uint64_t typeId = (uint64_t)CustomTypes.Size();
+    CustomTypes.EmplaceBack(name, dataFactory);
+    return typeId;
+}
+
 Pulsar::RuntimeState Pulsar::Module::CallFunctionByName(const String& name, ValueStack& stack, ExecutionContext& context) const
 {
     for (int64_t i = Functions.Size()-1; i >= 0; i--) {
@@ -109,6 +116,11 @@ Pulsar::ExecutionContext Pulsar::Module::CreateExecutionContext() const
     context.OwnerModule = this;
     for (size_t i = 0; i < Globals.Size(); i++)
         context.Globals.EmplaceBack(Globals[i].CreateInstance());
+    context.CustomTypeData.Reserve(CustomTypes.Size());
+    for (size_t i = 0; i < CustomTypes.Size(); i++) {
+        if (CustomTypes[i].DataFactory)
+            context.CustomTypeData.Insert((uint64_t)i, CustomTypes[i].DataFactory());
+    }
     return context;
 }
 
