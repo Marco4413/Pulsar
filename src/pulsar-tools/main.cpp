@@ -13,6 +13,7 @@
 #include "pulsar/structures/string.h"
 
 #include <chrono>
+#include <cstring>
 #include <filesystem>
 
 inline const char* ShiftArgs(int& argc, const char**& argv)
@@ -21,6 +22,14 @@ inline const char* ShiftArgs(int& argc, const char**& argv)
         return nullptr;
     --argc;
     return *argv++;
+}
+
+size_t StrIndexOf(const char* str, char ch)
+{
+    size_t strlen = std::strlen(str);
+    size_t idx = 0;
+    for (; idx < strlen && str[idx] != ch; idx++);
+    return idx;
 }
 
 struct FlagOption
@@ -86,8 +95,8 @@ PULSARTOOLS_FLAG_OPTIONS(RuntimeOptions,
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-lexer",  "b-lexer",  R_BIND_LEXER,  "Bind Lexer natives."),
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-module", "b-module", R_BIND_MODULE, "Bind Module natives."),
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-print",  "b-print",  R_BIND_PRINT,  "Bind Print natives."),
-    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-thread", "b-thread", R_BIND_THREAD, "Bind Thread natives. (passing handles to threads is not supported)"),
-    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-all",    "b-all",    R_BIND_ALL,    "Bind all available natives."),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-thread", "b-thread", R_BIND_THREAD, "Bind Thread natives.\n(passing handles to threads is not supported)"),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-all",    "b-all",    R_BIND_ALL,    "Bind all available natives. (default: true)"),
 )
 
 void PrintFlagOptions(const Pulsar::List<NamedFlagOption>& opts)
@@ -96,7 +105,14 @@ void PrintFlagOptions(const Pulsar::List<NamedFlagOption>& opts)
         const NamedFlagOption& namedOption = opts[i];
         PULSARTOOLS_INFOF("    {}", namedOption.Name);
         if (namedOption.Option.Description) {
-            PULSARTOOLS_INFOF("        {}", namedOption.Option.Description);
+            // Split description lines
+            Pulsar::StringView view(namedOption.Option.Description, std::strlen(namedOption.Option.Description));
+            do {
+                size_t idx = StrIndexOf(view.CStringFrom(0), '\n');
+                Pulsar::String line = view.GetPrefix(idx);
+                PULSARTOOLS_INFOF("        {0}", line);
+                view.RemovePrefix(idx+1);
+            } while (!view.Empty());
             PULSARTOOLS_INFO("");
         }
     }
