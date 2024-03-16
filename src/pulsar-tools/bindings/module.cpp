@@ -120,6 +120,7 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_IsValid(Pulsar::E
         return Pulsar::RuntimeState::Error;
 
     auto handleModulePair = moduleData->Modules.Find(moduleHandle.AsCustom().Handle);
-    frame.Stack.PushBack(Pulsar::Value().SetInteger(handleModulePair ? 1 : 0));
+    frame.Stack.EmplaceBack()
+        .SetInteger(handleModulePair ? 1 : 0);
     return Pulsar::RuntimeState::OK;
 }

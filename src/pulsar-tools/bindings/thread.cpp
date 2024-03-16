@@ -85,7 +85,8 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Join(Pulsar::Exec
         return Pulsar::RuntimeState::Error;
     std::shared_ptr<PulsarThread> thread = *handleThreadPair.Value;
 
-    frame.Stack.PushBack(Pulsar::Value().SetList(ThreadJoin(thread)));
+    frame.Stack.EmplaceBack()
+        .SetList(ThreadJoin(thread));
 
     threadData->Threads.Remove(threadHandle.AsCustom().Handle);
     return Pulsar::RuntimeState::OK;
@@ -122,7 +123,8 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_JoinAll(Pulsar::E
         handleNode = handleNode->Next();
     }
 
-    frame.Stack.PushBack(Pulsar::Value().SetList(std::move(threadResults)));
+    frame.Stack.EmplaceBack()
+        .SetList(std::move(threadResults));
     return Pulsar::RuntimeState::OK;
 }
 
@@ -141,10 +143,12 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_IsAlive(Pulsar::E
 
     auto handleThreadPair = threadData->Threads.Find(threadHandle.AsCustom().Handle);
     if (handleThreadPair && (*handleThreadPair.Value)->ThreadContext->IsRunning.load()) {
-        frame.Stack.PushBack(Pulsar::Value().SetInteger(1));
+        frame.Stack.EmplaceBack()
+            .SetInteger(1);
         return Pulsar::RuntimeState::OK;
     }
-    frame.Stack.PushBack(Pulsar::Value().SetInteger(0));
+    frame.Stack.EmplaceBack()
+        .SetInteger(0);
     return Pulsar::RuntimeState::OK;
 }
 
@@ -162,7 +166,8 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_IsValid(Pulsar::E
         return Pulsar::RuntimeState::Error;
 
     auto handleThreadPair = threadData->Threads.Find(threadHandle.AsCustom().Handle);
-    frame.Stack.PushBack(Pulsar::Value().SetInteger(handleThreadPair ? 1 : 0));
+    frame.Stack.EmplaceBack()
+        .SetInteger(handleThreadPair ? 1 : 0);
     return Pulsar::RuntimeState::OK;
 }
 

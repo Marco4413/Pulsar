@@ -129,7 +129,8 @@ Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_IsValid(Pulsar::Exe
     if (!lexerData)
         return Pulsar::RuntimeState::Error;
     auto handleLexerPair = lexerData->Lexers.Find(lexerHandle.AsCustom().Handle);
-    frame.Stack.PushBack(Pulsar::Value().SetInteger(handleLexerPair ? 1 : 0));
+    frame.Stack.EmplaceBack()
+        .SetInteger(handleLexerPair ? 1 : 0);
 
     return Pulsar::RuntimeState::OK;
 }
