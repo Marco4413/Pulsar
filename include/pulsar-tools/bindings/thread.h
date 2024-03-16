@@ -12,25 +12,28 @@
 
 namespace PulsarTools
 {
-    struct PulsarThreadContext
+    namespace ThreadNativeBindings
     {
-        Pulsar::ExecutionContext Context;
-        Pulsar::ValueStack Stack;
-        Pulsar::RuntimeState State;
-        std::atomic_bool IsRunning = false;
-    };
+        struct PulsarThreadContext
+        {
+            Pulsar::ExecutionContext Context;
+            Pulsar::ValueStack Stack;
+            Pulsar::RuntimeState State;
+            std::atomic_bool IsRunning = false;
+        };
 
-    struct PulsarThread
-    {
-        std::thread Thread;
-        std::shared_ptr<PulsarThreadContext> ThreadContext;
-    };
+        struct PulsarThread
+        {
+            std::thread Thread;
+            std::shared_ptr<PulsarThreadContext> ThreadContext;
+        };
 
-    class ThreadNativeBindings
-    {
-    public:
-        ThreadNativeBindings() = default;
-        ~ThreadNativeBindings() = default;
+        class ThreadTypeData : public Pulsar::CustomTypeData
+        {
+        public:
+            int64_t NextHandle = 1;
+            Pulsar::HashMap<int64_t, std::shared_ptr<PulsarThread>> Threads;
+        };
 
         void BindToModule(Pulsar::Module& module);
 
@@ -41,13 +44,8 @@ namespace PulsarTools
         Pulsar::RuntimeState Thread_IsAlive(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Thread_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
 
-    private:
-        Pulsar::ValueList ThreadJoin(std::shared_ptr<PulsarThread> thread) const;
-        
-        std::mutex m_Mutex;
-        int64_t m_NextHandle = 1;
-        Pulsar::HashMap<int64_t, std::shared_ptr<PulsarThread>> m_Threads;
-    };
+        Pulsar::ValueList ThreadJoin(std::shared_ptr<PulsarThread> thread);
+    }
 }
 
 #endif // _PULSARTOOLS_BINDINGS_THREAD_H

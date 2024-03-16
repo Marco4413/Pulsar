@@ -41,11 +41,13 @@ Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_FromFile(Pulsar::Ex
             .SetCustom({ .Type=type, .Handle=0 });
         return Pulsar::RuntimeState::OK;
     }
+    
+    auto lexerData = eContext.GetCustomTypeData<LexerTypeData>(type);
+    if (!lexerData)
+        return Pulsar::RuntimeState::Error;
 
-    m_Mutex.lock();
-    int64_t handle = m_NextHandle++;
-    m_Lexers.Emplace(handle, std::move(source));
-    m_Mutex.unlock();
+    int64_t handle = lexerData->NextHandle++;
+    lexerData->Lexers.Emplace(handle, std::move(source));
     
     frame.Stack.EmplaceBack()
         .SetCustom({ .Type=type, .Handle=handle });
@@ -59,17 +61,16 @@ Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_NextToken(Pulsar::E
     if (lexerHandle.Type() != Pulsar::ValueType::Custom
         || lexerHandle.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
-
-    m_Mutex.lock();
-    auto handleLexerPair = m_Lexers.Find(lexerHandle.AsCustom().Handle);
-    if (!handleLexerPair) {
-        m_Mutex.unlock();
-        return Pulsar::RuntimeState::Error;
-    }
-
-    Pulsar::Token token = handleLexerPair.Value->NextToken();
-    m_Mutex.unlock(); // Do not use handleLexerPair from here
     
+    auto lexerData = eContext.GetCustomTypeData<LexerTypeData>(type);
+    if (!lexerData)
+        return Pulsar::RuntimeState::Error;
+
+    auto handleLexerPair = lexerData->Lexers.Find(lexerHandle.AsCustom().Handle);
+    if (!handleLexerPair)
+        return Pulsar::RuntimeState::Error;
+    Pulsar::Token token = handleLexerPair.Value->NextToken();
+
     Pulsar::ValueList tokenAsList;
     tokenAsList.Append()->Value().SetInteger((int64_t)token.Type);
     tokenAsList.Append()->Value().SetString(Pulsar::TokenTypeToString(token.Type));
@@ -99,9 +100,12 @@ Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_Free(Pulsar::Execut
     if (lexerHandle.Type() != Pulsar::ValueType::Custom
         || lexerHandle.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
-    m_Mutex.lock();
-    m_Lexers.Remove(lexerHandle.AsCustom().Handle);
-    m_Mutex.unlock();
+    
+    auto lexerData = eContext.GetCustomTypeData<LexerTypeData>(type);
+    if (!lexerData)
+        return Pulsar::RuntimeState::Error;
+    lexerData->Lexers.Remove(lexerHandle.AsCustom().Handle);
+
     return Pulsar::RuntimeState::OK;
 }
 
@@ -119,9 +123,11 @@ Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_IsValid(Pulsar::Exe
         return Pulsar::RuntimeState::OK;
     }
 
-    m_Mutex.lock();
-    auto handleLexerPair = m_Lexers.Find(lexerHandle.AsCustom().Handle);
+    auto lexerData = eContext.GetCustomTypeData<LexerTypeData>(type);
+    if (!lexerData)
+        return Pulsar::RuntimeState::Error;
+    auto handleLexerPair = lexerData->Lexers.Find(lexerHandle.AsCustom().Handle);
     frame.Stack.PushBack(Pulsar::Value().SetInteger(handleLexerPair ? 1 : 0));
-    m_Mutex.unlock();
+
     return Pulsar::RuntimeState::OK;
 }

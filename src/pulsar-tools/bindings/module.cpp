@@ -30,18 +30,20 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_FromFile(Pulsar::
         return Pulsar::RuntimeState::OK;
     }
     
-    std::shared_ptr<Pulsar::Module> module = std::make_shared<Pulsar::Module>();
-    result = parser.ParseIntoModule(*module, Pulsar::ParseSettings_Default);
+    Pulsar::Module module;
+    result = parser.ParseIntoModule(module, Pulsar::ParseSettings_Default);
     if (result != Pulsar::ParseResult::OK) {
         frame.Stack.EmplaceBack()
             .SetCustom({ .Type=type, .Handle=0 });
         return Pulsar::RuntimeState::OK;
     }
     
-    m_Mutex.lock();
-    int64_t handle = m_NextHandle++;
-    m_Modules.Emplace(handle, module);
-    m_Mutex.unlock();
+    auto moduleData = eContext.GetCustomTypeData<ModuleTypeData>(type);
+    if (!moduleData)
+        return Pulsar::RuntimeState::Error;
+    
+    int64_t handle = moduleData->NextHandle++;
+    moduleData->Modules.Emplace(handle, std::move(module));
 
     frame.Stack.EmplaceBack()
         .SetCustom({ .Type=type, .Handle=handle });
@@ -55,20 +57,20 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_Run(Pulsar::Execu
     if (moduleHandle.Type() != Pulsar::ValueType::Custom
         || moduleHandle.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
-
-    m_Mutex.lock();
-    auto handleModulePair = m_Modules.Find(moduleHandle.AsCustom().Handle);
-    if (!handleModulePair) {
-        m_Mutex.unlock();
+    
+    auto moduleData = eContext.GetCustomTypeData<ModuleTypeData>(type);
+    if (!moduleData)
         return Pulsar::RuntimeState::Error;
-    }
+
+    auto handleModulePair = moduleData->Modules.Find(moduleHandle.AsCustom().Handle);
+    if (!handleModulePair)
+        return Pulsar::RuntimeState::Error;
     // The module handle is not actually thread-safe but neither is the VM
-    const std::shared_ptr<Pulsar::Module> module = *handleModulePair.Value;
-    m_Mutex.unlock();
+    const Pulsar::Module& module = *handleModulePair.Value;
 
     Pulsar::ValueStack stack;
-    Pulsar::ExecutionContext context = module->CreateExecutionContext();
-    auto runtimeState = module->CallFunctionByName("main", stack, context);
+    Pulsar::ExecutionContext context = module.CreateExecutionContext();
+    auto runtimeState = module.CallFunctionByName("main", stack, context);
     if (runtimeState != Pulsar::RuntimeState::OK)
         return Pulsar::RuntimeState::Error;
 
@@ -89,9 +91,11 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_Free(Pulsar::Exec
         || moduleHandle.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
 
-    m_Mutex.lock();
-    m_Modules.Remove(moduleHandle.AsCustom().Handle);
-    m_Mutex.unlock();
+    auto moduleData = eContext.GetCustomTypeData<ModuleTypeData>(type);
+    if (!moduleData)
+        return Pulsar::RuntimeState::Error;
+    moduleData->Modules.Remove(moduleHandle.AsCustom().Handle);
+
     return Pulsar::RuntimeState::OK;
 }
 
@@ -109,9 +113,11 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_IsValid(Pulsar::E
         return Pulsar::RuntimeState::OK;
     }
 
-    m_Mutex.lock();
-    auto handleModulePair = m_Modules.Find(moduleHandle.AsCustom().Handle);
+    auto moduleData = eContext.GetCustomTypeData<ModuleTypeData>(type);
+    if (!moduleData)
+        return Pulsar::RuntimeState::Error;
+
+    auto handleModulePair = moduleData->Modules.Find(moduleHandle.AsCustom().Handle);
     frame.Stack.PushBack(Pulsar::Value().SetInteger(handleModulePair ? 1 : 0));
-    m_Mutex.unlock();
     return Pulsar::RuntimeState::OK;
 }

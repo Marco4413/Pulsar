@@ -11,11 +11,14 @@
 
 namespace PulsarTools
 {
-    class ModuleNativeBindings
+    namespace ModuleNativeBindings
     {
-    public:
-        ModuleNativeBindings() = default;
-        ~ModuleNativeBindings() = default;
+        class ModuleTypeData : public Pulsar::CustomTypeData
+        {
+        public:
+            int64_t NextHandle = 1;
+            Pulsar::HashMap<int64_t, Pulsar::Module> Modules;
+        };
 
         void BindToModule(Pulsar::Module& module);
 
@@ -23,12 +26,7 @@ namespace PulsarTools
         Pulsar::RuntimeState Module_Run(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Module_Free(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Module_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
-
-    private:
-        std::mutex m_Mutex;
-        int64_t m_NextHandle = 1;
-        Pulsar::HashMap<int64_t, std::shared_ptr<Pulsar::Module>> m_Modules;
-    };
+    }
 }
 
 #endif // _PULSARTOOLS_BINDINGS_MODULE_H

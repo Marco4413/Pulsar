@@ -2,7 +2,9 @@
 
 void PulsarTools::ThreadNativeBindings::BindToModule(Pulsar::Module& module)
 {
-    uint64_t type = module.BindCustomType("Thread");
+    uint64_t type = module.BindCustomType("Thread", []() {
+        return std::make_shared<ThreadTypeData>();
+    });
     module.BindNativeFunction({ "thread/run", 2, 1 },
         [&, type](auto& ctx) { return Thread_Run(ctx, type); });
     module.BindNativeFunction({ "thread/join", 1, 1 },
@@ -54,12 +56,14 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Run(Pulsar::Execu
         }), threadContext
     );
     
-    m_Mutex.lock();
-    int64_t handle = m_NextHandle++;
+    auto threadData = eContext.GetCustomTypeData<ThreadTypeData>(type);
+    if (!threadData)
+        return Pulsar::RuntimeState::Error;
+
+    int64_t handle = threadData->NextHandle++;
     frame.Stack.EmplaceBack()
         .SetCustom({ .Type=type, .Handle=handle });
-    m_Threads.Insert(handle, std::move(thread));
-    m_Mutex.unlock();
+    threadData->Threads.Insert(handle, std::move(thread));
 
     return Pulsar::RuntimeState::OK;
 }
@@ -71,21 +75,19 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Join(Pulsar::Exec
     if (threadHandle.Type() != Pulsar::ValueType::Custom
         || threadHandle.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
-
-    m_Mutex.lock();
-    auto handleThreadPair = m_Threads.Find(threadHandle.AsCustom().Handle);
-    if (!handleThreadPair) {
-        m_Mutex.unlock();
+    
+    auto threadData = eContext.GetCustomTypeData<ThreadTypeData>(type);
+    if (!threadData)
         return Pulsar::RuntimeState::Error;
-    }
+
+    auto handleThreadPair = threadData->Threads.Find(threadHandle.AsCustom().Handle);
+    if (!handleThreadPair)
+        return Pulsar::RuntimeState::Error;
     std::shared_ptr<PulsarThread> thread = *handleThreadPair.Value;
-    m_Mutex.unlock();
 
     frame.Stack.PushBack(Pulsar::Value().SetList(ThreadJoin(thread)));
 
-    m_Mutex.lock();
-    m_Threads.Remove(threadHandle.AsCustom().Handle);
-    m_Mutex.unlock();
+    threadData->Threads.Remove(threadHandle.AsCustom().Handle);
     return Pulsar::RuntimeState::OK;
 }
 
@@ -96,6 +98,10 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_JoinAll(Pulsar::E
     if (threadHandleList.Type() != Pulsar::ValueType::List)
         return Pulsar::RuntimeState::TypeError;
     
+    auto threadData = eContext.GetCustomTypeData<ThreadTypeData>(type);
+    if (!threadData)
+        return Pulsar::RuntimeState::Error;
+    
     Pulsar::ValueList threadResults;
     Pulsar::ValueList& handleList = threadHandleList.AsList();
     Pulsar::ValueList::NodeType* handleNode = handleList.Front();
@@ -105,20 +111,14 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_JoinAll(Pulsar::E
             || handle.AsCustom().Type != type)
             return Pulsar::RuntimeState::TypeError;
 
-        m_Mutex.lock();
-        auto handleThreadPair = m_Threads.Find(handle.AsCustom().Handle);
-        if (!handleThreadPair) {
-            m_Mutex.unlock();
+        auto handleThreadPair = threadData->Threads.Find(handle.AsCustom().Handle);
+        if (!handleThreadPair)
             return Pulsar::RuntimeState::Error;
-        }
         std::shared_ptr<PulsarThread> thread = *handleThreadPair.Value;
-        m_Mutex.unlock();
         
         threadResults.Append()->Value().SetList(ThreadJoin(thread));
 
-        m_Mutex.lock();
-        m_Threads.Remove(handle.AsCustom().Handle);
-        m_Mutex.unlock();
+        threadData->Threads.Remove(handle.AsCustom().Handle);
         handleNode = handleNode->Next();
     }
 
@@ -134,15 +134,16 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_IsAlive(Pulsar::E
         || threadHandle.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
     frame.Stack.PushBack(threadHandle);
+    
+    auto threadData = eContext.GetCustomTypeData<ThreadTypeData>(type);
+    if (!threadData)
+        return Pulsar::RuntimeState::Error;
 
-    m_Mutex.lock();
-    auto handleThreadPair = m_Threads.Find(threadHandle.AsCustom().Handle);
+    auto handleThreadPair = threadData->Threads.Find(threadHandle.AsCustom().Handle);
     if (handleThreadPair && (*handleThreadPair.Value)->ThreadContext->IsRunning.load()) {
-        m_Mutex.unlock();
         frame.Stack.PushBack(Pulsar::Value().SetInteger(1));
         return Pulsar::RuntimeState::OK;
     }
-    m_Mutex.unlock();
     frame.Stack.PushBack(Pulsar::Value().SetInteger(0));
     return Pulsar::RuntimeState::OK;
 }
@@ -155,15 +156,17 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_IsValid(Pulsar::E
         || threadHandle.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
     frame.Stack.PushBack(threadHandle);
+    
+    auto threadData = eContext.GetCustomTypeData<ThreadTypeData>(type);
+    if (!threadData)
+        return Pulsar::RuntimeState::Error;
 
-    m_Mutex.lock();
-    auto handleThreadPair = m_Threads.Find(threadHandle.AsCustom().Handle);
+    auto handleThreadPair = threadData->Threads.Find(threadHandle.AsCustom().Handle);
     frame.Stack.PushBack(Pulsar::Value().SetInteger(handleThreadPair ? 1 : 0));
-    m_Mutex.unlock();
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::ValueList PulsarTools::ThreadNativeBindings::ThreadJoin(std::shared_ptr<PulsarThread> thread) const
+Pulsar::ValueList PulsarTools::ThreadNativeBindings::ThreadJoin(std::shared_ptr<PulsarThread> thread)
 {
     thread->Thread.join();
     Pulsar::ValueList threadResult;

@@ -83,10 +83,10 @@ PULSARTOOLS_FLAG_OPTIONS(ParserOptions,
 
 PULSARTOOLS_FLAG_OPTIONS(RuntimeOptions,
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-debug",  "b-debug",  R_BIND_DEBUG,  "Bind Debug natives."),
-    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-lexer",  "b-lexer",  R_BIND_LEXER,  "Bind Lexer natives. (handles are not thread-safe)"),
-    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-module", "b-module", R_BIND_MODULE, "Bind Module natives. (handles are not thread-safe)"),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-lexer",  "b-lexer",  R_BIND_LEXER,  "Bind Lexer natives."),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-module", "b-module", R_BIND_MODULE, "Bind Module natives."),
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-print",  "b-print",  R_BIND_PRINT,  "Bind Print natives."),
-    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-thread", "b-thread", R_BIND_THREAD,  "Bind Thread natives."),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-thread", "b-thread", R_BIND_THREAD, "Bind Thread natives. (passing handles to threads is not supported)"),
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-all",    "b-all",    R_BIND_ALL,    "Bind all available natives."),
 )
 
@@ -159,8 +159,7 @@ bool Command_Check(const char* executable, int argc, const char** argv)
 
     Pulsar::Module module;
     // Add debug bindings
-    PulsarTools::DebugNativeBindings debugBindings;
-    debugBindings.BindToModule(module, true);
+    PulsarTools::DebugNativeBindings::BindToModule(module, true);
 
     { // Parse Module
         PULSARTOOLS_INFOF("Parsing '{}'.", filepath);
@@ -262,9 +261,8 @@ bool Command_Run(const char* executable, int argc, const char** argv)
 
     Pulsar::Module module;
     // Debug bindings are declared before parsing so they can be used in compile-time evaluations
-    PulsarTools::DebugNativeBindings debugBindings;
     if (flagOptions & R_BIND_DEBUG)
-        debugBindings.BindToModule(module, true);
+        PulsarTools::DebugNativeBindings::BindToModule(module, true);
 
     { // Parse Module
         PULSARTOOLS_INFOF("Parsing '{}'.", filepath);
@@ -288,18 +286,14 @@ bool Command_Run(const char* executable, int argc, const char** argv)
     }
 
     // Add bindings
-    PulsarTools::LexerNativeBindings lexerBindings;
-    PulsarTools::ModuleNativeBindings moduleBindings;
-    PulsarTools::PrintNativeBindings printBindings;
-    PulsarTools::ThreadNativeBindings threadBindings;
     if (flagOptions & R_BIND_LEXER)
-        lexerBindings.BindToModule(module);
+        PulsarTools::LexerNativeBindings::BindToModule(module);
     if (flagOptions & R_BIND_MODULE)
-        moduleBindings.BindToModule(module);
+        PulsarTools::ModuleNativeBindings::BindToModule(module);
     if (flagOptions & R_BIND_PRINT)
-        printBindings.BindToModule(module);
+        PulsarTools::PrintNativeBindings::BindToModule(module);
     if (flagOptions & R_BIND_THREAD)
-        threadBindings.BindToModule(module);
+        PulsarTools::ThreadNativeBindings::BindToModule(module);
 
     { // Run Module
         PULSARTOOLS_INFOF("Running '{}'.", filepath);

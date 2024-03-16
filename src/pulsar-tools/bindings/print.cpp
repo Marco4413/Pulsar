@@ -2,7 +2,7 @@
 
 #include "pulsar-tools/print.h"
 
-void PulsarTools::PrintNativeBindings::BindToModule(Pulsar::Module& module) const
+void PulsarTools::PrintNativeBindings::BindToModule(Pulsar::Module& module)
 {
     module.BindNativeFunction({ "hello-from-cpp!", 0, 0 }, Print_HelloFromCpp);
     module.BindNativeFunction({ "print!",   1, 0 }, Print_Print);

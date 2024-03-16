@@ -11,11 +11,14 @@
 
 namespace PulsarTools
 {
-    class LexerNativeBindings
+    namespace LexerNativeBindings
     {
-    public:
-        LexerNativeBindings() = default;
-        ~LexerNativeBindings() = default;
+        class LexerTypeData : public Pulsar::CustomTypeData
+        {
+        public:
+            int64_t NextHandle = 1;
+            Pulsar::HashMap<int64_t, Pulsar::Lexer> Lexers;
+        };
 
         void BindToModule(Pulsar::Module& module);
 
@@ -23,12 +26,7 @@ namespace PulsarTools
         Pulsar::RuntimeState Lexer_NextToken(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Lexer_Free(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Lexer_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
-
-    private:
-        std::mutex m_Mutex;
-        int64_t m_NextHandle = 1;
-        Pulsar::HashMap<int64_t, Pulsar::Lexer> m_Lexers;
-    };
+    }
 }
 
 #endif // _PULSARTOOLS_BINDINGS_LEXER_H

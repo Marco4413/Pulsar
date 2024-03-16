@@ -7,18 +7,14 @@
 
 namespace PulsarTools
 {
-    class PrintNativeBindings
+    namespace PrintNativeBindings
     {
-    public:
-        PrintNativeBindings() = default;
-        ~PrintNativeBindings() = default;
+        void BindToModule(Pulsar::Module& module);
 
-        void BindToModule(Pulsar::Module& module) const;
-
-        static Pulsar::RuntimeState Print_HelloFromCpp(Pulsar::ExecutionContext& eContext);
-        static Pulsar::RuntimeState Print_Print(Pulsar::ExecutionContext& eContext);
-        static Pulsar::RuntimeState Print_Println(Pulsar::ExecutionContext& eContext);
-    };
+        Pulsar::RuntimeState Print_HelloFromCpp(Pulsar::ExecutionContext& eContext);
+        Pulsar::RuntimeState Print_Print(Pulsar::ExecutionContext& eContext);
+        Pulsar::RuntimeState Print_Println(Pulsar::ExecutionContext& eContext);
+    }
 }
 
 #endif // _PULSARTOOLS_BINDINGS_PRINT_H

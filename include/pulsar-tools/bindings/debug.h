@@ -7,16 +7,13 @@
 
 namespace PulsarTools
 {
-    class DebugNativeBindings
+    namespace DebugNativeBindings
     {
-    public:
-        DebugNativeBindings() = default;
-        ~DebugNativeBindings() = default;
+        void BindToModule(Pulsar::Module& module, bool declare = true);
 
-        void BindToModule(Pulsar::Module& module, bool declare = true) const;
-
-        static Pulsar::RuntimeState Debug_StackDump(Pulsar::ExecutionContext& eContext);
-    };
+        Pulsar::RuntimeState Debug_StackDump(Pulsar::ExecutionContext& eContext);
+        Pulsar::RuntimeState Debug_TraceCall(Pulsar::ExecutionContext& eContext);
+    }
 }
 
 #endif // _PULSARTOOLS_BINDINGS_DEBUG_H
