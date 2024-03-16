@@ -6,10 +6,12 @@ void PulsarTools::DebugNativeBindings::BindToModule(Pulsar::Module& module, bool
 {
     if (declare) {
         module.DeclareAndBindNativeFunction({ "stack-dump!", 0, 0 }, Debug_StackDump);
+        module.DeclareAndBindNativeFunction({ "trace-call!", 0, 0 }, Debug_TraceCall);
         return;
     }
 
     module.BindNativeFunction({ "stack-dump!", 0, 0 }, Debug_StackDump);
+    module.BindNativeFunction({ "trace-call!", 0, 0 }, Debug_TraceCall);
 }
 
 Pulsar::RuntimeState PulsarTools::DebugNativeBindings::Debug_StackDump(Pulsar::ExecutionContext& eContext)
@@ -21,5 +23,12 @@ Pulsar::RuntimeState PulsarTools::DebugNativeBindings::Debug_StackDump(Pulsar::E
         PULSARTOOLS_PRINTF(" {}", frame.Stack[i]);
     }
     PULSARTOOLS_PRINTF(" ]\n");
+    return Pulsar::RuntimeState::OK;
+}
+
+Pulsar::RuntimeState PulsarTools::DebugNativeBindings::Debug_TraceCall(Pulsar::ExecutionContext& eContext)
+{
+    Pulsar::String stackTrace = eContext.GetStackTrace(~0);
+    PULSARTOOLS_PRINTF("Stack Trace:\n{}\n", stackTrace);
     return Pulsar::RuntimeState::OK;
 }
