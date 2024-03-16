@@ -472,6 +472,30 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             return RuntimeState::TypeError;
         a.SetInteger(a.AsInteger() ^ b.AsInteger());
     } break;
+    case InstructionCode::BitShiftLeft: {
+        if (frame.Stack.Size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value b = std::move(frame.Stack.Back());
+        frame.Stack.PopBack();
+        Value& a = frame.Stack.Back();
+        if (a.Type() != ValueType::Integer || b.Type() != ValueType::Integer)
+            return RuntimeState::TypeError;
+        if (b.AsInteger() < 0)
+            a.SetInteger((int64_t)((uint64_t)a.AsInteger() >> -b.AsInteger()));
+        else a.SetInteger((int64_t)((uint64_t)a.AsInteger() << b.AsInteger()));
+    } break;
+    case InstructionCode::BitShiftRight: {
+        if (frame.Stack.Size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value b = std::move(frame.Stack.Back());
+        frame.Stack.PopBack();
+        Value& a = frame.Stack.Back();
+        if (a.Type() != ValueType::Integer || b.Type() != ValueType::Integer)
+            return RuntimeState::TypeError;
+        if (b.AsInteger() < 0)
+            a.SetInteger((int64_t)((uint64_t)a.AsInteger() << -b.AsInteger()));
+        else a.SetInteger((int64_t)((uint64_t)a.AsInteger() >> b.AsInteger()));
+    } break;
     case InstructionCode::Floor: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
