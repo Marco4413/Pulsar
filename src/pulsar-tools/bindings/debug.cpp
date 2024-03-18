@@ -28,7 +28,7 @@ Pulsar::RuntimeState PulsarTools::DebugNativeBindings::Debug_StackDump(Pulsar::E
 
 Pulsar::RuntimeState PulsarTools::DebugNativeBindings::Debug_TraceCall(Pulsar::ExecutionContext& eContext)
 {
-    Pulsar::String stackTrace = eContext.GetStackTrace(~0);
+    Pulsar::String stackTrace = eContext.GetStackTrace(~(size_t)0);
     PULSARTOOLS_PRINTF("Stack Trace:\n{}\n", stackTrace);
     return Pulsar::RuntimeState::OK;
 }
