@@ -2,6 +2,7 @@
 #include "pulsar-tools/print.h"
 
 #include "pulsar-tools/bindings/debug.h"
+#include "pulsar-tools/bindings/filesystem.h"
 #include "pulsar-tools/bindings/lexer.h"
 #include "pulsar-tools/bindings/module.h"
 #include "pulsar-tools/bindings/print.h"
@@ -39,23 +40,25 @@ struct FlagOption
     const char* Description = nullptr;
 };
 
-constexpr uint32_t P_DEBUG_SYMBOLS = 1;
-constexpr uint32_t P_STACK_TRACE   = 2;
-constexpr uint32_t P_ERROR_NOTES   = 4;
-constexpr uint32_t P_ALLOW_INCLUDE = 8;
+constexpr uint32_t P_DEBUG_SYMBOLS = (1     );
+constexpr uint32_t P_STACK_TRACE   = (1 << 1);
+constexpr uint32_t P_ERROR_NOTES   = (1 << 2);
+constexpr uint32_t P_ALLOW_INCLUDE = (1 << 3);
 constexpr uint32_t P_DEFAULT       =
       P_DEBUG_SYMBOLS
     | P_STACK_TRACE
     | P_ERROR_NOTES
     | P_ALLOW_INCLUDE;
 
-constexpr uint32_t R_BIND_DEBUG  =  1 << 16;
-constexpr uint32_t R_BIND_LEXER  =  2 << 16;
-constexpr uint32_t R_BIND_MODULE =  4 << 16;
-constexpr uint32_t R_BIND_PRINT  =  8 << 16;
-constexpr uint32_t R_BIND_THREAD = 16 << 16;
+constexpr uint32_t R_BIND_DEBUG  = (1     ) << 16;
+constexpr uint32_t R_BIND_FS     = (1 << 1) << 16;
+constexpr uint32_t R_BIND_LEXER  = (1 << 2) << 16;
+constexpr uint32_t R_BIND_MODULE = (1 << 3) << 16;
+constexpr uint32_t R_BIND_PRINT  = (1 << 4) << 16;
+constexpr uint32_t R_BIND_THREAD = (1 << 5) << 16;
 constexpr uint32_t R_BIND_ALL    =
       R_BIND_DEBUG
+    | R_BIND_FS
     | R_BIND_LEXER
     | R_BIND_MODULE
     | R_BIND_PRINT
@@ -91,12 +94,13 @@ PULSARTOOLS_FLAG_OPTIONS(ParserOptions,
 )
 
 PULSARTOOLS_FLAG_OPTIONS(RuntimeOptions,
-    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-debug",  "b-debug",  R_BIND_DEBUG,  "Bind Debug natives."),
-    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-lexer",  "b-lexer",  R_BIND_LEXER,  "Bind Lexer natives."),
-    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-module", "b-module", R_BIND_MODULE, "Bind Module natives."),
-    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-print",  "b-print",  R_BIND_PRINT,  "Bind Print natives."),
-    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-thread", "b-thread", R_BIND_THREAD, "Bind Thread natives.\n(passing handles to threads is not supported)"),
-    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-all",    "b-all",    R_BIND_ALL,    "Bind all available natives. (default: true)"),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-debug",      "b-debug",  R_BIND_DEBUG,  "Bind Debug natives."),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-filesystem", "b-fs",     R_BIND_FS,     "Bind File System natives."),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-lexer",      "b-lexer",  R_BIND_LEXER,  "Bind Lexer natives."),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-module",     "b-module", R_BIND_MODULE, "Bind Module natives."),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-print",      "b-print",  R_BIND_PRINT,  "Bind Print natives."),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-thread",     "b-thread", R_BIND_THREAD, "Bind Thread natives.\n(passing handles to threads is not supported)"),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-all",        "b-all",    R_BIND_ALL,    "Bind all available natives. (default: true)"),
 )
 
 void PrintFlagOptions(const Pulsar::List<NamedFlagOption>& opts)
@@ -302,6 +306,8 @@ bool Command_Run(const char* executable, int argc, const char** argv)
     }
 
     // Add bindings
+    if (flagOptions & R_BIND_FS)
+        PulsarTools::FileSystemNativeBindings::BindToModule(module);
     if (flagOptions & R_BIND_LEXER)
         PulsarTools::LexerNativeBindings::BindToModule(module);
     if (flagOptions & R_BIND_MODULE)
