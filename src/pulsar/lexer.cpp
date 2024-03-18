@@ -462,16 +462,35 @@ size_t Pulsar::Lexer::SkipComments()
     if (m_SourceView[0] == ';') {
         m_SourceView.RemovePrefix(1);
         return 1;
-    } else if (
-        m_SourceView.Length() < 2
-        || m_SourceView[0] != '/' || m_SourceView[1] != '/'
-    ) return 0;
-    size_t count = 0;
-    for (; count < m_SourceView.Length() && m_SourceView[count] != '\n'; count++);
-    count++; // Skip new line
-    m_SourceView.RemovePrefix(count);
-    m_Line++;
-    m_LineStartIdx = m_SourceView.GetStart();
+    } else if (m_SourceView.Length() < 2 || !(
+        m_SourceView[0] == '/' && (m_SourceView[1] == '/' || m_SourceView[1] == '*')
+    )) return 0;
+    
+    StringView commentView = m_SourceView;
+    commentView.RemovePrefix(1); // The '/' char
+
+    if (commentView[0] == '/') {
+        while (commentView.Length() > 0 && commentView[0] != '\n')
+            commentView.RemovePrefix(1);
+        commentView.RemovePrefix(1); // Remove new line char
+        m_Line++;
+        m_LineStartIdx = commentView.GetStart();
+    } else if (commentView[0] == '*') {
+        while (commentView.Length() > 0) {
+            if (commentView[0] == '\n') {
+                m_Line++;
+                m_LineStartIdx = commentView.GetStart()+1;
+            } else if (commentView.Length() >= 2 &&
+                commentView[0] == '*' && commentView[1] == '/') {
+                commentView.RemovePrefix(2);
+                break;
+            }
+            commentView.RemovePrefix(1);
+        }
+    }
+    
+    size_t count = commentView.GetStart() - m_SourceView.GetStart();
+    m_SourceView = commentView;
     return count;
 }
 
