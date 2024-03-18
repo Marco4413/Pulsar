@@ -873,3 +873,23 @@ Does not change the original `String`.
 | :----- | :------: | :-------: | :-------: |
 | Pops   | `String` | `Integer` | `Integer` |
 | Pushes | `String` | `String`  |           |
+
+### Type Checking Instructions
+
+There's a type check instruction for each [basic datatype](#basic-datatypes)
+and [complex datatype](#complex-datatypes). They all work the same:
+
+Push `Integer` 0 if the last value on the stack is not of type `T`.
+
+| Instruction      |                    Checks For                    |
+| :--------------- | :----------------------------------------------: |
+| `void?`          |                      `Void`                      |
+| `integer?`       |                    `Integer`                     |
+| `double?`        |                     `Double`                     |
+| `number?`        |              `Integer` or `Double`               |
+| `fn-ref?`        |               `FunctionReference`                |
+| `native-fn-ref?` |            `NativeFunctionReference`             |
+| `any-fn-ref?`    | `FunctionReference` or `NativeFunctionReference` |
+| `list?`          |                      `List`                      |
+| `string?`        |                     `String`                     |
+| `custom?`        |                     `Custom`                     |
