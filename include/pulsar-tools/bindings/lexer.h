@@ -1,8 +1,6 @@
 #ifndef _PULSARTOOLS_BINDINGS_LEXER_H
 #define _PULSARTOOLS_BINDINGS_LEXER_H
 
-#include <mutex>
-
 #include "pulsar-tools/core.h"
 
 #include "pulsar/lexer.h"

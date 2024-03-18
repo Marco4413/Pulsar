@@ -1,9 +1,6 @@
 #ifndef _PULSARTOOLS_BINDINGS_MODULE_H
 #define _PULSARTOOLS_BINDINGS_MODULE_H
 
-#include <memory>
-#include <mutex>
-
 #include "pulsar-tools/core.h"
 
 #include "pulsar/runtime.h"

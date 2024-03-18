@@ -3,6 +3,7 @@
 
 #include <cinttypes>
 #include <cstdlib>
+#include <memory>
 
 #include "fmt/color.h"
 

@@ -2,7 +2,6 @@
 #define _PULSARTOOLS_BINDINGS_THREAD_H
 
 #include <atomic>
-#include <mutex>
 #include <thread>
 
 #include "pulsar-tools/core.h"
