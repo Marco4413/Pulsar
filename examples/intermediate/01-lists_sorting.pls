@@ -1,7 +1,8 @@
 *(sort l) -> 1:
   <- l
-    (!length) if <= 1: .
+    (!empty?) if: .
     (!head) -> a
+      (!empty?) if: [ <- a ] .
       (sort)
     // We can assume the tail is sorted.
     (!head) -> b

@@ -2,7 +2,7 @@
 
 *(map l f) -> 1:
   <- l
-    (!length) if = 0: .
+    (!empty?) if: .
     (!head) f (!icall) -> v
     f (map)
   <- v

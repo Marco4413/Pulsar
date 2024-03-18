@@ -118,7 +118,7 @@ global "" -> printf/buffer
 *(printf fmt args) -> 1:
   <- args <- fmt
     do: '%' (printf/index-of) (!prefix) (printf/print!)
-      (!length) if 0: break
+      (!empty?) if: break
       1 (!index) -> ch
       2 (!prefix) (!pop)
       (!swap) // [ fmt, args ]
@@ -192,7 +192,7 @@ global "" -> printf/buffer
         end
         <- lines (!swap) (!append) -> lines
         lines-len 1 + -> lines-len
-      (!length) if 0: break
+      (!empty?) if: break
       1 (!prefix) (!pop) // Remove '\n'
       continue
     end

@@ -2,7 +2,7 @@
 *(*println! val).
 
 *(list-println! list):
-  <- list (!length) if 0: .
+  <- list (!empty?) if: .
   (!head) (*println!)
   (list-println!)
   .

@@ -1,8 +1,8 @@
 *(str-list-join l sep) -> 1:
   <- l
-    (!length) if 0: "".
-    (!length) if 1: (!head).
+    (!empty?) if: "".
     (!head) -> head
+      (!empty?) if: <- head .
     sep (str-list-join)
   <- head sep (!append)
     (!prepend)
