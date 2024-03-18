@@ -559,8 +559,14 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
     // Whether the if condition is fully contained within the statement.
     bool isSelfContained = false;
     bool hasComparison = false;
+    bool invertedJump = false;
 
     const Token& curToken = m_Lexer->NextToken();
+    if (curToken.Type == TokenType::KW_Not) {
+        m_Lexer->NextToken();
+        invertedJump = true;
+    }
+
     if (curToken.Type != TokenType::Colon) {
         hasComparison = true;
         switch (curToken.Type) {
@@ -633,6 +639,8 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
 
     PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, ifToken);
     size_t ifIdx = func.Code.Size();
+    if (invertedJump)
+        jmpInstrCode = InvertJump(jmpInstrCode);
     func.Code.EmplaceBack(jmpInstrCode, 0);
     
     auto res = ParseFunctionBody(module, func, localScope, skippableBlock, settings);
@@ -703,11 +711,19 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
     InstructionCode jmpInstrCode = InstructionCode::JumpIfZero;
     bool hasComparison = false;
     bool whileTrue = false;
+    bool invertedJump = false;
 
     size_t whileIdx = func.Code.Size();
     m_Lexer->NextToken();
+    if (curToken.Type == TokenType::KW_Not) {
+        m_Lexer->NextToken();
+        invertedJump = true;
+    }
+
     if (curToken.Type == TokenType::Colon) {
-        whileTrue = true;
+        if (invertedJump)
+            jmpInstrCode = InstructionCode::Jump;
+        else whileTrue = true;
     } else {
         switch (curToken.Type) {
         case TokenType::StringLiteral:
@@ -782,6 +798,8 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
     if (!whileTrue) {
         block.BreakStatements.PushBack(func.Code.Size());
         PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, whileToken);
+        if (invertedJump)
+            jmpInstrCode = InvertJump(jmpInstrCode);
         func.Code.EmplaceBack(jmpInstrCode, 0);
     }
     
