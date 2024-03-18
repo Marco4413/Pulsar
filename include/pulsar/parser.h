@@ -31,6 +31,16 @@ namespace Pulsar
         { "prefix",     { InstructionCode::Prefix               } },
         { "suffix",     { InstructionCode::Suffix               } },
         { "substr",     { InstructionCode::Substr               } },
+        { "void?",      { InstructionCode::IsVoid               } },
+        { "integer?",   { InstructionCode::IsInteger            } },
+        { "double?",    { InstructionCode::IsDouble             } },
+        { "number?",    { InstructionCode::IsNumber             } },
+        { "fn-ref?",        { InstructionCode::IsFunctionReference       } },
+        { "native-fn-ref?", { InstructionCode::IsNativeFunctionReference } },
+        { "any-fn-ref?",    { InstructionCode::IsAnyFunctionReference    } },
+        { "list?",      { InstructionCode::IsList               } },
+        { "string?",    { InstructionCode::IsString             } },
+        { "custom?",    { InstructionCode::IsCustom             } },
     };
 
     struct SkippableBlock
