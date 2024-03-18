@@ -34,6 +34,7 @@ namespace Pulsar
         Less, LessOrEqual,
         More, MoreOrEqual,
         PushReference,
+        KW_Not,
         KW_If, KW_Else, KW_End,
         KW_Global, KW_Const,
         KW_Do, KW_While, KW_Break, KW_Continue,
@@ -44,6 +45,7 @@ namespace Pulsar
     constexpr int64_t TOKEN_CD_INCLUDE = 1;
 
     static const HashMap<String, TokenType> Keywords {
+        { "not",      TokenType::KW_Not      },
         { "if",       TokenType::KW_If       },
         { "else",     TokenType::KW_Else     },
         { "end",      TokenType::KW_End      },

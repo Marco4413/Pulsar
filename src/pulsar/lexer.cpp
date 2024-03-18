@@ -546,6 +546,8 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
         return "MoreOrEqual";
     case TokenType::PushReference:
         return "PushReference";
+    case TokenType::KW_Not:
+        return "KW_Not";
     case TokenType::KW_If:
         return "KW_If";
     case TokenType::KW_Else:
