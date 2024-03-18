@@ -29,6 +29,8 @@ Pulsar::RuntimeState PulsarTools::FileSystemNativeBindings::FS_ReadAll(Pulsar::E
         return Pulsar::RuntimeState::TypeError;
     
     std::filesystem::path filePath(frame.Locals[0].AsString().Data());
+    if (!std::filesystem::is_regular_file(filePath))
+        return Pulsar::RuntimeState::Error;
     std::ifstream file(filePath, std::ios::binary);
     size_t fileSize = (size_t)std::filesystem::file_size(filePath);
 
