@@ -84,11 +84,14 @@ gist of Pulsar, we can get to the meat of it.
 
 ## Comments
 
-Two types of comments exist.
+Three types of comments exist.
+
+The multi-line comment `/* COMMENT */` which can be used to comment out
+multiple lines.
 
 The line comment `//` which comments out an entire line.
 
-And the character comment `;` which can be used to improve code readability
+The character comment `;` which can be used to improve code readability
 by *visually* separating *logical* expressions.
 
 i.e. `10 -> x; x` is more readable than `10 -> x x`.
