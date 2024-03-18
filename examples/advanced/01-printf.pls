@@ -158,9 +158,8 @@ global "" -> printf/buffer
           end
         else:
           // ABORT
-          "%."
-            (!swap) // [ "%." "...f" ]
-            (!append) (printf/print!)
+          // [ "...f", "%." ]
+          "%." (!prepend) (printf/print!)
           continue
         end
       else:
