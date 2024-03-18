@@ -40,7 +40,18 @@ namespace Pulsar
         Prepend, Append, Concat,
         Head, Tail,
         Index,
-        Prefix, Suffix, Substr
+        Prefix, Suffix, Substr,
+        // Type Checking
+        IsVoid,
+        IsInteger,
+        IsDouble,
+        IsNumber,
+        IsFunctionReference,
+        IsNativeFunctionReference,
+        IsAnyFunctionReference,
+        IsList,
+        IsString,
+        IsCustom,
     };
 
     struct Instruction

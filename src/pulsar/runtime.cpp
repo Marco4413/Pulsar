@@ -197,6 +197,35 @@ Pulsar::RuntimeState Pulsar::Module::PrepareCallFrame(ValueStack& callerStack, F
     return RuntimeState::OK;
 }
 
+// Used within Pulsar::Module::ExecuteInstruction to implement type-checking instructions
+inline bool _InstrTypeCheck(Pulsar::InstructionCode instrCode, Pulsar::ValueType type)
+{
+    switch (instrCode) {
+    case Pulsar::InstructionCode::IsVoid:
+        return type == Pulsar::ValueType::Void;
+    case Pulsar::InstructionCode::IsInteger:
+        return type == Pulsar::ValueType::Integer;
+    case Pulsar::InstructionCode::IsDouble:
+        return type == Pulsar::ValueType::Double;
+    case Pulsar::InstructionCode::IsNumber:
+        return Pulsar::IsNumericValueType(type);
+    case Pulsar::InstructionCode::IsFunctionReference:
+        return type == Pulsar::ValueType::FunctionReference;
+    case Pulsar::InstructionCode::IsNativeFunctionReference:
+        return type == Pulsar::ValueType::NativeFunctionReference;
+    case Pulsar::InstructionCode::IsAnyFunctionReference:
+        return Pulsar::IsReferenceValueType(type);
+    case Pulsar::InstructionCode::IsList:
+        return type == Pulsar::ValueType::List;
+    case Pulsar::InstructionCode::IsString:
+        return type == Pulsar::ValueType::String;
+    case Pulsar::InstructionCode::IsCustom:
+        return type == Pulsar::ValueType::Custom;
+    default:
+        return false;
+    }
+}
+
 Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionContext& eContext) const
 {
     const Instruction& instr = frame.Function->Code[frame.InstructionIndex++];
@@ -762,6 +791,22 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             String substr(&str.AsString().Data()[(size_t)startIdx.AsInteger()], (size_t)(endIdx.AsInteger()-startIdx.AsInteger()));
             startIdx.SetString(std::move(substr));
         } else return RuntimeState::TypeError;
+    } break;
+    case InstructionCode::IsVoid:
+    case InstructionCode::IsInteger:
+    case InstructionCode::IsDouble:
+    case InstructionCode::IsNumber:
+    case InstructionCode::IsFunctionReference:
+    case InstructionCode::IsNativeFunctionReference:
+    case InstructionCode::IsAnyFunctionReference:
+    case InstructionCode::IsList:
+    case InstructionCode::IsString:
+    case InstructionCode::IsCustom: {
+        if (frame.Stack.Size() < 1)
+            return RuntimeState::StackUnderflow;
+        ValueType valueType = frame.Stack.Back().Type();
+        frame.Stack.EmplaceBack()
+            .SetInteger(_InstrTypeCheck(instr.Code, valueType) ? 1 : 0);
     } break;
     }
 
