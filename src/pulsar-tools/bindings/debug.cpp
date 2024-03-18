@@ -17,12 +17,12 @@ void PulsarTools::DebugNativeBindings::BindToModule(Pulsar::Module& module, bool
 Pulsar::RuntimeState PulsarTools::DebugNativeBindings::Debug_StackDump(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::Frame& frame = eContext.CallStack.CallingFrame();
-    PULSARTOOLS_PRINTF("Stack Dump: [");
+    std::string dump("Stack Dump: [");
     for (size_t i = 0; i < frame.Stack.Size(); i++) {
-        if (i > 0) PULSARTOOLS_PRINTF(",");
-        PULSARTOOLS_PRINTF(" {}", frame.Stack[i]);
+        if (i > 0) dump += ',';
+        dump += fmt::format(" {}", frame.Stack[i]);
     }
-    PULSARTOOLS_PRINTF(" ]\n");
+    PULSARTOOLS_PRINTF("{} ]\n", dump);
     return Pulsar::RuntimeState::OK;
 }
 
