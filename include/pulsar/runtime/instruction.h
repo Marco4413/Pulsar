@@ -49,6 +49,27 @@ namespace Pulsar
         int64_t Arg0 = 0;
     };
 
+    constexpr InstructionCode InvertJump(InstructionCode jmpInstr)
+    {
+        switch (jmpInstr) {
+        case InstructionCode::JumpIfZero:
+            return InstructionCode::JumpIfNotZero;
+        case InstructionCode::JumpIfNotZero:
+            return InstructionCode::JumpIfZero;
+        case InstructionCode::JumpIfGreaterThanZero:
+            return InstructionCode::JumpIfLessThanOrEqualToZero;
+        case InstructionCode::JumpIfGreaterThanOrEqualToZero:
+            return InstructionCode::JumpIfLessThanZero;
+        case InstructionCode::JumpIfLessThanZero:
+            return InstructionCode::JumpIfGreaterThanOrEqualToZero;
+        case InstructionCode::JumpIfLessThanOrEqualToZero:
+            return InstructionCode::JumpIfGreaterThanZero;
+        case InstructionCode::Jump:
+        default:
+            return InstructionCode::Jump;
+        }
+    }
+
     constexpr bool ShouldJump(InstructionCode jmpInstr, double val)
     {
         switch (jmpInstr) {
