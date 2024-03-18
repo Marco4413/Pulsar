@@ -4,7 +4,7 @@
 *(*println! val).
 
 *(list-println! list):
-  <- list (!length) if 0: .
+  <- list (!empty?) if: .
   (!head) (*println!)
   (list-println!)
   .
@@ -288,8 +288,8 @@ name as one that's on its parent scope (shadowing).
 
 ```lisp
 *(func! x y) -> 0:
-  if 0 = 0:
-    // 'x' within this if statement has the value 10.
+  do:
+    // 'x' within this do block has the value 10.
     10 -> !x
   end
   // 'x' keeps its original value.
@@ -498,7 +498,7 @@ The `end` keyword must be specified at the end of the last branch.
 
 All the variants can be described with the following string:
 
-`if [[<lvalue>] [<comp> <lvalue>]]:`
+`if [not] [[<lvalue>] [<comp> <lvalue>]]:`
 
 > Woah, that's A LOT of `if`s.
 
@@ -524,6 +524,8 @@ The `else` branch can be specified within almost all `if`s.
 When an `if` statement is not self-contained a [control flow statement](#control-flow-statements)
 may replace the `end` keyword, thus an explicit `else` branch cannot exist.
 
+The `not` keyword may be used to negate the comparison.
+
 ## Skippable Blocks
 
 ### While Loop
@@ -545,12 +547,14 @@ The while loop is the one you know and love from other programming languages:
 It behaves the same way as you'd expect.
 
 All [comparison operators](#comparison-operators) are supported as well as all
-datatypes from the [if statement](#if-statement).
+datatypes from the [if statement](#if-statement) and the `not` keyword.
 
 If no condition and only an lvalue is provided then it's the same as writing
 `while <lvalue> != 0`
 
 If the condition is empty it behaves the same way as `while 1` (a while true loop).
+
+You can disable a while true loop by `while not` or `while 0`.
 
 All [Control Flow Statements](#control-flow-statements) are supported.
 
