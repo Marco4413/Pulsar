@@ -72,7 +72,7 @@ namespace Pulsar
         DataFactory_T DataFactory = nullptr;
     };
 
-    struct Module; // Forward Declaration
+    class Module; // Forward Declaration
     struct ExecutionContext
     {
         const Module* OwnerModule;
@@ -102,9 +102,18 @@ namespace Pulsar
         }
     };
 
-    struct Module
+    class Module
     {
     public:
+        Module() = default;
+        ~Module() = default;
+
+        Module(const Module&) = default;
+        Module(Module&&) = default;
+
+        Module& operator=(const Module&) = default;
+        Module& operator=(Module&&) = default;
+
         ExecutionContext CreateExecutionContext() const;
         RuntimeState CallFunction(int64_t funcIdx, ValueStack& stack, ExecutionContext& context) const;
         RuntimeState CallFunctionByName(const String& name, ValueStack& stack, ExecutionContext& context) const;
@@ -116,6 +125,11 @@ namespace Pulsar
         size_t BindNativeFunction(const FunctionDefinition& def, NativeFunction func);
         size_t DeclareAndBindNativeFunction(FunctionDefinition def, NativeFunction func);
         uint64_t BindCustomType(const String& name, CustomType::DataFactory_T dataFactory = nullptr);
+        
+        // Try not to access CustomTypes directly because it may change in the future.
+        CustomType& GetCustomType(uint64_t typeId)             { return CustomTypes[(size_t)typeId]; }
+        const CustomType& GetCustomType(uint64_t typeId) const { return CustomTypes[(size_t)typeId]; }
+        bool HasCustomType(uint64_t typeId) const              { return (size_t)typeId < CustomTypes.Size(); }
 
         bool HasSourceDebugSymbols() const { return !SourceDebugSymbols.IsEmpty(); }
 
@@ -123,11 +137,13 @@ namespace Pulsar
         List<FunctionDefinition> Functions;
         List<FunctionDefinition> NativeBindings;
         List<GlobalDefinition> Globals;
-        List<NativeFunction> NativeFunctions;
         List<Value> Constants;
-        List<CustomType> CustomTypes;
 
         List<SourceDebugSymbol> SourceDebugSymbols;
+
+        List<NativeFunction> NativeFunctions;
+        List<CustomType> CustomTypes;
+
     private:
         RuntimeState PrepareCallFrame(ValueStack& callerStack, Frame& callingFrame) const;
         RuntimeState ExecuteInstruction(Frame& frame, ExecutionContext& eContext) const;
