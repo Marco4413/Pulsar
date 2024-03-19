@@ -58,7 +58,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Run(Pulsar::Execu
     
     auto threadData = eContext.GetCustomTypeData<ThreadTypeData>(type);
     if (!threadData)
-        return Pulsar::RuntimeState::Error;
+        return Pulsar::RuntimeState::NoCustomTypeData;
 
     int64_t handle = threadData->NextHandle++;
     frame.Stack.EmplaceBack()
@@ -78,11 +78,11 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Join(Pulsar::Exec
     
     auto threadData = eContext.GetCustomTypeData<ThreadTypeData>(type);
     if (!threadData)
-        return Pulsar::RuntimeState::Error;
+        return Pulsar::RuntimeState::NoCustomTypeData;
 
     auto handleThreadPair = threadData->Threads.Find(threadHandle.AsCustom().Handle);
     if (!handleThreadPair)
-        return Pulsar::RuntimeState::Error;
+        return Pulsar::RuntimeState::InvalidCustomTypeHandle;
     std::shared_ptr<PulsarThread> thread = *handleThreadPair.Value;
 
     frame.Stack.EmplaceBack()
@@ -101,7 +101,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_JoinAll(Pulsar::E
     
     auto threadData = eContext.GetCustomTypeData<ThreadTypeData>(type);
     if (!threadData)
-        return Pulsar::RuntimeState::Error;
+        return Pulsar::RuntimeState::NoCustomTypeData;
     
     Pulsar::ValueList threadResults;
     Pulsar::ValueList& handleList = threadHandleList.AsList();
@@ -114,7 +114,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_JoinAll(Pulsar::E
 
         auto handleThreadPair = threadData->Threads.Find(handle.AsCustom().Handle);
         if (!handleThreadPair)
-            return Pulsar::RuntimeState::Error;
+            return Pulsar::RuntimeState::InvalidCustomTypeHandle;
         std::shared_ptr<PulsarThread> thread = *handleThreadPair.Value;
         
         threadResults.Append()->Value().SetList(ThreadJoin(thread));
@@ -139,7 +139,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_IsAlive(Pulsar::E
     
     auto threadData = eContext.GetCustomTypeData<ThreadTypeData>(type);
     if (!threadData)
-        return Pulsar::RuntimeState::Error;
+        return Pulsar::RuntimeState::NoCustomTypeData;
 
     auto handleThreadPair = threadData->Threads.Find(threadHandle.AsCustom().Handle);
     if (handleThreadPair && (*handleThreadPair.Value)->ThreadContext->IsRunning.load()) {
@@ -163,7 +163,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_IsValid(Pulsar::E
     
     auto threadData = eContext.GetCustomTypeData<ThreadTypeData>(type);
     if (!threadData)
-        return Pulsar::RuntimeState::Error;
+        return Pulsar::RuntimeState::NoCustomTypeData;
 
     auto handleThreadPair = threadData->Threads.Find(threadHandle.AsCustom().Handle);
     frame.Stack.EmplaceBack()

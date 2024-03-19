@@ -42,7 +42,7 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_FromFile(Pulsar::
     
     auto moduleData = eContext.GetCustomTypeData<ModuleTypeData>(type);
     if (!moduleData)
-        return Pulsar::RuntimeState::Error;
+        return Pulsar::RuntimeState::NoCustomTypeData;
     
     int64_t handle = moduleData->NextHandle++;
     moduleData->Modules.Emplace(handle, std::move(module));
@@ -62,11 +62,11 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_Run(Pulsar::Execu
     
     auto moduleData = eContext.GetCustomTypeData<ModuleTypeData>(type);
     if (!moduleData)
-        return Pulsar::RuntimeState::Error;
+        return Pulsar::RuntimeState::NoCustomTypeData;
 
     auto handleModulePair = moduleData->Modules.Find(moduleHandle.AsCustom().Handle);
     if (!handleModulePair)
-        return Pulsar::RuntimeState::Error;
+        return Pulsar::RuntimeState::InvalidCustomTypeHandle;
     // The module handle is not actually thread-safe but neither is the VM
     const Pulsar::Module& module = *handleModulePair.Value;
 
@@ -74,7 +74,7 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_Run(Pulsar::Execu
     Pulsar::ExecutionContext context = module.CreateExecutionContext();
     auto runtimeState = module.CallFunctionByName("main", stack, context);
     if (runtimeState != Pulsar::RuntimeState::OK)
-        return Pulsar::RuntimeState::Error;
+        return runtimeState;
 
     frame.Stack.EmplaceBack(moduleHandle);
     Pulsar::ValueList retValues;
@@ -95,7 +95,7 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_Free(Pulsar::Exec
 
     auto moduleData = eContext.GetCustomTypeData<ModuleTypeData>(type);
     if (!moduleData)
-        return Pulsar::RuntimeState::Error;
+        return Pulsar::RuntimeState::NoCustomTypeData;
     moduleData->Modules.Remove(moduleHandle.AsCustom().Handle);
 
     return Pulsar::RuntimeState::OK;
@@ -117,7 +117,7 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_IsValid(Pulsar::E
 
     auto moduleData = eContext.GetCustomTypeData<ModuleTypeData>(type);
     if (!moduleData)
-        return Pulsar::RuntimeState::Error;
+        return Pulsar::RuntimeState::NoCustomTypeData;
 
     auto handleModulePair = moduleData->Modules.Find(moduleHandle.AsCustom().Handle);
     frame.Stack.EmplaceBack()
