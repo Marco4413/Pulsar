@@ -848,6 +848,10 @@ const char* Pulsar::RuntimeStateToString(RuntimeState rstate)
         return "ListIndexOutOfBounds";
     case RuntimeState::StringIndexOutOfBounds:
         return "StringIndexOutOfBounds";
+    case RuntimeState::NoCustomTypeData:
+        return "NoCustomTypeData";
+    case RuntimeState::InvalidCustomTypeHandle:
+        return "InvalidCustomTypeHandle";
     }
     return "Unknown";
 }

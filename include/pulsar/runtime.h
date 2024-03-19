@@ -28,7 +28,9 @@ namespace Pulsar
         UnboundNativeFunction,
         FunctionNotFound,
         ListIndexOutOfBounds,
-        StringIndexOutOfBounds
+        StringIndexOutOfBounds,
+        NoCustomTypeData,
+        InvalidCustomTypeHandle,
     };
 
     const char* RuntimeStateToString(RuntimeState rstate);
