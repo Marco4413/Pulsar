@@ -2,7 +2,12 @@
 
 ![logo](logo.png)
 
-*A small stack-based dynamically-typed interpreted scripting language.*
+*A small
+[concatenative](https://en.wikipedia.org/wiki/Concatenative_programming_language)
+[stack-based](https://en.wikipedia.org/wiki/Stack-oriented_programming)
+[dynamically-typed](https://en.wikipedia.org/wiki/Type_system#Dynamic_type_checking_and_runtime_type_information)
+[interpreted](https://en.wikipedia.org/wiki/Interpreter_(computing))
+[scripting language](https://en.wikipedia.org/wiki/Scripting_language).*
 
 > The main purpose of this language is to be an alternative to CSS
 in an highly anticipated upcoming JavaScript Framework,
@@ -18,8 +23,8 @@ It can be found at [docs/LANGUAGE](docs/LANGUAGE.md).
 
 ## Editor Extensions
 
-If you want to enable Syntax Highlighting on VSCode for the Pulsar Programming
-Language, you can download and package the official extension found at
+If you want to enable Syntax Highlighting on VSCode for the Pulsar Language,
+you can download and package the official extension found at
 [Marco4413/vscode-pulsar-language](https://github.com/Marco4413/vscode-pulsar-language).
 
 ## Dependencies
