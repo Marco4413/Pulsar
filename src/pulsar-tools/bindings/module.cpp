@@ -8,13 +8,13 @@ void PulsarTools::ModuleNativeBindings::BindToModule(Pulsar::Module& module)
         return std::make_shared<ModuleTypeData>();
     });
     module.BindNativeFunction({ "module/from-file", 1, 1 },
-        [&, type](auto& ctx) { return Module_FromFile(ctx, type); });
+        [type](auto& ctx) { return Module_FromFile(ctx, type); });
     module.BindNativeFunction({ "module/run", 1, 2 },
-        [&, type](auto& ctx) { return Module_Run(ctx, type); });
+        [type](auto& ctx) { return Module_Run(ctx, type); });
     module.BindNativeFunction({ "module/free!", 1, 0 },
-        [&, type](auto& ctx) { return Module_Free(ctx, type); });
+        [type](auto& ctx) { return Module_Free(ctx, type); });
     module.BindNativeFunction({ "module/valid?", 1, 2 },
-        [&, type](auto& ctx) { return Module_IsValid(ctx, type); });
+        [type](auto& ctx) { return Module_IsValid(ctx, type); });
 }
 
 Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_FromFile(Pulsar::ExecutionContext& eContext, uint64_t type)

@@ -11,13 +11,13 @@ void PulsarTools::LexerNativeBindings::BindToModule(Pulsar::Module& module)
         return std::make_shared<LexerTypeData>();
     });
     module.BindNativeFunction({ "lexer/from-file", 1, 1 },
-        [&, type](auto& ctx) { return Lexer_FromFile(ctx, type); });
+        [type](auto& ctx) { return Lexer_FromFile(ctx, type); });
     module.BindNativeFunction({ "lexer/next-token", 1, 2 },
-        [&, type](auto& ctx) { return Lexer_NextToken(ctx, type); });
+        [type](auto& ctx) { return Lexer_NextToken(ctx, type); });
     module.BindNativeFunction({ "lexer/free!", 1, 0 },
-        [&, type](auto& ctx) { return Lexer_Free(ctx, type); });
+        [type](auto& ctx) { return Lexer_Free(ctx, type); });
     module.BindNativeFunction({ "lexer/valid?", 1, 2 },
-        [&, type](auto& ctx) { return Lexer_IsValid(ctx, type); });
+        [type](auto& ctx) { return Lexer_IsValid(ctx, type); });
 }
 
 Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_FromFile(Pulsar::ExecutionContext& eContext, uint64_t type)

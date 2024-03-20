@@ -6,15 +6,15 @@ void PulsarTools::ThreadNativeBindings::BindToModule(Pulsar::Module& module)
         return std::make_shared<ThreadTypeData>();
     });
     module.BindNativeFunction({ "thread/run", 2, 1 },
-        [&, type](auto& ctx) { return Thread_Run(ctx, type); });
+        [type](auto& ctx) { return Thread_Run(ctx, type); });
     module.BindNativeFunction({ "thread/join", 1, 1 },
-        [&, type](auto& ctx) { return Thread_Join(ctx, type); });
+        [type](auto& ctx) { return Thread_Join(ctx, type); });
     module.BindNativeFunction({ "thread/join-all", 1, 1 },
-        [&, type](auto& ctx) { return Thread_JoinAll(ctx, type); });
+        [type](auto& ctx) { return Thread_JoinAll(ctx, type); });
     module.BindNativeFunction({ "thread/alive?", 1, 2 },
-        [&, type](auto& ctx) { return Thread_IsAlive(ctx, type); });
+        [type](auto& ctx) { return Thread_IsAlive(ctx, type); });
     module.BindNativeFunction({ "thread/valid?", 1, 2 },
-        [&, type](auto& ctx) { return Thread_IsValid(ctx, type); });
+        [type](auto& ctx) { return Thread_IsValid(ctx, type); });
 }
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Run(Pulsar::ExecutionContext& eContext, uint64_t type)
