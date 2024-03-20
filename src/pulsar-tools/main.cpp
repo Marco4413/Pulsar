@@ -7,6 +7,7 @@
 #include "pulsar-tools/bindings/module.h"
 #include "pulsar-tools/bindings/panic.h"
 #include "pulsar-tools/bindings/print.h"
+#include "pulsar-tools/bindings/stdio.h"
 #include "pulsar-tools/bindings/thread.h"
 #include "pulsar-tools/bindings/time.h"
 
@@ -58,8 +59,9 @@ constexpr uint32_t R_BIND_LEXER  = (1 << 2) << 16;
 constexpr uint32_t R_BIND_MODULE = (1 << 3) << 16;
 constexpr uint32_t R_BIND_PANIC  = (1 << 4) << 16;
 constexpr uint32_t R_BIND_PRINT  = (1 << 5) << 16;
-constexpr uint32_t R_BIND_THREAD = (1 << 6) << 16;
-constexpr uint32_t R_BIND_TIME   = (1 << 7) << 16;
+constexpr uint32_t R_BIND_STDIO  = (1 << 6) << 16;
+constexpr uint32_t R_BIND_THREAD = (1 << 7) << 16;
+constexpr uint32_t R_BIND_TIME   = (1 << 8) << 16;
 constexpr uint32_t R_BIND_ALL    =
       R_BIND_DEBUG
     | R_BIND_FS
@@ -67,6 +69,7 @@ constexpr uint32_t R_BIND_ALL    =
     | R_BIND_MODULE
     | R_BIND_PANIC
     | R_BIND_PRINT
+    | R_BIND_STDIO
     | R_BIND_THREAD
     | R_BIND_TIME;
 
@@ -106,6 +109,7 @@ PULSARTOOLS_FLAG_OPTIONS(RuntimeOptions,
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-module",     "b-module", R_BIND_MODULE, "Bind Module natives."),
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-panic",      "b-panic",  R_BIND_PANIC,  "Bindings for functions that terminate execution."),
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-print",      "b-print",  R_BIND_PRINT,  "Printing functions."),
+    PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-stdio",      "b-stdio",  R_BIND_STDIO,  "Direct access to stdio for String IO."),
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-thread",     "b-thread", R_BIND_THREAD, "Bind Thread natives.\n(passing handles to threads is not supported)"),
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-time",       "b-time",   R_BIND_TIME,   "Bindings to the system clock."),
     PULSARTOOLS_FLAG_OPTION("--runtime", "-r", "bind-all",        "b-all",    R_BIND_ALL,    "Bind all available natives. (default: true)"),
@@ -324,6 +328,8 @@ bool Command_Run(const char* executable, int argc, const char** argv)
         PulsarTools::PanicNativeBindings::BindToModule(module);
     if (flagOptions & R_BIND_PRINT)
         PulsarTools::PrintNativeBindings::BindToModule(module);
+    if (flagOptions & R_BIND_STDIO)
+        PulsarTools::STDIONativeBindings::BindToModule(module);
     if (flagOptions & R_BIND_THREAD)
         PulsarTools::ThreadNativeBindings::BindToModule(module);
     if (flagOptions & R_BIND_TIME)
