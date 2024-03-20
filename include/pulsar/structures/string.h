@@ -132,6 +132,40 @@ namespace Pulsar
             return *this;
         }
 
+        int64_t Compare(const String& other) const
+        {
+            int64_t cmp = 0;
+            if (Length() != other.Length()) {
+                size_t minLength = Length() < other.Length()
+                    ? Length()
+                    : other.Length();
+                for (size_t i = 0; i < minLength; i++) {
+                    cmp = (*this)[i] - other[i];
+                    if (cmp != 0)
+                        break;
+                }
+                if (cmp == 0)
+                    cmp = (int64_t)Length() - (int64_t)other.Length();
+                return cmp;
+            }
+
+            for (size_t i = 0; i < Length(); i++) {
+                cmp = (*this)[i] - other[i];
+                if (cmp != 0)
+                    break;
+            }
+            return cmp;
+        }
+
+        String SubString(size_t startIdx, size_t endIdx) const
+        {
+            if (startIdx >= endIdx || startIdx >= m_Length)
+                return "";
+            else if (endIdx > m_Length)
+                return String(&m_Data[startIdx], m_Length-startIdx);
+            return String(&m_Data[startIdx], endIdx-startIdx);
+        }
+
         const char* Data() const { return m_Data; }
         size_t Length() const { return m_Length; }
         size_t Capacity() const { return m_Capacity; }
