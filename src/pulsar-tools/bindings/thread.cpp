@@ -85,10 +85,9 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Join(Pulsar::Exec
         return Pulsar::RuntimeState::InvalidCustomTypeHandle;
     std::shared_ptr<PulsarThread> thread = *handleThreadPair.Value;
 
-    frame.Stack.EmplaceBack()
-        .SetList(ThreadJoin(thread));
-
+    ThreadJoin(thread, frame.Stack);
     threadData->Threads.Remove(threadHandle.AsCustom().Handle);
+
     return Pulsar::RuntimeState::OK;
 }
 
@@ -117,7 +116,14 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_JoinAll(Pulsar::E
             return Pulsar::RuntimeState::InvalidCustomTypeHandle;
         std::shared_ptr<PulsarThread> thread = *handleThreadPair.Value;
         
-        threadResults.Append()->Value().SetList(ThreadJoin(thread));
+        ThreadJoin(thread, frame.Stack);
+        Pulsar::ValueList threadResult;
+        threadResult.Append()->Value() = std::move(frame.Stack.Back());
+        frame.Stack.PopBack();
+        threadResult.Append()->Value() = std::move(frame.Stack.Back());
+        frame.Stack.PopBack();
+
+        threadResults.Append()->Value().SetList(std::move(threadResult));
 
         threadData->Threads.Remove(handle.AsCustom().Handle);
         handleNode = handleNode->Next();
@@ -171,21 +177,21 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_IsValid(Pulsar::E
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::ValueList PulsarTools::ThreadNativeBindings::ThreadJoin(std::shared_ptr<PulsarThread> thread)
+void PulsarTools::ThreadNativeBindings::ThreadJoin(std::shared_ptr<PulsarThread> thread, Pulsar::ValueStack& stack)
 {
     thread->Thread.join();
     Pulsar::ValueList threadResult;
     if (thread->ThreadContext->State != Pulsar::RuntimeState::OK) {
         // An error occurred
-        threadResult.Append()->Value().SetInteger((int64_t)thread->ThreadContext->State);
-        threadResult.Append()->Value().SetList(Pulsar::ValueList());
-    } else {
-        threadResult.Append()->Value().SetInteger(0);
-        Pulsar::ValueList returnValues;
-        for (size_t i = 0; i < thread->ThreadContext->Stack.Size(); i++)
-            returnValues.Append()->Value() = std::move(thread->ThreadContext->Stack[i]);
-        thread->ThreadContext->Stack.Clear();
-        threadResult.Append()->Value().SetList(std::move(returnValues));
+        stack.EmplaceBack().SetList(Pulsar::ValueList());
+        stack.EmplaceBack().SetInteger((int64_t)thread->ThreadContext->State);
+        return;
     }
-    return threadResult;
+
+    Pulsar::ValueList returnValues;
+    for (size_t i = 0; i < thread->ThreadContext->Stack.Size(); i++)
+        returnValues.Append()->Value() = std::move(thread->ThreadContext->Stack[i]);
+    thread->ThreadContext->Stack.Clear();
+    stack.EmplaceBack().SetList(std::move(returnValues));
+    stack.EmplaceBack().SetInteger(0);
 }

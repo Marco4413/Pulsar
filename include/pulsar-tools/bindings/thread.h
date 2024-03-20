@@ -43,7 +43,7 @@ namespace PulsarTools
         Pulsar::RuntimeState Thread_IsAlive(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Thread_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
 
-        Pulsar::ValueList ThreadJoin(std::shared_ptr<PulsarThread> thread);
+        void ThreadJoin(std::shared_ptr<PulsarThread> thread, Pulsar::ValueStack& stack);
     }
 }
 

@@ -9,7 +9,7 @@
 global const 0 -> thread_bindings/run-single-threaded?
 
 *(*thread/run      fn     args) -> 1.
-*(*thread/join     handle     ) -> 1.
+*(*thread/join     handle     ) -> 2.
 *(*thread/join-all handle-list) -> 1.
 *(*thread/alive?   handle     ) -> 2.
 *(*thread/valid?   handle     ) -> 2.
