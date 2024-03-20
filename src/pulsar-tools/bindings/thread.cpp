@@ -47,9 +47,9 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Run(Pulsar::Execu
     }
 
     threadContext->Context.Globals = eContext.Globals;
+    threadContext->IsRunning.store(true);
     std::shared_ptr<PulsarThread> thread = std::make_shared<PulsarThread>(
         std::thread([func, threadContext]() mutable {
-            threadContext->IsRunning.store(true);
             threadContext->State = threadContext->Context.OwnerModule->ExecuteFunction(
                 func, threadContext->Stack, threadContext->Context);
             threadContext->IsRunning.store(false);
