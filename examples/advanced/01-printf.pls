@@ -1,4 +1,4 @@
-*(*print! val).
+*(*stdout/write! str).
 
 global [] -> printf/context-stack
 global 2 -> printf/default-precision
@@ -34,16 +34,16 @@ global "" -> printf/buffer
   .
 
 *(printf/flush-buffer!):
-  <- printf/buffer (*print!)
+  <- printf/buffer (*stdout/write!)
   "" -> printf/buffer
   .
 
-*(printf/print! val):
+*(printf/print! str):
   printf/print-to-buffer? if:
-    <- printf/buffer <- val (!append)
+    <- printf/buffer <- str (!append)
     -> printf/buffer
   else:
-    <- val (*print!)
+    <- str (*stdout/write!)
   end
   .
 
