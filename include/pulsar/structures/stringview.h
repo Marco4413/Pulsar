@@ -12,6 +12,10 @@ namespace Pulsar
     public:
         StringView(const String& str)
             : StringView(str.Data(), str.Length()) { }
+
+        StringView(const char* str)
+            : StringView(str, std::strlen(str)) { }
+
         StringView(const char* str, size_t length)
             : m_Data(str), m_End(length) { }
         
