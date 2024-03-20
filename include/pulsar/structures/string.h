@@ -56,6 +56,13 @@ namespace Pulsar
             return concat;
         }
 
+        String operator+(const char* cstr) const
+        {
+            String concat = *this;
+            concat += cstr;
+            return concat;
+        }
+
         String operator+(char ch) const
         {
             String concat = *this;
@@ -83,6 +90,17 @@ namespace Pulsar
             PULSAR_MEMCPY(
                 (void*)(m_Data+appendIdx), other.m_Data,
                 other.m_Length*sizeof(char));
+            return *this;
+        }
+
+        String& operator+=(const char* cstr)
+        {
+            size_t cstrLen = std::strlen(cstr);
+            size_t appendIdx = m_Length;
+            Resize(m_Length+cstrLen);
+            PULSAR_MEMCPY(
+                (void*)(m_Data+appendIdx), cstr,
+                cstrLen*sizeof(char));
             return *this;
         }
 
