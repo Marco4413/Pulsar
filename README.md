@@ -14,7 +14,7 @@ I wanted to have a second attempt at creating a programming language.
 
 ## Language Documentation
 
-It can be found within the [docs](docs) folder.
+It can be found at [docs/LANGUAGE](docs/LANGUAGE.md).
 
 ## Editor Extensions
 
