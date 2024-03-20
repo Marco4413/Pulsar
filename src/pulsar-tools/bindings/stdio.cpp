@@ -4,7 +4,7 @@
 
 void PulsarTools::STDIONativeBindings::BindToModule(Pulsar::Module& module)
 {
-    module.BindNativeFunction({ "stdin/read!",     0, 1 }, STDIN_Read);
+    module.BindNativeFunction({ "stdin/read",      0, 1 }, STDIN_Read);
     module.BindNativeFunction({ "stdout/write!",   1, 0 }, STDOUT_Write);
     module.BindNativeFunction({ "stdout/writeln!", 1, 0 }, STDOUT_WriteLn);
 }
