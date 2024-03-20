@@ -561,28 +561,7 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
 
         if (a.Type() != b.Type() || a.Type() != ValueType::String)
             return RuntimeState::TypeError;
-
-        // String Comparison!
-        if (a.AsString().Length() != b.AsString().Length()) {
-            size_t minLength = a.AsString().Length() < b.AsString().Length()
-                ? a.AsString().Length()
-                : b.AsString().Length();
-            int64_t cmp = 0;
-            for (size_t i = 0; i < minLength; i++) {
-                cmp = a.AsString()[i] - b.AsString()[i];
-                if (cmp != 0) break;
-            }
-            if (cmp == 0)
-                cmp = (int64_t)a.AsString().Length() - (int64_t)b.AsString().Length();
-            a.SetInteger(cmp);
-        } else {
-            int64_t cmp = 0;
-            for (size_t i = 0; i < a.AsString().Length(); i++) {
-                cmp = a.AsString()[i] - b.AsString()[i];
-                if (cmp != 0) break;
-            }
-            a.SetInteger(cmp);
-        }
+        a.SetInteger(a.AsString().Compare(b.AsString()));
     } break;
     case InstructionCode::Jump:
         frame.InstructionIndex = (size_t)((frame.InstructionIndex-1) + instr.Arg0);
@@ -781,15 +760,11 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         Value& str = frame.Stack[frame.Stack.Size()-2];
 
         if (str.Type() == ValueType::String) {
-            if (startIdx.AsInteger() >= endIdx.AsInteger()) {
-                startIdx.SetString("");
-                break;
-            } else if (
-                startIdx.AsInteger() < 0 || (size_t)startIdx.AsInteger() >= str.AsString().Length() ||
-                endIdx.AsInteger() < 0 || (size_t)endIdx.AsInteger() >= str.AsString().Length())
+            if (startIdx.AsInteger() < 0 || endIdx.AsInteger() < 0)
                 return RuntimeState::StringIndexOutOfBounds;
-            String substr(&str.AsString().Data()[(size_t)startIdx.AsInteger()], (size_t)(endIdx.AsInteger()-startIdx.AsInteger()));
-            startIdx.SetString(std::move(substr));
+            startIdx.SetString(str.AsString().SubString(
+                (size_t)startIdx.AsInteger(), (size_t)endIdx.AsInteger()
+            ));
         } else return RuntimeState::TypeError;
     } break;
     case InstructionCode::IsVoid:
