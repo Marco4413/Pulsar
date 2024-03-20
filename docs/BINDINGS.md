@@ -24,6 +24,8 @@ Prints the entire call stack up to the native call.
 
 The FileSystem API.
 
+See [examples/basic/10-file_system](../examples/basic/10-file_system.pls)
+
 ### fs/exists?
 
 `*(*fs/exists? path) -> 2.`
@@ -47,6 +49,8 @@ Errors if `path` is not a file.
 Bindings to the Pulsar Lexer.
 
 > *Don't ask me why they even exist.*
+
+See [examples/advanced/00-lexer_bindings](../examples/advanced/00-lexer_bindings.pls)
 
 ### lexer/from-file
 
@@ -107,6 +111,8 @@ They won't be documented until they're stable.*
 
 These methods will allow you to terminate execution to prevent
 undefined behaviour of functions.
+
+See [examples/intermediate/04-type_checking](../examples/intermediate/04-type_checking.pls)
 
 ### panic!
 
@@ -190,6 +196,8 @@ Meaning that it's very limited in what it can do.
 As of now you cannot exchange data between running threads.
 This could be possible with custom bindings that add a new type.
 
+See [examples/advanced/02-thread_bindings](../examples/advanced/02-thread_bindings.pls)
+
 ### thread/run
 
 `*(*thread/run fn args) -> 1.`
@@ -244,6 +252,8 @@ If `Thread` is not valid, it either does not exist, or was joined.
 ## Time
 
 Functions to keep track of time!
+
+See [examples/basic/11-time](../examples/basic/11-time.pls)
 
 ### time
 
