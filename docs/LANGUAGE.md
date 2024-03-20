@@ -1,4 +1,4 @@
-# The Pulsar Programming Language Documentation
+# The Pulsar Language Documentation
 
 ```lisp
 *(*println! val).
@@ -46,7 +46,7 @@
 
 ## It's stack-based!
 
-An important part of the Pulsar programming language is its stack-based nature.
+An important part of the Pulsar scripting language is its concatenative and stack-based nature.
 
 Constants and locals, also referred to as `lvalue`s, are pushed onto it all the time.
 
