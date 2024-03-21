@@ -7,26 +7,26 @@ void PulsarTools::ThreadNativeBindings::BindToModule(Pulsar::Module& module)
     });
     module.BindNativeFunction({ "thread/run", 2, 1 },
         [type](auto& ctx) { return Thread_Run(ctx, type); });
-    module.BindNativeFunction({ "thread/join", 1, 1 },
+    module.BindNativeFunction({ "thread/join", 1, 2 },
         [type](auto& ctx) { return Thread_Join(ctx, type); });
     module.BindNativeFunction({ "thread/join-all", 1, 1 },
         [type](auto& ctx) { return Thread_JoinAll(ctx, type); });
-    module.BindNativeFunction({ "thread/alive?", 1, 2 },
+    module.BindNativeFunction({ "thread/alive?", 1, 1 },
         [type](auto& ctx) { return Thread_IsAlive(ctx, type); });
-    module.BindNativeFunction({ "thread/valid?", 1, 2 },
+    module.BindNativeFunction({ "thread/valid?", 1, 1 },
         [type](auto& ctx) { return Thread_IsValid(ctx, type); });
 }
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Run(Pulsar::ExecutionContext& eContext, uint64_t type)
 {
     Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    Pulsar::Value& threadFn = frame.Locals[0];
+    Pulsar::Value& threadFn = frame.Locals[1];
     if (threadFn.Type() != Pulsar::ValueType::FunctionReference)
         return Pulsar::RuntimeState::TypeError;
     int64_t funcIdx = threadFn.AsInteger();
     if (funcIdx < 0 || (size_t)funcIdx >= eContext.OwnerModule->Functions.Size())
         return Pulsar::RuntimeState::OutOfBoundsFunctionIndex;
-    Pulsar::Value& threadArgs = frame.Locals[1];
+    Pulsar::Value& threadArgs = frame.Locals[0];
     if (threadArgs.Type() != Pulsar::ValueType::List)
         return Pulsar::RuntimeState::TypeError;
     
@@ -141,7 +141,6 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_IsAlive(Pulsar::E
     if (threadHandle.Type() != Pulsar::ValueType::Custom
         || threadHandle.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
-    frame.Stack.PushBack(threadHandle);
     
     auto threadData = eContext.GetCustomTypeData<ThreadTypeData>(type);
     if (!threadData)
@@ -165,7 +164,6 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_IsValid(Pulsar::E
     if (threadHandle.Type() != Pulsar::ValueType::Custom
         || threadHandle.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
-    frame.Stack.PushBack(threadHandle);
     
     auto threadData = eContext.GetCustomTypeData<ThreadTypeData>(type);
     if (!threadData)

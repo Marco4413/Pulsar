@@ -12,11 +12,11 @@ void PulsarTools::LexerNativeBindings::BindToModule(Pulsar::Module& module)
     });
     module.BindNativeFunction({ "lexer/from-file", 1, 1 },
         [type](auto& ctx) { return Lexer_FromFile(ctx, type); });
-    module.BindNativeFunction({ "lexer/next-token", 1, 2 },
+    module.BindNativeFunction({ "lexer/next-token", 1, 1 },
         [type](auto& ctx) { return Lexer_NextToken(ctx, type); });
     module.BindNativeFunction({ "lexer/free!", 1, 0 },
         [type](auto& ctx) { return Lexer_Free(ctx, type); });
-    module.BindNativeFunction({ "lexer/valid?", 1, 2 },
+    module.BindNativeFunction({ "lexer/valid?", 1, 1 },
         [type](auto& ctx) { return Lexer_IsValid(ctx, type); });
 }
 
@@ -88,10 +88,8 @@ Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_NextToken(Pulsar::E
             tokenAsList.Append()->Value().SetString(token.StringVal);
     }
 
-    frame.Stack.EmplaceBack(lexerHandle);
     frame.Stack.EmplaceBack()
         .SetList(std::move(tokenAsList));
-
     return Pulsar::RuntimeState::OK;
 }
 
@@ -118,7 +116,6 @@ Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_IsValid(Pulsar::Exe
     if (lexerHandle.Type() != Pulsar::ValueType::Custom
         || lexerHandle.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
-    frame.Stack.EmplaceBack(lexerHandle);
 
     if (lexerHandle.AsCustom().Handle == 0) {
         frame.Stack.EmplaceBack().SetInteger(0);

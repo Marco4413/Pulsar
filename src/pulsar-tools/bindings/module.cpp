@@ -9,11 +9,11 @@ void PulsarTools::ModuleNativeBindings::BindToModule(Pulsar::Module& module)
     });
     module.BindNativeFunction({ "module/from-file", 1, 1 },
         [type](auto& ctx) { return Module_FromFile(ctx, type); });
-    module.BindNativeFunction({ "module/run", 1, 2 },
+    module.BindNativeFunction({ "module/run", 1, 1 },
         [type](auto& ctx) { return Module_Run(ctx, type); });
     module.BindNativeFunction({ "module/free!", 1, 0 },
         [type](auto& ctx) { return Module_Free(ctx, type); });
-    module.BindNativeFunction({ "module/valid?", 1, 2 },
+    module.BindNativeFunction({ "module/valid?", 1, 1 },
         [type](auto& ctx) { return Module_IsValid(ctx, type); });
 }
 
@@ -76,7 +76,6 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_Run(Pulsar::Execu
     if (runtimeState != Pulsar::RuntimeState::OK)
         return runtimeState;
 
-    frame.Stack.EmplaceBack(moduleHandle);
     Pulsar::ValueList retValues;
     for (size_t i = 0; i < stack.Size(); i++)
         retValues.Append()->Value() = std::move(stack[i]);
@@ -108,7 +107,6 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_IsValid(Pulsar::E
     if (moduleHandle.Type() != Pulsar::ValueType::Custom
         || moduleHandle.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
-    frame.Stack.EmplaceBack(moduleHandle);
 
     if (moduleHandle.AsCustom().Handle == 0) {
         frame.Stack.EmplaceBack().SetInteger(0);

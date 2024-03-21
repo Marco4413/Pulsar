@@ -67,30 +67,30 @@ Don't forget to call [`(*lexer/free!)`](#lexerfree) when you're done!
 
 ### lexer/next-token
 
-`*(*lexer/next-token handle) -> 2.`
+`*(*lexer/next-token lexer) -> 1.`
 
 Types: `Lexer -> Lexer, [ String, Any? ]`
 
-Given a `Lexer`, returns the next token as a `List`.
+Returns the next token of `lexer` as a `List`.
 
 The `List` representing the token contains a `String` which is the name
 of the Token and an optional `Any` value which is the literal value.
 
 ### lexer/free!
 
-`*(*lexer/free! handle).`
+`*(*lexer/free! lexer).`
 
 Types: `Lexer ->`
 
-Deletes the given `Lexer` from memory.
+Deletes `lexer` from memory.
 
 ### lexer/valid?
 
-`*(*lexer/valid? handle).`
+`*(*lexer/valid? lexer).`
 
 Types: `Lexer ->`
 
-Deletes the given `Lexer` from memory.
+Checks if `lexer` is valid (was created and should be freed).
 
 ## Module
 
@@ -200,9 +200,9 @@ See [examples/advanced/02-thread_bindings](../examples/advanced/02-thread_bindin
 
 ### thread/run
 
-`*(*thread/run fn args) -> 1.`
+`*(*thread/run args fn) -> 1.`
 
-Types: `FunctionReference, List -> Thread`
+Types: `List, FunctionReference -> Thread`
 
 Runs a new thread with `fn` and `args`. All Globals are copied from
 the current context.
@@ -234,20 +234,19 @@ all `RuntimeState`s and return values of the `Thread`s.
 
 `*(*thread/alive? thread) -> 2.`
 
-Types: `Thread -> Thread, Integer`
+Types: `Thread -> Integer`
 
-Given a `thread` returns the `thread` and an `Integer` which is 0 if the `thread`
+Given a `thread` returns an `Integer` which is 0 if the `thread`
 is not running. Meaning that joining `thread` does not block.
 
 ### thread/valid?
 
 `*(*thread/valid? thread) -> 2.`
 
-Types: `Thread -> Thread, Integer`
+Types: `Thread -> Integer`
 
-Given a `thread` returns the `thread` and an `Integer` which is 0 if the `thread` is not valid.
-
-If `Thread` is not valid, it either does not exist, or was joined.
+Given a `thread` returns an `Integer` which is 0 if the `thread`
+is not valid (does not exist or was joined).
 
 ## Time
 

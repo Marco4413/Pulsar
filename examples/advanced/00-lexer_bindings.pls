@@ -1,35 +1,31 @@
 // Native Bindings
-*(*module/from-file   path) -> 1.
-*(*module/run       handle) -> 2.
-*(*module/free!     handle).
-*(*module/valid?    handle) -> 2.
+*(*lexer/from-file   path) -> 1.
+*(*lexer/next-token lexer) -> 1.
+*(*lexer/free!      lexer).
+*(*lexer/valid?     lexer) -> 1.
 
-*(*lexer/from-file    path) -> 1.
-*(*lexer/next-token handle) -> 2.
-*(*lexer/free!      handle).
-*(*lexer/valid?     handle) -> 2.
+global const 1 -> TOKEN/EOF
 
-*(lex-next handle) -> 2: // [ Handle, Token ]
-  handle
-    (*lexer/next-token)
-    (!head) if 1: // EndOfFile
-      -> token
-      (!empty-list)
-        <- token (!append)
-      .
+*(lex-next lexer) -> 1: // [ Token ]
+  lexer (*lexer/next-token)
+  (!head) if TOKEN/EOF:
     -> token
-    (lex-next)
-      <- token (!prepend)
+    [ <- token ]
+    .
+  -> token
+  lexer (lex-next)
+    <- token (!prepend)
   .
 
 *(lex-file filepath) -> 1:
-  <- filepath (*lexer/from-file)
-    (*lexer/valid?) if:
-      (lex-next) -> result
-      (*lexer/free!)
-      <- result
-      .
-    "Could not read file at " filepath (!append)
+  filepath (*lexer/from-file) -> lexer
+  lexer (*lexer/valid?) if:
+    lexer (lex-next)
+    lexer (*lexer/free!)
+    .
+  "Could not read file at '"
+    <- filepath (!append)
+    "'." (!append)
   .
 
 *(main args) -> 1:

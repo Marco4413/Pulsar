@@ -8,11 +8,11 @@
 // Set to 1 to run the example single-threaded
 global const 0 -> thread_bindings/run-single-threaded?
 
-*(*thread/run      fn     args) -> 1.
-*(*thread/join     handle     ) -> 2.
-*(*thread/join-all handle-list) -> 1.
-*(*thread/alive?   handle     ) -> 2.
-*(*thread/valid?   handle     ) -> 2.
+*(*thread/run      args fn) -> 1.
+*(*thread/join     thread ) -> 2.
+*(*thread/join-all threads) -> 1.
+*(*thread/alive?   thread ) -> 1.
+*(*thread/valid?   thread ) -> 1.
 
 *(main-st args) -> 1:
   [] -> results
@@ -28,14 +28,13 @@ global const 0 -> thread_bindings/run-single-threaded?
 
 *(main-mt args) -> 1:
   [] -> threads
-  <- args (!tail) do:
+  <- args (!tail) while:
     (!empty?) if: break
     (!head) -> filepath
-    <& (lex-file) [ <- filepath ] (*thread/run)
+    [ <- filepath ] <& (lex-file) (*thread/run)
       -> thread
     <- threads <- thread (!append)
       -> threads
-    continue
   end
   <- threads (*thread/join-all)
   .
