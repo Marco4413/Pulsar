@@ -54,7 +54,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Run(Pulsar::Execu
     
     const Pulsar::FunctionDefinition& func = eContext.OwnerModule->Functions[(size_t)funcIdx];
     std::shared_ptr<PulsarThreadContext> threadContext = std::make_shared<PulsarThreadContext>(
-        eContext.OwnerModule->CreateExecutionContext(),
+        eContext.OwnerModule->CreateExecutionContext(false, true),
         Pulsar::ValueStack(),
         Pulsar::RuntimeState::OK
     );
