@@ -69,12 +69,13 @@ Don't forget to call [`(*lexer/free!)`](#lexerfree) when you're done!
 
 `*(*lexer/next-token lexer) -> 1.`
 
-Types: `Lexer -> Lexer, [ String, Any? ]`
+Types: `Lexer -> Lexer, [ Integer, String, Any? ]`
 
 Returns the next token of `lexer` as a `List`.
 
-The `List` representing the token contains a `String` which is the name
-of the Token and an optional `Any` value which is the literal value.
+The `List` representing the token contains an `Integer` representing the
+Token's Type, a `String` which is the name of the Token and an optional
+`Any` value which is the literal value.
 
 ### lexer/free!
 
