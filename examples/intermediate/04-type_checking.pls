@@ -1,5 +1,5 @@
-*(*panic!).
-*(*panic/type!).
+*(*error!).
+*(*error/type!).
 
 *(*println! val).
 
@@ -13,7 +13,7 @@ global const -> Void:
   <- val
     (!void?) if: "Foo" .
     (!string?) if: "Foo " (!prepend) .
-    (*panic/type!) // Void or String
+    (*error/type!) // Void or String
   .
 
 *(main args):
