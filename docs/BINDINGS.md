@@ -20,6 +20,78 @@ Prints the whole stack of the calling function.
 
 Prints the entire call stack up to the native call.
 
+## Error
+
+Error handling bindings.
+
+**Why not put these in the Pulsar Language?**
+
+Just like threads, they're out of scope.
+
+*FUN FACT:*
+Even type checking instructions shouldn't have been part of the language.
+Though they were added to allow for optional arguments and/or handling
+of arguments of different types within a single function.
+
+See [examples/intermediate/04-type_checking](../examples/intermediate/04-type_checking.pls)
+
+See [examples/intermediate/06-error_handling](../examples/intermediate/06-error_handling.pls)
+
+### error!
+
+`*(*error!).`
+
+Throws `RuntimeState::Error`.
+
+Pops its call from the call stack before throwing the error.
+That way the error is shown to be within the caller.
+
+### error/type!
+
+`*(*error/type!).`
+
+Throws `RuntimeState::TypeError`.
+
+Pops its call from the call stack before throwing the error.
+That way the error is shown to be within the caller.
+
+### scall
+
+`*(*scall args fn) -> 2.`
+
+Types: `List, FunctionReference -> List, Integer`
+
+Calls `fn` with `args` and returns a `List` containing its
+return values and an `Integer` which is non-zero in case of
+an error.
+
+Extra arguments are part of return values.
+If an error occurred, return values is an empty list.
+
+Also known as "Safe/Sandboxed Call", `scall` creates a copy
+of the Context's Globals but not of Handle References:
+- Changes to Globals don't affect the main context.
+- Handles can't be passed as arguments.
+- Handles created within `fn` are freed in case of an error.
+
+### tcall
+
+`*(*tcall args fn) -> 2.`
+
+Types: `List, FunctionReference -> List, Integer`
+
+Calls `fn` with `args` and returns a `List` containing its
+return values and an `Integer` which is non-zero in case of
+an error.
+
+Extra arguments are part of return values.
+If an error occurred, return values is an empty list.
+
+Also known as "Try Call", `tcall` inherits the main context:
+- Changes to Globals affect the main context.
+- Handles can be passed as arguments.
+- Handles created within `fn` **ARE NOT** freed in case of an error.
+
 ## FS
 
 The FileSystem API.
@@ -107,31 +179,6 @@ They won't be documented until they're stable.*
 ### module/free!
 
 ### module/valid?
-
-## Panic
-
-These methods will allow you to terminate execution to prevent
-undefined behaviour of functions.
-
-See [examples/intermediate/04-type_checking](../examples/intermediate/04-type_checking.pls)
-
-### panic!
-
-`*(*panic!).`
-
-Throws `RuntimeState::Error`.
-
-Pops its call from the call stack before throwing the error.
-That way the error is shown to be within the caller.
-
-### panic/type!
-
-`*(*panic/type!).`
-
-Throws `RuntimeState::TypeError`.
-
-Pops its call from the call stack before throwing the error.
-That way the error is shown to be within the caller.
 
 ## Print
 
