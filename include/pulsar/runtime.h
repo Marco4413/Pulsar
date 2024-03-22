@@ -116,7 +116,7 @@ namespace Pulsar
         Module& operator=(const Module&) = default;
         Module& operator=(Module&&) = default;
 
-        ExecutionContext CreateExecutionContext() const;
+        ExecutionContext CreateExecutionContext(bool initGlobals=true, bool initTypeData=true) const;
         RuntimeState CallFunction(int64_t funcIdx, ValueStack& stack, ExecutionContext& context) const;
         RuntimeState CallFunctionByName(const String& name, ValueStack& stack, ExecutionContext& context) const;
         RuntimeState CallFunctionByDefinition(const FunctionDefinition& def, ValueStack& stack, ExecutionContext& context) const;

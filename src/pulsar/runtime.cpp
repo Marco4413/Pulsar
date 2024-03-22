@@ -110,16 +110,20 @@ Pulsar::RuntimeState Pulsar::Module::CallFunctionByDefinition(const FunctionDefi
     return RuntimeState::FunctionNotFound;
 }
 
-Pulsar::ExecutionContext Pulsar::Module::CreateExecutionContext() const
+Pulsar::ExecutionContext Pulsar::Module::CreateExecutionContext(bool initGlobals, bool initTypeData) const
 {
     ExecutionContext context;
     context.OwnerModule = this;
-    for (size_t i = 0; i < Globals.Size(); i++)
-        context.Globals.EmplaceBack(Globals[i].CreateInstance());
-    context.CustomTypeData.Reserve(CustomTypes.Size());
-    for (size_t i = 0; i < CustomTypes.Size(); i++) {
-        if (CustomTypes[i].DataFactory)
-            context.CustomTypeData.Insert((uint64_t)i, CustomTypes[i].DataFactory());
+    if (initGlobals) {
+        for (size_t i = 0; i < Globals.Size(); i++)
+            context.Globals.EmplaceBack(Globals[i].CreateInstance());
+    }
+    if (initTypeData) {
+        context.CustomTypeData.Reserve(CustomTypes.Size());
+        for (size_t i = 0; i < CustomTypes.Size(); i++) {
+            if (CustomTypes[i].DataFactory)
+                context.CustomTypeData.Insert((uint64_t)i, CustomTypes[i].DataFactory());
+        }
     }
     return context;
 }
