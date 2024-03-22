@@ -69,7 +69,7 @@ Don't forget to call [`(*lexer/free!)`](#lexerfree) when you're done!
 
 `*(*lexer/next-token lexer) -> 1.`
 
-Types: `Lexer -> Lexer, [ Integer, String, Any? ]`
+Types: `Lexer -> [ Integer, String, Any? ]`
 
 Returns the next token of `lexer` as a `List`.
 
