@@ -32,7 +32,7 @@ namespace Pulsar::Core
 {
     // New and Delete that strictly use PULSAR_ macros to allocate memory
     template<typename T, typename ...Args>
-    inline T* New(Args ...args)
+    inline T* New(Args&& ...args)
     {
         T* ptr = (T*)PULSAR_MALLOC(sizeof(T));
         return new(ptr) T(args...);
