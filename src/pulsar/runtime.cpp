@@ -625,7 +625,7 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         frame.Stack.PopBack();
         Value& list = frame.Stack.Back();
         if (list.Type() == ValueType::List) {
-            list.AsList().Prepend()->Value() = std::move(toPrepend);
+            list.AsList().Prepend(std::move(toPrepend));
         } else if (list.Type() == ValueType::String) {
             if (toPrepend.Type() == ValueType::String) {
                 toPrepend.AsString() += list.AsString();
@@ -646,7 +646,7 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         frame.Stack.PopBack();
         Value& list = frame.Stack.Back();
         if (list.Type() == ValueType::List) {
-            list.AsList().Append()->Value() = std::move(toAppend);
+            list.AsList().Append(std::move(toAppend));
         } else if (list.Type() == ValueType::String) {
             if (toAppend.Type() == ValueType::String)
                 list.AsString() += toAppend.AsString();
