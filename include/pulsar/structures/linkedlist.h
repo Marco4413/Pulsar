@@ -3,6 +3,8 @@
 
 #include "pulsar/core.h"
 
+#include "pulsar/structures/list.h"
+
 namespace Pulsar
 {
     template<typename T>
@@ -51,6 +53,9 @@ namespace Pulsar
     };
 
     template<typename T>
+    class List; // Forward Declaration
+
+    template<typename T>
     class LinkedList
     {
     public:
@@ -59,6 +64,21 @@ namespace Pulsar
 
         LinkedList() = default;
         ~LinkedList() { PULSAR_DELETE(NodeType, m_Start); }
+
+        explicit LinkedList(const List<T>& list)
+            : LinkedList()
+        {
+            for (size_t i = 0; i < list.Size(); i++)
+                Append(list[i]);
+        }
+
+        explicit LinkedList(List<T>&& list)
+            : LinkedList()
+        {
+            for (size_t i = 0; i < list.Size(); i++)
+                Append(std::move(list[i]));
+            list.Clear();
+        }
 
         LinkedList(const SelfType& other) { *this = other; }
         SelfType& operator=(const SelfType& other)
