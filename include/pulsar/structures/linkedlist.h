@@ -5,18 +5,19 @@
 
 namespace Pulsar
 {
-    template<typename T, auto ...DefaultInit>
+    template<typename T>
     class LinkedList; // Forward Declaration
 
-    template<typename T, auto ...DefaultInit>
+    template<typename T>
     class LinkedListNode
     {
     public:
-        friend LinkedList<T, DefaultInit...>;
-        typedef LinkedListNode<T, DefaultInit...> SelfType;
+        friend LinkedList<T>;
+        typedef LinkedListNode<T> SelfType;
         
-        LinkedListNode()
-            : m_Value(DefaultInit...) { }
+        template<typename ...Args>
+        LinkedListNode(Args&& ...init)
+            : m_Value(init...) { }
         ~LinkedListNode() { PULSAR_DELETE(SelfType, m_Next); }
 
         // Delete Copy & Move Constructors/Assignments
@@ -36,6 +37,7 @@ namespace Pulsar
             return length;
         }
 
+        // TODO: Maybe remove encapsulation.
         T& Value()             { return m_Value; }
         const T& Value() const { return m_Value; }
 
@@ -48,12 +50,12 @@ namespace Pulsar
         SelfType* m_Next = nullptr;
     };
 
-    template<typename T, auto ...DefaultInit>
+    template<typename T>
     class LinkedList
     {
     public:
-        typedef LinkedList<T, DefaultInit...> SelfType;
-        typedef LinkedListNode<T, DefaultInit...> NodeType;
+        typedef LinkedList<T> SelfType;
+        typedef LinkedListNode<T> NodeType;
 
         LinkedList() = default;
         ~LinkedList() { PULSAR_DELETE(NodeType, m_Start); }
@@ -85,24 +87,26 @@ namespace Pulsar
             return *this;
         }
 
-        NodeType* Prepend()
+        template<typename ...Args>
+        NodeType* Prepend(Args&& ...init)
         {
             if (!m_Start) {
-                m_Start = PULSAR_NEW(NodeType);
+                m_Start = PULSAR_NEW(NodeType, init...);
                 m_End = m_Start;
                 return m_Start;
             }
-            NodeType* newStart = PULSAR_NEW(NodeType);
+            NodeType* newStart = PULSAR_NEW(NodeType, init...);
             newStart->m_Next = m_Start;
             m_Start = newStart;
             return m_Start;
         }
 
-        NodeType* Append()
+        template<typename ...Args>
+        NodeType* Append(Args&& ...init)
         {
             if (!m_Start)
-                return Prepend();
-            m_End->m_Next = PULSAR_NEW(NodeType);
+                return Prepend(init...);
+            m_End->m_Next = PULSAR_NEW(NodeType, init...);
             m_End = m_End->m_Next;
             return m_End;
         }
