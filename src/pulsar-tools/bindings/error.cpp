@@ -37,8 +37,8 @@ Pulsar::RuntimeState PulsarTools::ErrorNativeBindings::Error_SafeCall(Pulsar::Ex
     ctx.Globals = eContext.Globals;
 
     Pulsar::RuntimeState state = eContext.OwnerModule->CallFunction(funcIdx, stack, ctx);
-    for (size_t i = 0; i < stack.Size(); i++)
-        args.AsList().Append(std::move(stack[i]));
+    if (state == Pulsar::RuntimeState::OK)
+        args.AsList() = Pulsar::ValueList(std::move(stack));
     
     frame.Stack.EmplaceBack(std::move(args));
     frame.Stack.EmplaceBack()
