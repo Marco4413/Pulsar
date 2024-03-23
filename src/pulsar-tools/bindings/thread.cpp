@@ -142,9 +142,9 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_JoinAll(Pulsar::E
         
         ThreadJoin(thread, frame.Stack);
         Pulsar::ValueList threadResult;
-        threadResult.Append()->Value() = std::move(frame.Stack.Back());
+        threadResult.Append(std::move(frame.Stack.Back()));
         frame.Stack.PopBack();
-        threadResult.Append()->Value() = std::move(frame.Stack.Back());
+        threadResult.Append(std::move(frame.Stack.Back()));
         frame.Stack.PopBack();
 
         threadResults.Append()->Value().SetList(std::move(threadResult));
@@ -212,7 +212,7 @@ void PulsarTools::ThreadNativeBindings::ThreadJoin(std::shared_ptr<PulsarThread>
 
     Pulsar::ValueList returnValues;
     for (size_t i = 0; i < thread->ThreadContext->Stack.Size(); i++)
-        returnValues.Append()->Value() = std::move(thread->ThreadContext->Stack[i]);
+        returnValues.Append(std::move(thread->ThreadContext->Stack[i]));
     thread->ThreadContext->Stack.Clear();
     stack.EmplaceBack().SetList(std::move(returnValues));
     stack.EmplaceBack().SetInteger(0);
@@ -258,7 +258,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_Send(Pulsar::Exe
     std::unique_lock channelLock(channel->Mutex);
     if (channel->IsClosed)
         return Pulsar::RuntimeState::InvalidCustomTypeHandle;
-    channel->Pipe.Append()->Value() = std::move(frame.Locals[0]);
+    channel->Pipe.Append(std::move(frame.Locals[0]));
     channelLock.unlock();
 
     channel->CV.notify_one();

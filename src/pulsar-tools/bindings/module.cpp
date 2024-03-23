@@ -78,7 +78,7 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_Run(Pulsar::Execu
 
     Pulsar::ValueList retValues;
     for (size_t i = 0; i < stack.Size(); i++)
-        retValues.Append()->Value() = std::move(stack[i]);
+        retValues.Append(std::move(stack[i]));
     frame.Stack.EmplaceBack()
         .SetList(std::move(retValues));
     return Pulsar::RuntimeState::OK;
