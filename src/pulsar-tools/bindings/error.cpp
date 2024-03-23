@@ -31,15 +31,7 @@ Pulsar::RuntimeState PulsarTools::ErrorNativeBindings::Error_SafeCall(Pulsar::Ex
         return Pulsar::RuntimeState::TypeError;
 
     int64_t funcIdx = funcRef.AsInteger();
-    Pulsar::ValueStack stack;
-    {
-        Pulsar::ValueList::NodeType* node = args.AsList().Front();
-        while (node) {
-            stack.EmplaceBack(std::move(node->Value()));
-            node = node->Next();
-        }
-        args.AsList().Clear();
-    }
+    Pulsar::ValueStack stack(std::move(args.AsList()));
 
     Pulsar::ExecutionContext ctx = eContext.OwnerModule->CreateExecutionContext(false, true);
     ctx.Globals = eContext.Globals;
@@ -65,25 +57,15 @@ Pulsar::RuntimeState PulsarTools::ErrorNativeBindings::Error_TryCall(Pulsar::Exe
         return Pulsar::RuntimeState::TypeError;
 
     int64_t funcIdx = funcRef.AsInteger();
-    Pulsar::ValueStack stack;
-    {
-        Pulsar::ValueList::NodeType* node = args.AsList().Front();
-        while (node) {
-            stack.EmplaceBack(std::move(node->Value()));
-            node = node->Next();
-        }
-        args.AsList().Clear();
-    }
+    Pulsar::ValueStack stack(std::move(args.AsList()));
 
     Pulsar::ExecutionContext ctx = eContext.OwnerModule->CreateExecutionContext(false, false);
     ctx.CustomTypeData = eContext.CustomTypeData;
     ctx.Globals = std::move(eContext.Globals);
 
     Pulsar::RuntimeState state = eContext.OwnerModule->CallFunction(funcIdx, stack, ctx);
-    if (state == Pulsar::RuntimeState::OK) {
-        for (size_t i = 0; i < stack.Size(); i++)
-            args.AsList().Append(std::move(stack[i]));
-    }
+    if (state == Pulsar::RuntimeState::OK)
+        args.AsList() = Pulsar::ValueList(std::move(stack));
     
     frame.Stack.EmplaceBack(std::move(args));
     frame.Stack.EmplaceBack()

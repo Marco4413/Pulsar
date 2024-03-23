@@ -55,18 +55,9 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Run(Pulsar::Execu
     const Pulsar::FunctionDefinition& func = eContext.OwnerModule->Functions[(size_t)funcIdx];
     std::shared_ptr<PulsarThreadContext> threadContext = std::make_shared<PulsarThreadContext>(
         eContext.OwnerModule->CreateExecutionContext(false, true),
-        Pulsar::ValueStack(),
+        Pulsar::ValueStack(std::move(threadArgs.AsList())),
         Pulsar::RuntimeState::OK
     );
-
-    {
-        Pulsar::ValueList& threadArgsList = threadArgs.AsList();
-        Pulsar::ValueList::NodeType* threadArgsListNode = threadArgsList.Front();
-        while (threadArgsListNode) {
-            threadContext->Stack.PushBack(std::move(threadArgsListNode->Value()));
-            threadArgsListNode = threadArgsListNode->Next();
-        }
-    }
 
     threadContext->Context.Globals = eContext.Globals;
     threadContext->IsRunning.store(true);
@@ -210,10 +201,7 @@ void PulsarTools::ThreadNativeBindings::ThreadJoin(std::shared_ptr<PulsarThread>
         return;
     }
 
-    Pulsar::ValueList returnValues;
-    for (size_t i = 0; i < thread->ThreadContext->Stack.Size(); i++)
-        returnValues.Append(std::move(thread->ThreadContext->Stack[i]));
-    thread->ThreadContext->Stack.Clear();
+    Pulsar::ValueList returnValues(std::move(thread->ThreadContext->Stack));
     stack.EmplaceBack().SetList(std::move(returnValues));
     stack.EmplaceBack().SetInteger(0);
 }
