@@ -117,7 +117,9 @@ global "" -> printf/buffer
 // Use (printf!) if you don't care about this feature
 *(printf fmt args) -> 1:
   <- args <- fmt
-    do: '%' (printf/index-of) (!prefix) (printf/print!)
+    while:
+      '%' (printf/index-of) (!prefix)
+        (printf/print!)
       (!empty?) if: break
       1 (!index) -> ch
       2 (!prefix) (!pop)
@@ -166,7 +168,6 @@ global "" -> printf/buffer
         "%" ch (!append) (printf/print!)
       end
       (!swap) // [ args, fmt ]
-      continue
     end
     (!pop) // Pops fmt
   .
@@ -184,7 +185,7 @@ global "" -> printf/buffer
   (printf/save-ctx!)
     1  -> printf/print-to-buffer?
     <- fmt <- args (printf) -> args
-    <- printf/buffer do:
+    <- printf/buffer while:
       '\n' (printf/index-of) (!prefix)
         (!length) if > max-line-len:
           (!length) -> max-line-len
@@ -193,7 +194,6 @@ global "" -> printf/buffer
         lines-len 1 + -> lines-len
       (!empty?) if: break
       1 (!prefix) (!pop) // Remove '\n'
-      continue
     end
   (printf/restore-ctx!)
   "+%.*s+\n" [ max-line-len, "-" ] (printf!)

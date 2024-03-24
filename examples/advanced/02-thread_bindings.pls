@@ -16,12 +16,11 @@ global const 0 -> thread_bindings/run-single-threaded?
 
 *(main-st args) -> 1:
   [] -> results
-  <- args (!tail) do:
+  <- args (!tail) while:
     (!empty?) if: break
-      (!head) (lex-file)
-        -> result
-      <- results <- result (!append) -> results
-    continue
+    (!head) (lex-file)
+      -> result
+    <- results <- result (!append) -> results
   end
   <- results
   .
