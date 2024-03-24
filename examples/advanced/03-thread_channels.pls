@@ -36,10 +36,13 @@
   [ in, out ] <& (worker-thread)
     (*thread/run) -> thread
 
+  "Type 'q' to quit." (*stdout/writeln!)
   while:
-    "PATH> " (*stdout/write!)
+    "LEX> " (*stdout/write!)
     (*stdin/read)
-      (!dup) if "q": (!pop) break
+      (!length) if 1:
+        0 (!index) if 'q': break
+      end
       in (*channel/send!)
     out (*channel/receive)
       (*println!)
