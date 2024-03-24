@@ -24,10 +24,10 @@ namespace Pulsar
         bool HasDebugSymbol() const { return DebugSymbol.Token.Type != TokenType::None; }
         bool HasCodeDebugSymbols() const { return !CodeDebugSymbols.IsEmpty(); }
 
-        bool MatchesDeclaration(const FunctionDefinition& other) const
+        bool MatchesDeclaration(const FunctionDefinition& other, bool matchLocals=true) const
         {
             return Arity == other.Arity
-                && LocalsCount == other.LocalsCount
+                && (!matchLocals || LocalsCount == other.LocalsCount)
                 && Returns == other.Returns
                 && Name == other.Name;
         }
