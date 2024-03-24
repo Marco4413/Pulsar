@@ -110,6 +110,17 @@ Pulsar::RuntimeState Pulsar::Module::CallFunctionByDefinition(const FunctionDefi
     return RuntimeState::FunctionNotFound;
 }
 
+Pulsar::RuntimeState Pulsar::Module::CallFunctionBySignature(const FunctionDefinition& sig, ValueStack& stack, ExecutionContext& context) const
+{
+    for (int64_t i = Functions.Size()-1; i >= 0; i--) {
+        const FunctionDefinition& other = Functions[(size_t)i];
+        if (!other.MatchesDeclaration(sig, false))
+            continue;
+        return CallFunction(i, stack, context);
+    }
+    return RuntimeState::FunctionNotFound;
+}
+
 Pulsar::ExecutionContext Pulsar::Module::CreateExecutionContext(bool initGlobals, bool initTypeData) const
 {
     ExecutionContext context;

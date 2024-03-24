@@ -120,6 +120,8 @@ namespace Pulsar
         RuntimeState CallFunction(int64_t funcIdx, ValueStack& stack, ExecutionContext& context) const;
         RuntimeState CallFunctionByName(const String& name, ValueStack& stack, ExecutionContext& context) const;
         RuntimeState CallFunctionByDefinition(const FunctionDefinition& def, ValueStack& stack, ExecutionContext& context) const;
+        /* Matches only Name, Arity and Returns */
+        RuntimeState CallFunctionBySignature(const FunctionDefinition& sig, ValueStack& stack, ExecutionContext& context) const;
 
         RuntimeState ExecuteFunction(const FunctionDefinition& def, ValueStack& stack, ExecutionContext& context) const;
 
