@@ -400,8 +400,59 @@ Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
         return CreateNoneToken();
     view.RemovePrefix(1);
     
-    return TrimToToken(view.GetStart()-m_SourceView.GetStart(),
+    Token strToken = TrimToToken(view.GetStart()-m_SourceView.GetStart(),
         TokenType::StringLiteral, std::move(val));
+
+    // Multi-line String Literals (\ and \n)
+    bool isValidMultiLine = false;
+    StringView oldView = m_SourceView;
+    size_t oldLine = m_Line;
+    size_t oldLineStartIdx = m_LineStartIdx;
+
+    SkipWhitespaces();
+    if (!m_SourceView.Empty() && m_SourceView[0] == '\\') {
+        m_SourceView.RemovePrefix(1);
+        bool appendNewLine = !m_SourceView.Empty() && m_SourceView[0] == 'n';
+        if (appendNewLine)
+            m_SourceView.RemovePrefix(1);
+        SkipWhitespaces();
+        Token nextStrToken = ParseStringLiteral();
+        if (nextStrToken.Type != TokenType::None) {
+            isValidMultiLine = true;
+            if (appendNewLine)
+                strToken.StringVal += '\n';
+            strToken.StringVal += std::move(nextStrToken.StringVal);
+            if (strToken.SourcePos.Line == nextStrToken.SourcePos.Line) {
+                // Same line: Extend CharSpan to include the whole String
+                // "Foo" \ "Bar"
+                // ^       ^
+                // |       nextStrToken.Char
+                // strToken.Char
+                // ~~~~~~~~ = nextStrToken.Char - strToken.Char
+                //         ~~~~~ = nextStrToken.CharSpan
+                strToken.SourcePos.CharSpan = (
+                    nextStrToken.SourcePos.Char
+                    - strToken.SourcePos.Char
+                    + nextStrToken.SourcePos.CharSpan);
+            } else {
+                // If it's not the same line take the last SourcePos
+                strToken.SourcePos = nextStrToken.SourcePos;
+            }
+        }
+    }
+
+    // Restore Lexer Context
+    // TODO: Maybe add a proper way to do this
+    //   Lexer::SaveContext
+    //   Lexer::RestoreContext
+    //   Lexer::DropContext
+    if (!isValidMultiLine) {
+        m_SourceView = oldView;
+        m_Line = oldLine;
+        m_LineStartIdx = oldLineStartIdx;
+    }
+
+    return strToken;
 }
 
 Pulsar::Token Pulsar::Lexer::ParseCharacterLiteral()
