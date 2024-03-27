@@ -195,6 +195,41 @@ except for some special ones which are turned into other characters:
 
 Where H is an hex digit.
 
+#### Multi-Line String Literals
+
+Pulsar uses an approach similar to C for multi-line strings.
+
+In C you would write:
+
+```c
+  "Hello,"
+"\nWorld!"
+```
+
+The C compiler automatically concatenates two (or more) string literals
+which are next to each other.
+
+However, Pulsar cannot do that without some extra syntax, since that
+same code should push two separate strings to the stack.
+
+So here's Pulsar's syntax:
+
+```lisp
+  "Hello,"
+\n"World!"
+
+ "Hello, "
+\"World!"
+```
+
+The first one produces `"Hello,\nWorld!"`.
+
+The second one `"Hello, World!"`.
+
+TL;DR You can write `\` or `\n` between two string literals to let the
+parser concatenate the two strings (the latter adds a new line between
+the two strings).
+
 #### List Literals
 
 List literals are comma-separated *lists* defined between brackets of `lvalue`s.
