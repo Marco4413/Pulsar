@@ -199,142 +199,160 @@ Pulsar::Token Pulsar::Lexer::ParseCompilerDirective()
 
 Pulsar::Token Pulsar::Lexer::ParseIntegerLiteral()
 {
-    size_t count = 0;
-    bool negative = m_SourceView[count] == '-';
-    if ((negative || m_SourceView[count] == '+') && ++count >= m_SourceView.Length())
-        return CreateNoneToken();
-    else if (!IsDigit(m_SourceView[count]))
+    StringView view(m_SourceView);
+    bool negative = view[0] == '-';
+    if (negative || view[0] == '+')
+        view.RemovePrefix(1);
+    if (view.Empty() || !IsDigit(view[0]))
         return CreateNoneToken();
     int64_t val = 0;
-    for (; count < m_SourceView.Length(); count++) {
-        if (IsIdentifierStart(m_SourceView[count])) {
+    while (!view.Empty()) {
+        if (IsIdentifierStart(view[0])) {
             return CreateNoneToken();
-        } else if (m_SourceView[count] == '.') {
-            if (m_SourceView.Length() <= count+1 || !IsDigit(m_SourceView[count+1]))
+        } else if (view[0] == '.') {
+            if (view.Length() < 2 || !IsDigit(view[1]))
                 break;
             return CreateNoneToken();
-        } else if (!IsDigit(m_SourceView[count]))
+        } else if (!IsDigit(view[0]))
             break;
         val *= 10;
-        val += m_SourceView[count] - '0';
+        val += view[0] - '0';
+        view.RemovePrefix(1);
     }
     if (negative)
         val *= -1;
-    return TrimToToken(count, TokenType::IntegerLiteral, val);
+    return TrimToToken(view.GetStart()-m_SourceView.GetStart(),
+        TokenType::IntegerLiteral, val);
 }
 
 Pulsar::Token Pulsar::Lexer::ParseHexIntegerLiteral()
 {
-    if (m_SourceView.Length() < 3)
+    StringView view(m_SourceView);
+    if (view.Length() < 3) // 0xX
         return CreateNoneToken();
-    else if (m_SourceView[0] != '0' || m_SourceView[1] != 'x' || !IsHexDigit(m_SourceView[2]))
+    else if (view[0] != '0' || view[1] != 'x' || !IsHexDigit(view[2]))
         return CreateNoneToken();
-    size_t count = 2;
+    view.RemovePrefix(2);
     int64_t val = 0;
-    for (; count < m_SourceView.Length(); count++) {
-        char ch = ToLowerCase(m_SourceView[count]);
-        if (!IsHexDigit(ch)) {
-            if (IsIdentifierStart(ch))
+    while (!view.Empty()) {
+        char digit = ToLowerCase(view[0]);
+        if (!IsHexDigit(digit)) {
+            if (IsIdentifierStart(digit))
                 return CreateNoneToken();
             break;
         }
         val *= 16;
-        if (ch >= 'a')
-            val += ch - 'a' + 10;
-        else val += ch - '0';
+        if (digit >= 'a')
+            val += digit - 'a' + 10;
+        else val += digit - '0';
+        view.RemovePrefix(1);
     }
-    return TrimToToken(count, TokenType::IntegerLiteral, val);
+    return TrimToToken(view.GetStart()-m_SourceView.GetStart(),
+        TokenType::IntegerLiteral, val);
 }
 
 Pulsar::Token Pulsar::Lexer::ParseOctIntegerLiteral()
 {
-    if (m_SourceView.Length() < 3)
+    StringView view(m_SourceView);
+    if (view.Length() < 3) // 0oX
         return CreateNoneToken();
-    else if (m_SourceView[0] != '0' || m_SourceView[1] != 'o' || !IsOctDigit(m_SourceView[2]))
+    else if (view[0] != '0' || view[1] != 'o' || !IsOctDigit(view[2]))
         return CreateNoneToken();
-    size_t count = 2;
+    view.RemovePrefix(2);
     int64_t val = 0;
-    for (; count < m_SourceView.Length(); count++) {
-        char ch = ToLowerCase(m_SourceView[count]);
-        if (IsIdentifierStart(ch))
+    while (!view.Empty()) {
+        char digit = view[0];
+        if (IsIdentifierStart(digit))
             return CreateNoneToken();
-        else if (!IsOctDigit(ch))
+        else if (!IsOctDigit(digit))
             break;
         val *= 8;
-        val += ch - '0';
+        val += digit - '0';
+        view.RemovePrefix(1);
     }
-    return TrimToToken(count, TokenType::IntegerLiteral, val);
+    return TrimToToken(view.GetStart()-m_SourceView.GetStart(),
+        TokenType::IntegerLiteral, val);
 }
 
 Pulsar::Token Pulsar::Lexer::ParseBinIntegerLiteral()
 {
-    if (m_SourceView.Length() < 3)
+    StringView view(m_SourceView);
+    if (view.Length() < 3) // 0bX
         return CreateNoneToken();
-    else if (m_SourceView[0] != '0' || m_SourceView[1] != 'b' || !IsBinDigit(m_SourceView[2]))
+    else if (view[0] != '0' || view[1] != 'b' || !IsBinDigit(view[2]))
         return CreateNoneToken();
-    size_t count = 2;
+    view.RemovePrefix(2);
     int64_t val = 0;
-    for (; count < m_SourceView.Length(); count++) {
-        char ch = ToLowerCase(m_SourceView[count]);
-        if (IsIdentifierStart(ch))
+    while (!view.Empty()) {
+        char digit = view[0];
+        if (IsIdentifierStart(digit))
             return CreateNoneToken();
-        else if (!IsBinDigit(ch))
+        else if (!IsBinDigit(digit))
             break;
         val *= 2;
-        val += ch - '0';
+        val += digit - '0';
+        view.RemovePrefix(1);
     }
-    return TrimToToken(count, TokenType::IntegerLiteral, val);
+    return TrimToToken(view.GetStart()-m_SourceView.GetStart(),
+        TokenType::IntegerLiteral, val);
 }
 
 Pulsar::Token Pulsar::Lexer::ParseDoubleLiteral()
 {
-    size_t count = 0;
-    double exp = m_SourceView[count] == '-' ? -1 : 1;
-    if ((exp < 0 || m_SourceView[count] == '+') && ++count >= m_SourceView.Length())
-        return CreateNoneToken();
-    else if (!IsDigit(m_SourceView[count]))
+    StringView view(m_SourceView);
+    double exp = view[0] == '-' ? -1 : 1;
+    if (exp < 0 || view[0] == '+')
+        view.RemovePrefix(1);
+    if (view.Empty() || !IsDigit(view[0]))
         return CreateNoneToken();
     bool decimal = false;
     double val = 0.0;
-    for (; count < m_SourceView.Length(); count++) {
-        if (IsIdentifierStart(m_SourceView[count]))
+    while (!view.Empty()) {
+        if (IsIdentifierStart(view[0])) {
             return CreateNoneToken();
-        else if (m_SourceView[count] == '.') {
+        } else if (view[0] == '.') {
             if (decimal)
                 return CreateNoneToken();
             decimal = true;
-            count++;
-            if (count >= m_SourceView.Length() || !IsDigit(m_SourceView[count]))
+            view.RemovePrefix(1);
+            if (view.Empty() || !IsDigit(view[0]))
                 return CreateNoneToken();
-        } if (!IsDigit(m_SourceView[count]))
+        } else if (!IsDigit(view[0]))
             break;
         
         if (decimal)
             exp /= 10;
         val *= 10;
-        val += m_SourceView[count] - '0';
+        val += view[0] - '0';
+        view.RemovePrefix(1);
     }
+
     val *= exp;
-    return TrimToToken(count, TokenType::DoubleLiteral, val);
+    return TrimToToken(view.GetStart()-m_SourceView.GetStart(),
+        TokenType::DoubleLiteral, std::move(val));
 }
 
 Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
 {
-    if (m_SourceView[0] != '"')
+    StringView view(m_SourceView);
+    if (view.Empty() || view[0] != '"')
         return CreateNoneToken();
-    size_t count = 1;
+    view.RemovePrefix(1);
+
     String val = "";
-    for (; count < m_SourceView.Length(); count++) {
-        if (IsControlCharacter(m_SourceView[count]))
+    while (!view.Empty()) {
+        if (IsControlCharacter(view[0]))
+            return CreateNoneToken();
+        else if (view[0] == '"')
             break;
-        else if (m_SourceView[count] == '"')
-            return TrimToToken(count+1, TokenType::StringLiteral, val);
-        else if (m_SourceView[count] == '\\') {
-            if (m_SourceView.Length()-count < 2)
-                break;
-            char ch = m_SourceView[++count];
+        else if (view[0] == '\\') {
+            view.RemovePrefix(1);
+            if (view.Empty())
+                return CreateNoneToken();
+            char ch = view[0];
             if (IsControlCharacter(ch))
-                break;
+                return CreateNoneToken();
+            view.RemovePrefix(1);
             switch (ch) {
             case 't':
                 val += '\t';
@@ -347,11 +365,11 @@ Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
                 break;
             case 'x': {
                 size_t digits = 2;
-                if (m_SourceView.Length() - (count+1) < digits)
-                    digits = m_SourceView.Length()- (count+1);
+                if (view.Length() < digits)
+                    digits = view.Length();
                 uint8_t code = 0;
                 for (size_t i = 0; i < digits; i++) {
-                    char digit = ToLowerCase(m_SourceView[count+1+i]);
+                    char digit = ToLowerCase(view[i]);
                     if (digit >= 'a' && digit <= 'f') {
                         code = (code << 4) + digit-'a'+10;
                     } else if (digit >= '0' && digit <= '9') {
@@ -366,18 +384,24 @@ Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
                     break;
                 }
                 val += (char)(code);
-                count += digits;
-                if (count+1 < m_SourceView.Length() && m_SourceView[count+1] == ';')
-                    count++;
+                view.RemovePrefix(digits);
+                if (!view.Empty() && view[0] == ';')
+                    view.RemovePrefix(1);
             } break;
             default:
                 val += ch;
             }
-            continue;
+        } else {
+            val += view[0];
+            view.RemovePrefix(1);
         }
-        val += m_SourceView[count];
     }
-    return CreateNoneToken();
+    if (view.Empty() || view[0] != '"')
+        return CreateNoneToken();
+    view.RemovePrefix(1);
+    
+    return TrimToToken(view.GetStart()-m_SourceView.GetStart(),
+        TokenType::StringLiteral, std::move(val));
 }
 
 Pulsar::Token Pulsar::Lexer::ParseCharacterLiteral()
