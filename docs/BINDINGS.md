@@ -252,6 +252,14 @@ See [examples/advanced/02-thread_bindings](../examples/advanced/02-thread_bindin
 
 See [examples/advanced/03-thread_channels](../examples/advanced/03-thread_channels.pls)
 
+### this-thread/sleep!
+
+`*(*this-thread/sleep! delay).`
+
+Types: `Integer ->`
+
+Suspends execution of the current thread for `delay` ms.
+
 ### thread/run
 
 `*(*thread/run args fn) -> 1.`
