@@ -1,5 +1,7 @@
 #include "pulsar-tools/bindings/thread.h"
 
+#include <chrono>
+
 void PulsarTools::ThreadNativeBindings::BindToModule(Pulsar::Module& module)
 {
     uint64_t threadType = module.BindCustomType("Thread", []() {
@@ -9,6 +11,8 @@ void PulsarTools::ThreadNativeBindings::BindToModule(Pulsar::Module& module)
     uint64_t channelType = module.BindCustomType("Channel", []() {
         return std::make_shared<ChannelTypeData>();
     });
+
+    module.BindNativeFunction({ "this-thread/sleep!", 1, 0 }, ThisThread_Sleep);
 
     module.BindNativeFunction({ "thread/run", 2, 1 },
         [threadType, channelType](auto& ctx) { return Thread_Run(ctx, threadType, channelType); });
@@ -37,6 +41,18 @@ void PulsarTools::ThreadNativeBindings::BindToModule(Pulsar::Module& module)
         [channelType](auto& ctx) { return Channel_IsClosed(ctx, channelType); });
     module.BindNativeFunction({ "channel/valid?", 1, 1 },
         [channelType](auto& ctx) { return Channel_IsValid(ctx, channelType); });
+}
+
+Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::ThisThread_Sleep(Pulsar::ExecutionContext& eContext)
+{
+    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+    Pulsar::Value& delay = frame.Locals[0];
+    if (!Pulsar::IsNumericValueType(delay.Type()))
+        return Pulsar::RuntimeState::TypeError;
+    double delayMs = delay.Type() == Pulsar::ValueType::Double ?
+        delay.AsDouble() : (double)delay.AsInteger();
+    std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(delayMs));
+    return Pulsar::RuntimeState::OK;
 }
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Run(Pulsar::ExecutionContext& eContext, uint64_t threadType, uint64_t channelType)

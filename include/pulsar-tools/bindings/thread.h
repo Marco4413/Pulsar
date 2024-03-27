@@ -55,6 +55,8 @@ namespace PulsarTools
 
         void BindToModule(Pulsar::Module& module);
 
+        Pulsar::RuntimeState ThisThread_Sleep(Pulsar::ExecutionContext& eContext);
+
         Pulsar::RuntimeState Thread_Run(Pulsar::ExecutionContext& eContext, uint64_t threadType, uint64_t channelType);
         Pulsar::RuntimeState Thread_Join(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Thread_JoinAll(Pulsar::ExecutionContext& eContext, uint64_t type);
