@@ -406,7 +406,6 @@ Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
 
 Pulsar::Token Pulsar::Lexer::ParseCharacterLiteral()
 {
-    // TODO: Either switch to this style of lexing or the other way around.
     if (m_SourceView.Length() < 3
         || m_SourceView[0] != '\'')
         return CreateNoneToken();
