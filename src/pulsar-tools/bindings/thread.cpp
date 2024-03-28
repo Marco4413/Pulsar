@@ -262,7 +262,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_Send(Pulsar::Exe
 
     std::unique_lock channelLock(channel->Mutex);
     if (channel->IsClosed)
-        return Pulsar::RuntimeState::InvalidCustomTypeHandle;
+        return Pulsar::RuntimeState::OK;
     channel->Pipe.Append(std::move(frame.Locals[0]));
     channelLock.unlock();
 
