@@ -326,7 +326,7 @@ Types: `Any, Channel ->`
 Puts `value` into `channel` so that a call to `(*channel/receive)`
 on `channel` returns `value`.
 
-Errors if `channel` is closed.
+If `channel` is closed, nothing is sent.
 
 ### channel/receive
 
