@@ -21,6 +21,10 @@ global const       300 -> snake/update-time
 global const  [ 2, 2 ] -> snake/world/origin
 global const        12 -> snake/world/width
 global const         6 -> snake/world/height
+global const       'W' -> snake/key/up
+global const       'A' -> snake/key/left
+global const       'S' -> snake/key/down
+global const       'D' -> snake/key/right
 
 global const -> snake/window/frame:
   snake/world/origin (!head) 1 - -> pad-left 
@@ -43,7 +47,6 @@ global const -> snake/window/frame:
   .
 
 *(*stdin/read) -> 1.
-*(*stdout/write! str).
 
 *(*time/micros) -> 1.
 *(*time/steady) -> 1.
@@ -236,13 +239,13 @@ global const -> snake/window/frame:
     (*stdin/read)
       (!empty?) if: (!pop) continue
       0 (!index) (char/to-upper) -> dir
-    if dir = 'W':
+    if dir = snake/key/up:
       [  0, -1 ] ch (*channel/send!)
-    else if dir = 'A':
+    else if dir = snake/key/left:
       [ -1,  0 ] ch (*channel/send!)
-    else if dir = 'S':
+    else if dir = snake/key/down:
       [  0,  1 ] ch (*channel/send!)
-    else if dir = 'D':
+    else if dir = snake/key/right:
       [  1,  0 ] ch (*channel/send!)
     end
   end
@@ -255,16 +258,21 @@ global const -> snake/window/frame:
   \n"keys must be typed and committed with ENTER."
   \n""
   \n"Keys:"
-  \n"  W: Up"
-  \n"  S: Down"
-  \n"  A: Left"
-  \n"  D: Right"
+  \n"  %c: Up"
+  \n"  %c: Down"
+  \n"  %c: Left"
+  \n"  %c: Right"
   \n""
   \n"You can edit the source code of this file"
   \n"to change game settings (it's all at the top)."
   \n""
   \n"Press ENTER when you're ready!"
-  \n"" (*stdout/write!)
+  \n"" [
+    snake/key/up,
+    snake/key/down,
+    snake/key/left,
+    snake/key/right,
+  ] (printf!) (printf/flush-buffer!)
   (*stdin/read) (!pop)
 
   (*time/micros) -> random/seed
@@ -302,7 +310,7 @@ global const -> snake/window/frame:
 
     "Game Over!"
   \n"Press ENTER to quit."
-  \n"" (*stdout/write!)
+  \n"" (printf/print!) (printf/flush-buffer!)
 
   inp-ch (*channel/close!)
   <- inp-ch (*channel/free!)
