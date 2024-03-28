@@ -49,9 +49,10 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::ThisThread_Sleep(Pulsar:
     Pulsar::Value& delay = frame.Locals[0];
     if (!Pulsar::IsNumericValueType(delay.Type()))
         return Pulsar::RuntimeState::TypeError;
-    double delayMs = delay.Type() == Pulsar::ValueType::Double ?
-        delay.AsDouble() : (double)delay.AsInteger();
-    std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(delayMs));
+    int64_t delayMs = delay.Type() == Pulsar::ValueType::Double ?
+        (int64_t)delay.AsDouble() : (int64_t)delay.AsInteger();
+    if (delayMs > 0)
+        std::this_thread::sleep_for(std::chrono::duration<int64_t, std::milli>(delayMs));
     return Pulsar::RuntimeState::OK;
 }
 
