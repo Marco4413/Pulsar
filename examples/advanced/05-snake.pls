@@ -13,12 +13,15 @@ global       0 -> snake/game-over?
 global       2 -> snake/growth
 global [10, 4] -> snake/fruit
 
+// Game Settings
+global const         1 -> snake/wrap-edges?
 global const         1 -> snake/show-update-budget?
 global const [ 1, 11 ] -> snake/ui-position
 global const       300 -> snake/update-time
 global const  [ 2, 2 ] -> snake/world/origin
 global const        12 -> snake/world/width
 global const         6 -> snake/world/height
+
 global const -> snake/window/frame:
   snake/world/origin (!head) 1 - -> pad-left 
   "%.*s+%.*s+\n" [
@@ -170,6 +173,14 @@ global const -> snake/window/frame:
   0
   .
 
+*(snake/wrap v) -> 1:
+  <- v (vec2/unpack)
+    -> y -> x
+  if x <= 0: snake/world/width  else if x > snake/world/width:  1 else: x end
+  if y <= 0: snake/world/height else if y > snake/world/height: 1 else: y end
+    (vec2/pack)
+  .
+
 *(snake/on-top-of-snake? v) -> 1:
   snake while:
     (!empty?) if: break
@@ -207,8 +218,12 @@ global const -> snake/window/frame:
   end
 
   snake-head snake/direction (vec2/add)
-    (!dup) (snake/out-of-bounds?) if:
-      1 -> snake/game-over? .
+    snake/wrap-edges? if:
+      (snake/wrap)
+    else:
+      (!dup) (snake/out-of-bounds?) if:
+        1 -> snake/game-over? .
+    end
     (!dup) (snake/on-top-of-snake?) if:
       1 -> snake/game-over? .
     <- snake (!swap) (!prepend) -> snake
@@ -244,6 +259,9 @@ global const -> snake/window/frame:
   \n"  S: Down"
   \n"  A: Left"
   \n"  D: Right"
+  \n""
+  \n"You can edit the source code of this file"
+  \n"to change game settings (it's all at the top)."
   \n""
   \n"Press ENTER when you're ready!"
   \n"" (*stdout/write!)
