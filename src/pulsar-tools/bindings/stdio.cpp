@@ -31,7 +31,7 @@ Pulsar::RuntimeState PulsarTools::STDIONativeBindings::STDOUT_Write(Pulsar::Exec
     Pulsar::Value& str = frame.Locals[0];
     if (str.Type() != Pulsar::ValueType::String)
         return Pulsar::RuntimeState::TypeError;
-    std::cout << str.AsString().Data();
+    std::cout << str.AsString().Data() << std::flush;
     return Pulsar::RuntimeState::OK;
 }
 
