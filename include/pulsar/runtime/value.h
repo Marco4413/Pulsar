@@ -16,11 +16,14 @@ namespace Pulsar
     
     enum class ValueType
     {
-        Void = 0,
-        Integer, Double,
-        FunctionReference, NativeFunctionReference,
-        List, String,
-        Custom
+        Void    = 0x00,
+        Integer = 0x01,
+        Double  = 0x02,
+        FunctionReference       = 0x03,
+        NativeFunctionReference = 0x04,
+        List    = 0x05,
+        String  = 0x06,
+        Custom  = 0xFF
     };
 
     constexpr bool IsNumericValueType(ValueType vtype)
