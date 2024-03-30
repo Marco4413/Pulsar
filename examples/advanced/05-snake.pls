@@ -9,6 +9,7 @@ global 1 -> printf/print-to-buffer?
 //  standard used by ANSI Escape Codes
 global [[1,1]] -> snake
 global  [1,0]  -> snake/direction
+global  [1,0]  -> snake/next-direction
 global       0 -> snake/game-over?
 global       2 -> snake/growth
 global [10, 4] -> snake/fruit
@@ -213,6 +214,10 @@ global const -> snake/window/frame:
 *(snake/update!):
   snake/game-over? if: .
 
+  <- snake/next-direction (!void?) if not:
+    -> snake/direction
+  end
+
   <- snake 0 (!index) -> snake-head -> snake
   
   snake-head snake/fruit (vec2/equals?) if:
@@ -298,7 +303,7 @@ global const -> snake/window/frame:
 
           snake/direction (vec2/opposite)
             new-direction (vec2/equals?) if not:
-              new-direction -> snake/direction
+              new-direction -> snake/next-direction
             end
           continue
       end
