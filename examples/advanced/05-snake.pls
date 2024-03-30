@@ -11,6 +11,7 @@ global [[1,1]] -> snake
 global  [1,0]  -> snake/direction
 global  [1,0]  -> snake/next-direction
 global       0 -> snake/game-over?
+global  "None" -> snake/game-over-reason
 global       2 -> snake/growth
 global [10, 4] -> snake/fruit
 // How many times we should try to regen the fruit
@@ -238,9 +239,11 @@ global const -> snake/window/frame:
       (snake/wrap)
     else:
       (!dup) (snake/out-of-bounds?) if:
+        "Wall collision." -> snake/game-over-reason
         1 -> snake/game-over? .
     end
     (!dup) (snake/on-top-of-snake?) if:
+      "Self collision." -> snake/game-over-reason
       1 -> snake/game-over? .
     <- snake (!swap) (!prepend) -> snake
   .
@@ -322,8 +325,12 @@ global const -> snake/window/frame:
   end
 
     "Game Over!"
+  \n"Reason: %s"
+  \n""
   \n"Press ENTER to quit."
-  \n"" (printf/print!) (printf/flush-buffer!)
+  \n"" [
+    snake/game-over-reason
+  ] (printf!) (printf/flush-buffer!)
 
   inp-ch (*channel/close!)
   <- inp-ch (*channel/free!)
