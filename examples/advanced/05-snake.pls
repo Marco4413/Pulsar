@@ -12,6 +12,9 @@ global  [1,0]  -> snake/direction
 global       0 -> snake/game-over?
 global       2 -> snake/growth
 global [10, 4] -> snake/fruit
+// How many times we should try to regen the fruit
+//  if it overlaps the snake
+global       4 -> snake/fruit/regen-attempts
 
 // Game Settings
 global const         1 -> snake/wrap-edges?
@@ -193,13 +196,18 @@ global const -> snake/window/frame:
   .
 
 *(snake/fruit/regen!):
-  (random/int) (math/abs)
-    snake/world/width %
-    1 +
-  (random/int) (math/abs)
-    snake/world/height %
-    1 +
-  (vec2/pack) -> snake/fruit
+  0 -> i while:
+    (random/int) (math/abs)
+      snake/world/width %
+      1 +
+    (random/int) (math/abs)
+      snake/world/height %
+      1 +
+    (vec2/pack) -> snake/fruit
+    i if >= snake/fruit/regen-attempts: break
+    snake/fruit (snake/on-top-of-snake?) if not: break
+    i 1 + -> i
+  end
   .
 
 *(snake/update!):
