@@ -76,6 +76,8 @@ namespace Pulsar
     class Token
     {
     public:
+        Token() = default;
+
         Token(TokenType type, const String& val)
             : Type(type), StringVal(val) { }
         Token(TokenType type, String&& val)
@@ -89,7 +91,7 @@ namespace Pulsar
             : Type(type), IntegerVal(0) { }
     
     public:
-        TokenType Type;
+        TokenType Type = TokenType::None;
         String StringVal = "";
         int64_t IntegerVal = 0;
         double DoubleVal = 0.0;
