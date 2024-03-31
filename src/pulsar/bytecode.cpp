@@ -179,7 +179,10 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadFunctionDefinition(IRea
     if (!reader.ReadU64(localsCount))
         return ReadResult::UnexpectedEOF;
     out.LocalsCount = (size_t)localsCount;
-    RETURN_IF_NOT_OK(ReadList(reader, out.Code));
+
+    RETURN_IF_NOT_OK(ReadSized(reader, [&out](IReader& reader) mutable {
+        return ReadList(reader, out.Code);
+    }));
 
     return ReadSized(reader, [&out](ByteReader& reader) mutable {
         if (reader.IsAtEndOfFile())
@@ -282,49 +285,51 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadValue(IReader& reader, 
     uint8_t valueType = 0;
     if (!reader.ReadU8(valueType))
         return ReadResult::UnexpectedEOF;
-    switch ((ValueType)valueType) {
-    case ValueType::Void:
+    return ReadSized(reader, [&out, valueType](IReader& reader) mutable {
+        switch ((ValueType)valueType) {
+        case ValueType::Void:
+            return ReadResult::OK;
+        case ValueType::Integer: {
+            int64_t val;
+            if (!reader.ReadI64(val))
+                return ReadResult::UnexpectedEOF;
+            out.SetInteger(val);
+        } break;
+        case ValueType::Double: {
+            double val;
+            if (!reader.ReadF64(val))
+                return ReadResult::UnexpectedEOF;
+            out.SetDouble(val);
+        } break;
+        case ValueType::FunctionReference: {
+            int64_t idx;
+            if (!reader.ReadI64(idx))
+                return ReadResult::UnexpectedEOF;
+            out.SetFunctionReference(idx);
+        } break;
+        case ValueType::NativeFunctionReference: {
+            int64_t idx;
+            if (!reader.ReadI64(idx))
+                return ReadResult::UnexpectedEOF;
+            out.SetNativeFunctionReference(idx);
+        } break;
+        case ValueType::List: {
+            LinkedList<Value> list;
+            RETURN_IF_NOT_OK(ReadLinkedList(reader, list));
+            out.SetList(std::move(list));
+        } break;
+        case ValueType::String: {
+            String str;
+            RETURN_IF_NOT_OK(ReadString(reader, str));
+            out.SetString(std::move(str));
+        } break;
+        case ValueType::Custom:
+            return ReadResult::UnsupportedCustomDataType;
+        default:
+            return ReadResult::UnsupportedValueType;
+        }
         return ReadResult::OK;
-    case ValueType::Integer: {
-        int64_t val;
-        if (!reader.ReadI64(val))
-            return ReadResult::UnexpectedEOF;
-        out.SetInteger(val);
-    } break;
-    case ValueType::Double: {
-        double val;
-        if (!reader.ReadF64(val))
-            return ReadResult::UnexpectedEOF;
-        out.SetDouble(val);
-    } break;
-    case ValueType::FunctionReference: {
-        int64_t idx;
-        if (!reader.ReadI64(idx))
-            return ReadResult::UnexpectedEOF;
-        out.SetFunctionReference(idx);
-    } break;
-    case ValueType::NativeFunctionReference: {
-        int64_t idx;
-        if (!reader.ReadI64(idx))
-            return ReadResult::UnexpectedEOF;
-        out.SetNativeFunctionReference(idx);
-    } break;
-    case ValueType::List: {
-        LinkedList<Value> list;
-        RETURN_IF_NOT_OK(ReadLinkedList(reader, list));
-        out.SetList(std::move(list));
-    } break;
-    case ValueType::String: {
-        String str;
-        RETURN_IF_NOT_OK(ReadString(reader, str));
-        out.SetString(std::move(str));
-    } break;
-    case ValueType::Custom:
-        return ReadResult::UnsupportedCustomDataType;
-    default:
-        return ReadResult::UnsupportedValueType;
-    }
-    return ReadResult::OK;
+    });
 }
 
 bool Pulsar::Binary::WriteByteCode(IWriter& writer, const Module& module)
@@ -443,9 +448,10 @@ bool Pulsar::Binary::ByteCode::WriteFunctionDefinition(IWriter& writer, const Fu
         && writer.WriteU64((uint64_t)funcDef.Arity)
         && writer.WriteU64((uint64_t)funcDef.Returns)
         && writer.WriteU64((uint64_t)funcDef.LocalsCount)
-        && WriteList(writer, funcDef.Code))
-    ) return false;
+    )) return false;
     return WriteSized(writer, [&funcDef](IWriter& writer) {
+        return WriteList(writer, funcDef.Code);
+    }) && WriteSized(writer, [&funcDef](IWriter& writer) {
         if (funcDef.HasDebugSymbol() || funcDef.HasCodeDebugSymbols()) {
             return WriteFunctionDebugSymbol(writer, funcDef.DebugSymbol)
                 && WriteList(writer, funcDef.CodeDebugSymbols);
@@ -538,23 +544,25 @@ bool Pulsar::Binary::ByteCode::WriteValue(IWriter& writer, const Value& value)
 {
     if (!writer.WriteU8((uint8_t)value.Type()))
         return false;
-    switch (value.Type()) {
-    case ValueType::Void:
-        return true;
-    case ValueType::Integer:
-    case ValueType::FunctionReference:
-    case ValueType::NativeFunctionReference:
-        return writer.WriteI64(value.AsInteger());
-    case ValueType::Double:
-        return writer.WriteF64(value.AsDouble());
-    case ValueType::List:
-        return WriteLinkedList(writer, value.AsList());
-    case ValueType::String:
-        return WriteString(writer, value.AsString());
-    case ValueType::Custom:
-    default:
-        return false;
-    }
+    return WriteSized(writer, [&value](IWriter& writer) {
+        switch (value.Type()) {
+        case ValueType::Void:
+            return true;
+        case ValueType::Integer:
+        case ValueType::FunctionReference:
+        case ValueType::NativeFunctionReference:
+            return writer.WriteI64(value.AsInteger());
+        case ValueType::Double:
+            return writer.WriteF64(value.AsDouble());
+        case ValueType::List:
+            return WriteLinkedList(writer, value.AsList());
+        case ValueType::String:
+            return WriteString(writer, value.AsString());
+        case ValueType::Custom:
+        default:
+            return false;
+        }
+    });
 }
 
 const char* Pulsar::Binary::ReadResultToString(ReadResult rr)
