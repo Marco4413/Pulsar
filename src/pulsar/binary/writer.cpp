@@ -33,19 +33,21 @@ bool Pulsar::Binary::IWriter::WriteF64(double dbl)
     // TODO: We're assuming doubles are stored with the same endianness as Integers
     // If we encounter any issue we should change this
     uint64_t value = *((uint64_t*)dblPtr);
-    if constexpr (IS_LITTLE_ENDIAN)
+    if constexpr (IS_LITTLE_ENDIAN) {
         return WriteData(8, (uint8_t*)&value);
-    uint8_t data[8] {
-        (uint8_t)( value        & 0xFF),
-        (uint8_t)((value >>  8) & 0xFF),
-        (uint8_t)((value >> 16) & 0xFF),
-        (uint8_t)((value >> 24) & 0xFF),
-        (uint8_t)((value >> 32) & 0xFF),
-        (uint8_t)((value >> 40) & 0xFF),
-        (uint8_t)((value >> 48) & 0xFF),
-        (uint8_t)((value >> 56) & 0xFF),
-    };
-    return WriteData(8, data);
+    } else {
+        uint8_t data[8] {
+            (uint8_t)( value        & 0xFF),
+            (uint8_t)((value >>  8) & 0xFF),
+            (uint8_t)((value >> 16) & 0xFF),
+            (uint8_t)((value >> 24) & 0xFF),
+            (uint8_t)((value >> 32) & 0xFF),
+            (uint8_t)((value >> 40) & 0xFF),
+            (uint8_t)((value >> 48) & 0xFF),
+            (uint8_t)((value >> 56) & 0xFF),
+        };
+        return WriteData(8, data);
+    }
 }
 
 bool Pulsar::Binary::IWriter::WriteI64(int64_t value)
@@ -60,26 +62,30 @@ bool Pulsar::Binary::IWriter::WriteU64(uint64_t value)
 
 bool Pulsar::Binary::IWriter::WriteU32(uint32_t value)
 {
-    if constexpr (IS_LITTLE_ENDIAN)
+    if constexpr (IS_LITTLE_ENDIAN) {
         return WriteData(4, (uint8_t*)&value);
-    uint8_t data[4] {
-        (uint8_t)( value        & 0xFF),
-        (uint8_t)((value >>  8) & 0xFF),
-        (uint8_t)((value >> 16) & 0xFF),
-        (uint8_t)((value >> 24) & 0xFF),
-    };
-    return WriteData(4, data);
+    } else {
+        uint8_t data[4] {
+            (uint8_t)( value        & 0xFF),
+            (uint8_t)((value >>  8) & 0xFF),
+            (uint8_t)((value >> 16) & 0xFF),
+            (uint8_t)((value >> 24) & 0xFF),
+        };
+        return WriteData(4, data);
+    }
 }
 
 bool Pulsar::Binary::IWriter::WriteU16(uint16_t value)
 {
-    if constexpr (IS_LITTLE_ENDIAN)
+    if constexpr (IS_LITTLE_ENDIAN) {
         return WriteData(2, (uint8_t*)&value);
-    uint8_t data[2] {
-        (uint8_t)( value       & 0xFF),
-        (uint8_t)((value >> 8) & 0xFF),
-    };
-    return WriteData(2, data);
+    } else {
+        uint8_t data[2] {
+            (uint8_t)( value       & 0xFF),
+            (uint8_t)((value >> 8) & 0xFF),
+        };
+        return WriteData(2, data);
+    }
 }
 
 bool Pulsar::Binary::IWriter::WriteU8(uint8_t value)
