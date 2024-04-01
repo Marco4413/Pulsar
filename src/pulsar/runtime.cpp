@@ -578,6 +578,14 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             return RuntimeState::TypeError;
         a.SetInteger(a.AsString().Compare(b.AsString()));
     } break;
+    case InstructionCode::Equals: {
+        if (frame.Stack.Size() < 2)
+            return RuntimeState::StackUnderflow;
+        Value b = std::move(frame.Stack.Back());
+        frame.Stack.PopBack();
+        Value& a = frame.Stack.Back();
+        a.SetInteger(a == b ? 1 : 0);
+    } break;
     case InstructionCode::Jump:
         frame.InstructionIndex = (size_t)((frame.InstructionIndex-1) + instr.Arg0);
         break;

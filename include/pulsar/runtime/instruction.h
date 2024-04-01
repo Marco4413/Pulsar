@@ -52,6 +52,7 @@ namespace Pulsar
         Ceil  = 0x41,
         // Comparison
         Compare = 0x50,
+        Equals  = 0x51,
         // Jumps
         Jump                           = 0x60,
         JumpIfZero                     = 0x61,
