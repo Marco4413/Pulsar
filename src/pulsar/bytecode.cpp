@@ -205,11 +205,11 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadGlobalDebugSymbol(IRead
 Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadGlobalDefinition(IReader& reader, GlobalDefinition& out)
 {
     RETURN_IF_NOT_OK(ReadString(reader, out.Name));
-    RETURN_IF_NOT_OK(ReadValue(reader, out.InitialValue));
     uint8_t flags = 0;
     if (!reader.ReadU8(flags))
         return ReadResult::UnexpectedEOF;
     out.IsConstant = (flags & GLOBAL_FLAG_CONSTANT) != 0;
+    RETURN_IF_NOT_OK(ReadValue(reader, out.InitialValue));
     return ReadSized(reader, [&out](ByteReader& reader) mutable {
         if (reader.IsAtEndOfFile())
             return ReadResult::OK;
@@ -469,9 +469,9 @@ bool Pulsar::Binary::ByteCode::WriteGlobalDebugSymbol(IWriter& writer, const Glo
 bool Pulsar::Binary::ByteCode::WriteGlobalDefinition(IWriter& writer, const GlobalDefinition& globDef)
 {
     if (!(WriteString(writer, globDef.Name)
+        && writer.WriteU8(globDef.IsConstant ? GLOBAL_FLAG_CONSTANT : 0)
         && WriteValue(writer, globDef.InitialValue)
-        && writer.WriteU8(globDef.IsConstant ? GLOBAL_FLAG_CONSTANT : 0))
-    ) return false;
+    )) return false;
     return WriteSized(writer, [&globDef](IWriter& writer) {
         if (globDef.HasDebugSymbol())
             return WriteGlobalDebugSymbol(writer, globDef.DebugSymbol);
