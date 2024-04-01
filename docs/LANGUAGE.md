@@ -298,6 +298,13 @@ Bit Shifts are logical shifts. Negative shifts swap the direction.
 
 As of now, these are only allowed within [if statements](#if-statement).
 
+However, you can achieve the same behaviour through the [compare](#compare)
+and [equals?](#equals) instructions.
+
+= and != work on all [Data Types](#datatypes).
+
+While the others only work on Numeric and String [Data Types](#datatypes).
+
 ## Special Operators
 
 Special operators are the ones that do not just consume N values and
@@ -530,6 +537,10 @@ straightforward one.
 
 It's your typical if statement! You can't go wrong with it.
 
+All [Comparison Operators](#comparison-operators) are supported.
+Literals allowed within if conditions are strings and numeric data types.
+However, that does not stop you from comparing two values bound to locals.
+
 The `end` keyword must be specified at the end of the last branch.
 
 ### Weird cool variants?!?!
@@ -758,6 +769,16 @@ If both values are `String`s then the returned value is an `Integer`.
 | :----- | :----------------: | :----------------: |
 | Pops   | `Numeric`/`String` | `Numeric`/`String` |
 | Pushes |     `Numeric`      |                    |
+
+### equals?
+
+Checks if the last two elements on the stack are equal,
+pushing a non-zero value only if both are the same value.
+
+|        |    S-1    |  S0   |
+| :----- | :-------: | :---: |
+| Pops   |   `Any`   | `Any` |
+| Pushes | `Integer` |       |
 
 ### icall
 
