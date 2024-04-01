@@ -556,6 +556,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
     Token ifToken = m_Lexer->CurrentToken();
     Token comparisonToken(TokenType::None);
     InstructionCode jmpInstrCode = InstructionCode::JumpIfZero;
+    InstructionCode compInstrCode = InstructionCode::Equals;
     // Whether the if condition is fully contained within the statement.
     bool isSelfContained = false;
     bool hasComparison = false;
@@ -575,7 +576,8 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
         case TokenType::DoubleLiteral:
         case TokenType::Identifier: {
             isSelfContained = true;
-            jmpInstrCode = InstructionCode::JumpIfNotZero;
+            // compInstrCode = InstructionCode::Equals;
+            jmpInstrCode = InstructionCode::JumpIfZero;
             auto res = PushLValue(module, func, localScope, curToken, settings);
             if (res != ParseResult::OK)
                 return res;
@@ -585,24 +587,32 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
             break;
         }
 
-        if (curToken.Type != TokenType::Colon) {
+        if (curToken.Type == TokenType::Colon) {
+            isSelfContained = false;
+        } else if (curToken.Type != TokenType::Colon) {
             switch (curToken.Type) {
             case TokenType::Equals:
-                jmpInstrCode = InstructionCode::JumpIfNotZero;
-                break;
-            case TokenType::NotEquals:
+                // compInstrCode = InstructionCode::Equals;
                 jmpInstrCode = InstructionCode::JumpIfZero;
                 break;
+            case TokenType::NotEquals:
+                // compInstrCode = InstructionCode::Equals;
+                jmpInstrCode = InstructionCode::JumpIfNotZero;
+                break;
             case TokenType::Less:
+                compInstrCode = InstructionCode::Compare;
                 jmpInstrCode = InstructionCode::JumpIfGreaterThanOrEqualToZero;
                 break;
             case TokenType::LessOrEqual:
+                compInstrCode = InstructionCode::Compare;
                 jmpInstrCode = InstructionCode::JumpIfGreaterThanZero;
                 break;
             case TokenType::More:
+                compInstrCode = InstructionCode::Compare;
                 jmpInstrCode = InstructionCode::JumpIfLessThanOrEqualToZero;
                 break;
             case TokenType::MoreOrEqual:
+                compInstrCode = InstructionCode::Compare;
                 jmpInstrCode = InstructionCode::JumpIfLessThanZero;
                 break;
             default:
@@ -624,7 +634,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
             default:
                 return SetError(ParseResult::UnexpectedToken, curToken, "Expected lvalue of type Integer, Double or Local after comparison operator.");
             }
-        } else isSelfContained = false;
+        }
     }
 
     if (isChained && !isSelfContained)
@@ -634,7 +644,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected ':' to begin if statement body.");
     else if (hasComparison) {
         PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, ifToken);
-        func.Code.EmplaceBack(InstructionCode::Compare);
+        func.Code.EmplaceBack(compInstrCode);
     }
 
     PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, ifToken);
