@@ -18,6 +18,7 @@ namespace Pulsar
         { "floor",      { InstructionCode::Floor                } },
         { "ceil",       { InstructionCode::Ceil                 } },
         { "compare",    { InstructionCode::Compare              } },
+        { "equals?",    { InstructionCode::Equals               } },
         { "icall",      { InstructionCode::ICall                } },
         { "length",     { InstructionCode::Length               } },
         { "empty?",     { InstructionCode::IsEmpty              } },
