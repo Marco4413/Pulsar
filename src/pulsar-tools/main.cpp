@@ -140,12 +140,17 @@ void PrintFlagOptions(const Pulsar::List<NamedFlagOption>& opts)
     }
 }
 
-bool IsNeutronFile(const Pulsar::String& filepath)
+bool IsFile(const Pulsar::String& filepath)
 {
     std::filesystem::path path(filepath.Data());
-    if (!std::filesystem::exists(path) || !std::filesystem::is_regular_file(path))
+    return std::filesystem::exists(path) && std::filesystem::is_regular_file(path);
+}
+
+bool IsNeutronFile(const Pulsar::String& filepath)
+{
+    if (!IsFile(filepath))
         return false;
-    std::ifstream file(path);
+    std::ifstream file(filepath.Data());
     char sig[Pulsar::Binary::SIGNATURE_LENGTH];
     if (!file.read(sig, (std::streamsize)Pulsar::Binary::SIGNATURE_LENGTH))
         return false;
@@ -321,7 +326,7 @@ bool Command_Check(const char* executable, int argc, const char** argv)
         PrintCheckCommandUsage(executable);
         PULSARTOOLS_ERRORF("{} check: No file provided.", executable);
         return false;
-    } else if (!std::filesystem::exists(filepath.Data())) {
+    } else if (!IsFile(filepath)) {
         PULSARTOOLS_ERRORF("{} check: '{}' does not exist.", executable, filepath);
         return false;
     }
@@ -378,7 +383,7 @@ bool Command_Compile(const char* executable, int argc, const char** argv)
         PrintCompileCommandUsage(executable);
         PULSARTOOLS_ERRORF("{} compile: No file provided.", executable);
         return false;
-    } else if (!std::filesystem::exists(filepath.Data())) {
+    } else if (!IsFile(filepath)) {
         PULSARTOOLS_ERRORF("{} compile: '{}' does not exist.", executable, filepath);
         return false;
     }
@@ -463,7 +468,7 @@ bool Command_Run(const char* executable, int argc, const char** argv)
         PrintRunCommandUsage(executable);
         PULSARTOOLS_ERRORF("{} run: No file provided.", executable);
         return false;
-    } else if (!std::filesystem::exists(filepath.Data())) {
+    } else if (!IsFile(filepath)) {
         PULSARTOOLS_ERRORF("{} run: '{}' does not exist.", executable, filepath);
         return false;
     }
