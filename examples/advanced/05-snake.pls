@@ -254,7 +254,7 @@ global const -> snake/window/frame:
       break
     (*stdin/read)
       (!empty?) if: (!pop) continue
-      0 (!index) (char/to-upper) -> dir
+      (!length) 1 - (!index) (char/to-upper) -> dir
     if dir = snake/key/up:
       [  0, -1 ] ch (*channel/send!)
     else if dir = snake/key/left:
