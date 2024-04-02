@@ -149,7 +149,7 @@ bool IsNeutronFile(const Pulsar::String& filepath)
 {
     if (!IsFile(filepath))
         return false;
-    std::ifstream file(filepath.Data());
+    std::ifstream file(filepath.Data(), std::ios::binary);
     char sig[Pulsar::Binary::SIGNATURE_LENGTH];
     if (!file.read(sig, (std::streamsize)Pulsar::Binary::SIGNATURE_LENGTH))
         return false;
