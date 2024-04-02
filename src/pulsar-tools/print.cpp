@@ -42,8 +42,15 @@ void PulsarTools::PrintPrettyError(
     if (source) {
         size_t trimmedFromStart = PrintTokenView(*source, token, viewRange);
         size_t charsToToken = token.SourcePos.Char-trimmedFromStart + (trimmedFromStart > 0 ? 4 : 0);
-        if (token.SourcePos.CharSpan > 0)
+        // We could split this into two separate PULSARTOOLS_PRINTF calls
+        // However, I think it's better doing it in a single one
+        // This whole thing is kind of a mess, I'd like to make this
+        //  function return a String which can be printed afterwards
+        if (token.SourcePos.CharSpan > 0) {
             PULSARTOOLS_PRINTF(fmt::fg(fmt::color::red), "\n{0: ^{1}}^{0:~^{2}}", "", charsToToken, token.SourcePos.CharSpan-1);
+        } else {
+            PULSARTOOLS_PRINTF(fmt::fg(fmt::color::red), "\n{0: ^{1}}^", "", charsToToken);
+        }
     } else {
         PULSARTOOLS_PRINTF("No source to show.\n", token.SourcePos.Line+1, token.SourcePos.Char+1, message);
     }
