@@ -15,7 +15,7 @@ namespace Pulsar::Binary
     {
     public:
         FileReader(const String& path)
-            : m_File(path.Data()) { }
+            : m_File(path.Data(), std::ios::binary) { }
 
         bool ReadData(uint64_t size, uint8_t* data) override
         {
