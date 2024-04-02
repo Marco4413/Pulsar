@@ -26,8 +26,7 @@
 
 inline const char* ShiftArgs(int& argc, const char**& argv)
 {
-    if (argc <= 0)
-        return nullptr;
+    PULSARTOOLS_ASSERT(argc > 0, "ShiftArgs called with an invalid argc.");
     --argc;
     return *argv++;
 }
