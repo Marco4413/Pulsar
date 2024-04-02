@@ -29,6 +29,11 @@ project "pulsar-tools"
    filter "toolset:gcc"
       buildoptions { "-Wall", "-Wextra", "-Wpedantic", "-Werror" }
 
+   filter "action:vs*"
+      flags { "FatalWarnings" }
+      warnings "Extra"
+      externalwarnings "Extra"
+
    filter "toolset:msc"
       buildoptions { "/W4", "/WX" }
 
