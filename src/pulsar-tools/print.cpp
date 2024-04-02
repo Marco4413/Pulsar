@@ -58,7 +58,9 @@ void PulsarTools::PrintPrettyRuntimeError(const Pulsar::ExecutionContext& contex
 
     Pulsar::String stackTrace = context.GetStackTrace(10);
     const Pulsar::Frame& frame = context.CallStack.CurrentFrame();
-    if (!context.OwnerModule->HasSourceDebugSymbols() || !frame.Function->HasDebugSymbol()) {
+    if (!context.OwnerModule->HasSourceDebugSymbols()
+        || !frame.Function->HasDebugSymbol()
+        || frame.Function->DebugSymbol.SourceIdx >= context.OwnerModule->SourceDebugSymbols.Size()) {
         PULSARTOOLS_PRINTF(
             "Error: Within function {}\n{}",
             frame.Function->Name, stackTrace);
