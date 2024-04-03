@@ -195,6 +195,11 @@ except for some special ones which are turned into other characters:
 
 Where H is an hex digit.
 
+Unicode characters may be present within Strings.
+However, the language itself does not handle their encoding (yet).
+
+i.e. The [`index`](#index) instruction will index a single byte within the String.
+
 #### Multi-Line String Literals
 
 Pulsar uses an approach similar to C for multi-line strings.
