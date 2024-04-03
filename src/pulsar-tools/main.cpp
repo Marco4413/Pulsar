@@ -498,7 +498,7 @@ bool Command_Run(const char* executable, int argc, const char** argv)
 
 void PrintProgramUsage(const char* executable)
 {
-    PULSARTOOLS_INFOF("{} <COMMAND> ...", executable);
+    PULSARTOOLS_INFOF("{} [COMMAND] ...", executable);
     PULSARTOOLS_INFO("COMMAND:");
     PULSARTOOLS_INFO("    check");
     PULSARTOOLS_INFO("        Checks the specified Pulsar file for parse errors.");
@@ -506,7 +506,8 @@ void PrintProgramUsage(const char* executable)
     PULSARTOOLS_INFO("    compile");
     PULSARTOOLS_INFO("        Parses and outputs a Neutron file from a Pulsar source file.");
     PULSARTOOLS_INFO("");
-    PULSARTOOLS_INFO("    run");
+    PULSARTOOLS_INFO("    run (default)");
+    PULSARTOOLS_INFO("        If no other command is invoked, this is the default one.");
     PULSARTOOLS_INFO("        Runs the specified Pulsar or Neutron file.");
     PULSARTOOLS_INFO("        When running a Neutron file, Parser settings are ignored.");
     PULSARTOOLS_INFO("");
@@ -533,9 +534,14 @@ int main(int argc, const char** argv)
         if (!Command_Run(executable, argc, argv))
             return 1;
     } else {
-        PrintProgramUsage(executable);
-        PULSARTOOLS_ERRORF("{}: '{}' is not a valid command.", executable, command);
-        return 1;
+        // Fallback to the run command
+        ++argc; // "command" is probably the filepath, go back 1 argument
+        --argv;
+        if (!Command_Run(executable, argc, argv))
+            return 1;
+        // PrintProgramUsage(executable);
+        // PULSARTOOLS_ERRORF("{}: '{}' is not a valid command.", executable, command);
+        // return 1;
     }
 
     return 0;
