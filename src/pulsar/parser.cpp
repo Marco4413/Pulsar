@@ -643,7 +643,9 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
     if (curToken.Type != TokenType::Colon)
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected ':' to begin if statement body.");
     else if (hasComparison) {
-        PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, ifToken);
+        if (comparisonToken.Type != TokenType::None) {
+            PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, comparisonToken);
+        } else PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, ifToken);
         func.Code.EmplaceBack(compInstrCode);
     }
 
