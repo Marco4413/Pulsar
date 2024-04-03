@@ -143,7 +143,10 @@ within the language itself.
 | NativeFunctionReference |    64     |
 |         Custom          |    128    |
 
-Support for unsigned integers is planned.
+> ~~Support for unsigned integers is planned.~~
+>
+> This message has been here for a few months now:
+> It's probably not happening.
 
 The Custom datatype is mainly intended to be returned by [Native Functions](#native-functions).
 So you can have handle-like objects that can keep a pointer to some state.
