@@ -719,6 +719,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
     Token whileToken = curToken;
     Token comparisonToken(TokenType::None);
     InstructionCode jmpInstrCode = InstructionCode::JumpIfZero;
+    InstructionCode compInstrCode = InstructionCode::Equals;
     bool hasComparison = false;
     bool whileTrue = false;
     bool invertedJump = false;
@@ -754,21 +755,27 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
             hasComparison = true;
             switch (curToken.Type) {
             case TokenType::Equals:
-                jmpInstrCode = InstructionCode::JumpIfNotZero;
-                break;
-            case TokenType::NotEquals:
+                // compInstrCode = InstructionCode::Equals;
                 jmpInstrCode = InstructionCode::JumpIfZero;
                 break;
+            case TokenType::NotEquals:
+                // compInstrCode = InstructionCode::Equals;
+                jmpInstrCode = InstructionCode::JumpIfNotZero;
+                break;
             case TokenType::Less:
+                compInstrCode = InstructionCode::Compare;
                 jmpInstrCode = InstructionCode::JumpIfGreaterThanOrEqualToZero;
                 break;
             case TokenType::LessOrEqual:
+                compInstrCode = InstructionCode::Compare;
                 jmpInstrCode = InstructionCode::JumpIfGreaterThanZero;
                 break;
             case TokenType::More:
+                compInstrCode = InstructionCode::Compare;
                 jmpInstrCode = InstructionCode::JumpIfLessThanOrEqualToZero;
                 break;
             case TokenType::MoreOrEqual:
+                compInstrCode = InstructionCode::Compare;
                 jmpInstrCode = InstructionCode::JumpIfLessThanZero;
                 break;
             default:
@@ -797,7 +804,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected ':' to begin while loop body.");
     else if (hasComparison) {
         PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, comparisonToken);
-        func.Code.EmplaceBack(InstructionCode::Compare);
+        func.Code.EmplaceBack(compInstrCode);
     }
 
     SkippableBlock block{
