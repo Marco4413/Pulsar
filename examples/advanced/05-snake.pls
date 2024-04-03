@@ -279,7 +279,7 @@ global const -> snake/window/frame:
   \n"  %c: Left"
   \n"  %c: Right"
   \n""
-  \n"You can edit the source code of this file"
+  \n"If running the Pulsar source file, you can edit it"
   \n"to change game settings (it's all at the top)."
   \n""
   \n"Press ENTER when you're ready!"
