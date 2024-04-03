@@ -98,7 +98,7 @@ namespace Pulsar
         SourcePosition SourcePos = {0,0,0,0};
     };
 
-    inline bool IsControlCharacter(char ch)      { return ch <= 0x1F || ch >= 0x7F; }
+    inline bool IsControlCharacter(char ch)      { return (ch >= 0x00 && ch <= 0x1F) || ch == 0x7F; }
     inline bool IsSpace(char ch)                 { return ch == ' ' || (ch >= '\t' && ch <= '\r'); }
     inline bool IsAlphaCharacter(char ch)        { return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'); }
     inline bool IsDigit(char ch)                 { return ch >= '0' && ch <= '9'; }
