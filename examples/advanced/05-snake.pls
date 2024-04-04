@@ -21,7 +21,6 @@ global       4 -> snake/fruit/regen-attempts
 // Game Settings
 global const         1 -> snake/wrap-edges?
 global const         1 -> snake/show-update-budget?
-global const [ 1, 11 ] -> snake/ui-position
 global const       300 -> snake/update-time
 global const  [ 2, 2 ] -> snake/world/origin
 global const        12 -> snake/world/width
@@ -30,6 +29,14 @@ global const       'W' -> snake/key/up
 global const       'A' -> snake/key/left
 global const       'S' -> snake/key/down
 global const       'D' -> snake/key/right
+
+global const -> snake/ui-position:
+  snake/world/origin 1 (!index)
+    snake/world/height +
+    3 +
+  -> y
+  [ 1, y ]
+  .
 
 global const -> snake/window/frame:
   snake/world/origin (!head) 1 - -> pad-left 
