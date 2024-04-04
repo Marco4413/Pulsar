@@ -586,15 +586,15 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         Value& a = frame.Stack.Back();
         a.SetInteger(a == b ? 1 : 0);
     } break;
-    case InstructionCode::Jump:
+    case InstructionCode::J:
         frame.InstructionIndex = (size_t)((frame.InstructionIndex-1) + instr.Arg0);
         break;
-    case InstructionCode::JumpIfZero:
-    case InstructionCode::JumpIfNotZero:
-    case InstructionCode::JumpIfGreaterThanZero:
-    case InstructionCode::JumpIfGreaterThanOrEqualToZero:
-    case InstructionCode::JumpIfLessThanZero:
-    case InstructionCode::JumpIfLessThanOrEqualToZero: {
+    case InstructionCode::JZ:
+    case InstructionCode::JNZ:
+    case InstructionCode::JGZ:
+    case InstructionCode::JGEZ:
+    case InstructionCode::JLZ:
+    case InstructionCode::JLEZ: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
         Value truthValue = std::move(frame.Stack.Back());

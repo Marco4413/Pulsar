@@ -54,13 +54,13 @@ namespace Pulsar
         Compare = 0x50,
         Equals  = 0x51,
         // Jumps
-        Jump                           = 0x60,
-        JumpIfZero                     = 0x61,
-        JumpIfNotZero                  = 0x62,
-        JumpIfGreaterThanZero          = 0x63,
-        JumpIfGreaterThanOrEqualToZero = 0x64,
-        JumpIfLessThanZero             = 0x65,
-        JumpIfLessThanOrEqualToZero    = 0x66,
+        J    = 0x60, // Unconditional
+        JZ   = 0x61, // =  0
+        JNZ  = 0x62, // <> 0
+        JGZ  = 0x63, // >  0
+        JGEZ = 0x64, // >= 0
+        JLZ  = 0x65, // <  0
+        JLEZ = 0x66, // <= 0
         // Sized Values
         IsEmpty = 0x70,
         Length  = 0x71,
@@ -98,40 +98,40 @@ namespace Pulsar
     constexpr InstructionCode InvertJump(InstructionCode jmpInstr)
     {
         switch (jmpInstr) {
-        case InstructionCode::JumpIfZero:
-            return InstructionCode::JumpIfNotZero;
-        case InstructionCode::JumpIfNotZero:
-            return InstructionCode::JumpIfZero;
-        case InstructionCode::JumpIfGreaterThanZero:
-            return InstructionCode::JumpIfLessThanOrEqualToZero;
-        case InstructionCode::JumpIfGreaterThanOrEqualToZero:
-            return InstructionCode::JumpIfLessThanZero;
-        case InstructionCode::JumpIfLessThanZero:
-            return InstructionCode::JumpIfGreaterThanOrEqualToZero;
-        case InstructionCode::JumpIfLessThanOrEqualToZero:
-            return InstructionCode::JumpIfGreaterThanZero;
-        case InstructionCode::Jump:
+        case InstructionCode::JZ:
+            return InstructionCode::JNZ;
+        case InstructionCode::JNZ:
+            return InstructionCode::JZ;
+        case InstructionCode::JGZ:
+            return InstructionCode::JLEZ;
+        case InstructionCode::JGEZ:
+            return InstructionCode::JLZ;
+        case InstructionCode::JLZ:
+            return InstructionCode::JGEZ;
+        case InstructionCode::JLEZ:
+            return InstructionCode::JGZ;
+        case InstructionCode::J:
         default:
-            return InstructionCode::Jump;
+            return InstructionCode::J;
         }
     }
 
     constexpr bool ShouldJump(InstructionCode jmpInstr, double val)
     {
         switch (jmpInstr) {
-        case InstructionCode::Jump:
+        case InstructionCode::J:
             return true;
-        case InstructionCode::JumpIfZero:
+        case InstructionCode::JZ:
             return val == 0.0;
-        case InstructionCode::JumpIfNotZero:
+        case InstructionCode::JNZ:
             return val != 0.0;
-        case InstructionCode::JumpIfGreaterThanZero:
+        case InstructionCode::JGZ:
             return val > 0.0;
-        case InstructionCode::JumpIfGreaterThanOrEqualToZero:
+        case InstructionCode::JGEZ:
             return val >= 0.0;
-        case InstructionCode::JumpIfLessThanZero:
+        case InstructionCode::JLZ:
             return val < 0.0;
-        case InstructionCode::JumpIfLessThanOrEqualToZero:
+        case InstructionCode::JLEZ:
             return val <= 0.0;
         default:
             return false;
@@ -141,19 +141,19 @@ namespace Pulsar
     constexpr bool ShouldJump(InstructionCode jmpInstr, int64_t val)
     {
         switch (jmpInstr) {
-        case InstructionCode::Jump:
+        case InstructionCode::J:
             return true;
-        case InstructionCode::JumpIfZero:
+        case InstructionCode::JZ:
             return val == 0;
-        case InstructionCode::JumpIfNotZero:
+        case InstructionCode::JNZ:
             return val != 0;
-        case InstructionCode::JumpIfGreaterThanZero:
+        case InstructionCode::JGZ:
             return val > 0;
-        case InstructionCode::JumpIfGreaterThanOrEqualToZero:
+        case InstructionCode::JGEZ:
             return val >= 0;
-        case InstructionCode::JumpIfLessThanZero:
+        case InstructionCode::JLZ:
             return val < 0;
-        case InstructionCode::JumpIfLessThanOrEqualToZero:
+        case InstructionCode::JLEZ:
             return val <= 0;
         default:
             return false;

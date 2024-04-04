@@ -374,14 +374,14 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                 return SetError(ParseResult::UnexpectedToken, curToken, "Trying to break out of an un-breakable block.");
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
             skippableBlock->BreakStatements.PushBack(func.Code.Size());
-            func.Code.EmplaceBack(InstructionCode::Jump, 0);
+            func.Code.EmplaceBack(InstructionCode::J, 0);
             return ParseResult::OK;
         case TokenType::KW_Continue:
             if (!skippableBlock || !skippableBlock->AllowContinue)
                 return SetError(ParseResult::UnexpectedToken, curToken, "Trying to repeat an un-repeatable block.");
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
             skippableBlock->ContinueStatements.PushBack(func.Code.Size());
-            func.Code.EmplaceBack(InstructionCode::Jump, 0);
+            func.Code.EmplaceBack(InstructionCode::J, 0);
             return ParseResult::OK;
         case TokenType::KW_Do: {
             auto res = ParseDoBlock(module, func, scope, settings);
@@ -555,7 +555,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
 {
     Token ifToken = m_Lexer->CurrentToken();
     Token comparisonToken(TokenType::None);
-    InstructionCode jmpInstrCode = InstructionCode::JumpIfZero;
+    InstructionCode jmpInstrCode = InstructionCode::JZ;
     InstructionCode compInstrCode = InstructionCode::Equals;
     // Whether the if condition is fully contained within the statement.
     bool isSelfContained = false;
@@ -577,7 +577,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
         case TokenType::Identifier: {
             isSelfContained = true;
             // compInstrCode = InstructionCode::Equals;
-            jmpInstrCode = InstructionCode::JumpIfZero;
+            jmpInstrCode = InstructionCode::JZ;
             auto res = PushLValue(module, func, localScope, curToken, settings);
             if (res != ParseResult::OK)
                 return res;
@@ -593,27 +593,27 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
             switch (curToken.Type) {
             case TokenType::Equals:
                 // compInstrCode = InstructionCode::Equals;
-                jmpInstrCode = InstructionCode::JumpIfZero;
+                jmpInstrCode = InstructionCode::JZ;
                 break;
             case TokenType::NotEquals:
                 // compInstrCode = InstructionCode::Equals;
-                jmpInstrCode = InstructionCode::JumpIfNotZero;
+                jmpInstrCode = InstructionCode::JNZ;
                 break;
             case TokenType::Less:
                 compInstrCode = InstructionCode::Compare;
-                jmpInstrCode = InstructionCode::JumpIfGreaterThanOrEqualToZero;
+                jmpInstrCode = InstructionCode::JGEZ;
                 break;
             case TokenType::LessOrEqual:
                 compInstrCode = InstructionCode::Compare;
-                jmpInstrCode = InstructionCode::JumpIfGreaterThanZero;
+                jmpInstrCode = InstructionCode::JGZ;
                 break;
             case TokenType::More:
                 compInstrCode = InstructionCode::Compare;
-                jmpInstrCode = InstructionCode::JumpIfLessThanOrEqualToZero;
+                jmpInstrCode = InstructionCode::JLEZ;
                 break;
             case TokenType::MoreOrEqual:
                 compInstrCode = InstructionCode::Compare;
-                jmpInstrCode = InstructionCode::JumpIfLessThanZero;
+                jmpInstrCode = InstructionCode::JLZ;
                 break;
             default:
                 return SetError(ParseResult::UnexpectedToken, curToken, "Expected if body start ':' or comparison operator.");
@@ -685,7 +685,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
 
     size_t elseIdx = func.Code.Size();
     PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
-    func.Code.EmplaceBack(InstructionCode::Jump, 0);
+    func.Code.EmplaceBack(InstructionCode::J, 0);
     func.Code[ifIdx].Arg0 = func.Code.Size() - ifIdx;
     m_Lexer->NextToken(); // Consume 'else' Token
 
@@ -720,7 +720,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected while loop");
     Token whileToken = curToken;
     Token comparisonToken(TokenType::None);
-    InstructionCode jmpInstrCode = InstructionCode::JumpIfZero;
+    InstructionCode jmpInstrCode = InstructionCode::JZ;
     InstructionCode compInstrCode = InstructionCode::Equals;
     bool hasComparison = false;
     bool whileTrue = false;
@@ -735,7 +735,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
 
     if (curToken.Type == TokenType::Colon) {
         if (invertedJump)
-            jmpInstrCode = InstructionCode::Jump;
+            jmpInstrCode = InstructionCode::J;
         else whileTrue = true;
     } else {
         switch (curToken.Type) {
@@ -743,7 +743,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
         case TokenType::IntegerLiteral:
         case TokenType::DoubleLiteral:
         case TokenType::Identifier: {
-            // jmpInstrCode = InstructionCode::JumpIfZero;
+            // jmpInstrCode = InstructionCode::JZ;
             auto res = PushLValue(module, func, localScope, curToken, settings);
             if (res != ParseResult::OK)
                 return res;
@@ -758,27 +758,27 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
             switch (curToken.Type) {
             case TokenType::Equals:
                 // compInstrCode = InstructionCode::Equals;
-                jmpInstrCode = InstructionCode::JumpIfZero;
+                jmpInstrCode = InstructionCode::JZ;
                 break;
             case TokenType::NotEquals:
                 // compInstrCode = InstructionCode::Equals;
-                jmpInstrCode = InstructionCode::JumpIfNotZero;
+                jmpInstrCode = InstructionCode::JNZ;
                 break;
             case TokenType::Less:
                 compInstrCode = InstructionCode::Compare;
-                jmpInstrCode = InstructionCode::JumpIfGreaterThanOrEqualToZero;
+                jmpInstrCode = InstructionCode::JGEZ;
                 break;
             case TokenType::LessOrEqual:
                 compInstrCode = InstructionCode::Compare;
-                jmpInstrCode = InstructionCode::JumpIfGreaterThanZero;
+                jmpInstrCode = InstructionCode::JGZ;
                 break;
             case TokenType::More:
                 compInstrCode = InstructionCode::Compare;
-                jmpInstrCode = InstructionCode::JumpIfLessThanOrEqualToZero;
+                jmpInstrCode = InstructionCode::JLEZ;
                 break;
             case TokenType::MoreOrEqual:
                 compInstrCode = InstructionCode::Compare;
-                jmpInstrCode = InstructionCode::JumpIfLessThanZero;
+                jmpInstrCode = InstructionCode::JLZ;
                 break;
             default:
                 return SetError(ParseResult::UnexpectedToken, curToken, "Expected while loop body start ':' or comparison operator.");
@@ -835,7 +835,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
         func.Code[block.ContinueStatements[i]].Arg0 = (int64_t)(whileIdx-block.ContinueStatements[i]);
 
     size_t endIdx = func.Code.Size();
-    func.Code.EmplaceBack(InstructionCode::Jump, (int64_t)(whileIdx-endIdx));
+    func.Code.EmplaceBack(InstructionCode::J, (int64_t)(whileIdx-endIdx));
 
     size_t breakIdx = func.Code.Size();
     for (size_t i = 0; i < block.BreakStatements.Size(); i++)
