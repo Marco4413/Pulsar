@@ -6,7 +6,7 @@ term.popColor()
 workspace "pulsar"
    -- architecture "x64"
    configurations { "Debug", "Release" }
-   startproject "pulsar-dev"
+   startproject "pulsar-tools"
 
 include "pulsar"
 include "libs/fmt"
