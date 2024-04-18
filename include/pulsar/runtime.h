@@ -8,6 +8,7 @@
 #include "pulsar/runtime/global.h"
 #include "pulsar/runtime/value.h"
 #include "pulsar/structures/list.h"
+#include "pulsar/structures/ref.h"
 
 namespace Pulsar
 {
@@ -62,13 +63,13 @@ namespace Pulsar
     class CustomTypeData
     {
     public:
-        typedef std::shared_ptr<Pulsar::CustomTypeData> Ptr_T;
+        typedef SharedRef<Pulsar::CustomTypeData> Ref_T;
         virtual ~CustomTypeData() = default;
     };
 
     struct CustomType
     {
-        typedef std::function<CustomTypeData::Ptr_T()> DataFactory_T;
+        typedef std::function<CustomTypeData::Ref_T()> DataFactory_T;
         String Name;
         // Method that generates a new instance of a derived class from CustomTypeData
         DataFactory_T DataFactory = nullptr;
@@ -81,16 +82,16 @@ namespace Pulsar
         Pulsar::CallStack CallStack;
         List<GlobalInstance> Globals;
         // Don't access this directly, use the GetCustomTypeData method
-        HashMap<uint64_t, Pulsar::CustomTypeData::Ptr_T> CustomTypeData;
+        HashMap<uint64_t, Pulsar::CustomTypeData::Ref_T> CustomTypeData;
 
         // Retrieves and casts to the correct type an instance of CustomTypeData
         template<typename T>
-        std::shared_ptr<T> GetCustomTypeData(uint64_t type)
+        SharedRef<T> GetCustomTypeData(uint64_t type)
         {
             auto typeDataPair = CustomTypeData.Find(type);
             if (!typeDataPair)
                 return nullptr;
-            return std::static_pointer_cast<T>(*typeDataPair.Value);
+            return typeDataPair.Value->CastTo<T>();
         }
 
         String GetCallTrace(size_t callIdx) const;

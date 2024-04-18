@@ -6,7 +6,6 @@
 #include <cinttypes>
 #include <cstring>
 #include <functional>
-#include <memory>
 #include <initializer_list>
 
 #ifndef PULSAR_MALLOC
