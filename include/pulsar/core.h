@@ -2,6 +2,7 @@
 #define _PULSAR_CORE_H
 
 // All std includes from header files are here.
+#include <atomic>
 #include <cinttypes>
 #include <cstring>
 #include <functional>
