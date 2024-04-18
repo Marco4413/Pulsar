@@ -117,4 +117,13 @@ namespace Pulsar
     };
 }
 
+template<typename T>
+struct std::hash<Pulsar::SharedRef<T>>
+{
+    size_t operator()(const Pulsar::SharedRef<T>& ref) const
+    {
+        return std::hash<void*>{}((void*)ref.Get());
+    }
+};
+
 #endif // _PULSAR_STRUCTURES_REF_H
