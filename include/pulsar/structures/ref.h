@@ -71,26 +71,11 @@ namespace Pulsar
         template<typename U>
         operator SharedRef<U>() const { return CastTo<U>(); }
 
-        // Casting methods which create a new SharedRef sharing the same RefCount
-
+        // Create a new SharedRef sharing the same RefCount
         template<typename U>
         SharedRef<U> CastTo() const
         {
             SharedRef<U> sRef(dynamic_cast<U*>(m_Ptr), m_RefCount);
-            return sRef;
-        }
-
-        template<typename U>
-        SharedRef<U> StaticCastTo() const
-        {
-            SharedRef<U> sRef(static_cast<U*>(m_Ptr), m_RefCount);
-            return sRef;
-        }
-
-        template<typename U>
-        SharedRef<U> ReinterpretCastTo() const
-        {
-            SharedRef<U> sRef(reinterpret_cast<U*>(m_Ptr), m_RefCount);
             return sRef;
         }
 
