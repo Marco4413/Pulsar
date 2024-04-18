@@ -35,7 +35,7 @@ namespace Pulsar::Core
     inline T* New(Args&& ...args)
     {
         T* ptr = (T*)PULSAR_MALLOC(sizeof(T));
-        return new(ptr) T(args...);
+        return new(ptr) T(std::forward<Args>(args)...);
     }
 
     template<typename T>

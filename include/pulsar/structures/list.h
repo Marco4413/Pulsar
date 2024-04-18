@@ -129,7 +129,7 @@ namespace Pulsar
         {
             size_t appendIdx = m_Size;
             ResizeUninitialized(m_Size+1);
-            new(&m_Data[appendIdx]) T(args...);
+            new(&m_Data[appendIdx]) T(std::forward<Args>(args)...);
             return m_Data[appendIdx];
         }
 

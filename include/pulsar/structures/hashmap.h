@@ -122,7 +122,7 @@ namespace Pulsar
         PairRef Insert(K&& key, V&& value)           { return Emplace(std::move(key), std::move(value)); }
 
         template<typename ...Args>
-        PairRef Emplace(const K& key, Args&& ...args) { K _k = key; return Emplace(std::move(_k), args...); }
+        PairRef Emplace(const K& key, Args&& ...args) { K _k = key; return Emplace(std::move(_k), std::forward<Args>(args)...); }
 
         template<typename ...Args>
         PairRef Emplace(K&& key, Args&& ...args)
@@ -134,17 +134,17 @@ namespace Pulsar
                 if (!bucket.Populated) {
                     bucket.Populated = true;
                     new(&bucket.Key) K(std::move(key));
-                    new(&bucket.Value) V(args...);
+                    new(&bucket.Value) V(std::forward<Args>(args)...);
                     return {&bucket.Key, &bucket.Value};
                 } else if (bucket.Key == key) {
                     bucket.Value.~V();
-                    new(&bucket.Value) V(args...);
+                    new(&bucket.Value) V(std::forward<Args>(args)...);
                     return {&bucket.Key, &bucket.Value};
                 }
             }
             // No free buckets!
             Reserve(Capacity()*3/2+1);
-            return Emplace(std::move(key), args...);
+            return Emplace(std::move(key), std::forward<Args>(args)...);
         }
 
         PairRef Find(const K& key)

@@ -173,7 +173,7 @@ namespace Pulsar
         template<typename ...Args>
         Token TrimToToken(size_t length, Args&& ...args)
         {
-            Token token(args...);
+            Token token(std::forward<Args>(args)...);
             token.SourcePos = GetSourcePosition(length);
             if (length > 0)
                 m_SourceView.RemovePrefix(length);

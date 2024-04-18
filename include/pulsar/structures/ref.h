@@ -23,7 +23,7 @@ namespace Pulsar
         template<typename ...Args>
         static SharedRef<T> New(Args&& ...args)
         {
-            SharedRef<T> ref(PULSAR_NEW(T, args...));
+            SharedRef<T> ref(PULSAR_NEW(T, std::forward<Args>(args)...));
             return ref;
         }
 
