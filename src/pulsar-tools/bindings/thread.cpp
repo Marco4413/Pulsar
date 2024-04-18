@@ -70,7 +70,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Run(Pulsar::Execu
         return Pulsar::RuntimeState::TypeError;
     
     const Pulsar::FunctionDefinition& func = eContext.OwnerModule->Functions[(size_t)funcIdx];
-    std::shared_ptr<PulsarThreadContext> threadContext = std::make_shared<PulsarThreadContext>(
+    Pulsar::SharedRef<PulsarThreadContext> threadContext = Pulsar::SharedRef<PulsarThreadContext>::New(
         eContext.OwnerModule->CreateExecutionContext(false, true),
         Pulsar::ValueStack(std::move(threadArgs.AsList())),
         Pulsar::RuntimeState::OK
@@ -78,7 +78,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Run(Pulsar::Execu
 
     threadContext->Context.Globals = eContext.Globals;
     threadContext->IsRunning.store(true);
-    std::shared_ptr<PulsarThread> thread = std::make_shared<PulsarThread>(
+    Pulsar::SharedRef<PulsarThread> thread = Pulsar::SharedRef<PulsarThread>::New(
         std::thread([func, threadContext]() mutable {
             threadContext->State = threadContext->Context.OwnerModule->ExecuteFunction(
                 func, threadContext->Stack, threadContext->Context);
@@ -115,7 +115,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Join(Pulsar::Exec
     auto handleThreadPair = threadData->Threads.Find(threadHandle.AsCustom().Handle);
     if (!handleThreadPair)
         return Pulsar::RuntimeState::InvalidCustomTypeHandle;
-    std::shared_ptr<PulsarThread> thread = *handleThreadPair.Value;
+    Pulsar::SharedRef<PulsarThread> thread = *handleThreadPair.Value;
 
     ThreadJoin(thread, frame.Stack);
     threadData->Threads.Remove(threadHandle.AsCustom().Handle);
@@ -146,7 +146,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_JoinAll(Pulsar::E
         auto handleThreadPair = threadData->Threads.Find(handle.AsCustom().Handle);
         if (!handleThreadPair)
             return Pulsar::RuntimeState::InvalidCustomTypeHandle;
-        std::shared_ptr<PulsarThread> thread = *handleThreadPair.Value;
+        Pulsar::SharedRef<PulsarThread> thread = *handleThreadPair.Value;
         
         ThreadJoin(thread, frame.Stack);
         Pulsar::ValueList threadResult;
@@ -207,7 +207,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_IsValid(Pulsar::E
     return Pulsar::RuntimeState::OK;
 }
 
-void PulsarTools::ThreadNativeBindings::ThreadJoin(std::shared_ptr<PulsarThread> thread, Pulsar::ValueStack& stack)
+void PulsarTools::ThreadNativeBindings::ThreadJoin(Pulsar::SharedRef<PulsarThread> thread, Pulsar::ValueStack& stack)
 {
     thread->Thread.join();
     Pulsar::ValueList threadResult;
@@ -231,7 +231,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_New(Pulsar::Exec
         return Pulsar::RuntimeState::NoCustomTypeData;
     
     std::unique_lock channelDataLock(channelData->Mutex);
-    std::shared_ptr<Channel> channel = std::make_shared<Channel>();
+    Pulsar::SharedRef<Channel> channel = Pulsar::SharedRef<Channel>::New();
     int64_t handle = channelData->NextHandle++;
     channelData->Channels.Insert(handle, std::move(channel));
     channelDataLock.unlock();
@@ -257,7 +257,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_Send(Pulsar::Exe
     auto handleChannelPair = channelData->Channels.Find(channelHandle.AsCustom().Handle);
     if (!handleChannelPair)
         return Pulsar::RuntimeState::InvalidCustomTypeHandle;
-    std::shared_ptr<Channel> channel = *handleChannelPair.Value;
+    Pulsar::SharedRef<Channel> channel = *handleChannelPair.Value;
     channelDataLock.unlock();
 
     std::unique_lock channelLock(channel->Mutex);
@@ -286,7 +286,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_Receive(Pulsar::
     auto handleChannelPair = channelData->Channels.Find(channelHandle.AsCustom().Handle);
     if (!handleChannelPair)
         return Pulsar::RuntimeState::InvalidCustomTypeHandle;
-    std::shared_ptr<Channel> channel = *handleChannelPair.Value;
+    Pulsar::SharedRef<Channel> channel = *handleChannelPair.Value;
     channelDataLock.unlock();
 
     std::unique_lock channelLock(channel->Mutex);
@@ -321,7 +321,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_Close(Pulsar::Ex
     auto handleChannelPair = channelData->Channels.Find(channelHandle.AsCustom().Handle);
     if (!handleChannelPair)
         return Pulsar::RuntimeState::InvalidCustomTypeHandle;
-    std::shared_ptr<Channel> channel = *handleChannelPair.Value;
+    Pulsar::SharedRef<Channel> channel = *handleChannelPair.Value;
     channelDataLock.unlock();
 
     std::unique_lock channelLock(channel->Mutex);
@@ -346,7 +346,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_Free(Pulsar::Exe
     auto handleChannelPair = channelData->Channels.Find(channelHandle.AsCustom().Handle);
     if (!handleChannelPair)
         return Pulsar::RuntimeState::OK;
-    std::shared_ptr<Channel> channel = *handleChannelPair.Value;
+    Pulsar::SharedRef<Channel> channel = *handleChannelPair.Value;
     channelData->Channels.Remove(channelHandle.AsCustom().Handle);
     channelDataLock.unlock();
 
@@ -372,7 +372,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_IsEmpty(Pulsar::
     auto handleChannelPair = channelData->Channels.Find(channelHandle.AsCustom().Handle);
     if (!handleChannelPair)
         return Pulsar::RuntimeState::InvalidCustomTypeHandle;
-    std::shared_ptr<Channel> channel = *handleChannelPair.Value;
+    Pulsar::SharedRef<Channel> channel = *handleChannelPair.Value;
     channelDataLock.unlock();
 
     std::unique_lock channelLock(channel->Mutex);
@@ -397,7 +397,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_IsClosed(Pulsar:
     auto handleChannelPair = channelData->Channels.Find(channelHandle.AsCustom().Handle);
     if (!handleChannelPair)
         return Pulsar::RuntimeState::InvalidCustomTypeHandle;
-    std::shared_ptr<Channel> channel = *handleChannelPair.Value;
+    Pulsar::SharedRef<Channel> channel = *handleChannelPair.Value;
     channelDataLock.unlock();
 
     std::unique_lock channelLock(channel->Mutex);

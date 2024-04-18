@@ -26,14 +26,14 @@ namespace PulsarTools
         struct PulsarThread
         {
             std::thread Thread;
-            std::shared_ptr<PulsarThreadContext> ThreadContext;
+            Pulsar::SharedRef<PulsarThreadContext> ThreadContext;
         };
 
         class ThreadTypeData : public Pulsar::CustomTypeData
         {
         public:
             int64_t NextHandle = 1;
-            Pulsar::HashMap<int64_t, std::shared_ptr<PulsarThread>> Threads;
+            Pulsar::HashMap<int64_t, Pulsar::SharedRef<PulsarThread>> Threads;
         };
 
         struct Channel
@@ -49,7 +49,7 @@ namespace PulsarTools
         {
         public:
             int64_t NextHandle = 1;
-            Pulsar::HashMap<int64_t, std::shared_ptr<Channel>> Channels;
+            Pulsar::HashMap<int64_t, Pulsar::SharedRef<Channel>> Channels;
             std::mutex Mutex;
         };
 
@@ -72,7 +72,7 @@ namespace PulsarTools
         Pulsar::RuntimeState Channel_IsClosed(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Channel_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
 
-        void ThreadJoin(std::shared_ptr<PulsarThread> thread, Pulsar::ValueStack& stack);
+        void ThreadJoin(Pulsar::SharedRef<PulsarThread> thread, Pulsar::ValueStack& stack);
     }
 }
 
