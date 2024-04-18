@@ -6,7 +6,7 @@
 #include <cinttypes>
 #include <cstring>
 #include <functional>
-#include <initializer_list>
+#include <utility>
 
 #ifndef PULSAR_MALLOC
 #define PULSAR_MALLOC std::malloc
