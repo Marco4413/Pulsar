@@ -5,11 +5,11 @@
 void PulsarTools::ThreadNativeBindings::BindToModule(Pulsar::Module& module)
 {
     uint64_t threadType = module.BindCustomType("Thread", []() {
-        return std::make_shared<ThreadTypeData>();
+        return Pulsar::SharedRef<ThreadTypeData>::New();
     });
     
     uint64_t channelType = module.BindCustomType("Channel", []() {
-        return std::make_shared<ChannelTypeData>();
+        return Pulsar::SharedRef<ChannelTypeData>::New();
     });
 
     module.BindNativeFunction({ "this-thread/sleep!", 1, 0 }, ThisThread_Sleep);
