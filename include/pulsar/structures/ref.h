@@ -60,6 +60,7 @@ namespace Pulsar
         }
 
         T* operator->() const { return m_Ptr; }
+        T& operator*() const { return *m_Ptr; }
         T& operator[](size_t idx) const { return m_Ptr[idx]; }
 
         template<typename U>
