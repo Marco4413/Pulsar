@@ -15,26 +15,28 @@ namespace Pulsar
     {
     public:
         typedef HashMapBucket<K, V> SelfType;
+        typedef HashMap<K, V> MapType;
+        friend MapType;
 
         HashMapBucket()
-            : KeyStorage{}, ValueStorage{} { };
+            : m_KeyStorage{}, m_ValueStorage{} { };
         ~HashMapBucket() { Clear(); }
 
         HashMapBucket(const SelfType& other)
         {
-            if (other.Populated) {
-                Populated = true;
-                new(&Key) K(other.Key);
-                new(&Value) V(other.Value);
+            if (other.m_Populated) {
+                m_Populated = true;
+                new(&m_Key) K(other.m_Key);
+                new(&m_Value) V(other.m_Value);
             }
         }
 
         HashMapBucket(SelfType&& other)
         {
-            if (other.Populated) {
-                Populated = true;
-                new(&Key) K(std::move(other.Key));
-                new(&Value) V(std::move(other.Value));
+            if (other.m_Populated) {
+                m_Populated = true;
+                new(&m_Key) K(std::move(other.m_Key));
+                new(&m_Value) V(std::move(other.m_Value));
                 other.Clear();
             }
         }
@@ -44,23 +46,32 @@ namespace Pulsar
 
         void Clear()
         {
-            if (!Populated)
+            if (!m_Populated)
                 return;
-            Populated = false;
-            Key.~K();
-            Value.~V();
+            m_Populated = false;
+            m_Key.~K();
+            m_Value.~V();
         }
 
-        bool Populated = false;
+        bool IsPopulated() const { return m_Populated; }
+        operator bool() const { return IsPopulated(); }
+
+        const K& Key() const { return m_Key; }
+
+        V& Value() { return m_Value; }
+        const V& Value() const { return m_Value; }
+
+    private:
+        bool m_Populated = false;
         union
         {
-            K Key;
-            uint8_t KeyStorage[sizeof(K)];
+            K m_Key;
+            uint8_t m_KeyStorage[sizeof(K)];
         };
         union
         {
-            V Value;
-            uint8_t ValueStorage[sizeof(V)];
+            V m_Value;
+            uint8_t m_ValueStorage[sizeof(V)];
         };     
     };
 
@@ -111,14 +122,14 @@ namespace Pulsar
             m_Buckets.Reserve(newCapacity);
             m_Buckets.Resize(newCapacity);
             for (size_t i = 0; i < oldBuckets.Size(); i++) {
-                if (oldBuckets[i].Populated)
-                    Emplace(std::move(oldBuckets[i].Key), std::move(oldBuckets[i].Value));
+                if (oldBuckets[i].m_Populated)
+                    Emplace(std::move(oldBuckets[i].m_Key), std::move(oldBuckets[i].m_Value));
             }
         }
 
-        PairRef Insert(const K& key, const V& value) { K _k = key; V _v = value; return Insert(std::move(_k), std::move(_v)); }
-        PairRef Insert(const K& key, V&& value)      { K _k = key; return Insert(std::move(_k), std::move(value)); }
-        PairRef Insert(K&& key, const V& value)      { V _v = value; return Insert(std::move(key), std::move(_v)); }
+        PairRef Insert(const K& key, const V& value) { K _k(key); V _v(value); return Insert(std::move(_k), std::move(_v)); }
+        PairRef Insert(const K& key, V&& value)      { K _k(key); return Insert(std::move(_k), std::move(value)); }
+        PairRef Insert(K&& key, const V& value)      { V _v(value); return Insert(std::move(key), std::move(_v)); }
         PairRef Insert(K&& key, V&& value)           { return Emplace(std::move(key), std::move(value)); }
 
         template<typename ...Args>
@@ -131,15 +142,15 @@ namespace Pulsar
             size_t startIdx = hash % m_Buckets.Size();
             for (size_t i = 0; i < m_Buckets.Size(); i++) {
                 BucketType& bucket = m_Buckets[(startIdx+i)%m_Buckets.Size()];
-                if (!bucket.Populated) {
-                    bucket.Populated = true;
-                    new(&bucket.Key) K(std::move(key));
-                    new(&bucket.Value) V(std::forward<Args>(args)...);
-                    return {&bucket.Key, &bucket.Value};
-                } else if (bucket.Key == key) {
-                    bucket.Value.~V();
-                    new(&bucket.Value) V(std::forward<Args>(args)...);
-                    return {&bucket.Key, &bucket.Value};
+                if (!bucket.m_Populated) {
+                    bucket.m_Populated = true;
+                    new(&bucket.m_Key) K(std::move(key));
+                    new(&bucket.m_Value) V(std::forward<Args>(args)...);
+                    return {&bucket.m_Key, &bucket.m_Value};
+                } else if (bucket.m_Key == key) {
+                    bucket.m_Value.~V();
+                    new(&bucket.m_Value) V(std::forward<Args>(args)...);
+                    return {&bucket.m_Key, &bucket.m_Value};
                 }
             }
             // No free buckets!
@@ -153,10 +164,10 @@ namespace Pulsar
             size_t startIdx = hash % m_Buckets.Size();
             for (size_t i = 0; i < m_Buckets.Size(); i++) {
                 BucketType& bucket = m_Buckets[(startIdx+i)%m_Buckets.Size()];
-                if (!bucket.Populated)
+                if (!bucket.m_Populated)
                     continue;
-                else if (bucket.Key == key)
-                    return {&bucket.Key, &bucket.Value};
+                else if (bucket.m_Key == key)
+                    return {&bucket.m_Key, &bucket.m_Value};
             }
             return {};
         }
@@ -167,10 +178,10 @@ namespace Pulsar
             size_t startIdx = hash % m_Buckets.Size();
             for (size_t i = 0; i < m_Buckets.Size(); i++) {
                 const BucketType& bucket = m_Buckets[(startIdx+i)%m_Buckets.Size()];
-                if (!bucket.Populated)
+                if (!bucket.m_Populated)
                     continue;
-                else if (bucket.Key == key)
-                    return {&bucket.Key, &bucket.Value};
+                else if (bucket.m_Key == key)
+                    return {&bucket.m_Key, &bucket.m_Value};
             }
             return {};
         }
@@ -181,12 +192,39 @@ namespace Pulsar
             size_t startIdx = hash % m_Buckets.Size();
             for (size_t i = 0; i < m_Buckets.Size(); i++) {
                 BucketType& bucket = m_Buckets[(startIdx+i)%m_Buckets.Size()];
-                if (!bucket.Populated)
+                if (!bucket.m_Populated)
                     continue;
-                else if (bucket.Key == key) {
+                else if (bucket.m_Key == key) {
                     bucket.Clear();
                     return;
                 }
+            }
+        }
+
+        void ReHash()
+        {
+            List<BucketType> buckets(std::move(m_Buckets));
+            m_Buckets.Reserve(buckets.Size());
+            m_Buckets.Resize(buckets.Size());
+            for (size_t i = 0; i < buckets.Size(); i++) {
+                if (buckets[i].m_Populated)
+                    Emplace(std::move(buckets[i].Key), std::move(buckets[i].Value));
+            }
+        }
+
+        void ForEach(std::function<void(const BucketType&)> fn) const
+        {
+            for (size_t i = 0; i < m_Buckets.Size(); i++) {
+                if (m_Buckets[i].m_Populated)
+                    fn(m_Buckets[i]);
+            }
+        }
+
+        void ForEach(std::function<void(BucketType&)> fn)
+        {
+            for (size_t i = 0; i < m_Buckets.Size(); i++) {
+                if (m_Buckets[i].m_Populated)
+                    fn(m_Buckets[i]);
             }
         }
 
@@ -196,7 +234,7 @@ namespace Pulsar
         {
             size_t count = 0;
             for (size_t i = 0; i < m_Buckets.Size(); i++) {
-                if (m_Buckets[i].Populated)
+                if (m_Buckets[i].m_Populated)
                     count++;
             }
             return count;
