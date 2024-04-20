@@ -130,15 +130,18 @@ namespace Pulsar
         size_t BindNativeFunction(const FunctionDefinition& def, NativeFunction func);
         size_t DeclareAndBindNativeFunction(FunctionDefinition def, NativeFunction func);
         uint64_t BindCustomType(const String& name, CustomType::DataFactory_T dataFactory = nullptr);
-        
-        // Try not to access CustomTypes directly because it may change in the future.
-        CustomType& GetCustomType(uint64_t typeId)             { return CustomTypes[(size_t)typeId]; }
-        const CustomType& GetCustomType(uint64_t typeId) const { return CustomTypes[(size_t)typeId]; }
-        bool HasCustomType(uint64_t typeId) const              { return (size_t)typeId < CustomTypes.Size(); }
+
+        // Be sure to check if the type exists first (unless you know for sure it exists)
+        CustomType& GetCustomType(uint64_t typeId)             { return *CustomTypes.Find(typeId).Value; }
+        const CustomType& GetCustomType(uint64_t typeId) const { return *CustomTypes.Find(typeId).Value; }
+        bool HasCustomType(uint64_t typeId) const              { return CustomTypes.Find(typeId); }
 
         bool HasSourceDebugSymbols() const { return !SourceDebugSymbols.IsEmpty(); }
 
     public:
+        // Access these member variables only for:
+        // - Inspecting the Module.
+        // - Creating your own language which runs on the Pulsar VM.
         List<FunctionDefinition> Functions;
         List<FunctionDefinition> NativeBindings;
         List<GlobalDefinition> Globals;
@@ -146,12 +149,16 @@ namespace Pulsar
 
         List<SourceDebugSymbol> SourceDebugSymbols;
 
+        // These are managed by the Bind* methods.
         List<NativeFunction> NativeFunctions;
-        List<CustomType> CustomTypes;
+        HashMap<uint64_t, CustomType> CustomTypes;
 
     private:
         RuntimeState PrepareCallFrame(ValueStack& callerStack, Frame& callingFrame) const;
         RuntimeState ExecuteInstruction(Frame& frame, ExecutionContext& eContext) const;
+
+    private:
+        uint64_t m_LastTypeId = 0;
     };
 }
 
