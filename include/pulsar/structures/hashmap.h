@@ -109,6 +109,8 @@ namespace Pulsar
 
         ~HashMap() = default;
 
+        // Capacity cannot be == 0
+        // So if newCapacity is 0, 1 is the value used
         void Reserve(size_t newCapacity)
         {
             if (newCapacity == Capacity())
@@ -118,6 +120,9 @@ namespace Pulsar
                 if (newCapacity < count)
                     return;
             }
+            // Force Capacity to be 1
+            if (newCapacity <= 0)
+                newCapacity = 1;
             List<BucketType> oldBuckets(std::move(m_Buckets));
             m_Buckets.Reserve(newCapacity);
             m_Buckets.Resize(newCapacity);
