@@ -132,9 +132,9 @@ namespace Pulsar
             }
         }
 
-        PairRef Insert(const K& key, const V& value) { K _k(key); V _v(value); return Insert(std::move(_k), std::move(_v)); }
-        PairRef Insert(const K& key, V&& value)      { K _k(key); return Insert(std::move(_k), std::move(value)); }
-        PairRef Insert(K&& key, const V& value)      { V _v(value); return Insert(std::move(key), std::move(_v)); }
+        PairRef Insert(const K& key, const V& value) { return Emplace(key, value); }
+        PairRef Insert(const K& key, V&& value)      { return Emplace(key, std::move(value)); }
+        PairRef Insert(K&& key, const V& value)      { return Emplace(std::move(key), value); }
         PairRef Insert(K&& key, V&& value)           { return Emplace(std::move(key), std::move(value)); }
 
         template<typename ...Args>
