@@ -143,24 +143,28 @@ namespace Pulsar
         template<typename ...Args>
         PairRef Emplace(K&& key, Args&& ...args)
         {
-            size_t hash = std::hash<K>{}(key);
-            size_t startIdx = hash % m_Buckets.Size();
-            for (size_t i = 0; i < m_Buckets.Size(); i++) {
-                BucketType& bucket = m_Buckets[(startIdx+i)%m_Buckets.Size()];
-                if (!bucket.m_Populated) {
-                    bucket.m_Populated = true;
-                    new(&bucket.m_Key) K(std::move(key));
-                    new(&bucket.m_Value) V(std::forward<Args>(args)...);
-                    return {&bucket.m_Key, &bucket.m_Value};
-                } else if (bucket.m_Key == key) {
-                    bucket.m_Value.~V();
-                    new(&bucket.m_Value) V(std::forward<Args>(args)...);
-                    return {&bucket.m_Key, &bucket.m_Value};
-                }
+            PairRef existingPair = Find(key);
+            if (existingPair) {
+                (*existingPair.Value).~V();
+                new(existingPair.Value) V(std::forward<Args>(args)...);
+                return existingPair;
             }
-            // No free buckets!
-            Reserve(Capacity()*3/2+1);
-            return Emplace(std::move(key), std::forward<Args>(args)...);
+
+            while (true) {
+                size_t hash = std::hash<K>{}(key);
+                size_t startIdx = hash % m_Buckets.Size();
+                for (size_t i = 0; i < m_Buckets.Size(); i++) {
+                    BucketType& bucket = m_Buckets[(startIdx+i)%m_Buckets.Size()];
+                    if (!bucket.m_Populated) {
+                        bucket.m_Populated = true;
+                        new(&bucket.m_Key) K(std::move(key));
+                        new(&bucket.m_Value) V(std::forward<Args>(args)...);
+                        return {&bucket.m_Key, &bucket.m_Value};
+                    }
+                }
+                // No free buckets! Reserve and repeat.
+                Reserve(Capacity()*3/2+1);
+            }
         }
 
         PairRef Find(const K& key)
