@@ -8,7 +8,7 @@
   .
 
 *(main args):
-  [
+  [ // ASCII art generated with https://marco4413.github.io/MediaAsciifier/
     "       3",
     "     -44444454",
     "    !44331  2445555:",
