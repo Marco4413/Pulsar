@@ -113,7 +113,8 @@ namespace Pulsar
     class Parser
     {
     public:
-        Parser() { }
+        Parser() = default;
+        ~Parser() = default;
 
         bool AddSource(const String& path, const String& src);
         bool AddSource(const String& path, String&& src);
