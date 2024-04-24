@@ -73,12 +73,12 @@ size_t Pulsar::Module::BindNativeFunction(const FunctionDefinition& def, NativeF
     return bound;
 }
 
-size_t Pulsar::Module::DeclareAndBindNativeFunction(FunctionDefinition def, NativeFunction func)
+int64_t Pulsar::Module::DeclareAndBindNativeFunction(FunctionDefinition def, NativeFunction func)
 {
-    NativeBindings.PushBack(def);
+    NativeBindings.EmplaceBack(std::move(def));
     NativeFunctions.Resize(NativeBindings.Size());
     NativeFunctions.Back() = func;
-    return NativeBindings.Size()-1;
+    return (int64_t)(NativeBindings.Size())-1;
 }
 
 uint64_t Pulsar::Module::BindCustomType(const String& name, CustomType::DataFactory_T dataFactory)
