@@ -72,3 +72,8 @@ $ pulsar-tools run path/to/pulsar/file.pls
 ```
 
 If an example requires external arguments, just append them to the command.
+
+### Including Pulsar in your Project
+
+There's a fully working demo within the `pulsar-demo` project.
+You can check out the `premake5.lua` script and the source code within `src/pulsar-demo`
