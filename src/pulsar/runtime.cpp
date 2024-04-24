@@ -40,17 +40,26 @@ Pulsar::String Pulsar::ExecutionContext::GetStackTrace(size_t maxDepth) const
 
     String trace("    ");
     trace += GetCallTrace(CallStack.Size()-1);
-    if (CallStack.Size() == 1)
+    if (CallStack.Size() == 1 || maxDepth == 1)
         return trace;
 
     if (maxDepth > CallStack.Size())
         maxDepth = CallStack.Size();
-    else if (maxDepth < CallStack.Size()) {
+
+    // Show half of the top-most calls and half of the bottom ones.
+    // (maxDepth+1) is to give "priority" to the top-most calls in case of odd numbers.
+    for (size_t i = 1; i < (maxDepth+1)/2; i++) {
+        trace += "\n    ";
+        trace += GetCallTrace(i);
+    }
+
+    if (maxDepth < CallStack.Size()) {
         trace += "\n    ... other ";
-        trace += UIntToString(CallStack.Size()-maxDepth);
+        trace += UIntToString((uint64_t)(CallStack.Size()-maxDepth));
         trace += " calls";
     }
-    for (size_t i = 1; i < maxDepth; i++) {
+
+    for (size_t i = (maxDepth+1)/2; i < maxDepth; i++) {
         trace += "\n    ";
         trace += GetCallTrace(maxDepth-i-1);
     }
