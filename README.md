@@ -31,7 +31,7 @@ you can download and package the official extension found at
 
 **None!**
 
-Except for the `pulsar-dev` and `pulsar-tools` projects
+Except for the `pulsar-demo` and `pulsar-tools` projects
 which use `fmt` for pretty printing.
 
 The Language itself has no dependencies except for the C++20 standard library.
@@ -52,10 +52,6 @@ Supported compilers are `gcc` and `msvc`.
 They're within the [examples](examples) folder.
 
 ### Running Examples
-
-~~The current way of running examples is by compiling the `pulsar-dev` project
-and passing the example to run as an argument. Other arguments are passed to the
-main function of the example.~~
 
 The new `pulsar-tools` project is the preferred way of running examples.
 In fact, it's the CLI tool for Pulsar.
