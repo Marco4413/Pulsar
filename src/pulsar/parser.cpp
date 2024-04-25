@@ -394,6 +394,12 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
             if (res != ParseResult::OK)
                 return res;
         } break;
+        case TokenType::KW_Local: {
+            PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
+            auto res = ParseLocalBlock(module, func, scope, skippableBlock, settings);
+            if (res != ParseResult::OK)
+                return res;
+        } break;
         case TokenType::Plus:
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
             func.Code.EmplaceBack(InstructionCode::DynSum);
@@ -711,6 +717,74 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
         return res;
     }
     return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'else' block start or 'else if' compound statement.");
+}
+
+inline bool IsDummyIdentifier(const Pulsar::String& id)
+{
+    return id.Length() == 1 && id[0] == '_';
+}
+
+Pulsar::ParseResult Pulsar::Parser::ParseLocalBlock(Module& module, FunctionDefinition& func, const LocalScope& localScope, SkippableBlock* skippableBlock, const ParseSettings& settings)
+{
+    const Token& curToken = m_Lexer->CurrentToken();
+    if (curToken.Type != TokenType::KW_Local)
+        return SetError(ParseResult::UnexpectedToken, curToken, "Expected local block.");
+
+    List<Token> localNames;
+    // Map that holds the index within localNames for the last definition of a local with a specific name.
+    HashMap<String, size_t> localNameToIdx;
+    while (m_Lexer->NextToken().Type != TokenType::Colon) {
+        if (curToken.Type != TokenType::Identifier)
+            return SetError(ParseResult::UnexpectedToken, curToken, "Expected name of local.");
+        if (!IsDummyIdentifier(curToken.StringVal))
+            localNameToIdx.Insert(curToken.StringVal, localNames.Size());
+        localNames.EmplaceBack(curToken);
+    }
+
+    // TODO: Maybe don't copy the scope if not necessary.
+    LocalScope scope = localScope;
+    for (size_t i = 0; i < localNames.Size(); i++) {
+        size_t localNameIdx = localNames.Size()-i-1;
+        const Token& localName = localNames[localNameIdx];
+        // Because ids from localName are always put into localNameToIdx, it is safe to dereference.
+        // Except for "Dummy Identifiers"
+        if (IsDummyIdentifier(localName.StringVal) || *localNameToIdx.Find(localName.StringVal).Value != localNameIdx) {
+            if (settings.StoreDebugSymbols) {
+                PUSH_CODE_SYMBOL(true, func, localName);
+                func.Code.EmplaceBack(InstructionCode::Pop);
+            } else {
+                // Optimize for sequences of '_'
+                // Only if debug is not enabled
+                int64_t count = 1;
+                for (size_t j = 0; j < localNameIdx; j++) {
+                    const Token& prevLocalName = localNames[localNameIdx-j-1];
+                    if (!(IsDummyIdentifier(prevLocalName.StringVal) || *localNameToIdx.Find(localName.StringVal).Value != localNameIdx))
+                        break;
+                    count++;
+                    i++;
+                }
+                func.Code.EmplaceBack(InstructionCode::Pop, count);
+            }
+        } else {
+            int64_t localIdx = (int64_t)scope.Locals.Size();
+            scope.Locals.PushBack(localName.StringVal);
+            if (scope.Locals.Size() > func.LocalsCount)
+                func.LocalsCount = scope.Locals.Size();
+            PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, localName);
+            func.Code.EmplaceBack(InstructionCode::PopIntoLocal, localIdx);
+        }
+    }
+
+    // TODO: This is copy-pasted multiple times, find a better solution.
+    auto res = ParseFunctionBody(module, func, scope, skippableBlock, settings);
+    if (res == ParseResult::OK) {
+        m_Lexer->NextToken();
+        if (curToken.Type != TokenType::KW_End)
+            return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'end' to close local block.");
+    } else if (res != ParseResult::UnexpectedToken || curToken.Type != TokenType::KW_End)
+        return res;
+    ClearError();
+    return ParseResult::OK;
 }
 
 Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefinition& func, const LocalScope& localScope, const ParseSettings& settings)
