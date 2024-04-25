@@ -111,29 +111,29 @@ global const -> snake/window/frame:
 
 *(vec2/add v1 v2) -> 1:
   <- v1 (vec2/unpack)
-    -> y1 -> x1
   <- v2 (vec2/unpack)
-    -> y2 -> x2
-  x1 x2 +
-  y1 y2 +
-    (vec2/pack)
+    local x1 y1 x2 y2:
+      x1 x2 +
+      y1 y2 +
+        (vec2/pack)
+    end
   .
 
 *(vec2/opposite v) -> 1:
-  <- v (vec2/unpack)
-    -> y -> x
-  x -1 *
-  y -1 *
-    (vec2/pack)
+  <- v (vec2/unpack) local x y:
+    x -1 *
+    y -1 *
+      (vec2/pack)
+  end
   .
 
 *(vec2/equals? v1 v2) -> 1:
   <- v1 (vec2/unpack)
-    -> y1 -> x1
   <- v2 (vec2/unpack)
-    -> y2 -> x2
-  x1 if x2: y1 if y2: 1 . end
-  0
+    local x1 y1 x2 y2:
+      x1 if x2: y1 if y2: 1 . end
+      0
+    end
   .
 
 *(ansi/set-cursor! x y):
@@ -179,21 +179,21 @@ global const -> snake/window/frame:
   .
 
 *(snake/out-of-bounds? v) -> 1:
-  <- v (vec2/unpack)
-    -> y -> x
-  x if <= 0: 1 .
-  y if <= 0: 1 .
-  x if > snake/world/width: 1 .
-  y if > snake/world/height: 1 .
-  0
+  <- v (vec2/unpack) local x y:
+    x if <= 0: 1 .
+    y if <= 0: 1 .
+    x if > snake/world/width: 1 .
+    y if > snake/world/height: 1 .
+    0
+  end
   .
 
 *(snake/wrap v) -> 1:
-  <- v (vec2/unpack)
-    -> y -> x
-  if x <= 0: snake/world/width  else if x > snake/world/width:  1 else: x end
-  if y <= 0: snake/world/height else if y > snake/world/height: 1 else: y end
-    (vec2/pack)
+  <- v (vec2/unpack) local x y:
+    if x <= 0: snake/world/width  else if x > snake/world/width:  1 else: x end
+    if y <= 0: snake/world/height else if y > snake/world/height: 1 else: y end
+      (vec2/pack)
+  end
   .
 
 *(snake/on-top-of-snake? v) -> 1:
