@@ -583,6 +583,46 @@ may replace the `end` keyword, thus an explicit `else` branch cannot exist.
 
 The `not` keyword may be used to negate the comparison.
 
+## Local Block
+
+The local block is an easy way to [move](#the-rightarrow-operator) stack values into locals with a function arguments-like syntax.
+
+```lisp
+local [...identifiers]:
+  // Code here
+end
+```
+
+If no identifier is provided it acts like a new scope, so you'll be able to hide locals within it.
+Moreover, it does not have the draw-back of losing the reference to the last [skippable block](#skippable-blocks)
+which the [do block](#do-block) has.
+
+The identifier `_` drops the value instead of creating a new local.
+
+Duplicate identifiers are dropped except for the last one in the list.
+
+Locals defined outside of the local block are shadowed.
+
+**What does "function arguments-like syntax" mean?**
+
+Here's an example:
+
+```lisp
+1 2
+  // 2 is the top-most value, so "two" must be defined first.
+  // To mimic the behaviour of the local block, the binding is forced (-> !).
+  -> !two
+  -> !one
+```
+
+```lisp
+1 2 local one two:
+  // The function-like syntax allows to define them in an intuitive order.
+end
+```
+
+Both snippets produce the same VM code.
+
 ## Skippable Blocks
 
 ### While Loop
