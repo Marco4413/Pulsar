@@ -837,10 +837,10 @@ function is called like a normal `(function)` call.
 
 See the [references example](../examples/basic/05-references.pls).
 
-|        |            S-1             |    S0     |
-| :----- | :------------------------: | :-------: |
-| Pops   | `Native/FunctionReference` | `...Args` |
-| Pushes | `...ReturnValues`          |           |
+|        |        S-1        |             S0             |
+| :----- | :---------------: | :------------------------: |
+| Pops   | `...Args`         | `Native/FunctionReference` |
+| Pushes | `...ReturnValues` |                            |
 
 ### length
 
