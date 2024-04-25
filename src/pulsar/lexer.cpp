@@ -659,6 +659,8 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
         return "KW_Break";
     case TokenType::KW_Continue:
         return "KW_Continue";
+    case TokenType::KW_Local:
+        return "KW_Local";
     case TokenType::CompilerDirective:
         return "CompilerDirective";
     case TokenType::EndOfFile:

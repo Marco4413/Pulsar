@@ -38,6 +38,7 @@ namespace Pulsar
         KW_If, KW_Else, KW_End,
         KW_Global, KW_Const,
         KW_Do, KW_While, KW_Break, KW_Continue,
+        KW_Local,
         CompilerDirective
     };
 
@@ -55,6 +56,7 @@ namespace Pulsar
         { "while",    TokenType::KW_While    },
         { "break",    TokenType::KW_Break    },
         { "continue", TokenType::KW_Continue },
+        { "local",    TokenType::KW_Local    },
     };
 
     static const HashMap<String, int64_t> CompilerDirectives {
