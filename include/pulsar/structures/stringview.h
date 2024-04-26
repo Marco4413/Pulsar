@@ -31,7 +31,8 @@ namespace Pulsar
         size_t Length() const   { return Empty() ? 0 : m_End - m_Start; }
         bool Empty() const      { return m_Start >= m_End; }
         size_t GetStart() const { return m_Start; }
-        const char* CStringFrom(size_t idx) const { return &m_Data[m_Start+idx]; }
+        // Data may not be null-terminated, use StringView::Length to get the remaining characters.
+        const char* DataFromStart() const { return &m_Data[m_Start]; }
     private:
         const char* m_Data = nullptr;
         size_t m_Start = 0;

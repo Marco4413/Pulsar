@@ -129,7 +129,7 @@ void PrintFlagOptions(const Pulsar::List<NamedFlagOption>& opts)
             // Split description lines
             Pulsar::StringView view(namedOption.Option.Description, std::strlen(namedOption.Option.Description));
             do {
-                size_t idx = StrIndexOf(view.CStringFrom(0), '\n');
+                size_t idx = StrIndexOf(view.DataFromStart(), '\n');
                 Pulsar::String line = view.GetPrefix(idx);
                 PULSARTOOLS_INFOF("        {0}", line);
                 view.RemovePrefix(idx+1);

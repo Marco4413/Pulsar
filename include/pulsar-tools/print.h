@@ -35,7 +35,7 @@ struct fmt::formatter<Pulsar::StringView> : formatter<string_view>
 {
     auto format(const Pulsar::StringView& val, format_context& ctx) const
     {
-        return fmt::format_to(ctx.out(), "{:.{}}", val.CStringFrom(0), val.Length());
+        return fmt::format_to(ctx.out(), "{:.{}}", val.DataFromStart(), val.Length());
     }
 };
 
