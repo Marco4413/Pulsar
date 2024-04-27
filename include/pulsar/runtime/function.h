@@ -38,6 +38,18 @@ namespace Pulsar
                 && Returns == other.Returns
                 && Name == other.Name;
         }
+
+        bool FindCodeDebugSymbolFor(size_t instructionIdx, size_t& symbolIdxOut) const {
+            if (!HasCodeDebugSymbols())
+                return false;
+            symbolIdxOut = 0;
+            for (size_t i = 0; i < CodeDebugSymbols.Size(); i++) {
+                if (CodeDebugSymbols[i].StartIdx > instructionIdx)
+                    break;
+                symbolIdxOut = i;
+            }
+            return true;
+        }
     };
 }
 
