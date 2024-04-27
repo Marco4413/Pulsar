@@ -9,15 +9,11 @@ Pulsar::String Pulsar::ExecutionContext::GetCallTrace(size_t callIdx) const
         trace += '*';
     trace += frame.Function->Name + ')';
     if (frame.Function->HasDebugSymbol() && OwnerModule->HasSourceDebugSymbols()) {
-        const auto& filePath = OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx].Path;
-        if (frame.Function->HasCodeDebugSymbols()) {
-            size_t symbolIdx = 0;
-            for (size_t j = 0; j < frame.Function->CodeDebugSymbols.Size(); j++) {
-                if (frame.Function->CodeDebugSymbols[j].StartIdx >= frame.InstructionIndex)
-                    break;
-                symbolIdx = j;
-            }
-            const auto& token = frame.Function->CodeDebugSymbols[symbolIdx].Token;
+        const Pulsar::String& filePath = OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx].Path;
+
+        size_t codeSymbolIdx = 0;
+        if (frame.InstructionIndex > 0 && frame.Function->FindCodeDebugSymbolFor(frame.InstructionIndex-1, codeSymbolIdx)) {
+            const auto& token = frame.Function->CodeDebugSymbols[codeSymbolIdx].Token;
             trace += " '" + filePath;
             trace += ":" + UIntToString(token.SourcePos.Line+1);
             trace += ":" + UIntToString(token.SourcePos.Char+1);
