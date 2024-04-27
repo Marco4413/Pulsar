@@ -118,11 +118,11 @@ int main(int argc, const char** argv)
     // The logo example needs a native function called "println!" to be ran.
     // Module::BindNativeFunction returns how many definitions matched and, therefore, were bound.
     module.BindNativeFunction({
-        .Name="println!",
-        .Arity=1,
-        .Returns=0,
+        .Name = "println!",
+        .Arity = 1,
+        .Returns = 0,
         // This is not necessary as by default it's the same as Arity.
-        .LocalsCount=1,
+        .LocalsCount = 1,
     }, [](Pulsar::ExecutionContext& ctx) {
         // We get the frame of this function call.
         Pulsar::Frame& frame = ctx.CallStack.CurrentFrame();
