@@ -724,7 +724,7 @@ inline bool IsDummyIdentifier(const Pulsar::String& id)
     return id.Length() == 1 && id[0] == '_';
 }
 
-Pulsar::ParseResult Pulsar::Parser::ParseLocalBlock(Module& module, FunctionDefinition& func, const LocalScope& localScope, SkippableBlock* skippableBlock, const ParseSettings& settings)
+Pulsar::ParseResult Pulsar::Parser::ParseLocalBlock(Module& module, FunctionDefinition& func, const LocalScope& parentScope, SkippableBlock* skippableBlock, const ParseSettings& settings)
 {
     const Token& curToken = m_Lexer->CurrentToken();
     if (curToken.Type != TokenType::KW_Local)
@@ -741,8 +741,10 @@ Pulsar::ParseResult Pulsar::Parser::ParseLocalBlock(Module& module, FunctionDefi
         localNames.EmplaceBack(curToken);
     }
 
-    // TODO: Maybe don't copy the scope if not necessary.
-    LocalScope scope = localScope;
+    // localScope will point to _localScope only if some locals were bound.
+    LocalScope* localScope = nullptr;
+    LocalScope _localScope{ parentScope.Global };
+
     for (size_t i = 0; i < localNames.Size(); i++) {
         size_t localNameIdx = localNames.Size()-i-1;
         const Token& localName = localNames[localNameIdx];
@@ -766,17 +768,25 @@ Pulsar::ParseResult Pulsar::Parser::ParseLocalBlock(Module& module, FunctionDefi
                 func.Code.EmplaceBack(InstructionCode::Pop, count);
             }
         } else {
-            int64_t localIdx = (int64_t)scope.Locals.Size();
-            scope.Locals.PushBack(localName.StringVal);
-            if (scope.Locals.Size() > func.LocalsCount)
-                func.LocalsCount = scope.Locals.Size();
+            if (!localScope) {
+                // Populate localScope only if needed.
+                // This speeds-up the parsing of `local: ... end`
+                // Because parentScope won't be copied.
+                localScope = &_localScope;
+                _localScope.Locals = parentScope.Locals;
+            }
+
+            int64_t localIdx = (int64_t)_localScope.Locals.Size();
+            _localScope.Locals.PushBack(localName.StringVal);
+            if (_localScope.Locals.Size() > func.LocalsCount)
+                func.LocalsCount = _localScope.Locals.Size();
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, localName);
             func.Code.EmplaceBack(InstructionCode::PopIntoLocal, localIdx);
         }
     }
 
     // TODO: This is copy-pasted multiple times, find a better solution.
-    auto res = ParseFunctionBody(module, func, scope, skippableBlock, settings);
+    auto res = ParseFunctionBody(module, func, localScope ? *localScope : parentScope, skippableBlock, settings);
     if (res == ParseResult::OK) {
         m_Lexer->NextToken();
         if (curToken.Type != TokenType::KW_End)
