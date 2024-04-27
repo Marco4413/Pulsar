@@ -97,7 +97,8 @@ namespace Pulsar
         String GetCallTrace(size_t callIdx) const;
         String GetStackTrace(size_t maxDepth) const;
 
-        bool IsAtEnd() const {
+        bool IsAtEnd() const
+        {
             return CallStack.IsEmpty() || (
                 CallStack.Size() == 1 &&
                 CallStack[0].InstructionIndex >= CallStack[0].Function->Code.Size()
