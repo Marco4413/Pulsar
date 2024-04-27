@@ -73,7 +73,7 @@ void PulsarTools::PrintPrettyRuntimeError(const Pulsar::ExecutionContext& contex
             frame.Function->Name, stackTrace);
         return;
     } else if (!frame.Function->HasCodeDebugSymbols()) {
-        const auto& srcSymbol = context.OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
+        const Pulsar::SourceDebugSymbol& srcSymbol = context.OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
         PrintPrettyError(
             &srcSymbol.Source, &srcSymbol.Path,
             frame.Function->DebugSymbol.Token,
@@ -83,19 +83,13 @@ void PulsarTools::PrintPrettyRuntimeError(const Pulsar::ExecutionContext& contex
         return;
     }
 
-    size_t symbolIdx = 0;
-    for (size_t i = 0; i < frame.Function->CodeDebugSymbols.Size(); i++) {
-        // frame.InstructionIndex points to the NEXT instruction
-        if (frame.Function->CodeDebugSymbols[i].StartIdx >= frame.InstructionIndex)
-            break;
-        symbolIdx = i;
-    }
+    const Pulsar::SourceDebugSymbol& srcSymbol = context.OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
 
-    const auto& srcSymbol = context.OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
-    if (symbolIdx > 0) {
+    size_t codeSymbolIdx = 0;
+    if (frame.InstructionIndex > 0 && frame.Function->FindCodeDebugSymbolFor(frame.InstructionIndex-1, codeSymbolIdx)) {
         PrintPrettyError(
             &srcSymbol.Source, &srcSymbol.Path,
-            frame.Function->CodeDebugSymbols[symbolIdx].Token,
+            frame.Function->CodeDebugSymbols[codeSymbolIdx].Token,
             "In function " + frame.Function->Name,
             viewRange);
     } else {
