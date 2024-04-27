@@ -123,7 +123,7 @@ Pulsar::RuntimeState Pulsar::Module::CallFunctionBySignature(const FunctionDefin
 {
     for (int64_t i = Functions.Size()-1; i >= 0; i--) {
         const FunctionDefinition& other = Functions[(size_t)i];
-        if (!other.MatchesDeclaration(sig, false))
+        if (!other.MatchesSignature(sig))
             continue;
         return CallFunction(i, stack, context);
     }
