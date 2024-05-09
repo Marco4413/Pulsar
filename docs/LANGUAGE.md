@@ -505,13 +505,17 @@ Then they must be bound before running the Pulsar module
 within the native implementation.
 
 ```lisp
-*(*native-func-name arg1 arg2 ... argN) -> M.
+*(*native-func-name K arg1 arg2 ... argN) -> M.
 ```
 
 Signatures must match so that the right amount of arguments
 can be taken and added to the caller's stack.
 
-As always, return count (and arrow) can be omitted to imply 0.
+As always, `K` and `-> M` default to 0.
+
+There's no real reason native functions should have a value for `K`.
+Native code is fast, and having some sort of documentation within the name
+of the arguments is a better choice.
 
 **Native function can't be redefined with a different signature\*.**
 
