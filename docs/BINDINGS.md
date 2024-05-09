@@ -282,7 +282,7 @@ and the `RuntimeState` as an `Integer` (no error if 0).
 
 ### thread/join-all
 
-`*(*thread/join threads) -> 1.`
+`*(*thread/join-all threads) -> 1.`
 
 Types: `[ ...Thread ] -> [ ...[ Integer, List ] ]`
 
