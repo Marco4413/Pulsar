@@ -178,6 +178,10 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadFunctionDefinition(IRea
     if (!reader.ReadU64(returns))
         return ReadResult::UnexpectedEOF;
     out.Returns = (size_t)returns;
+    uint64_t stackArity = 0;
+    if (!reader.ReadU64(stackArity))
+        return ReadResult::UnexpectedEOF;
+    out.StackArity = (size_t)stackArity;
     uint64_t localsCount = 0;
     if (!reader.ReadU64(localsCount))
         return ReadResult::UnexpectedEOF;
@@ -465,6 +469,7 @@ bool Pulsar::Binary::ByteCode::WriteFunctionDefinition(IWriter& writer, const Fu
     if (!(WriteString(writer, funcDef.Name, settings)
         && writer.WriteU64((uint64_t)funcDef.Arity)
         && writer.WriteU64((uint64_t)funcDef.Returns)
+        && writer.WriteU64((uint64_t)funcDef.StackArity)
         && writer.WriteU64((uint64_t)funcDef.LocalsCount)
     )) return false;
     return WriteSized(writer, [&funcDef](IWriter& writer, const WriteSettings& settings) {
