@@ -459,17 +459,19 @@ Functions take some arguments from the caller's stack and return some.
 A function definition looks like this:
 
 ```lisp
-*(func-name arg1 arg2 ... argN) -> M:
+*(func-name K arg1 arg2 ... argN) -> M:
   // Do Stuff
   .
 ```
 
-When the function returns, at least M values must be on its stack.
-Only the last M values are returned onto the caller's stack.
+Where `K` and `M` are [integer literals](#integer-literals).
+`K` and `-> M` are optional and they default to 0.
 
-And of course when called, N values must be on the caller's stack.
+When the function is called, N+`K` values are taken from the caller's stack.
+`K` values are moved into the stack. While N values are bound to locals.
 
-Return count (and arrow) can be omitted and 0 is implied.
+When the function returns, `M` values must be on the stack and they are
+moved into the caller's stack.
 
 **Functions with the same name may exist. See below to understand
 what function will be called.**
