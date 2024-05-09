@@ -61,7 +61,7 @@ namespace Pulsar
             for (size_t i = 0; i < other.Size(); i++) {
                 if (i < oldSize)
                     m_Data[i].~T();
-                new(&m_Data[i]) T(other.m_Data[i]);
+                PULSAR_PLACEMENT_NEW(T, &m_Data[i], other.m_Data[i]);
             }
             return *this;
         }
@@ -74,7 +74,7 @@ namespace Pulsar
             for (size_t i = 0; i < other.Size(); i++) {
                 if (i < oldSize)
                     m_Data[i].~T();
-                new(&m_Data[i]) T(std::move(other.m_Data[i]));
+                PULSAR_PLACEMENT_NEW(T, &m_Data[i], std::move(other.m_Data[i]));
                 other.m_Data[i].~T();
             }
             other.m_Size = 0;
@@ -88,7 +88,7 @@ namespace Pulsar
             ResizeUninitialized(newSize);
             if (oldSize < m_Size) {
                 for (size_t i = oldSize; i < m_Size; i++)
-                    new(&m_Data[i]) T(args...);
+                    PULSAR_PLACEMENT_NEW(T, &m_Data[i], args...);
                 return;
             }
             
@@ -102,7 +102,7 @@ namespace Pulsar
                 return;
             T* newData = (T*)PULSAR_MALLOC(sizeof(T) * newCapacity);
             for (size_t i = 0; i < m_Size; i++) {
-                new(&newData[i]) T(std::move(m_Data[i]));
+                PULSAR_PLACEMENT_NEW(T, &newData[i], std::move(m_Data[i]));
                 m_Data[i].~T();
             }
             PULSAR_FREE((void*)m_Data);
@@ -114,14 +114,14 @@ namespace Pulsar
         {
             size_t appendIdx = m_Size;
             ResizeUninitialized(m_Size+1);
-            new(&m_Data[appendIdx]) T(value);
+            PULSAR_PLACEMENT_NEW(T, &m_Data[appendIdx], value);
         }
 
         void PushBack(T&& value)
         {
             size_t appendIdx = m_Size;
             ResizeUninitialized(m_Size+1);
-            new(&m_Data[appendIdx]) T(std::move(value));
+            PULSAR_PLACEMENT_NEW(T, &m_Data[appendIdx], std::move(value));
         }
 
         template<typename ...Args>
@@ -129,7 +129,7 @@ namespace Pulsar
         {
             size_t appendIdx = m_Size;
             ResizeUninitialized(m_Size+1);
-            new(&m_Data[appendIdx]) T(std::forward<Args>(args)...);
+            PULSAR_PLACEMENT_NEW(T, &m_Data[appendIdx], std::forward<Args>(args)...);
             return m_Data[appendIdx];
         }
 

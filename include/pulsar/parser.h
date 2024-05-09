@@ -147,7 +147,7 @@ namespace Pulsar
             Pulsar::Lexer Lexer;
         };
 
-        HashMap<String, nullptr_t> m_ParsedSources;
+        HashMap<String, std::nullptr_t> m_ParsedSources;
         List<LexerSource> m_LexerPool;
 
         Lexer* m_Lexer = nullptr;

@@ -26,8 +26,8 @@ namespace Pulsar
         {
             if (other.m_Populated) {
                 m_Populated = true;
-                new(&m_Key) K(other.m_Key);
-                new(&m_Value) V(other.m_Value);
+                PULSAR_PLACEMENT_NEW(K, &m_Key, other.m_Key);
+                PULSAR_PLACEMENT_NEW(V, &m_Value, other.m_Value);
             }
         }
 
@@ -35,8 +35,8 @@ namespace Pulsar
         {
             if (other.m_Populated) {
                 m_Populated = true;
-                new(&m_Key) K(std::move(other.m_Key));
-                new(&m_Value) V(std::move(other.m_Value));
+                PULSAR_PLACEMENT_NEW(K, &m_Key, std::move(other.m_Key));
+                PULSAR_PLACEMENT_NEW(V, &m_Value, std::move(other.m_Value));
                 other.Clear();
             }
         }
@@ -146,7 +146,7 @@ namespace Pulsar
             PairRef existingPair = Find(key);
             if (existingPair) {
                 (*existingPair.Value).~V();
-                new(existingPair.Value) V(std::forward<Args>(args)...);
+                PULSAR_PLACEMENT_NEW(V, existingPair.Value, std::forward<Args>(args)...);
                 return existingPair;
             }
 
@@ -157,8 +157,8 @@ namespace Pulsar
                     BucketType& bucket = m_Buckets[(startIdx+i)%m_Buckets.Size()];
                     if (!bucket.m_Populated) {
                         bucket.m_Populated = true;
-                        new(&bucket.m_Key) K(std::move(key));
-                        new(&bucket.m_Value) V(std::forward<Args>(args)...);
+                        PULSAR_PLACEMENT_NEW(K, &bucket.m_Key, std::move(key));
+                        PULSAR_PLACEMENT_NEW(V, &bucket.m_Value, std::forward<Args>(args)...);
                         return {&bucket.m_Key, &bucket.m_Value};
                     }
                 }
