@@ -299,6 +299,11 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
     }
 
     m_Lexer->NextToken();
+    if (curToken.Type == TokenType::IntegerLiteral) {
+        def.StackArity = curToken.IntegerVal;
+        m_Lexer->NextToken();
+    }
+
     List<String> args;
     for (;;) {
         if (curToken.Type != TokenType::Identifier)
