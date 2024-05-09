@@ -207,13 +207,22 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteFunction(const FunctionDefinition& f
 
 Pulsar::RuntimeState Pulsar::Module::PrepareCallFrame(ValueStack& callerStack, Frame& callingFrame) const
 {
-    if (callerStack.Size() < callingFrame.Function->Arity)
+    if (callerStack.Size() < (callingFrame.Function->StackArity + callingFrame.Function->Arity))
         return RuntimeState::StackUnderflow;
+
     callingFrame.Locals.Resize(callingFrame.Function->LocalsCount);
     for (size_t i = 0; i < callingFrame.Function->Arity; i++) {
         callingFrame.Locals[callingFrame.Function->Arity-i-1] = std::move(callerStack.Back());
         callerStack.PopBack();
     }
+
+    // TODO: Figure out if this tanks performance when StackArity is 0
+    callingFrame.Stack.Resize(callingFrame.Function->StackArity);
+    for (size_t i = 0; i < callingFrame.Function->StackArity; i++) {
+        callingFrame.Stack[callingFrame.Function->StackArity-i-1] = std::move(callerStack.Back());
+        callerStack.PopBack();
+    }
+
     return RuntimeState::OK;
 }
 

@@ -15,7 +15,9 @@ namespace Pulsar
         size_t Arity;
         size_t Returns;
         
+        size_t StackArity = 0;
         size_t LocalsCount = Arity;
+
         List<Instruction> Code = List<Instruction>();
         
         FunctionDebugSymbol DebugSymbol{Token(TokenType::None), (size_t)-1};
@@ -26,7 +28,8 @@ namespace Pulsar
 
         bool MatchesDeclaration(const FunctionDefinition& other) const
         {
-            return Arity == other.Arity
+            return StackArity == other.StackArity
+                && Arity == other.Arity
                 && LocalsCount == other.LocalsCount
                 && Returns == other.Returns
                 && Name == other.Name;
@@ -34,7 +37,8 @@ namespace Pulsar
 
         bool MatchesSignature(const FunctionDefinition& other) const
         {
-            return Arity == other.Arity
+            return StackArity == other.StackArity
+                && Arity == other.Arity
                 && Returns == other.Returns
                 && Name == other.Name;
         }
