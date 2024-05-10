@@ -12,6 +12,12 @@ project "pulsar"
    -- Define PULSAR_NO_FILESYSTEM to disable the usage of the FileSystem API.
    -- defines "PULSAR_NO_FILESYSTEM"
 
+   filter "toolset:clang"
+      buildoptions {
+         "-Wall", "-Wextra", "-Wpedantic", "-Werror",
+         "-Wno-gnu-zero-variadic-macro-arguments"
+      }
+
    filter "toolset:gcc"
       buildoptions { "-Wall", "-Wextra", "-Wpedantic", "-Werror" }
 

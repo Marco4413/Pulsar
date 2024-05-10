@@ -28,6 +28,12 @@ project "pulsar-demo"
    -- Though it is used by pulsar-demo, so it would not work.
    -- defines "PULSAR_NO_FILESYSTEM"
 
+   filter "toolset:clang"
+      buildoptions {
+         "-Wall", "-Wextra", "-Wpedantic", "-Werror",
+         "-Wno-gnu-zero-variadic-macro-arguments"
+      }
+
    filter "toolset:gcc"
       buildoptions { "-Wall", "-Wextra", "-Wpedantic", "-Werror" }
 
@@ -57,6 +63,12 @@ project "pulsar-tools"
    includedirs { "include", "libs/fmt/include" }
    files { "src/pulsar-tools/**.cpp", "include/pulsar-tools/**.h" }
    links { "pulsar", "fmt" }
+
+   filter "toolset:clang"
+      buildoptions {
+         "-Wall", "-Wextra", "-Wpedantic", "-Werror",
+         "-Wno-gnu-zero-variadic-macro-arguments"
+      }
 
    filter "toolset:gcc"
       buildoptions { "-Wall", "-Wextra", "-Wpedantic", "-Werror" }
