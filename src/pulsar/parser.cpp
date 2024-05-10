@@ -300,7 +300,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
 
     m_Lexer->NextToken();
     if (curToken.Type == TokenType::IntegerLiteral) {
-        def.StackArity = curToken.IntegerVal;
+        def.StackArity = (size_t)curToken.IntegerVal;
         m_Lexer->NextToken();
     }
 
