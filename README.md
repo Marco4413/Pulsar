@@ -47,6 +47,9 @@ Alternatively `premake5 gmake2` will create Makefiles.
 C++20 is the standard used by the project.
 Supported compilers are `gcc` and `msvc`.
 
+*`clang` should also work but it's not my go-to compiler,
+so it may break between commits.*
+
 ## Examples
 
 They're within the [examples](examples) folder.
