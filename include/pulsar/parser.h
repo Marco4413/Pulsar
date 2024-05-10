@@ -105,7 +105,7 @@ namespace Pulsar
          * @param cwf The path to the current file.
          * @param token The StringLiteral Token containing the path to the file to include.
          */
-        std::function<ParseResult(Parser&, Pulsar::String, Token)> IncludeResolver = nullptr;
+        std::function<ParseResult(Parser&, String, Token)> IncludeResolver = nullptr;
     };
 
     inline const ParseSettings ParseSettings_Default{};
