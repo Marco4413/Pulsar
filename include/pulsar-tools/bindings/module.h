@@ -10,18 +10,17 @@ namespace PulsarTools
 {
     namespace ModuleNativeBindings
     {
-        class ModuleTypeData : public Pulsar::CustomTypeData
+        class ModuleType : public Pulsar::CustomDataHolder, public Pulsar::Module
         {
         public:
-            int64_t NextHandle = 1;
-            Pulsar::HashMap<int64_t, Pulsar::Module> Modules;
+            using Ref_T = Pulsar::SharedRef<ModuleType>;
+            using Pulsar::Module::Module;
         };
 
         void BindToModule(Pulsar::Module& module);
 
         Pulsar::RuntimeState Module_FromFile(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Module_Run(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Module_Free(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Module_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
     }
 }
