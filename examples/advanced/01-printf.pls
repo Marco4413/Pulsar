@@ -220,7 +220,9 @@ global "" -> printf/buffer
     // (except for printf/context-stack)
     1 -> printf/print-to-buffer?
     4 -> printf/default-precision
-    "%s, %s%c\n%.*sPI=%f\n" [
+      "%s, %s%c"
+    \n"%.*sPI=%f"
+    \n"" [
       "Hello", "World", '!',
       8, " ", 3.1415
     ] (printf!)

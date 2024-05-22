@@ -75,7 +75,6 @@ global const -> snake/window/frame:
 *(*channel/send!   value channel).
 *(*channel/receive channel) -> 1.
 *(*channel/close!  channel).
-*(*channel/free!   channel).
 *(*channel/empty?  channel) -> 1.
 *(*channel/closed? channel) -> 1.
 
@@ -340,6 +339,6 @@ global const -> snake/window/frame:
   ] (printf!) (printf/flush-buffer!)
 
   inp-ch (*channel/close!)
-  <- inp-ch (*channel/free!)
+  <- inp-ch (!pop)
   <- inp-thread (*thread/join) (!pop 2)
   .

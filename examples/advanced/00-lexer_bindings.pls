@@ -1,7 +1,6 @@
 // Native Bindings
 *(*lexer/from-file   path) -> 1.
 *(*lexer/next-token lexer) -> 1.
-*(*lexer/free!      lexer).
 *(*lexer/valid?     lexer) -> 1.
 
 global const 1 -> TOKEN/EOF
@@ -21,7 +20,6 @@ global const 1 -> TOKEN/EOF
   filepath (*lexer/from-file) -> lexer
   lexer (*lexer/valid?) if:
     lexer (lex-next)
-    lexer (*lexer/free!)
     .
   "Could not read file at '"
     <- filepath (!append)
