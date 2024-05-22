@@ -69,10 +69,9 @@ Extra arguments are part of return values.
 If an error occurred, return values is an empty list.
 
 Also known as "Safe/Sandboxed Call", `scall` creates a copy
-of the Context's Globals but not of Handle References:
+of the Context's Globals but not of CustomTypeData:
 - Changes to Globals don't affect the main context.
-- Handles can't be passed as arguments.
-- Handles created within `fn` are freed in case of an error.
+- CustomTypeData is NOT shared with the main context.
 
 ### tcall
 
@@ -89,8 +88,7 @@ If an error occurred, return values is an empty list.
 
 Also known as "Try Call", `tcall` inherits the main context:
 - Changes to Globals affect the main context.
-- Handles can be passed as arguments.
-- Handles created within `fn` **ARE NOT** freed in case of an error.
+- CustomTypeData is shared with the main context.
 
 ## FS
 
@@ -135,8 +133,6 @@ Creates a new `Lexer` from the file at `path`.
 If the file does not exist returns an invalid `Lexer`.
 Use [`(*lexer/valid?)`](#lexervalid) to check if no error occurred.
 
-Don't forget to call [`(*lexer/free!)`](#lexerfree) when you're done!
-
 ### lexer/next-token
 
 `*(*lexer/next-token lexer) -> 1.`
@@ -149,21 +145,13 @@ The `List` representing the token contains an `Integer` representing the
 Token's Type, a `String` which is the name of the Token and an optional
 `Any` value which is the literal value.
 
-### lexer/free!
-
-`*(*lexer/free! lexer).`
-
-Types: `Lexer ->`
-
-Deletes `lexer` from memory.
-
 ### lexer/valid?
 
 `*(*lexer/valid? lexer).`
 
 Types: `Lexer ->`
 
-Checks if `lexer` is valid (was created and should be freed).
+Checks if `lexer` is valid (if not there was an error when creating it).
 
 ## Module
 
@@ -175,8 +163,6 @@ They won't be documented until they're stable.*
 ### module/from-file
 
 ### module/run
-
-### module/free!
 
 ### module/valid?
 
@@ -239,14 +225,17 @@ Writes `str` and a new line character to `stdout`.
 Threads within Pulsar!
 
 Pulsar is not actually designed to be Thread-Safe.
-Meaning that it's very limited in what it can do.
 
-The only custom type that can be passed to a thread is the
+~~Meaning that it's very limited in what it can do.~~
+
+~~The only custom type that can be passed to a thread is the
 [`Channel`](#channelnew) type, other types (from this document,
-even `Thread`s) lose their reference for thread-safety reasons.
+even `Thread`s) lose their reference for thread-safety reasons.~~
 
-The [`Channel`](#channelnew) type allows to send/receive data to/from
-running threads.
+So you can't expect all *Custom* type values to be thread-safe.
+
+The [`Channel`](#channelnew) type allows you to send/receive data
+to/from running threads. Use this with *non-Custom* values.
 
 See [examples/advanced/02-thread_bindings](../examples/advanced/02-thread_bindings.pls)
 
@@ -315,7 +304,7 @@ Types: `-> Channel`
 
 Creates a new open `Channel`.
 
-`Channel`s can be passed to `Thread`s!
+`Channel`s are thread-safe and can be passed to `Thread`s!
 
 ### channel/send!
 
@@ -347,15 +336,6 @@ Marks `channel` as closed.
 - Calls to [`(*channel/send!)`](#channelsend) will error.
 - Calls to [`(*channel/receive)`](#channelreceive) will return `Void` if `channel` is empty.
 
-### channel/free!
-
-`*(*channel/free! channel).`
-
-Types: `Channel ->`
-
-Closes `channel` and deletes references to it.
-- Blocked calls to [`(*channel/receive)`](#channelreceive) will act the same as [`(*channel/close!)`](#channelclose).
-
 ### channel/empty?
 
 `*(*channel/empty? channel) -> 1.`
@@ -382,8 +362,8 @@ Returns a non-zero `Integer` if `channel` is closed.
 
 Types: `Channel -> Integer`
 
-Returns a non-zero `Integer` if references `channel` still exist.
-Meaning [`(*channel/free!)`](#channelfree) was not yet called on `channel`.
+Returns a non-zero `Integer` if `channel` is in a valid state.
+If not, there may have been an error when creating it.
 
 ## Time
 
