@@ -32,6 +32,7 @@ namespace Pulsar
         StringIndexOutOfBounds,
         NoCustomTypeData,
         InvalidCustomTypeHandle,
+        InvalidCustomTypeReference,
     };
 
     const char* RuntimeStateToString(RuntimeState rstate);
