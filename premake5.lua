@@ -27,6 +27,9 @@ project "pulsar-demo"
    -- You can even tell Pulsar to not use the filesystem C++ header.
    -- Though it is used by pulsar-demo, so it would not work.
    -- defines "PULSAR_NO_FILESYSTEM"
+   -- Moreover, you can disable the usage of atomics if you don't plan
+   --  to use multi-threading (as of now, they're only used by SharedRef).
+   -- defines "PULSAR_NO_ATOMIC"
 
    filter "toolset:clang"
       buildoptions {

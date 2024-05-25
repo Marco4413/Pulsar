@@ -9,7 +9,7 @@ namespace Pulsar
     {
         struct RefCount
         {
-            std::atomic_size_t SharedRefs = 0;
+            PULSAR_ATOMIC_SIZE_T SharedRefs = 0;
         };
     }
 
@@ -98,12 +98,12 @@ namespace Pulsar
         void IncrementRefCount() const
         {
             if (m_RefCount)
-                m_RefCount->SharedRefs.fetch_add(1);
+                m_RefCount->SharedRefs++;
         }
 
         void DecrementRefCount()
         {
-            if (m_RefCount && m_RefCount->SharedRefs.fetch_sub(1) <= 1) {
+            if (m_RefCount && m_RefCount->SharedRefs-- <= 1) {
                 PULSAR_DELETE(T, m_Ptr);
                 PULSAR_DELETE(Ref::RefCount, m_RefCount);
                 m_Ptr = nullptr;
