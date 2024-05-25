@@ -2,12 +2,23 @@
 #define _PULSAR_CORE_H
 
 // All std includes from header files are here.
-#include <atomic>
 #include <cinttypes>
 #include <cstring>
 #include <functional>
 #include <type_traits>
 #include <utility>
+
+#ifndef PULSAR_NO_ATOMIC
+#include <atomic>
+#endif // PULSAR_NO_ATOMIC
+
+#ifndef PULSAR_ATOMIC_SIZE_T
+  #ifdef PULSAR_NO_ATOMIC
+    #define PULSAR_ATOMIC_SIZE_T size_t
+  #else // PULSAR_NO_ATOMIC
+    #define PULSAR_ATOMIC_SIZE_T std::atomic_size_t
+  #endif // PULSAR_NO_ATOMIC
+#endif // PULSAR_ATOMIC_SIZE_T
 
 #ifndef PULSAR_MALLOC
 #define PULSAR_MALLOC(size) \

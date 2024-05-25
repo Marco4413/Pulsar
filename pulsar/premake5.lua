@@ -11,6 +11,9 @@ project "pulsar"
    
    -- Define PULSAR_NO_FILESYSTEM to disable the usage of the FileSystem API.
    -- defines "PULSAR_NO_FILESYSTEM"
+   -- You can also define PULSAR_NO_ATOMIC to disable the usage of the Atomic header.
+   -- Atomics are mainly used by Pulsar::SharedRef to support multi-threading.
+   -- defines "PULSAR_NO_ATOMIC"
 
    filter "toolset:clang"
       buildoptions {
