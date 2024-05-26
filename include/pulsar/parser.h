@@ -140,6 +140,10 @@ namespace Pulsar
         ParseResult ParseWhileLoop(Module& module, FunctionDefinition& func, const LocalScope& localScope, const ParseSettings& settings);
         ParseResult ParseDoBlock(Module& module, FunctionDefinition& func, const LocalScope& localScope, const ParseSettings& settings);
         ParseResult PushLValue(Module& module, FunctionDefinition& func, const LocalScope& localScope, const Token& lvalue, const ParseSettings& settings);
+    
+        const Token& NextToken();
+        const Token& CurrentToken() const;
+        bool IsEndOfFile() const;
     private:
         struct LexerSource
         {
@@ -151,6 +155,8 @@ namespace Pulsar
         List<LexerSource> m_LexerPool;
 
         Lexer* m_Lexer = nullptr;
+        Token m_CurrentToken = Token(TokenType::None);
+
         const String* m_ErrorSource = nullptr;
         const String* m_ErrorPath = nullptr;
         ParseResult m_Error = ParseResult::OK;
