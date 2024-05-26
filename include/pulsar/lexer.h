@@ -133,7 +133,6 @@ namespace Pulsar
         {
             m_SourceView.RemovePrefix(other.m_SourceView.GetStart());
             m_SourceView.RemoveSuffix(m_SourceView.Length()-other.m_SourceView.Length());
-            m_Token = other.m_Token;
             m_Line = other.m_Line;
             m_LineStartIdx = other.m_LineStartIdx;
         }
@@ -144,7 +143,6 @@ namespace Pulsar
             m_SourceView.RemovePrefix(other.m_SourceView.GetStart());
             m_SourceView.RemoveSuffix(m_SourceView.Length()-other.m_SourceView.Length());
             other.m_SourceView.RemoveSuffix(other.m_SourceView.Length());
-            m_Token = std::move(other.m_Token);
             m_Line = other.m_Line;
             m_LineStartIdx = other.m_LineStartIdx;
         }
@@ -152,9 +150,8 @@ namespace Pulsar
         Lexer& operator=(const Lexer&) = delete;
         Lexer& operator=(Lexer&&) = delete;
 
-        const Token& NextToken()             { m_Token = ParseNextToken(); return m_Token; }
-        const Token& CurrentToken() const    { return m_Token; }
-        bool IsEndOfFile() const             { return m_SourceView.Length() == 0; }
+        Token NextToken()               { return ParseNextToken(); }
+        bool IsEndOfFile() const        { return m_SourceView.Length() == 0; }
         const String& GetSource() const { return m_Source; }
         SourcePosition GetSourcePosition(size_t span=0) const
             { return { m_Line, m_SourceView.GetStart() - m_LineStartIdx, m_SourceView.GetStart(), span }; }
@@ -191,7 +188,6 @@ namespace Pulsar
     private:
         String m_Source;
         StringView m_SourceView;
-        Token m_Token = Token(TokenType::None);
         size_t m_Line = 0;
         size_t m_LineStartIdx = 0;
     };
