@@ -195,7 +195,7 @@ namespace Pulsar
             return {};
         }
 
-        void Remove(const K& key)
+        bool Remove(const K& key)
         {
             size_t hash = std::hash<K>{}(key);
             size_t startIdx = hash % m_Buckets.Size();
@@ -205,9 +205,10 @@ namespace Pulsar
                     continue;
                 else if (bucket.m_Key == key) {
                     bucket.Clear();
-                    return;
+                    return true;
                 }
             }
+            return false;
         }
 
         void ReHash()
