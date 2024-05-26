@@ -120,6 +120,10 @@ namespace Pulsar
             || ch == '!';
     }
 
+    // Checks if the given String is a valid Identifier
+    // As described by IsIdentifierStart/Continuation
+    bool IsIdentifier(const String& s);
+
     class Lexer
     {
     public:

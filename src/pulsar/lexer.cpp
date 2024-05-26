@@ -38,6 +38,19 @@ Pulsar::String Pulsar::ToStringLiteral(const String& str)
     return lit;
 }
 
+bool Pulsar::IsIdentifier(const String& s)
+{
+    if (s.Length() == 0)
+        return false;
+    else if (!IsIdentifierStart(s[0]))
+        return false;
+    for (size_t i = 1; i < s.Length(); i++) {
+        if (!IsIdentifierContinuation(s[i]))
+            return false;
+    }
+    return true;
+}
+
 Pulsar::Token Pulsar::Lexer::ParseNextToken()
 {
     while (m_SourceView.Length() > 0) {
