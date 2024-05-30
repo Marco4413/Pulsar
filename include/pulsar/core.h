@@ -8,6 +8,27 @@
 #include <type_traits>
 #include <utility>
 
+#ifdef PULSAR_DEBUG
+  #include <cstdio>
+  #include <cstdlib>
+  #ifndef PULSAR_ASSERT
+    #define PULSAR_ASSERT(cond, msg)                      \
+        do {                                              \
+            if (!(cond)) {                                \
+                std::fprintf(stderr,                      \
+                    "%s:%d: ASSERTION (%s) FAILED: %s\n", \
+                    __FILE__, __LINE__, #cond, (msg));    \
+                std::abort();                             \
+            }                                             \
+        } while (0)
+  #endif // PULSAR_ASSERT
+#else // PULSAR_DEBUG
+  #ifndef PULSAR_ASSERT
+    #define PULSAR_ASSERT(cond, msg) \
+        do { (void)(cond); (void)(msg); } while (0)
+  #endif // PULSAR_ASSERT
+#endif // PULSAR_DEBUG
+
 #ifndef PULSAR_NO_ATOMIC
 #include <atomic>
 #endif // PULSAR_NO_ATOMIC
