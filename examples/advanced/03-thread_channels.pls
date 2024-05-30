@@ -10,7 +10,6 @@
 *(*channel/send!   value channel).
 *(*channel/receive channel) -> 1.
 *(*channel/close!  channel).
-*(*channel/free!   channel).
 *(*channel/empty?  channel) -> 1.
 *(*channel/closed? channel) -> 1.
 *(*channel/valid?  channel) -> 1.
@@ -50,7 +49,5 @@
 
   in (*channel/close!)
   <- thread (*thread/join) (!pop 2)
-  // Only free Channels when they're no longer used
-  <- in  (*channel/free!)
-  <- out (*channel/free!)
+  <- in <- out (!pop 2) // Pop channels so that they get deleted
   .

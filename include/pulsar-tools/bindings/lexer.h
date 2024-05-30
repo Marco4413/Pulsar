@@ -11,18 +11,17 @@ namespace PulsarTools
 {
     namespace LexerNativeBindings
     {
-        class LexerTypeData : public Pulsar::CustomTypeData
+        class LexerType : public Pulsar::CustomDataHolder, public Pulsar::Lexer
         {
         public:
-            int64_t NextHandle = 1;
-            Pulsar::HashMap<int64_t, Pulsar::Lexer> Lexers;
+            using Ref_T = Pulsar::SharedRef<LexerType>;
+            using Pulsar::Lexer::Lexer;
         };
 
         void BindToModule(Pulsar::Module& module);
 
         Pulsar::RuntimeState Lexer_FromFile(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Lexer_NextToken(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Lexer_Free(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Lexer_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
     }
 }

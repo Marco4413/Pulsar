@@ -141,7 +141,7 @@ within the language itself.
 |         Double          |    64     |
 |    FunctionReference    |    64     |
 | NativeFunctionReference |    64     |
-|         Custom          |    128    |
+|         Custom          |    192    |
 
 > ~~Support for unsigned integers is planned.~~
 >
@@ -149,7 +149,11 @@ within the language itself.
 > It's probably not happening.
 
 The Custom datatype is mainly intended to be returned by [Native Functions](#native-functions).
-So you can have handle-like objects that can keep a pointer to some state.
+It holds the Id of the Type and a Shared Reference to its data.
+While all values in Pulsar are passed around by value, the Custom
+type is the only one which is always passed by reference
+(it's still by value, but it holds a reference so you can see it
+like that).
 
 #### Integer Literals
 
@@ -171,6 +175,16 @@ They must have a '.' between two sets of digits to separate the fractional part,
 it would be an [integer literal](#integer-literals).
 
 Currently there's no support for exponential notation (i.e. 0.1E4).
+
+#### CustomTypeData
+
+*CustomTypeData* is a global kind of data which is shared across the
+whole execution context. It may be provided by native bindings.
+
+*CustomTypeData* was previously used to hold information about
+custom typed provided by native bindings. However, the *Custom*
+type now holds a direct reference to its data. As of now, it's
+no longer used by standard bindings.
 
 ### Complex Datatypes
 

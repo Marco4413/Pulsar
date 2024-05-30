@@ -48,7 +48,7 @@ struct fmt::formatter<Pulsar::Value> : formatter<string_view>
         case Pulsar::ValueType::Void:
             return fmt::format_to(ctx.out(), "Void");
         case Pulsar::ValueType::Custom:
-            return fmt::format_to(ctx.out(), "Custom(.Type={},.Handle={})", val.AsCustom().Type, val.AsCustom().Handle);
+            return fmt::format_to(ctx.out(), "Custom(.Type={},.Data={})", val.AsCustom().Type, (void*)val.AsCustom().Data.Get());
         case Pulsar::ValueType::Integer:
             return fmt::format_to(ctx.out(), "{}", val.AsInteger());
         case Pulsar::ValueType::FunctionReference:

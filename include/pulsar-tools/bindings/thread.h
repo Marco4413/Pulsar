@@ -29,11 +29,12 @@ namespace PulsarTools
             Pulsar::SharedRef<PulsarThreadContext> ThreadContext;
         };
 
-        class ThreadTypeData : public Pulsar::CustomTypeData
+        class ThreadType : public Pulsar::CustomDataHolder, public PulsarThread
         {
         public:
-            int64_t NextHandle = 1;
-            Pulsar::HashMap<int64_t, Pulsar::SharedRef<PulsarThread>> Threads;
+            using Ref_T = Pulsar::SharedRef<ThreadType>;
+            ThreadType(std::thread&& thread, Pulsar::SharedRef<PulsarThreadContext>&& threadContext)
+                : PulsarThread{ std::move(thread), std::move(threadContext) } { }
         };
 
         struct Channel
@@ -45,12 +46,11 @@ namespace PulsarTools
             std::condition_variable CV;
         };
 
-        class ChannelTypeData : public Pulsar::CustomTypeData
+        class ChannelType : public Pulsar::CustomDataHolder, public Channel
         {
         public:
-            int64_t NextHandle = 1;
-            Pulsar::HashMap<int64_t, Pulsar::SharedRef<Channel>> Channels;
-            std::mutex Mutex;
+            using Ref_T = Pulsar::SharedRef<ChannelType>;
+            using Channel::Channel;
         };
 
         void BindToModule(Pulsar::Module& module);
@@ -67,7 +67,6 @@ namespace PulsarTools
         Pulsar::RuntimeState Channel_Send(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Channel_Receive(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Channel_Close(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Channel_Free(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Channel_IsEmpty(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Channel_IsClosed(Pulsar::ExecutionContext& eContext, uint64_t type);
         Pulsar::RuntimeState Channel_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type);

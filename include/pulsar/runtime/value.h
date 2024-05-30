@@ -4,16 +4,28 @@
 #include "pulsar/core.h"
 
 #include "pulsar/structures/linkedlist.h"
+#include "pulsar/structures/ref.h"
 #include "pulsar/structures/string.h"
 
 namespace Pulsar
 {
+    class CustomDataHolder
+    {
+    public:
+        typedef SharedRef<Pulsar::CustomDataHolder> Ref_T;
+        virtual ~CustomDataHolder() = default;
+    };
+
     struct CustomData
     {
         uint64_t Type;
-        int64_t Handle;
+        CustomDataHolder::Ref_T Data = nullptr;
+
+        // Should cast to a derived of CustomDataHolder
+        template<typename T>
+        SharedRef<T> As() { return Data.CastTo<T>(); }
     };
-    
+
     enum class ValueType
     {
         Void    = 0x00,
@@ -115,7 +127,7 @@ namespace Pulsar
                 return AsString() == other.AsString();
             case ValueType::Custom:
                 return AsCustom().Type == other.AsCustom().Type
-                    && AsCustom().Handle == other.AsCustom().Handle;
+                    && AsCustom().Data == other.AsCustom().Data;
             case ValueType::List:
                 const ValueList::NodeType* aNext = AsList().Front();
                 const ValueList::NodeType* bNext = other.AsList().Front();
@@ -176,6 +188,8 @@ namespace Pulsar
                 PULSAR_MEMSET((void*)&m_AsString, 0, sizeof(String));
                 break;
             case ValueType::Custom:
+                // Call Destructor
+                m_AsCustom.~CustomData();
                 PULSAR_MEMSET((void*)&m_AsCustom, 0, sizeof(CustomData));
                 break;
             }

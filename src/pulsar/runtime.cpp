@@ -864,6 +864,8 @@ const char* Pulsar::RuntimeStateToString(RuntimeState rstate)
         return "NoCustomTypeData";
     case RuntimeState::InvalidCustomTypeHandle:
         return "InvalidCustomTypeHandle";
+    case RuntimeState::InvalidCustomTypeReference:
+        return "InvalidCustomTypeReference";
     }
     return "Unknown";
 }
