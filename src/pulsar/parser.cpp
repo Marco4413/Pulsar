@@ -7,12 +7,8 @@
 
 Pulsar::ParseResult Pulsar::Parser::SetError(ParseResult errorType, const Token& token, const String& errorMsg)
 {
-    m_ErrorSource = nullptr;
-    m_ErrorPath = nullptr;
-    if (m_LexerPool.Size() > 0) {
-        m_ErrorSource = &m_LexerPool.Back().Lexer.GetSource();
-        m_ErrorPath = &m_LexerPool.Back().Path;
-    }
+    m_ErrorSource = CurrentSource();
+    m_ErrorPath = CurrentPath();
     m_Error = errorType;
     m_ErrorToken = token;
     m_ErrorMsg = errorMsg;
@@ -116,14 +112,13 @@ Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, const ParseS
 
     while (m_LexerPool.Size() > 0) {
         auto result = ParseModuleStatement(module, globalScope, settings);
-        if (result == ParseResult::OK) {
-            if (IsEndOfFile()) {
-                m_LexerPool.PopBack();
-                m_Lexer = &m_LexerPool.Back().Lexer;
-            }
-            continue;
+        if (result != ParseResult::OK)
+            return result;
+        else if (IsEndOfFile()) {
+            // No need to call ClearError because Result was OK
+            m_LexerPool.PopBack();
+            m_Lexer = &m_LexerPool.Back().Lexer;
         }
-        return result;
     }
     module.NativeFunctions.Resize(module.NativeBindings.Size(), nullptr);
     return ParseResult::OK;
@@ -144,15 +139,19 @@ Pulsar::ParseResult Pulsar::Parser::ParseModuleStatement(Module& module, GlobalS
         if (curToken.Type != TokenType::StringLiteral) {
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected file path.");
         } else if (settings.IncludeResolver) {
-            auto res = settings.IncludeResolver(*this, m_LexerPool.Back().Path, curToken);
+            const String* cwf = CurrentPath();
+            PULSAR_ASSERT(cwf != nullptr, "CWF should not be nullptr.");
+            auto res = settings.IncludeResolver(*this, *cwf, curToken);
             if (res != ParseResult::OK)
                 return res;
         } else {
 #ifdef PULSAR_NO_FILESYSTEM
             return SetError(ParseResult::FileSystemNotAvailable, curToken, "No custom include resolver provided.");
 #else // PULSAR_NO_FILESYSTEM
+            const String* cwf = CurrentPath();
+            PULSAR_ASSERT(cwf != nullptr, "CWF should not be nullptr.");
             std::filesystem::path targetPath(curToken.StringVal.Data());
-            std::filesystem::path workingPath(m_LexerPool.Back().Path.Data());
+            std::filesystem::path workingPath(cwf->Data());
             std::filesystem::path filePath = workingPath.parent_path() / targetPath;
             auto result = AddSourceFile(filePath.generic_string().data());
             if (result != ParseResult::OK)
@@ -160,8 +159,12 @@ Pulsar::ParseResult Pulsar::Parser::ParseModuleStatement(Module& module, GlobalS
 #endif // PULSAR_NO_FILESYSTEM
         }
         if (settings.StoreDebugSymbols) {
-            globalScope.SourceDebugSymbols.Emplace(m_LexerPool.Back().Path, module.SourceDebugSymbols.Size());
-            module.SourceDebugSymbols.EmplaceBack(m_LexerPool.Back().Path, m_LexerPool.Back().Lexer.GetSource());
+            const String* path = CurrentPath();
+            PULSAR_ASSERT(path != nullptr, "Path should not be nullptr.");
+            const String* source = CurrentSource();
+            PULSAR_ASSERT(source != nullptr, "Source should not be nullptr.");
+            globalScope.SourceDebugSymbols.Emplace(*path, module.SourceDebugSymbols.Size());
+            module.SourceDebugSymbols.EmplaceBack(*path, *source);
         }
         return ParseResult::OK;
     }
@@ -263,8 +266,9 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
     }
 
     if (settings.StoreDebugSymbols) {
-        const auto& lexSource = m_LexerPool.Back();
-        auto sourcePathIdxPair = globalScope.SourceDebugSymbols.Find(lexSource.Path);
+        const String* path = CurrentPath();
+        PULSAR_ASSERT(path != nullptr, "Path should not be nullptr.");
+        auto sourcePathIdxPair = globalScope.SourceDebugSymbols.Find(*path);
         globalDef->DebugSymbol.Token = identToken;
         globalDef->DebugSymbol.SourceIdx = sourcePathIdxPair ? *sourcePathIdxPair.Value : ~(size_t)0;
     }
@@ -290,8 +294,9 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
     Token identToken = curToken;
     FunctionDefinition def = { identToken.StringVal, 0, 0 };
     if (settings.StoreDebugSymbols) {
-        const auto& lexSource = m_LexerPool.Back();
-        auto sourcePathIdxPair = globalScope.SourceDebugSymbols.Find(lexSource.Path);
+        const String* path = CurrentPath();
+        PULSAR_ASSERT(path != nullptr, "Path should not be nullptr.");
+        auto sourcePathIdxPair = globalScope.SourceDebugSymbols.Find(*path);
         def.DebugSymbol.Token = identToken;
         def.DebugSymbol.SourceIdx = sourcePathIdxPair ? *sourcePathIdxPair.Value : ~(size_t)0;
     }
@@ -1162,6 +1167,20 @@ const Pulsar::Token& Pulsar::Parser::CurrentToken() const
 bool Pulsar::Parser::IsEndOfFile() const
 {
     return m_Lexer->IsEndOfFile();
+}
+
+const Pulsar::String* Pulsar::Parser::CurrentPath() const
+{
+    if (m_LexerPool.Size() > 0)
+        return &m_LexerPool.Back().Path;
+    return nullptr;
+}
+
+const Pulsar::String* Pulsar::Parser::CurrentSource() const
+{
+    if (m_LexerPool.Size() > 0)
+        return &m_LexerPool.Back().Lexer.GetSource();
+    return nullptr;
 }
 
 const char* Pulsar::ParseResultToString(ParseResult presult)

@@ -144,6 +144,11 @@ namespace Pulsar
         const Token& NextToken();
         const Token& CurrentToken() const;
         bool IsEndOfFile() const;
+
+        // Pointers are guaranteed to be valid until m_LexerPool changes.
+        // i.e. If parsing is on hold or has been aborted, they're safe to use.
+        const String* CurrentPath() const;
+        const String* CurrentSource() const;
     private:
         struct LexerSource
         {
