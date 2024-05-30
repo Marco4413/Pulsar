@@ -81,6 +81,10 @@ namespace Pulsar
         }
 
         T* Get() const { return m_Ptr; }
+        size_t SharedCount() const
+        {
+            return m_RefCount ? (size_t)m_RefCount->SharedRefs : 1;
+        }
 
     private:
         explicit SharedRef(T* ptr)
