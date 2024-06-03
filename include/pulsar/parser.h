@@ -43,6 +43,12 @@ namespace Pulsar
         { "string?",    { InstructionCode::IsString             } },
         { "custom?",    { InstructionCode::IsCustom             } },
         { "j!",         { InstructionCode::J, false             } },
+        { "jz!",        { InstructionCode::JZ                   } },
+        { "jnz!",       { InstructionCode::JNZ                  } },
+        { "jgz!",       { InstructionCode::JGZ                  } },
+        { "jgez!",      { InstructionCode::JGEZ                 } },
+        { "jlz!",       { InstructionCode::JLZ                  } },
+        { "jlez!",      { InstructionCode::JLEZ                 } },
     };
 
     struct SkippableBlock
