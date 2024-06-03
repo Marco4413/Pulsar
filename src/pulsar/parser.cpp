@@ -195,7 +195,11 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
         ParseSettings subSettings = settings;
         // We want to know where, within the body of the global, the runtime failed.
         subSettings.StoreDebugSymbols = true;
-        auto result = PushLValue(module, dummyFunc, {globalScope}, curToken, subSettings);
+        LocalScope localScope{
+            .Global = globalScope,
+            .Function = nullptr,
+        };
+        auto result = PushLValue(module, dummyFunc, localScope, curToken, subSettings);
         if (result != ParseResult::OK)
             return result;
         NextToken();
@@ -223,7 +227,15 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
         ParseSettings subSettings = settings;
         // We want to know where, within the body of the global, the runtime failed.
         subSettings.StoreDebugSymbols = true;
-        auto result = ParseFunctionBody(module, dummyFunc, {globalScope}, nullptr, subSettings);
+        FunctionScope functionScope;
+        LocalScope localScope{
+            .Global = globalScope,
+            .Function = &functionScope,
+        };
+        auto result = ParseFunctionBody(module, dummyFunc, localScope, nullptr, subSettings);
+        if (result != ParseResult::OK)
+            return result;
+        result = BackPatchFunctionLabels(dummyFunc, functionScope);
         if (result != ParseResult::OK)
             return result;
     }
@@ -350,14 +362,38 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
         if (curToken.Type != TokenType::Colon)
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected '->' for return count declaration or ':' to begin function body.");
         globalScope.Functions.Emplace(def.Name, module.Functions.Size());
-        LocalScope localScope = {globalScope, std::move(args)};
-        ParseResult bodyParseResult = ParseFunctionBody(module, def, localScope, nullptr, settings);
-        if (bodyParseResult != ParseResult::OK)
-            return bodyParseResult;
+        FunctionScope functionScope;
+        LocalScope localScope{
+            .Global = globalScope,
+            .Function = &functionScope,
+            .Locals = std::move(args),
+        };
+        ParseResult parseResult = ParseFunctionBody(module, def, localScope, nullptr, settings);
+        if (parseResult != ParseResult::OK)
+            return parseResult;
+        parseResult = BackPatchFunctionLabels(def, functionScope);
+        if (parseResult != ParseResult::OK)
+            return parseResult;
         globalScope.NativeFunctions.Emplace(def.Name, module.Functions.Size());
         module.Functions.EmplaceBack(std::move(def));
     }
 
+    return ParseResult::OK;
+}
+
+Pulsar::ParseResult Pulsar::Parser::BackPatchFunctionLabels(FunctionDefinition& func, const FunctionScope& funcScope)
+{
+    for (size_t i = 0; i < funcScope.LabelUsages.Size(); i++) {
+        const FunctionScope::LabelBackPatch& toBackPatch = funcScope.LabelUsages[i];
+        auto nameLabelPair = funcScope.Labels.Find(toBackPatch.Label.StringVal);
+        if (!nameLabelPair)
+            return SetError(ParseResult::UsageOfUndeclaredLabel, toBackPatch.Label, "Usage of undeclared label.");
+        size_t relJump = nameLabelPair.Value->CodeDstIdx - toBackPatch.CodeIdx;
+        Instruction& instr = func.Code[toBackPatch.CodeIdx];
+        if (!IsJump(instr.Code))
+            return SetError(ParseResult::IllegalUsageOfLabel, toBackPatch.Label, "Labels can only be used by jump instructions.");
+        instr.Arg0 = (int64_t)relJump;
+    }
     return ParseResult::OK;
 }
 
@@ -463,6 +499,13 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
             if (res != ParseResult::OK)
                 return res;
         } break;
+        case TokenType::Label: {
+            if (!localScope.Function)
+                return SetError(ParseResult::LabelNotAllowedInContext, curToken, "Labels are not allowed within this context.");
+            else if (localScope.Function->Labels.Find(curToken.StringVal))
+                return SetError(ParseResult::RedeclarationOfLabel, curToken, "Redeclaration of labels is not allowed.");
+            localScope.Function->Labels.Emplace(curToken.StringVal, curToken, func.Code.Size());
+        } break;
         case TokenType::RightArrow:
         case TokenType::BothArrows: {
             bool copyIntoLocal = curToken.Type == TokenType::BothArrows;
@@ -510,28 +553,54 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
             bool isNative = curToken.Type == TokenType::Star;
             bool isInstruction = curToken.Type == TokenType::Negate;
             if (isNative || isInstruction) NextToken();
+
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
             Token identToken = curToken;
-            int64_t arg0 = 0;
             if (identToken.Type != TokenType::Identifier)
                 return SetError(ParseResult::UnexpectedToken, identToken, "Expected function name for function call.");
             NextToken();
-            if (isInstruction && curToken.Type == TokenType::IntegerLiteral) {
-                arg0 = curToken.IntegerVal;
+
+            Token argToken(TokenType::None);
+            if (isInstruction && (
+                curToken.Type == TokenType::IntegerLiteral ||
+                curToken.Type == TokenType::Label
+            )) {
+                argToken = curToken;
                 NextToken();
             }
+
+            // We want to do this check here to get back to the user asap
+            // Without trying to resolve the name of the function/instruction
             if (curToken.Type != TokenType::CloseParenth)
                 return SetError(ParseResult::UnexpectedToken, curToken, "Expected ')' to close function call.");
-            
+
             if (isInstruction) {
                 auto instrNameDescPair = InstructionMappings.Find(identToken.StringVal);
                 if (!instrNameDescPair)
                     return SetError(ParseResult::UsageOfUnknownInstruction, identToken, "Instruction does not exist.");
+
                 const InstructionDescription& instrDesc = *instrNameDescPair.Value;
                 if (instrDesc.MayFail)
                     PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, identToken);
+
+                int64_t arg0 = 0;
+                if (IsJump(instrDesc.Code)) {
+                    // Allow only Labels in jump instructions
+                    if (argToken.Type == TokenType::None)
+                        return SetError(ParseResult::UnexpectedToken, curToken, "Expected label for jump instruction.");
+                    else if (argToken.Type != TokenType::Label)
+                        return SetError(ParseResult::UnexpectedToken, argToken, "Jump instructions only accept labels as arguments.");
+                    else if (!localScope.Function)
+                        return SetError(ParseResult::LabelNotAllowedInContext, argToken, "Labels are not allowed within this context.");
+                    localScope.Function->LabelUsages.EmplaceBack(argToken, func.Code.Size());
+                } else if (argToken.Type != TokenType::None) {
+                    // Not a jump and an argument was provided
+                    if (argToken.Type != TokenType::IntegerLiteral)
+                        return SetError(ParseResult::UnexpectedToken, argToken, "Non-jump instructions only accept integer literals as arguments.");
+                    arg0 = argToken.IntegerVal;
+                }
+
                 func.Code.EmplaceBack(instrDesc.Code, arg0);
-                break;
             } else if (isNative) {
                 auto nativeNameIdxPair = scope.Global.NativeFunctions.Find(identToken.StringVal);
                 if (!nativeNameIdxPair) {
@@ -539,14 +608,13 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                 }
                 int64_t funcIdx = (int64_t)*nativeNameIdxPair.Value;
                 func.Code.EmplaceBack(InstructionCode::CallNative, funcIdx);
-                break;
+            } else {
+                auto funcNameIdxPair = scope.Global.Functions.Find(identToken.StringVal);
+                if (!funcNameIdxPair)
+                    return SetError(ParseResult::UsageOfUndeclaredFunction, identToken, "Function not declared.");
+                int64_t funcIdx = (int64_t)*funcNameIdxPair.Value;
+                func.Code.EmplaceBack(InstructionCode::Call, funcIdx);
             }
-
-            auto funcNameIdxPair = scope.Global.Functions.Find(identToken.StringVal);
-            if (!funcNameIdxPair)
-                return SetError(ParseResult::UsageOfUndeclaredFunction, identToken, "Function not declared.");
-            int64_t funcIdx = (int64_t)*funcNameIdxPair.Value;
-            func.Code.EmplaceBack(InstructionCode::Call, funcIdx);
         } break;
         case TokenType::KW_If: {
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
@@ -751,7 +819,10 @@ Pulsar::ParseResult Pulsar::Parser::ParseLocalBlock(Module& module, FunctionDefi
 
     // localScope will point to _localScope only if some locals were bound.
     LocalScope* localScope = nullptr;
-    LocalScope _localScope{ parentScope.Global };
+    LocalScope _localScope{
+        .Global = parentScope.Global,
+        .Function = parentScope.Function,
+    };
 
     for (size_t i = 0; i < localNames.Size(); i++) {
         size_t localNameIdx = localNames.Size()-i-1;
@@ -1216,6 +1287,14 @@ const char* Pulsar::ParseResultToString(ParseResult presult)
         return "UnsafeChainedIfStatement";
     case ParseResult::FileSystemNotAvailable:
         return "FileSystemNotAvailable";
+    case ParseResult::UsageOfUndeclaredLabel:
+        return "UsageOfUndeclaredLabel";
+    case ParseResult::IllegalUsageOfLabel:
+        return "IllegalUsageOfLabel";
+    case ParseResult::LabelNotAllowedInContext:
+        return "LabelNotAllowedInContext";
+    case ParseResult::RedeclarationOfLabel:
+        return "RedeclarationOfLabel";
     }
     return "Unknown";
 }

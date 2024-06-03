@@ -42,6 +42,7 @@ namespace Pulsar
         { "list?",      { InstructionCode::IsList               } },
         { "string?",    { InstructionCode::IsString             } },
         { "custom?",    { InstructionCode::IsCustom             } },
+        { "j!",         { InstructionCode::J, false             } },
     };
 
     struct SkippableBlock
@@ -63,9 +64,28 @@ namespace Pulsar
         HashMap<String, size_t> Globals;
     };
 
+    struct FunctionScope
+    {
+        struct Label
+        {
+            Token Label;
+            size_t CodeDstIdx;
+        };
+
+        struct LabelBackPatch
+        {
+            Token Label;
+            size_t CodeIdx;
+        };
+
+        HashMap<String, Label> Labels;
+        List<LabelBackPatch> LabelUsages;
+    };
+
     struct LocalScope
     {
         const GlobalScope& Global;
+        FunctionScope* const Function;
         List<String> Locals = List<String>();
     };
 
@@ -86,6 +106,10 @@ namespace Pulsar
         NativeFunctionRedeclaration,
         UnsafeChainedIfStatement,
         FileSystemNotAvailable,
+        UsageOfUndeclaredLabel,
+        IllegalUsageOfLabel,
+        LabelNotAllowedInContext,
+        RedeclarationOfLabel,
     };
 
     const char* ParseResultToString(ParseResult presult);
@@ -130,10 +154,12 @@ namespace Pulsar
         const Token& GetErrorToken() const    { return m_ErrorToken; }
         ParseResult SetError(ParseResult errorType, const Token& token, const String& errorMsg);
         void ClearError();
+
     private:
         ParseResult ParseModuleStatement(Module& module, GlobalScope& globalScope, const ParseSettings& settings);
         ParseResult ParseGlobalDefinition(Module& module, GlobalScope& globalScope, const ParseSettings& settings);
         ParseResult ParseFunctionDefinition(Module& module, GlobalScope& globalScope, const ParseSettings& settings);
+        ParseResult BackPatchFunctionLabels(FunctionDefinition& func, const FunctionScope& funcScope);
         ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalScope& localScope, SkippableBlock* skippableBlock, const ParseSettings& settings);
         ParseResult ParseIfStatement(Module& module, FunctionDefinition& func, const LocalScope& localScope, SkippableBlock* skippableBlock, bool isChained, const ParseSettings& settings);
         ParseResult ParseLocalBlock(Module& module, FunctionDefinition& func, const LocalScope& localScope, SkippableBlock* skippableBlock, const ParseSettings& settings);
