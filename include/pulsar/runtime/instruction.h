@@ -95,6 +95,22 @@ namespace Pulsar
         int64_t Arg0 = 0;
     };
 
+    constexpr bool IsJump(InstructionCode jmpInstr)
+    {
+        switch (jmpInstr) {
+        case InstructionCode::J:
+        case InstructionCode::JZ:
+        case InstructionCode::JNZ:
+        case InstructionCode::JGZ:
+        case InstructionCode::JGEZ:
+        case InstructionCode::JLZ:
+        case InstructionCode::JLEZ:
+            return true;
+        default:
+            return false;
+        }
+    }
+
     constexpr InstructionCode InvertJump(InstructionCode jmpInstr)
     {
         switch (jmpInstr) {
