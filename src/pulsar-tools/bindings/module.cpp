@@ -4,7 +4,7 @@
 
 void PulsarTools::ModuleNativeBindings::BindToModule(Pulsar::Module& module)
 {
-    uint64_t type = module.BindCustomType("Module");
+    uint64_t type = module.BindCustomType("Pulsar-Tools/Module");
     module.BindNativeFunction({ "module/from-file", 1, 1 },
         [type](auto& ctx) { return Module_FromFile(ctx, type); });
     module.BindNativeFunction({ "module/run", 1, 1 },

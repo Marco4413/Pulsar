@@ -7,7 +7,7 @@
 
 void PulsarTools::LexerNativeBindings::BindToModule(Pulsar::Module& module)
 {
-    uint64_t type = module.BindCustomType("Lexer");
+    uint64_t type = module.BindCustomType("Pulsar-Tools/Lexer");
     module.BindNativeFunction({ "lexer/from-file", 1, 1 },
         [type](auto& ctx) { return Lexer_FromFile(ctx, type); });
     module.BindNativeFunction({ "lexer/next-token", 1, 1 },

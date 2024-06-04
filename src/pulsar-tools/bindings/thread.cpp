@@ -4,8 +4,8 @@
 
 void PulsarTools::ThreadNativeBindings::BindToModule(Pulsar::Module& module)
 {
-    uint64_t threadType = module.BindCustomType("Thread");
-    uint64_t channelType = module.BindCustomType("Channel");
+    uint64_t threadType = module.BindCustomType("Pulsar-Tools/Thread");
+    uint64_t channelType = module.BindCustomType("Pulsar-Tools/Channel");
 
     module.BindNativeFunction({ "this-thread/sleep!", 1, 0 }, ThisThread_Sleep);
 
