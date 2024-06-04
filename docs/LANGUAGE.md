@@ -182,7 +182,7 @@ Currently there's no support for exponential notation (i.e. 0.1E4).
 whole execution context. It may be provided by native bindings.
 
 *CustomTypeData* was previously used to hold information about
-custom typed provided by native bindings. However, the *Custom*
+custom types provided by native bindings. However, the *Custom*
 type now holds a direct reference to its data. As of now, it's
 no longer used by standard bindings.
 
@@ -778,7 +778,7 @@ Most of the time, the instruction doesn't even need arguments to do its job.
 
 Pops the last value on the stack.
 
-Accepts `arg0`: if <= 1, 1 value is popped. If > 1 `arg0`, values are popped.
+Accepts `arg0`: if <= 1, 1 value is popped. If > 1, `arg0` values are popped.
 
 ### swap
 
@@ -795,7 +795,7 @@ Let `T` and `U` be any type:
 
 Duplicates the last value on the stack.
 
-Accepts `arg0`: if <= 1, 1 copy is pushed. If > 1 `arg0`, copies are pushed.
+Accepts `arg0`: if <= 1, 1 copy is pushed. If > 1, `arg0` copies are pushed.
 
 |        |  S0   |   S+1   |
 | :----- | :---: | :-----: |
