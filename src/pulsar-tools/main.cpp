@@ -50,6 +50,7 @@ constexpr uint32_t P_DEBUG         = (1     );
 constexpr uint32_t P_STACK_TRACE   = (1 << 1);
 constexpr uint32_t P_ERROR_NOTES   = (1 << 2);
 constexpr uint32_t P_ALLOW_INCLUDE = (1 << 3);
+constexpr uint32_t P_ALLOW_LABELS  = (1 << 4);
 constexpr uint32_t P_DEFAULT       =
       P_DEBUG
     | P_STACK_TRACE
@@ -100,11 +101,12 @@ struct NamedFlagOption
 
 PULSARTOOLS_FLAG_OPTIONS(ParserOptions,
     PULSARTOOLS_FLAG_OPTION_LONG("--parser", "-p", "debug", P_DEBUG,
-        "Store debug symbols for better runtime error information."
+        "Store debug symbols for better runtime error information. (default: true)"
         "\nAutomatically binds and declares debug functions to be used during parse-time evaluation."),
-    PULSARTOOLS_FLAG_OPTION_LONG("--parser", "-p", "stack-trace",   P_STACK_TRACE,   "Enable stack trace for compile-time evaluation errors."),
-    PULSARTOOLS_FLAG_OPTION_LONG("--parser", "-p", "error-notes",   P_ERROR_NOTES,   "Enable notes about errors."),
-    PULSARTOOLS_FLAG_OPTION_LONG("--parser", "-p", "allow-include", P_ALLOW_INCLUDE, "Allow the usage of the include directive."),
+    PULSARTOOLS_FLAG_OPTION_LONG("--parser", "-p", "stack-trace",   P_STACK_TRACE,   "Enable stack trace for compile-time evaluation errors. (default: true)"),
+    PULSARTOOLS_FLAG_OPTION_LONG("--parser", "-p", "error-notes",   P_ERROR_NOTES,   "Enable notes about errors. (default: true)"),
+    PULSARTOOLS_FLAG_OPTION_LONG("--parser", "-p", "allow-include", P_ALLOW_INCLUDE, "Allow the usage of the include directive. (default: true)"),
+    PULSARTOOLS_FLAG_OPTION_LONG("--parser", "-p", "allow-labels",  P_ALLOW_LABELS,  "Allow the usage of labels within functions. (default: false)"),
 )
 
 PULSARTOOLS_FLAG_OPTIONS(RuntimeOptions,
@@ -199,6 +201,7 @@ void ParserSettingsFromFlagOptions(uint32_t flagOptions, Pulsar::ParseSettings& 
     parserSettings.AppendStackTraceToErrorMessage = (flagOptions & P_STACK_TRACE)   != 0;
     parserSettings.AppendNotesToErrorMessage      = (flagOptions & P_ERROR_NOTES)   != 0;
     parserSettings.AllowIncludeDirective          = (flagOptions & P_ALLOW_INCLUDE) != 0;
+    parserSettings.AllowLabels                    = (flagOptions & P_ALLOW_LABELS)  != 0;
 }
 
 void BindNativesFromFlagOptions(uint32_t flagOptions, Pulsar::Module& module)
