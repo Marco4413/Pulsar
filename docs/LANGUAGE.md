@@ -768,6 +768,9 @@ scenario to deal with, pure nightmare if you ask me).
 [skippable blocks](#skippable-blocks) exist. They're just more readable. However,
 labels were added to be able to decompile any Neutron file into Pulsar code.**
 
+**By default Labels are disabled when running files with `pulsar-tools`.
+Check its usage to find the option which enables them.**
+
 A label represents a fixed point within a function body to which you can jump
 to using [jump instructions](#jump-instructions). They can also be used in
 [global producers](#global-producers).
