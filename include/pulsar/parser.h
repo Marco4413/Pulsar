@@ -128,6 +128,7 @@ namespace Pulsar
         size_t StackTraceMaxDepth           = 10;
         bool AppendNotesToErrorMessage      = true;
         bool AllowIncludeDirective          = true;
+        bool AllowLabels                    = true;
         /**
          * @brief (parser, cwf, token) -> ParseResult
          * @param parser The Parser that called the function.

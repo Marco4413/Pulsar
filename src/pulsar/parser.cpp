@@ -500,7 +500,9 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                 return res;
         } break;
         case TokenType::Label: {
-            if (!localScope.Function)
+            if (!settings.AllowLabels)
+                return SetError(ParseResult::LabelNotAllowedInContext, curToken, "Labels were disabled.");
+            else if (!localScope.Function)
                 return SetError(ParseResult::LabelNotAllowedInContext, curToken, "Labels are not allowed within this context.");
             else if (localScope.Function->Labels.Find(curToken.StringVal))
                 return SetError(ParseResult::RedeclarationOfLabel, curToken, "Redeclaration of labels is not allowed.");
@@ -590,6 +592,8 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                         return SetError(ParseResult::UnexpectedToken, curToken, "Expected label for jump instruction.");
                     else if (argToken.Type != TokenType::Label)
                         return SetError(ParseResult::UnexpectedToken, argToken, "Jump instructions only accept labels as arguments.");
+                    else if (!settings.AllowLabels)
+                        return SetError(ParseResult::LabelNotAllowedInContext, argToken, "Labels were disabled.");
                     else if (!localScope.Function)
                         return SetError(ParseResult::LabelNotAllowedInContext, argToken, "Labels are not allowed within this context.");
                     localScope.Function->LabelUsages.EmplaceBack(argToken, func.Code.Size());
