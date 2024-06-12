@@ -737,7 +737,16 @@ Global variables are defined as follows:
 
 **Redefinition of non-const globals will change the previous value.**
 
-The last definition of a global dictates its runtime value.
+The last definition of a global dictates its **runtime** value.
+
+When using the value of a global in another global's definition,
+its value is the one of the latest redefinition up until its usage:
+```lisp
+global 1 -> a
+global a -> b
+global 2 -> a
+// b has the value 1
+```
 
 They're treated like locals within functions, so you can copy,
 move or set them like you would normally do with locals. However,
