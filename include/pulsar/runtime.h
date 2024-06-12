@@ -66,6 +66,10 @@ namespace Pulsar
     public:
         typedef SharedRef<Pulsar::CustomTypeData> Ref_T;
         virtual ~CustomTypeData() = default;
+        // This method should create a copy of the data.
+        // It may return nullptr meaning that it is not implemented (or not needed).
+        // It should be used when creating a snapshot of the ExecutionContext to create a sandbox.
+        virtual Ref_T Copy() const { return nullptr; }
     };
 
     struct CustomType
