@@ -39,7 +39,8 @@ namespace Pulsar
         KW_Global, KW_Const,
         KW_Do, KW_While, KW_Break, KW_Continue,
         KW_Local,
-        CompilerDirective
+        CompilerDirective,
+        Label,
     };
 
     constexpr int64_t TOKEN_CD_GENERIC = 0;
@@ -162,6 +163,7 @@ namespace Pulsar
     private:
         Token ParseNextToken();
         Token ParseIdentifier();
+        Token ParseLabel();
         Token ParseCompilerDirective();
         Token ParseIntegerLiteral();
         Token ParseHexIntegerLiteral();

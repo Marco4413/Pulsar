@@ -95,6 +95,11 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
                 if (token.Type != TokenType::None)
                     return token;
             } break;
+            case '@': {
+                Pulsar::Token token = ParseLabel();
+                if (token.Type != TokenType::None)
+                    return token;
+            } break;
             default: {
                 Pulsar::Token token = ParseIdentifier();
                 if (token.Type != TokenType::None) {
@@ -188,6 +193,21 @@ Pulsar::Token Pulsar::Lexer::ParseIdentifier()
     size_t count = 0;
     for (; count < m_SourceView.Length() && IsIdentifierContinuation(m_SourceView[count]); count++);
     return TrimToToken(count, TokenType::Identifier, m_SourceView.GetPrefix(count));
+}
+
+Pulsar::Token Pulsar::Lexer::ParseLabel()
+{
+    if (m_SourceView.Length() < 2)
+        return TrimToToken(0, TokenType::None);
+    if (m_SourceView[0] != '@' || !IsIdentifierStart(m_SourceView[1]))
+        return TrimToToken(0, TokenType::None);
+
+    size_t count = 1;
+    for (; count < m_SourceView.Length() && IsIdentifierContinuation(m_SourceView[count]); count++);
+
+    StringView idView = m_SourceView;
+    idView.RemovePrefix(1);
+    return TrimToToken(count, TokenType::Label, idView.GetPrefix(count-1));
 }
 
 Pulsar::Token Pulsar::Lexer::ParseCompilerDirective()
@@ -676,6 +696,8 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
         return "KW_Local";
     case TokenType::CompilerDirective:
         return "CompilerDirective";
+    case TokenType::Label:
+        return "Label";
     case TokenType::EndOfFile:
         return "EndOfFile";
     }

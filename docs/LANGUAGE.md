@@ -771,6 +771,77 @@ That example goes from ~700ms of runtime to ~50us just by pre-computing
 the lists it uses (granted that sorting algorithm has its worst case
 scenario to deal with, pure nightmare if you ask me).
 
+## Labels
+
+**NOTE: Labels should never be used unless strictly needed. That's the reason
+[skippable blocks](#skippable-blocks) exist. They're just more readable. However,
+labels were added to be able to decompile any Neutron file into Pulsar code.**
+
+**By default Labels are disabled when running files with `pulsar-tools`.
+Check its usage to find the option which enables them.**
+
+A label represents a fixed point within a function body to which you can jump
+to using [jump instructions](#jump-instructions). They can also be used in
+[global producers](#global-producers).
+
+They are [identifiers](#identifiers) preceded by a `@` symbol.
+
+Any label can be used from any part of the function.
+A jump can point to some label which is declared after its usage.
+
+Here's a function which generates a list of `n` numbers from 0 to `n`:
+
+```lisp
+*(gen n) -> 1:
+  [] 0 -> i while i < n:
+    i (!append)
+    i 1 + -> i
+  end
+  .
+```
+
+The same function using labels looks like this:
+
+```lisp
+*(gen n) -> 1:
+  [] 0 -> i
+@while
+  i n (!compare)
+    (!jgez! @endwhile)
+  i (!append)
+  i 1 + -> i
+  (!j! @while)
+@endwhile
+  .
+```
+
+Which is actually what the first snippet compiles to.
+Using labels removes all kind of scoping which Pulsar does with blocks.
+
+As stated at the start of this section, labels are useful for decompiling
+Neutron files into valid Pulsar code. They're bad for actual code readability.
+
+However, there are some use-cases. Like code which is executed each time on return:
+
+```lisp
+// Bindings provided by Pulsar-Tools
+// This example may get outdated over time.
+// You just have to get the concept out of it.
+*(*channel/new) -> 1.
+*(*channel/close! ch).
+
+*(func):
+  (*channel/new) -> channel
+  // ...
+    // Somewhere within code
+    //  where you want to return.
+    (!j! @return)
+  // ...
+@return
+  channel (*channel/close!)
+  .
+```
+
 ## Instructions
 
 You can see instructions as *blazing fast* functions!
@@ -780,8 +851,14 @@ They are called with `(!instr arg0)`.
 Moreover, they map directly to VM instructions. So they don't even have the
 overhead of creating a new Frame and Stack.
 
-Internal arguments MUST be Integer Literals and they're completely optional.
-Most of the time, the instruction doesn't even need arguments to do its job.
+Internal arguments MUST be Integer Literals for non-jump instructions and
+they're completely optional. Most of the time, the instruction doesn't even
+need arguments to do its job.
+
+Meanwhile, you must provide a declared [@label](#labels) to jump instructions.
+It is required, and you can't use integers for security reasons (you may be
+able to jump in the middle of a [list literal](#list-literals) representation,
+which is not cool at all from where I'm from).
 
 ### pop
 
@@ -1026,3 +1103,25 @@ Push `Integer` 0 if the last value on the stack is not of type `T`.
 | `list?`          |                      `List`                      |
 | `string?`        |                     `String`                     |
 | `custom?`        |                     `Custom`                     |
+
+### Jump Instructions
+
+**NOTE: Check the section about [labels](#labels) to understand why jumps are
+generally a bad practice to follow.**
+
+Jump instructions require a [label](#labels) as their argument.
+
+All instructions, except for the unconditional jump `j!`, take one value from
+the stack which is either an `Integer` or `Double`. And perform a check on it
+which is shown in the table below. If the check is true, a jump to the provided
+label is performed.
+
+| Instruction | Checks For |
+| :---------- | :--------: |
+| `j!`        |     \-     |
+| `jz!`       |   `= 0`    |
+| `jnz!`      |   `!= 0`   |
+| `jgz!`      |   `> 0`    |
+| `jgez!`     |   `>= 0`   |
+| `jlz!`      |   `< 0`    |
+| `jlez!`     |   `<= 0`   |
