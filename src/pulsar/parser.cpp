@@ -927,6 +927,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
         func.Code[block.ContinueStatements[i]].Arg0 = (int64_t)(whileIdx-block.ContinueStatements[i]);
 
     size_t endIdx = func.Code.Size();
+    PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, whileToken);
     func.Code.EmplaceBack(InstructionCode::J, (int64_t)(whileIdx-endIdx));
 
     size_t breakIdx = func.Code.Size();
