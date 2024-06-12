@@ -13,6 +13,8 @@
   // scall makes a copy of globals:
   // - Changes to globals don't affect the main context
   // - CustomTypeData is NOT shared with the main context.
+  //   If supported, it is copied from its current state.
+  //   Otherwise, it's re-initialized to its default.
   random/seed -> seed
   [] <& (my-func) (*scall) if not: (*error!) end
   if random/seed != seed: (*error!) end
