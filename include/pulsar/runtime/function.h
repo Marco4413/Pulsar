@@ -43,7 +43,8 @@ namespace Pulsar
                 && Name == other.Name;
         }
 
-        bool FindCodeDebugSymbolFor(size_t instructionIdx, size_t& symbolIdxOut) const {
+        bool FindCodeDebugSymbolFor(size_t instructionIdx, size_t& symbolIdxOut) const
+        {
             if (!HasCodeDebugSymbols())
                 return false;
             symbolIdxOut = 0;
