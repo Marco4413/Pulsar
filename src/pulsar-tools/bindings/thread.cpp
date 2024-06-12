@@ -69,6 +69,14 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Run(Pulsar::Execu
         Pulsar::RuntimeState::OK
     );
 
+    eContext.CustomTypeData.ForEach([&threadContext](const Pulsar::HashMapBucket<uint64_t, Pulsar::CustomTypeData::Ref_T>& b) mutable {
+        PULSAR_ASSERT(b.Value(), "Reference to CustomTypeData is nullptr.");
+        uint64_t customType = b.Key();
+        Pulsar::CustomTypeData::Ref_T customData = b.Value()->Copy();
+        if (customData)
+            threadContext->Context.CustomTypeData.Insert(customType, customData);
+    });
+
     threadContext->Context.Globals = eContext.Globals;
     threadContext->IsRunning.store(true);
     std::thread nativeThread = std::thread([func, threadContext]() mutable {

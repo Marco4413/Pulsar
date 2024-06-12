@@ -34,6 +34,13 @@ Pulsar::RuntimeState PulsarTools::ErrorNativeBindings::Error_SafeCall(Pulsar::Ex
     Pulsar::ValueStack stack(std::move(args.AsList()));
 
     Pulsar::ExecutionContext ctx = eContext.OwnerModule->CreateExecutionContext(false, true);
+    eContext.CustomTypeData.ForEach([&ctx](const Pulsar::HashMapBucket<uint64_t, Pulsar::CustomTypeData::Ref_T>& b) mutable {
+        PULSAR_ASSERT(b.Value(), "Reference to CustomTypeData is nullptr.");
+        uint64_t customType = b.Key();
+        Pulsar::CustomTypeData::Ref_T customData = b.Value()->Copy();
+        if (customData)
+            ctx.CustomTypeData.Insert(customType, customData);
+    });
     ctx.Globals = eContext.Globals;
 
     Pulsar::RuntimeState state = eContext.OwnerModule->CallFunction(funcIdx, stack, ctx);
