@@ -117,7 +117,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, const ParseS
         else if (IsEndOfFile()) {
             // No need to call ClearError because Result was OK
             m_LexerPool.PopBack();
-            m_Lexer = &m_LexerPool.Back().Lexer;
+            m_Lexer = m_LexerPool.IsEmpty() ? nullptr : &m_LexerPool.Back().Lexer;
         }
     }
     module.NativeFunctions.Resize(module.NativeBindings.Size(), nullptr);
