@@ -60,8 +60,17 @@ namespace Pulsar
         }
 
         T* operator->() const { return m_Ptr; }
-        T& operator*() const { return *m_Ptr; }
-        T& operator[](size_t idx) const { return m_Ptr[idx]; }
+        T& operator*() const
+        {
+            PULSAR_ASSERT(!Get(), "Dereferencing nullptr.");
+            return *m_Ptr;
+        }
+
+        T& operator[](size_t idx) const
+        {
+            PULSAR_ASSERT(!Get(), "Indexing nullptr.");
+            return m_Ptr[idx];
+        }
 
         template<typename U>
         bool operator==(const SharedRef<U>& o) const { return m_Ptr == o.m_Ptr; }

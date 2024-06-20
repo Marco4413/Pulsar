@@ -46,8 +46,17 @@ namespace Pulsar
             m_Data[m_Capacity] = '\0';
         }
 
-        char operator[](size_t idx) const { return m_Data[idx]; }
-        char& operator[](size_t idx)      { return m_Data[idx]; }
+        char operator[](size_t idx) const
+        {
+            PULSAR_ASSERT(idx < Length(), "String index out of bounds.");
+            return m_Data[idx];
+        }
+
+        char& operator[](size_t idx)
+        {
+            PULSAR_ASSERT(idx < Length(), "String index out of bounds.");
+            return m_Data[idx];
+        }
 
         String operator+(const String& other) const
         {

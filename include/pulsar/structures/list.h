@@ -133,13 +133,26 @@ namespace Pulsar
             return m_Data[appendIdx];
         }
 
-        void PopBack() { m_Data[--m_Size].~T(); }
+        void PopBack()
+        {
+            PULSAR_ASSERT(!IsEmpty(), "Popping values from an empty list.");
+            m_Data[--m_Size].~T();
+        }
 
-        T& operator[](size_t index)             { return m_Data[index]; }
-        const T& operator[](size_t index) const { return m_Data[index]; }
+        T& operator[](size_t index)
+        {
+            PULSAR_ASSERT(index < Size(), "List index out of bounds.");
+            return m_Data[index];
+        }
 
-        T& Back()              { return m_Data[m_Size-1]; }
-        const T& Back() const  { return m_Data[m_Size-1]; }
+        const T& operator[](size_t index) const
+        {
+            PULSAR_ASSERT(index < Size(), "List index out of bounds.");
+            return m_Data[index];
+        }
+
+        T& Back()             { return (*this)[m_Size-1]; }
+        const T& Back() const { return (*this)[m_Size-1]; }
 
         void Clear()
         {
