@@ -19,9 +19,11 @@ namespace Pulsar::Binary
 
         bool WriteData(uint64_t size, const uint8_t* data) override
         {
-            size_t idx = m_Bytes.Size();
-            m_Bytes.Resize(m_Bytes.Size() + (size_t)size);
-            PULSAR_MEMCPY((void*)&m_Bytes[idx], (void*)data, (size_t)size);
+            if (size > 0) {
+                size_t idx = m_Bytes.Size();
+                m_Bytes.Resize(m_Bytes.Size() + (size_t)size);
+                PULSAR_MEMCPY((void*)&m_Bytes[idx], (void*)data, (size_t)size);
+            }
             return true;
         }
 
