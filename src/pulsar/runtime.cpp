@@ -339,6 +339,25 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             return RuntimeState::WritingOnConstantGlobal;
         global.Value = frame.Stack.Back();
     } break;
+    case InstructionCode::Pack: {
+        ValueList list;
+        if (instr.Arg0 > 0) {
+            size_t packing = (size_t)instr.Arg0;
+            if (frame.Stack.Size() < packing)
+                return RuntimeState::StackUnderflow;
+            for (size_t i = 0; i < packing; i++) {
+                list.Prepend(std::move(frame.Stack.Back()));
+                frame.Stack.PopBack();
+            }
+        } else {
+            // TODO: Not implemented.
+            // To follow the unpack instruction, this should pack the entire stack.
+            // Though is that useful? I think it would only create issues.
+            return RuntimeState::Error;
+        }
+        frame.Stack.EmplaceBack()
+            .SetList(std::move(list));
+    } break;
     case InstructionCode::Pop: {
         size_t popCount = (size_t)(instr.Arg0 > 0 ? instr.Arg0 : 1);
         if (frame.Stack.Size() < popCount)
@@ -716,6 +735,31 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         Value& list = frame.Stack.Back();
         if (list.Type() == ValueType::List) {
             list.AsList().RemoveFront(1);
+        } else return RuntimeState::TypeError;
+    } break;
+    case InstructionCode::UnpackHead: {
+        if (frame.Stack.Size() < 1)
+            return RuntimeState::StackUnderflow;
+        size_t listIdx = frame.Stack.Size()-1;
+        if (frame.Stack[listIdx].Type() == ValueType::List) {
+            ValueList::NodeType* node = frame.Stack[listIdx].AsList().Front();
+            if (instr.Arg0 > 0) {
+                size_t unpacked = 0;
+                for (int64_t i = 0; i < instr.Arg0; i++) {
+                    if (!node)
+                        return RuntimeState::ListIndexOutOfBounds;
+                    frame.Stack.PushBack(std::move(node->Value()));
+                    node = node->Next();
+                    ++unpacked;
+                }
+                frame.Stack[listIdx].AsList().RemoveFront(unpacked);
+            } else {
+                while (node) {
+                    frame.Stack.PushBack(std::move(node->Value()));
+                    node = node->Next();
+                }
+                frame.Stack[listIdx].AsList().Clear();
+            }
         } else return RuntimeState::TypeError;
     } break;
     case InstructionCode::Index: {
