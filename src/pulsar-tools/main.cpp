@@ -134,7 +134,10 @@ void PrintFlagOptions(const Pulsar::List<NamedFlagOption>& opts)
                 size_t idx = StrIndexOf(view.DataFromStart(), '\n');
                 Pulsar::String line = view.GetPrefix(idx);
                 PULSARTOOLS_INFOF("        {0}", line);
-                view.RemovePrefix(idx+1);
+                view.RemovePrefix(idx);
+                // Remove new line
+                if (!view.Empty())
+                    view.RemovePrefix(1);
             } while (!view.Empty());
             PULSARTOOLS_INFO("");
         }
