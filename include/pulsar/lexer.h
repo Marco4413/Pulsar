@@ -155,6 +155,10 @@ namespace Pulsar
         Lexer& operator=(const Lexer&) = delete;
         Lexer& operator=(Lexer&&) = delete;
 
+        // Skips a sha-bang at the current position
+        // Use this after creating a Lexer to ignore it
+        bool SkipShaBang();
+
         Token NextToken()               { return ParseNextToken(); }
         bool IsEndOfFile() const        { return m_SourceView.Length() == 0; }
         const String& GetSource() const { return m_Source; }

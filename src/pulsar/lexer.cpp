@@ -51,6 +51,25 @@ bool Pulsar::IsIdentifier(const String& s)
     return true;
 }
 
+bool Pulsar::Lexer::SkipShaBang()
+{
+    if (m_SourceView.Length() < 2)
+        return false;
+    
+    if (m_SourceView[0] != '#' || m_SourceView[1] != '!')
+        return false;
+
+    while (m_SourceView.Length() > 0 && m_SourceView[0] != '\n')
+        m_SourceView.RemovePrefix(1);
+    if (!m_SourceView.Empty())
+        m_SourceView.RemovePrefix(1); // Remove new line char
+
+    m_Line++;
+    m_LineStartIdx = m_SourceView.GetStart();
+
+    return true;
+}
+
 Pulsar::Token Pulsar::Lexer::ParseNextToken()
 {
     while (m_SourceView.Length() > 0) {
