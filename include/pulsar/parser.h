@@ -12,6 +12,7 @@ namespace Pulsar
 {
     struct InstructionDescription { InstructionCode Code; bool MayFail = true; };
     static const HashMap<String, InstructionDescription> InstructionMappings {
+        { "pack",       { InstructionCode::Pack                 } },
         { "pop",        { InstructionCode::Pop                  } },
         { "swap",       { InstructionCode::Swap                 } },
         { "dup",        { InstructionCode::Dup                  } },
@@ -28,6 +29,7 @@ namespace Pulsar
         { "concat",     { InstructionCode::Concat               } },
         { "head",       { InstructionCode::Head                 } },
         { "tail",       { InstructionCode::Tail                 } },
+        { "unpack",     { InstructionCode::UnpackHead           } },
         { "index",      { InstructionCode::Index                } },
         { "prefix",     { InstructionCode::Prefix               } },
         { "suffix",     { InstructionCode::Suffix               } },
