@@ -42,6 +42,7 @@ bool Pulsar::Parser::AddSource(const String& path, const String& src)
 
     m_LexerPool.EmplaceBack(path, src);
     m_Lexer = &m_LexerPool.Back().Lexer;
+    m_Lexer->SkipShaBang();
     return true;
 }
 
@@ -56,6 +57,7 @@ bool Pulsar::Parser::AddSource(const String& path, String&& src)
 
     m_LexerPool.EmplaceBack(path, std::move(src));
     m_Lexer = &m_LexerPool.Back().Lexer;
+    m_Lexer->SkipShaBang();
     return true;
 }
 
