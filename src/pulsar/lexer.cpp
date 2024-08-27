@@ -598,7 +598,8 @@ size_t Pulsar::Lexer::SkipComments()
     if (commentView[0] == '/') {
         while (commentView.Length() > 0 && commentView[0] != '\n')
             commentView.RemovePrefix(1);
-        commentView.RemovePrefix(1); // Remove new line char
+        if (!m_SourceView.Empty())
+            m_SourceView.RemovePrefix(1); // Remove new line char
         m_Line++;
         m_LineStartIdx = commentView.GetStart();
     } else if (commentView[0] == '*') {
