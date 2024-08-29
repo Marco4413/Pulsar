@@ -96,6 +96,27 @@ by *visually* separating *logical* expressions.
 
 i.e. `10 -> x; x` is more readable than `10 -> x x`.
 
+## Sha-Bang
+
+For anyone who's not familiar with the Unix standard of specifying
+interpreters for text files, here's the [Wikipedia page](https://en.wikipedia.org/wiki/Shebang_%28Unix%29).
+
+Sha-bang(s) may only appear at the top of a source file and are
+treated like a line [comment](#comments).
+
+Of course it's platform independent, so it's only QoL for Unix
+users. Which means it doesn't hurt to place it at the top of your
+source files even if you're only planning to use the script on
+Windows.
+
+```sh
+#!/usr/bin/env pulsar-tools
+```
+
+The above example of a sha-bang expects the `pulsar-tools` executable
+to be in the `PATH`. If so, it will run the file it's in with the
+`pulsar-tools` interpreter.
+
 ## Identifiers
 
 Identifiers can start with any letter from the alphabeth or the underscore character.
