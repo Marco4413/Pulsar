@@ -10,13 +10,13 @@ void PulsarTools::ErrorNativeBindings::BindToModule(Pulsar::Module& module)
 
 Pulsar::RuntimeState PulsarTools::ErrorNativeBindings::Error_Error(Pulsar::ExecutionContext& eContext)
 {
-    eContext.CallStack.PopBack();
+    eContext.CallStack.PopFrame();
     return Pulsar::RuntimeState::Error;
 }
 
 Pulsar::RuntimeState PulsarTools::ErrorNativeBindings::Error_Type(Pulsar::ExecutionContext& eContext)
 {
-    eContext.CallStack.PopBack();
+    eContext.CallStack.PopFrame();
     return Pulsar::RuntimeState::TypeError;
 }
 

@@ -47,17 +47,33 @@ namespace Pulsar
         size_t InstructionIndex = 0;
     };
 
-    class CallStack : public List<Frame>
+    class CallStack
     {
     public:
-        CallStack()
-            : List<Frame>() { }
-        
-        bool HasCaller() const            { return Size() > 1; }
-        Frame& CallingFrame()             { return (*this)[Size()-2]; }
-        const Frame& CallingFrame() const { return (*this)[Size()-2]; }
-        Frame& CurrentFrame()             { return (*this).Back(); }
-        const Frame& CurrentFrame() const { return (*this).Back(); }
+        CallStack() = default;
+        ~CallStack() = default;
+
+        bool HasCaller() const            { return m_Frames.Size() > 1; }
+        Frame& CallingFrame()             { return m_Frames[Size()-2]; }
+        const Frame& CallingFrame() const { return m_Frames[Size()-2]; }
+        Frame& CurrentFrame()             { return m_Frames.Back(); }
+        const Frame& CurrentFrame() const { return m_Frames.Back(); }
+
+        Frame CreateFrame(const FunctionDefinition* def, bool native=false);
+        Frame& CreateAndPushFrame(const FunctionDefinition* def, bool native=false);
+        RuntimeState PrepareFrame(Frame& frame);
+        RuntimeState PrepareFrame(Frame& frame, ValueStack& callerStack);
+
+        Frame& PushFrame(Frame&& frame) { return m_Frames.EmplaceBack(std::move(frame)); }
+        void PopFrame() { m_Frames.PopBack(); }
+
+        bool IsEmpty() const { return m_Frames.IsEmpty(); }
+        size_t Size() const { return m_Frames.Size(); }
+        Frame& operator[](size_t i) { return m_Frames[i]; }
+        const Frame& operator[](size_t i) const { return m_Frames[i]; }
+
+    private:
+        List<Frame> m_Frames;
     };
 
     // Extend this class to store your custom type's data
@@ -162,7 +178,6 @@ namespace Pulsar
         HashMap<uint64_t, CustomType> CustomTypes;
 
     private:
-        RuntimeState PrepareCallFrame(ValueStack& callerStack, Frame& callingFrame) const;
         RuntimeState ExecuteInstruction(Frame& frame, ExecutionContext& eContext) const;
 
     private:

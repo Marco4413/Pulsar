@@ -63,6 +63,49 @@ Pulsar::String Pulsar::ExecutionContext::GetStackTrace(size_t maxDepth) const
     return trace;
 }
 
+Pulsar::Frame Pulsar::CallStack::CreateFrame(const FunctionDefinition* def, bool native)
+{
+    return {
+        .Function = def,
+        .IsNative = native,
+        .Locals = List<Value>(def->Arity),
+        .Stack = ValueStack(),
+        .InstructionIndex = 0,
+    };
+}
+
+Pulsar::Frame& Pulsar::CallStack::CreateAndPushFrame(const FunctionDefinition* def, bool native)
+{
+    return m_Frames.EmplaceBack(CreateFrame(def, native));
+}
+
+Pulsar::RuntimeState Pulsar::CallStack::PrepareFrame(Frame& frame)
+{
+    PULSAR_ASSERT(HasCaller(), "Stack not provided for function with no caller.");
+    return PrepareFrame(frame, CallingFrame().Stack);
+}
+
+Pulsar::RuntimeState Pulsar::CallStack::PrepareFrame(Frame& frame, ValueStack& callerStack)
+{
+    if (callerStack.Size() < (frame.Function->StackArity + frame.Function->Arity))
+        return RuntimeState::StackUnderflow;
+
+    frame.Locals.Resize(frame.Function->LocalsCount);
+    for (size_t i = 0; i < frame.Function->Arity; i++) {
+        frame.Locals[frame.Function->Arity-i-1] = std::move(callerStack.Back());
+        callerStack.PopBack();
+    }
+
+    // TODO: Figure out if this tanks performance when StackArity is 0
+    frame.Stack.Resize(frame.Function->StackArity);
+    for (size_t i = 0; i < frame.Function->StackArity; i++) {
+        frame.Stack[frame.Function->StackArity-i-1] = std::move(callerStack.Back());
+        callerStack.PopBack();
+    }
+
+    return RuntimeState::OK;
+}
+
 size_t Pulsar::Module::BindNativeFunction(const FunctionDefinition& def, NativeFunction func)
 {
     if (NativeFunctions.Size() != NativeBindings.Size())
@@ -154,15 +197,14 @@ Pulsar::RuntimeState Pulsar::Module::CallFunction(int64_t funcIdx, ValueStack& s
 Pulsar::RuntimeState Pulsar::Module::ExecuteFunction(const FunctionDefinition& func, ValueStack& stack, ExecutionContext& context) const
 {
     { // Create Frame
-        context.CallStack.EmplaceBack(&func);
-        Frame& thisFrame = context.CallStack[0];
-        auto res = PrepareCallFrame(stack, thisFrame);
+        Frame& frame = context.CallStack.CreateAndPushFrame(&func, false);
+        auto res = context.CallStack.PrepareFrame(frame, stack);
         if (res != RuntimeState::OK)
             return res;
     }
 
-    for (;;) {
-        for (;;) {
+    while (true) {
+        while (true) {
             Frame& frame = context.CallStack.CurrentFrame();
             if (frame.InstructionIndex >= frame.Function->Code.Size())
                 break;
@@ -186,7 +228,7 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteFunction(const FunctionDefinition& f
                 retFrame.Stack[retFrame.Stack.Size()-retFrame.Function->Returns+i]
             ));
         }
-        context.CallStack.PopBack();
+        context.CallStack.PopFrame();
     }
 
     if (context.CallStack.Size() == 0)
@@ -202,27 +244,6 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteFunction(const FunctionDefinition& f
             ));
         }
     }
-    return RuntimeState::OK;
-}
-
-Pulsar::RuntimeState Pulsar::Module::PrepareCallFrame(ValueStack& callerStack, Frame& callingFrame) const
-{
-    if (callerStack.Size() < (callingFrame.Function->StackArity + callingFrame.Function->Arity))
-        return RuntimeState::StackUnderflow;
-
-    callingFrame.Locals.Resize(callingFrame.Function->LocalsCount);
-    for (size_t i = 0; i < callingFrame.Function->Arity; i++) {
-        callingFrame.Locals[callingFrame.Function->Arity-i-1] = std::move(callerStack.Back());
-        callerStack.PopBack();
-    }
-
-    // TODO: Figure out if this tanks performance when StackArity is 0
-    callingFrame.Stack.Resize(callingFrame.Function->StackArity);
-    for (size_t i = 0; i < callingFrame.Function->StackArity; i++) {
-        callingFrame.Stack[callingFrame.Function->StackArity-i-1] = std::move(callerStack.Back());
-        callerStack.PopBack();
-    }
-
     return RuntimeState::OK;
 }
 
@@ -368,11 +389,11 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         if (funcIdx < 0 || (size_t)funcIdx >= Functions.Size())
             return RuntimeState::OutOfBoundsFunctionIndex;
 
-        Frame callFrame{ &Functions[(size_t)funcIdx] };
-        auto res = PrepareCallFrame(frame.Stack, callFrame);
+        Frame callFrame = eContext.CallStack.CreateFrame(&Functions[(size_t)funcIdx], false);
+        auto res = eContext.CallStack.PrepareFrame(callFrame, frame.Stack);
         if (res != RuntimeState::OK)
             return res;
-        eContext.CallStack.PushBack(std::move(callFrame));
+        eContext.CallStack.PushFrame(std::move(callFrame));
     } break;
     case InstructionCode::CallNative: {
         if (NativeBindings.Size() != NativeFunctions.Size())
@@ -383,11 +404,11 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         if (!NativeFunctions[(size_t)funcIdx])
             return RuntimeState::UnboundNativeFunction;
 
-        Frame callFrame{ &NativeBindings[(size_t)funcIdx], true };
-        auto res = PrepareCallFrame(frame.Stack, callFrame);
+        Frame callFrame = eContext.CallStack.CreateFrame(&NativeBindings[(size_t)funcIdx], true);
+        auto res = eContext.CallStack.PrepareFrame(callFrame, frame.Stack);
         if (res != RuntimeState::OK)
             return res;
-        eContext.CallStack.PushBack(std::move(callFrame));
+        eContext.CallStack.PushFrame(std::move(callFrame));
         return NativeFunctions[(size_t)funcIdx](eContext);
     }
     case InstructionCode::Return:
@@ -402,11 +423,11 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             int64_t funcIdx = funcIdxValue.AsInteger();
             if (funcIdx < 0 || (size_t)funcIdx >= Functions.Size())
                 return RuntimeState::OutOfBoundsFunctionIndex;
-            Frame callFrame{ &Functions[(size_t)funcIdx] };
-            auto res = PrepareCallFrame(frame.Stack, callFrame);
+            Frame callFrame = eContext.CallStack.CreateFrame(&Functions[(size_t)funcIdx], false);
+            auto res = eContext.CallStack.PrepareFrame(callFrame, frame.Stack);
             if (res != RuntimeState::OK)
                 return res;
-            eContext.CallStack.PushBack(std::move(callFrame));
+            eContext.CallStack.PushFrame(std::move(callFrame));
             break;
         } else if (funcIdxValue.Type() == ValueType::NativeFunctionReference) {
             if (NativeBindings.Size() != NativeFunctions.Size())
@@ -417,11 +438,11 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             if (!NativeFunctions[(size_t)funcIdx])
                 return RuntimeState::UnboundNativeFunction;
 
-            Frame callFrame{ &NativeBindings[(size_t)funcIdx], true };
-            auto res = PrepareCallFrame(frame.Stack, callFrame);
+            Frame callFrame = eContext.CallStack.CreateFrame(&NativeBindings[(size_t)funcIdx], true);
+            auto res = eContext.CallStack.PrepareFrame(callFrame, frame.Stack);
             if (res != RuntimeState::OK)
                 return res;
-            eContext.CallStack.PushBack(std::move(callFrame));
+            eContext.CallStack.PushFrame(std::move(callFrame));
             return NativeFunctions[(size_t)funcIdx](eContext);
         }
         return RuntimeState::TypeError;
