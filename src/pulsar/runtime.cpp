@@ -81,8 +81,8 @@ Pulsar::Frame& Pulsar::CallStack::CreateAndPushFrame(const FunctionDefinition* d
 
 Pulsar::RuntimeState Pulsar::CallStack::PrepareFrame(Frame& frame)
 {
-    PULSAR_ASSERT(HasCaller(), "Stack not provided for function with no caller.");
-    return PrepareFrame(frame, CallingFrame().Stack);
+    PULSAR_ASSERT(!IsEmpty(), "Stack not provided for new function with no candidate caller.");
+    return PrepareFrame(frame, CurrentFrame().Stack);
 }
 
 Pulsar::RuntimeState Pulsar::CallStack::PrepareFrame(Frame& frame, ValueStack& callerStack)
