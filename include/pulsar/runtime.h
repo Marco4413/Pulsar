@@ -59,6 +59,17 @@ namespace Pulsar
         Frame& CurrentFrame()             { return m_Frames.Back(); }
         const Frame& CurrentFrame() const { return m_Frames.Back(); }
 
+        /*
+        Calling a function:
+        {
+            Frame frame = callStack.CreateFrame(&func);
+            RuntimeState state = callStack.PrepareFrame(frame);
+            if (state != RuntimeState::OK)
+                return state;
+            callStack.PushFrame(std::move(frame));
+        }
+        */
+
         Frame CreateFrame(const FunctionDefinition* def, bool native=false);
         Frame& CreateAndPushFrame(const FunctionDefinition* def, bool native=false);
         RuntimeState PrepareFrame(Frame& frame);
