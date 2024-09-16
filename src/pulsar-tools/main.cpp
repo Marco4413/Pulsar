@@ -284,7 +284,11 @@ bool RunModule(const Pulsar::String& filepath, const Pulsar::String& entryPoint,
     PULSARTOOLS_PRINTF("\n"); // Add new line after script output
     PULSARTOOLS_INFOF("Execution took: {}us", execTime.count());
 
-    if (runtimeState != Pulsar::RuntimeState::OK) {
+    if (runtimeState == Pulsar::RuntimeState::FunctionNotFound) {
+        PULSARTOOLS_ERRORF("Runtime Error: {}", Pulsar::RuntimeStateToString(runtimeState));
+        PULSARTOOLS_ERRORF("Entry point function ({}) not found.", entryPoint);
+        return false;
+    } else if (runtimeState != Pulsar::RuntimeState::OK) {
         PULSARTOOLS_ERRORF("Runtime Error: {}", Pulsar::RuntimeStateToString(runtimeState));
         PulsarTools::PrintPrettyRuntimeError(context);
         PULSARTOOLS_PRINTF("\n");
