@@ -1,20 +1,57 @@
-*(sort l) -> 1:
-  <- l
-    (!empty?) if: .
-    (!head) -> a
-      (!empty?) if: [ <- a ] .
-      (sort)
-    // We can assume the tail is sorted.
-    (!head) -> b
-    a b (!compare) if <= 0:
-      <- b (!prepend)
-      <- a (!prepend)
-    else:
-      <- a (!prepend)
-      <- b (!prepend)
-      (sort) // The thing may not be sorted! Do it again!
-    end
+*(split-array array len) -> 2:
+  [] while:
+    <- array
+      (!empty?) if: (!swap) .
+      len if <= 0:  (!swap) .
+    (!head) (!swap) -> array
+    (!append)
+    len 1 - -> len
+  end
   .
+
+*(merge a b) -> 1:
+  <- a (!length) -> a_len -> a
+  <- b (!length) -> b_len -> b
+
+  [] -> merged
+
+  while:
+    a_len if not: break
+    b_len if not: break
+
+    // Take the elements to compare
+    <- a (!head) -> x -> a
+    <- b (!head) -> y -> b
+
+    x y (!compare) if < 0:
+      <- merged <- x (!append)  -> merged
+      <- b      <- y (!prepend) -> b
+      a_len 1 - -> a_len // Element taken from a
+    else:
+      <- merged <- y (!append)  -> merged
+      <- a      <- x (!prepend) -> a
+      b_len 1 - -> b_len // Element taken from b
+    end
+  end
+
+  <- merged
+  <- a (!concat)
+  <- b (!concat)
+  .
+
+*(merge-sort array) -> 1:
+  <- array (!length) -> array_len
+  array_len if <= 1: .
+
+  array_len 2 /
+    (split-array)
+  
+  (merge-sort) (!swap)
+  (merge-sort) (merge)
+  .
+
+*(sort array) -> 1:
+  <- array (merge-sort) .
 
 *(main args) -> 1:
   [ // https://www.random.org/strings
