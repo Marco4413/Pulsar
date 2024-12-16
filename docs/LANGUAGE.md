@@ -592,9 +592,9 @@ However, that does not stop you from comparing two values bound to locals.
 
 The `end` keyword must be specified at the end of the last branch.
 
-### Weird cool variants?!?!
+### More Ifs
 
-All the variants can be described with the following string:
+The following pattern describes all available Ifs:
 
 `if [not] [[<lvalue>] [<comp> <lvalue>]]:`
 
@@ -788,9 +788,8 @@ As seen in the [globals example](../examples/intermediate/02-globals.pls), you c
 performance-heavy tasks during parsing. That means increasing compile
 time to improve runtime efficiency!
 
-That example goes from ~700ms of runtime to ~50us just by pre-computing
-the lists it uses (granted that sorting algorithm has its worst case
-scenario to deal with, pure nightmare if you ask me).
+That example goes from ~2.3ms of runtime to ~54us just by pre-computing
+the lists it uses.
 
 ## Labels
 
