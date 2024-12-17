@@ -32,10 +32,19 @@ Pulsar::RuntimeState PulsarTools::TimeNativeBindings::Time_Steady(Pulsar::Execut
 
 Pulsar::RuntimeState PulsarTools::TimeNativeBindings::Time_Micros(Pulsar::ExecutionContext& eContext)
 {
-    auto time = std::chrono::high_resolution_clock::now();
-    auto timeSinceEpoch = std::chrono::duration_cast<std::chrono::microseconds>(time.time_since_epoch());
-    eContext.CallStack.CurrentFrame()
-        .Stack.EmplaceBack()
-        .SetInteger((int64_t)timeSinceEpoch.count());
+    // Use the high resolution clock only if it's monotonic
+    if constexpr (std::chrono::high_resolution_clock::is_steady) {
+        auto time = std::chrono::high_resolution_clock::now();
+        auto timeSinceEpoch = std::chrono::duration_cast<std::chrono::microseconds>(time.time_since_epoch());
+        eContext.CallStack.CurrentFrame()
+            .Stack.EmplaceBack()
+            .SetInteger((int64_t)timeSinceEpoch.count());
+    } else {
+        auto time = std::chrono::steady_clock::now();
+        auto timeSinceEpoch = std::chrono::duration_cast<std::chrono::microseconds>(time.time_since_epoch());
+        eContext.CallStack.CurrentFrame()
+            .Stack.EmplaceBack()
+            .SetInteger((int64_t)timeSinceEpoch.count());
+    }
     return Pulsar::RuntimeState::OK;
 }

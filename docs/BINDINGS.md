@@ -411,3 +411,4 @@ Returns the current time in milliseconds as seen by the Monotonic Clock of the s
 Types: `-> Integer`
 
 Returns the current time in microseconds.
+The function is monotonic so it can be used to measure performance.
