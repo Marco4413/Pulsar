@@ -52,7 +52,7 @@ void PulsarTools::PrintPrettyError(
             PULSARTOOLS_PRINTF(fmt::fg(fmt::color::red), "\n{0: ^{1}}^", "", charsToToken);
         }
     } else {
-        PULSARTOOLS_PRINTF("No source to show.\n", token.SourcePos.Line+1, token.SourcePos.Char+1, message);
+        PULSARTOOLS_PRINTF("No source to show.\n");
     }
 }
 
