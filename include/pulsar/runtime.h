@@ -123,7 +123,7 @@ namespace Pulsar
             auto typeDataPair = CustomTypeData.Find(type);
             if (!typeDataPair)
                 return nullptr;
-            return typeDataPair.Value->CastTo<T>();
+            return typeDataPair->Value().CastTo<T>();
         }
 
         String GetCallTrace(size_t callIdx) const;
@@ -167,8 +167,8 @@ namespace Pulsar
         uint64_t BindCustomType(const String& name, CustomType::DataFactory_T dataFactory = nullptr);
 
         // Be sure to check if the type exists first (unless you know for sure it exists)
-        CustomType& GetCustomType(uint64_t typeId)             { return *CustomTypes.Find(typeId).Value; }
-        const CustomType& GetCustomType(uint64_t typeId) const { return *CustomTypes.Find(typeId).Value; }
+        CustomType& GetCustomType(uint64_t typeId)             { return CustomTypes.Find(typeId)->Value(); }
+        const CustomType& GetCustomType(uint64_t typeId) const { return CustomTypes.Find(typeId)->Value(); }
         bool HasCustomType(uint64_t typeId) const              { return CustomTypes.Find(typeId); }
 
         bool HasSourceDebugSymbols() const { return !SourceDebugSymbols.IsEmpty(); }

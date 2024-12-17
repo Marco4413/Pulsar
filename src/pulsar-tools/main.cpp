@@ -178,9 +178,9 @@ bool ParseOptions(
         auto runNameOptPair = RuntimeOptions.Find(option);
         
         if (parserFlags && parseNameOptPair) {
-            opt = parseNameOptPair.Value;
+            opt = &parseNameOptPair->Value();
         } else if (runtimeFlags && runNameOptPair) {
-            opt = runNameOptPair.Value;
+            opt = &runNameOptPair->Value();
         } else if (customParser && customParser(option, argc, argv)) {
             continue;
         } else {

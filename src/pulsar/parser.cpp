@@ -216,7 +216,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
 
     auto globalNameIdxPair = globalScope.Globals.Find(identToken.StringVal);
     if (globalNameIdxPair) {
-        if (module.Globals[*globalNameIdxPair.Value].IsConstant)
+        if (module.Globals[globalNameIdxPair->Value()].IsConstant)
             return SetError(ParseResult::WritingToConstantGlobal, identToken, "Trying to reassign constant global.");
         else if (isConstant)
             return SetError(ParseResult::UnexpectedToken, constToken, "Redeclaring global as const.");
@@ -275,7 +275,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
         globalScope.Globals.Emplace(identToken.StringVal, module.Globals.Size());
         globalDef = &module.Globals.EmplaceBack(std::move(identToken.StringVal), std::move(stack.Back()), isConstant);
     } else {
-        globalDef = &module.Globals[*globalNameIdxPair.Value];
+        globalDef = &module.Globals[globalNameIdxPair->Value()];
         globalDef->InitialValue = std::move(stack.Back());
     }
 
@@ -284,7 +284,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
         PULSAR_ASSERT(path != nullptr, "Path should not be nullptr.");
         auto sourcePathIdxPair = globalScope.SourceDebugSymbols.Find(*path);
         globalDef->DebugSymbol.Token = identToken;
-        globalDef->DebugSymbol.SourceIdx = sourcePathIdxPair ? *sourcePathIdxPair.Value : ~(size_t)0;
+        globalDef->DebugSymbol.SourceIdx = sourcePathIdxPair ? sourcePathIdxPair->Value() : ~(size_t)0;
     }
 
     return ParseResult::OK;
@@ -312,7 +312,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
         PULSAR_ASSERT(path != nullptr, "Path should not be nullptr.");
         auto sourcePathIdxPair = globalScope.SourceDebugSymbols.Find(*path);
         def.DebugSymbol.Token = identToken;
-        def.DebugSymbol.SourceIdx = sourcePathIdxPair ? *sourcePathIdxPair.Value : ~(size_t)0;
+        def.DebugSymbol.SourceIdx = sourcePathIdxPair ? sourcePathIdxPair->Value() : ~(size_t)0;
     }
 
     NextToken();
@@ -354,7 +354,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
             globalScope.NativeFunctions.Emplace(def.Name, module.NativeBindings.Size());
             module.NativeBindings.EmplaceBack(std::move(def));
         } else {
-            size_t nativeIdx = (int64_t)*nameIdxPair.Value;
+            size_t nativeIdx = (int64_t)nameIdxPair->Value();
             FunctionDefinition& nativeFunc = module.NativeBindings[nativeIdx];
             if (!nativeFunc.MatchesDeclaration(def))
                 return SetError(ParseResult::NativeFunctionRedeclaration, identToken, "Redeclaration of Native Function with different signature.");
@@ -390,7 +390,7 @@ Pulsar::ParseResult Pulsar::Parser::BackPatchFunctionLabels(FunctionDefinition& 
         auto nameLabelPair = funcScope.Labels.Find(toBackPatch.Label.StringVal);
         if (!nameLabelPair)
             return SetError(ParseResult::UsageOfUndeclaredLabel, toBackPatch.Label, "Usage of undeclared label.");
-        size_t relJump = nameLabelPair.Value->CodeDstIdx - toBackPatch.CodeIdx;
+        size_t relJump = nameLabelPair->Value().CodeDstIdx - toBackPatch.CodeIdx;
         Instruction& instr = func.Code[toBackPatch.CodeIdx];
         if (!IsJump(instr.Code))
             return SetError(ParseResult::IllegalUsageOfLabel, toBackPatch.Label, "Labels can only be used by jump instructions.");
@@ -530,7 +530,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                 if (localIdx < 0) {
                     auto globalNameIdxPair = scope.Global.Globals.Find(curToken.StringVal);
                     if (globalNameIdxPair) {
-                        int64_t globalIdx = (int64_t)*globalNameIdxPair.Value;
+                        int64_t globalIdx = (int64_t)globalNameIdxPair->Value();
                         if (module.Globals[(size_t)globalIdx].IsConstant)
                             return SetError(ParseResult::UnexpectedToken, curToken, "Trying to assign to constant global.");
                         func.Code.EmplaceBack(
@@ -583,7 +583,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                 if (!instrNameDescPair)
                     return SetError(ParseResult::UsageOfUnknownInstruction, identToken, "Instruction does not exist.");
 
-                const InstructionDescription& instrDesc = *instrNameDescPair.Value;
+                const InstructionDescription& instrDesc = instrNameDescPair->Value();
                 if (instrDesc.MayFail)
                     PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, identToken);
 
@@ -612,13 +612,13 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                 if (!nativeNameIdxPair) {
                     return SetError(ParseResult::UsageOfUndeclaredNativeFunction, identToken, "Native function not declared.");
                 }
-                int64_t funcIdx = (int64_t)*nativeNameIdxPair.Value;
+                int64_t funcIdx = (int64_t)nativeNameIdxPair->Value();
                 func.Code.EmplaceBack(InstructionCode::CallNative, funcIdx);
             } else {
                 auto funcNameIdxPair = scope.Global.Functions.Find(identToken.StringVal);
                 if (!funcNameIdxPair)
                     return SetError(ParseResult::UsageOfUndeclaredFunction, identToken, "Function not declared.");
-                int64_t funcIdx = (int64_t)*funcNameIdxPair.Value;
+                int64_t funcIdx = (int64_t)funcNameIdxPair->Value();
                 func.Code.EmplaceBack(InstructionCode::Call, funcIdx);
             }
         } break;
@@ -835,7 +835,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseLocalBlock(Module& module, FunctionDefi
         const Token& localName = localNames[localNameIdx];
         // Because ids from localName are always put into localNameToIdx, it is safe to dereference.
         // Except for "Dummy Identifiers"
-        if (IsDummyIdentifier(localName.StringVal) || *localNameToIdx.Find(localName.StringVal).Value != localNameIdx) {
+        if (IsDummyIdentifier(localName.StringVal) || localNameToIdx.Find(localName.StringVal)->Value() != localNameIdx) {
             if (settings.StoreDebugSymbols) {
                 PUSH_CODE_SYMBOL(true, func, localName);
                 func.Code.EmplaceBack(InstructionCode::Pop);
@@ -845,7 +845,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseLocalBlock(Module& module, FunctionDefi
                 int64_t count = 1;
                 for (size_t j = 0; j < localNameIdx; j++) {
                     const Token& prevLocalName = localNames[localNameIdx-j-1];
-                    if (!(IsDummyIdentifier(prevLocalName.StringVal) || *localNameToIdx.Find(localName.StringVal).Value != localNameIdx))
+                    if (!(IsDummyIdentifier(prevLocalName.StringVal) || localNameToIdx.Find(localName.StringVal)->Value() != localNameIdx))
                         break;
                     count++;
                     i++;
@@ -1069,7 +1069,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
             auto globalNameIdxPair = localScope.Global.Globals.Find(lvalue.StringVal);
             if (!globalNameIdxPair)
                 return SetError(ParseResult::UsageOfUndeclaredLocal, lvalue, "Local not declared.");
-            func.Code.EmplaceBack(InstructionCode::PushGlobal, (int64_t)*globalNameIdxPair.Value);
+            func.Code.EmplaceBack(InstructionCode::PushGlobal, (int64_t)globalNameIdxPair->Value());
             break;
         }
         func.Code.EmplaceBack(InstructionCode::PushLocal, localIdx);
@@ -1105,14 +1105,14 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
                 auto nativeNameIdxPair = localScope.Global.NativeFunctions.Find(identToken.StringVal);
                 if (!nativeNameIdxPair)
                     return SetError(ParseResult::UsageOfUndeclaredNativeFunction, identToken, "Native function not declared.");
-                func.Code.EmplaceBack(InstructionCode::PushNativeFunctionReference, (int64_t)*nativeNameIdxPair.Value);
+                func.Code.EmplaceBack(InstructionCode::PushNativeFunctionReference, (int64_t)nativeNameIdxPair->Value());
                 break;
             }
 
             auto funcNameIdxPair = localScope.Global.Functions.Find(identToken.StringVal);
             if (!funcNameIdxPair)
                 return SetError(ParseResult::UsageOfUndeclaredFunction, identToken, "Function not declared.");
-            func.Code.EmplaceBack(InstructionCode::PushFunctionReference, (int64_t)*funcNameIdxPair.Value);
+            func.Code.EmplaceBack(InstructionCode::PushFunctionReference, (int64_t)funcNameIdxPair->Value());
         } else return SetError(ParseResult::UnexpectedToken, curToken, "Expected (function) or local to reference.");
     } break;
     case TokenType::LeftArrow: {
@@ -1127,9 +1127,9 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
             auto globalNameIdxPair = localScope.Global.Globals.Find(lvalue.StringVal);
             if (!globalNameIdxPair)
                 return SetError(ParseResult::UsageOfUndeclaredLocal, lvalue, "Local not declared.");
-            if (module.Globals[*globalNameIdxPair.Value].IsConstant)
+            if (module.Globals[globalNameIdxPair->Value()].IsConstant)
                 return SetError(ParseResult::WritingToConstantGlobal, curToken, "Cannot move constant global.");
-            func.Code.EmplaceBack(InstructionCode::MoveGlobal, (int64_t)*globalNameIdxPair.Value);
+            func.Code.EmplaceBack(InstructionCode::MoveGlobal, (int64_t)globalNameIdxPair->Value());
             break;
         }
         func.Code.EmplaceBack(InstructionCode::MoveLocal, localIdx);

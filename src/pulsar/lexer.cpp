@@ -125,7 +125,7 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
                     auto kwNameTypePair = Keywords.Find(token.StringVal);
                     if (!kwNameTypePair)
                         return token;
-                    token.Type = *kwNameTypePair.Value;
+                    token.Type = kwNameTypePair->Value();
                     return token;
                 }
             }
@@ -245,7 +245,7 @@ Pulsar::Token Pulsar::Lexer::ParseCompilerDirective()
 
     auto cdNameValPair = CompilerDirectives.Find(token.StringVal);
     if (cdNameValPair)
-        token.IntegerVal = *cdNameValPair.Value;
+        token.IntegerVal = cdNameValPair->Value();
     return token;
 }
 
