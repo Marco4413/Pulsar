@@ -176,28 +176,26 @@ namespace Pulsar
         template<typename ...Args>
         BucketType& Emplace(K&& key, Args&& ...args)
         {
-            for (int attempt = 0; attempt < 2; attempt++) {
-                size_t keyHash = HashKey(key);
-                for (size_t probeIdx = 0; probeIdx < m_Buckets.Size(); probeIdx++) {
-                    size_t hash = HashProbe(keyHash, probeIdx);
-                    BucketType& bucket = m_Buckets[hash];
-                    if (!bucket.IsPopulated()) {
-                        bucket.Fill(
-                            std::move(key),
-                            std::forward<Args>(args)...);
-                        return bucket;
-                    } else if (bucket.Key() == key) {
-                        bucket.m_Value.~V();
-                        PULSAR_PLACEMENT_NEW(V, &bucket.m_Value, std::forward<Args>(args)...);
-                        return bucket;
-                    }
+            size_t keyHash = HashKey(key);
+            for (size_t probeIdx = 0; probeIdx < m_Buckets.Size(); probeIdx++) {
+                size_t hash = HashProbe(keyHash, probeIdx);
+                BucketType& bucket = m_Buckets[hash];
+                if (!bucket.IsPopulated()) {
+                    bucket.Fill(
+                        std::move(key),
+                        std::forward<Args>(args)...);
+                    return bucket;
+                } else if (bucket.Key() == key) {
+                    bucket.m_Value.~V();
+                    PULSAR_PLACEMENT_NEW(V, &bucket.m_Value, std::forward<Args>(args)...);
+                    return bucket;
                 }
-
-                // No free buckets! Reserve and repeat.
-                Reserve(Capacity()*3/2+1);
             }
 
-            PULSAR_ASSERT(false, "Failed to insert value into HashMap.");
+            // No free buckets! Reserve and repeat.
+            Reserve(Capacity()*3/2+1);
+
+            return Emplace(std::move(key), std::forward<Args>(args)...);
         }
 
         /**
