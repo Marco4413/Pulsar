@@ -10,6 +10,7 @@ workspace "pulsar"
 
 include "pulsar"
 include "libs/fmt"
+include "libs/lsp-framework/lspframework"
 
 project "pulsar-demo"
    kind "ConsoleApp"
@@ -47,6 +48,49 @@ project "pulsar-demo"
 
    filter "toolset:msc"
       buildoptions { "/W4", "/WX" }
+
+   filter "configurations:Debug"
+      defines "PULSAR_DEBUG"
+      symbols "On"
+
+   filter "configurations:Release"
+      optimize "Speed"
+
+project "pulsar-lsp"
+   kind "ConsoleApp"
+   language "C++"
+   cppdialect "C++20"
+
+   location "build/pulsar-lsp"
+   targetdir "%{prj.location}/%{cfg.buildcfg}"
+
+   includedirs {
+      "include",
+      "libs/lsp-framework",
+      "libs/lsp-framework/build/lspframework/generated"
+   }
+   files { "src/pulsar-lsp/**.cpp", "include/pulsar-lsp/**.h" }
+   links { "pulsar", "lspframework" }
+
+   filter "toolset:clang"
+      buildoptions {
+         "-Wall", "-Wextra", "-Wpedantic", "-Werror",
+         "-Wno-gnu-zero-variadic-macro-arguments"
+      }
+
+   filter "toolset:gcc"
+      buildoptions { "-Wall", "-Wextra", "-Wpedantic", "-Werror" }
+
+   filter "action:vs*"
+      flags { "FatalWarnings" }
+      warnings "Extra"
+      externalwarnings "Extra"
+
+   filter "toolset:msc"
+      buildoptions { "/W4", "/WX" }
+
+   filter { "configurations:Debug", "action:not vs*", "toolset:not msc" }
+      linkoptions { "-fsanitize=address,undefined" }
 
    filter "configurations:Debug"
       defines "PULSAR_DEBUG"
