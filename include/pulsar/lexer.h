@@ -74,6 +74,9 @@ namespace Pulsar
         size_t Char;
         size_t Index;
         size_t CharSpan;
+
+        bool operator==(const SourcePosition&) const = default;
+        bool operator!=(const SourcePosition&) const = default;
     };
 
     class Token
