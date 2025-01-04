@@ -90,9 +90,15 @@ namespace Pulsar
 
     struct LocalScope
     {
+        struct LocalVar
+        {
+            String Name;
+            SourcePosition DeclaredAt;
+        };
+
         const GlobalScope& Global;
         FunctionScope* const Function;
-        List<String> Locals = List<String>();
+        List<LocalVar> Locals = List<LocalVar>();
     };
 
     enum class ParseResult

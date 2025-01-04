@@ -321,11 +321,11 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
         NextToken();
     }
 
-    List<String> args;
+    List<LocalScope::LocalVar> args;
     for (;;) {
         if (curToken.Type != TokenType::Identifier)
             break;
-        args.EmplaceBack(std::move(curToken.StringVal));
+        args.EmplaceBack(std::move(curToken.StringVal), curToken.SourcePos);
         NextToken();
     }
     def.Arity = args.Size();
@@ -522,10 +522,13 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
             int64_t localIdx = 0;
             if (forceBinding) {
                 localIdx = (int64_t)scope.Locals.Size();
-                scope.Locals.PushBack(curToken.StringVal);
+                scope.Locals.PushBack({
+                    .Name = curToken.StringVal,
+                    .DeclaredAt = curToken.SourcePos
+                });
             } else {
                 localIdx = (int64_t)scope.Locals.Size()-1;
-                for (; localIdx >= 0 && scope.Locals[(size_t)localIdx] != curToken.StringVal; localIdx--);
+                for (; localIdx >= 0 && scope.Locals[(size_t)localIdx].Name != curToken.StringVal; localIdx--);
                 if (localIdx < 0) {
                     auto globalNameIdxPair = scope.Global.Globals.Find(curToken.StringVal);
                     if (globalNameIdxPair) {
@@ -540,7 +543,10 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                         break;
                     }
                     localIdx = (int64_t)scope.Locals.Size();
-                    scope.Locals.EmplaceBack(curToken.StringVal);
+                    scope.Locals.PushBack({
+                        .Name = curToken.StringVal,
+                        .DeclaredAt = curToken.SourcePos
+                    });
                 }
             }
             if (scope.Locals.Size() > func.LocalsCount)
@@ -861,7 +867,10 @@ Pulsar::ParseResult Pulsar::Parser::ParseLocalBlock(Module& module, FunctionDefi
             }
 
             int64_t localIdx = (int64_t)_localScope.Locals.Size();
-            _localScope.Locals.PushBack(localName.StringVal);
+            _localScope.Locals.PushBack({
+                .Name = localName.StringVal,
+                .DeclaredAt = localName.SourcePos
+            });
             if (_localScope.Locals.Size() > func.LocalsCount)
                 func.LocalsCount = _localScope.Locals.Size();
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, localName);
@@ -1063,7 +1072,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
     case TokenType::Identifier: {
         PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, lvalue);
         int64_t localIdx = (int64_t)localScope.Locals.Size()-1;
-        for (; localIdx >= 0 && localScope.Locals[(size_t)localIdx] != lvalue.StringVal; localIdx--);
+        for (; localIdx >= 0 && localScope.Locals[(size_t)localIdx].Name != lvalue.StringVal; localIdx--);
         if (localIdx < 0) {
             auto globalNameIdxPair = localScope.Global.Globals.Find(lvalue.StringVal);
             if (!globalNameIdxPair)
@@ -1121,7 +1130,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected local name.");
 
         int64_t localIdx = (int64_t)localScope.Locals.Size()-1;
-        for (; localIdx >= 0 && localScope.Locals[(size_t)localIdx] != curToken.StringVal; localIdx--);
+        for (; localIdx >= 0 && localScope.Locals[(size_t)localIdx].Name != curToken.StringVal; localIdx--);
         if (localIdx < 0) {
             auto globalNameIdxPair = localScope.Global.Globals.Find(lvalue.StringVal);
             if (!globalNameIdxPair)
