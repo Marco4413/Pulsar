@@ -122,19 +122,64 @@ namespace Pulsar
         IllegalUsageOfLabel,
         LabelNotAllowedInContext,
         RedeclarationOfLabel,
+        LSPHooksRequestedTermination,
     };
 
     const char* ParseResultToString(ParseResult presult);
 
+    enum class LSPBlockNotificationType
+    {
+        BlockStart,
+        BlockEnd,
+        LocalScopeChanged,
+    };
+
+    enum class LSPIdentifierUsageType
+    {
+        Global,
+        Function,
+        NativeFunction,
+        Local,
+        // TODO: Maybe implement label support.
+        //       It's a bit tricky since they're back-patched.
+        // Label,
+    };
+
+    struct LSPHooks
+    {
+        // If a callback returns true, parsing is blocked with ParseResult::LSPHooksRequestedTermination
+
+        struct OnBlockNotificationParams
+        {
+            LSPBlockNotificationType Type;
+            SourcePosition Position;
+            const String& FilePath;
+            const String& FnName;
+            const Pulsar::LocalScope& LocalScope;
+        };
+        using OnBlockNotificationFn = std::function<bool(OnBlockNotificationParams&&)>;
+
+        struct OnIdentifierUsageParams
+        {
+            LSPIdentifierUsageType Type;
+            // The index the identifier is bound to
+            // Meaning depends on .Type
+            size_t BoundIdx;
+            const String& FilePath;
+            // Empty if in global scope
+            const String& FnName;
+            const Pulsar::Token& Token;
+            const Pulsar::LocalScope& LocalScope;
+        };
+        using OnIdentifierUsageFn = std::function<bool(OnIdentifierUsageParams&&)>;
+
+        OnBlockNotificationFn OnBlockNotification = nullptr;
+        OnIdentifierUsageFn OnIdentifierUsage = nullptr;
+    };
+
     class Parser; // Forward Declaration
     struct ParseSettings
     {
-        bool StoreDebugSymbols              = true;
-        bool AppendStackTraceToErrorMessage = true;
-        size_t StackTraceMaxDepth           = 10;
-        bool AppendNotesToErrorMessage      = true;
-        bool AllowIncludeDirective          = true;
-        bool AllowLabels                    = true;
         /**
          * @brief (parser, cwf, token) -> ParseResult
          * @param parser The Parser that called the function.
@@ -142,7 +187,19 @@ namespace Pulsar
          * @param cwf The path to the current file.
          * @param token The StringLiteral Token containing the path to the file to include.
          */
-        std::function<ParseResult(Parser&, String, Token)> IncludeResolver = nullptr;
+        using IncludeResolverFn = std::function<ParseResult(Parser&, String, Token)>;
+
+        // TODO: Add setting to prevent execution of global producers.
+        // Reason: Infinite loops, my beloved <3
+
+        bool StoreDebugSymbols              = true;
+        bool AppendStackTraceToErrorMessage = true;
+        size_t StackTraceMaxDepth           = 10;
+        bool AppendNotesToErrorMessage      = true;
+        bool AllowIncludeDirective          = true;
+        bool AllowLabels                    = true;
+        IncludeResolverFn IncludeResolver   = nullptr;
+        Pulsar::LSPHooks LSPHooks           = {};
     };
 
     inline const ParseSettings ParseSettings_Default{};
