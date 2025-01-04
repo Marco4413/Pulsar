@@ -376,7 +376,6 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
         parseResult = BackPatchFunctionLabels(def, functionScope);
         if (parseResult != ParseResult::OK)
             return parseResult;
-        globalScope.NativeFunctions.Emplace(def.Name, module.Functions.Size());
         module.Functions.EmplaceBack(std::move(def));
     }
 
