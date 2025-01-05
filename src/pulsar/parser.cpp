@@ -287,7 +287,13 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
     dummyFunc.Name += '}';
     auto stack = ValueStack();
     auto context = module.CreateExecutionContext();
-    auto evalResult = module.ExecuteFunction(dummyFunc, stack, context);
+    auto evalResult = RuntimeState::OK;
+    if (isProducer && settings.MapGlobalProducersToVoid) {
+        stack.EmplaceBack().SetVoid();
+    } else {
+        evalResult = module.ExecuteFunction(dummyFunc, stack, context);
+    }
+
     if (evalResult != RuntimeState::OK || stack.Size() == 0) {
         size_t instrIdx = context.CallStack[0].InstructionIndex;
         size_t symbolIdx = 0;

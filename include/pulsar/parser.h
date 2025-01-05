@@ -224,15 +224,15 @@ namespace Pulsar
          */
         using IncludeResolverFn = std::function<ParseResult(Parser&, String, Token)>;
 
-        // TODO: Add setting to prevent execution of global producers.
-        // Reason: Infinite loops, my beloved <3
-
         bool StoreDebugSymbols              = true;
         bool AppendStackTraceToErrorMessage = true;
         size_t StackTraceMaxDepth           = 10;
         bool AppendNotesToErrorMessage      = true;
         bool AllowIncludeDirective          = true;
         bool AllowLabels                    = true;
+        // LSPs may set this to `true` to avoid infinite loops in global producers.
+        // If this is set to `true`, you shouldn't expect the module to run correctly.
+        bool MapGlobalProducersToVoid       = false;
         IncludeResolverFn IncludeResolver   = nullptr;
         Pulsar::LSPHooks LSPHooks           = {};
     };
