@@ -188,8 +188,28 @@ namespace Pulsar
         };
         using OnIdentifierUsageFn = std::function<bool(OnIdentifierUsageParams&&)>;
 
-        OnBlockNotificationFn OnBlockNotification = nullptr;
-        OnIdentifierUsageFn OnIdentifierUsage = nullptr;
+        struct OnFunctionDefinitionParams
+        {
+            bool IsNative;
+            size_t Index;
+            const String& FilePath;
+            /**
+             * The event is triggered at definition-time.
+             * The only properties available are:
+             * - `.Name`
+             * - `.Arity`
+             * - `.Returns`
+             * - `.StackArity`
+             */
+            const FunctionDefinition& FnDefinition;
+            const Pulsar::Token& Identifier;
+            const Pulsar::List<Pulsar::LocalScope::LocalVar>& Args;
+        };
+        using OnFunctionDefinitionFn = std::function<bool(OnFunctionDefinitionParams&&)>;
+
+        OnBlockNotificationFn  OnBlockNotification  = nullptr;
+        OnIdentifierUsageFn    OnIdentifierUsage    = nullptr;
+        OnFunctionDefinitionFn OnFunctionDefinition = nullptr;
     };
 
     class Parser; // Forward Declaration
