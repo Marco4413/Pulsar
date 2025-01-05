@@ -70,6 +70,13 @@ namespace PulsarLSP
         Pulsar::List<Pulsar::LocalScope::LocalVar> Args;
     };
 
+    struct UserProvidedOptions
+    {
+        bool MapGlobalProducersToVoid = true;
+    };
+
+    inline const UserProvidedOptions UserProvidedOptions_Default{};
+
     struct ParsedDocument
     {
         using SharedRef = Pulsar::SharedRef<ParsedDocument>;
@@ -78,7 +85,7 @@ namespace PulsarLSP
         Pulsar::List<FunctionScope> FunctionScopes;
         Pulsar::List<FunctionDefinition> FunctionDefinitions;
 
-        static std::optional<ParsedDocument> From(const lsp::FileURI& uri, bool extractAll=false);
+        static std::optional<ParsedDocument> From(const lsp::FileURI& uri, bool extractAll=false, UserProvidedOptions opt=UserProvidedOptions_Default);
     };
 
     // Does not modify `doc`
@@ -108,6 +115,7 @@ namespace PulsarLSP
 
     private:
         Pulsar::HashMap<Pulsar::String, ParsedDocument::SharedRef> m_DocumentCache;
+        UserProvidedOptions m_Options = UserProvidedOptions_Default;
     };
 
 }

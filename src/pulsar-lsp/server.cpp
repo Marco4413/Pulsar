@@ -87,7 +87,7 @@ lsp::FileURI PulsarLSP::NormalizedPathToURI(const Pulsar::String& path)
     return uri;
 }
 
-std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const lsp::FileURI& uri, bool extractAll)
+std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const lsp::FileURI& uri, bool extractAll, UserProvidedOptions opt)
 {
     ParsedDocument parsedDocument;
 
@@ -98,7 +98,8 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
     Pulsar::List<FunctionDefinition> functionDefinitions;
 
     Pulsar::ParseSettings settings = Pulsar::ParseSettings_Default;
-    settings.StoreDebugSymbols = true;
+    settings.StoreDebugSymbols        = true;
+    settings.MapGlobalProducersToVoid = opt.MapGlobalProducersToVoid;
     settings.LSPHooks.OnBlockNotification = [&path, extractAll, &functionScopes](Pulsar::LSPHooks::OnBlockNotificationParams&& params) {
         if (!extractAll && params.FilePath != path) return false;
 
@@ -454,7 +455,7 @@ void PulsarLSP::Server::StripModule(Pulsar::Module& mod) const
 
 Pulsar::SharedRef<PulsarLSP::ParsedDocument> PulsarLSP::Server::ParseAndStoreDocument(const lsp::FileURI& uri)
 {
-    auto doc = ParsedDocument::From(uri, false);
+    auto doc = ParsedDocument::From(uri, false, m_Options);
     if (!doc) {
         // Drop document that failed parsing.
         // This means that the document does not exist.
@@ -474,9 +475,18 @@ void PulsarLSP::Server::Run(lsp::Connection& connection)
 
     bool running = true;
     messageHandler.requestHandler()
-        .add<lsp::requests::Initialize>([](const lsp::jsonrpc::MessageId& id, lsp::requests::Initialize::Params&& params)
+        .add<lsp::requests::Initialize>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::Initialize::Params&& params)
         {
-            (void)id; (void)params;
+            (void)id;
+            if (params.initializationOptions && params.initializationOptions->isObject()) {
+                const auto& userOptions = params.initializationOptions->object();
+
+                if (auto mapGlobalProducersToVoid = userOptions.find("mapGlobalProducersToVoid");
+                    mapGlobalProducersToVoid != userOptions.end() &&
+                    mapGlobalProducersToVoid->second.isBoolean()
+                ) this->m_Options.MapGlobalProducersToVoid = mapGlobalProducersToVoid->second.boolean();
+            }
+            
             lsp::requests::Initialize::Result result;
 
             lsp::TextDocumentSyncOptions documentSyncOptions{};
