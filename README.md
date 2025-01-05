@@ -34,6 +34,8 @@ you can download and package the official extension found at
 Except for the `pulsar-demo` and `pulsar-tools` projects
 which use `fmt` for pretty printing.
 
+And the `pulsar-lsp` project which uses `lsp-framework`.
+
 The Language itself has no dependencies except for the C++20 standard library.
 
 ## Building
@@ -49,6 +51,20 @@ Supported compilers are `gcc` and `msvc`.
 
 *`clang` should also work but it's not my go-to compiler,
 so it may break between commits.*
+
+### Building Pulsar-LSP
+
+`pulsar-lsp` should have no issues building. However, if you're using a
+C++ LSP Server on your editor, you may notice that some header files are missing.
+That happens because `lsp-framework` generates some header files from a json file,
+which means that you must build `lsp-framework` before editing files from `pulsar-lsp`.
+
+Building with Make:
+```sh
+$ make -j lspframework
+```
+
+On Visual Studio use the solution explorer to build the `lspframework` project.
 
 ## Examples
 
