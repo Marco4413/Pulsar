@@ -5,30 +5,30 @@
 #include <fstream>
 #endif // PULSAR_NO_FILESYSTEM
 
-#define LSP_SEND_BLOCK_NOTIFICATION(notificationType, fnName, localScope, settings) \
-    do {                                                                            \
-        const Pulsar::String* filePath = this->CurrentPath();                       \
-        const auto& callback = (settings).LSPHooks.OnBlockNotification;             \
-        if (filePath && callback) {                                                 \
-            if (callback({(notificationType), CurrentToken().SourcePos,             \
-                         *filePath, (fnName), (localScope)})) {                     \
-                return SetError(                                                    \
-                    Pulsar::ParseResult::LSPHooksRequestedTermination,              \
-                    CurrentToken(), "LSP-requested termination.");                  \
-        }}                                                                          \
+#define LSP_SEND_BLOCK_NOTIFICATION(notificationType, fnDef, localScope, settings) \
+    do {                                                                           \
+        const Pulsar::String* filePath = this->CurrentPath();                      \
+        const auto& callback = (settings).LSPHooks.OnBlockNotification;            \
+        if (filePath && callback) {                                                \
+            if (callback({(notificationType), CurrentToken().SourcePos,            \
+                         *filePath, (fnDef), (localScope)})) {                     \
+                return SetError(                                                   \
+                    Pulsar::ParseResult::LSPHooksRequestedTermination,             \
+                    CurrentToken(), "LSP-requested termination.");                 \
+        }}                                                                         \
     } while (0)
 
-#define LSP_IDENTIFIER_USAGE(usageType, boundIdx, fnName, token, localScope, settings) \
-    do {                                                                               \
-        const Pulsar::String* filePath = this->CurrentPath();                          \
-        const auto& callback = (settings).LSPHooks.OnIdentifierUsage;                  \
-        if (filePath && callback) {                                                    \
-            if (callback({(usageType), (size_t)(boundIdx),                             \
-                         *filePath, (fnName), (token), (localScope)})) {               \
-                return SetError(                                                       \
-                    Pulsar::ParseResult::LSPHooksRequestedTermination,                 \
-                    CurrentToken(), "LSP-requested termination.");                     \
-        }}                                                                             \
+#define LSP_IDENTIFIER_USAGE(usageType, boundIdx, fnDef, token, localScope, settings) \
+    do {                                                                              \
+        const Pulsar::String* filePath = this->CurrentPath();                         \
+        const auto& callback = (settings).LSPHooks.OnIdentifierUsage;                 \
+        if (filePath && callback) {                                                   \
+            if (callback({(usageType), (size_t)(boundIdx),                            \
+                         *filePath, (fnDef), (token), (localScope)})) {               \
+                return SetError(                                                      \
+                    Pulsar::ParseResult::LSPHooksRequestedTermination,                \
+                    CurrentToken(), "LSP-requested termination.");                    \
+        }}                                                                            \
     } while (0)
 
 Pulsar::ParseResult Pulsar::Parser::SetError(ParseResult errorType, const Token& token, const String& errorMsg)
@@ -432,7 +432,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
     const LocalScope& localScope, SkippableBlock* skippableBlock,
     const ParseSettings& settings)
 {
-    LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::BlockStart, func.Name, localScope, settings);
+    LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::BlockStart, func, localScope, settings);
     LocalScope scope = localScope;
     for (;;) {
         const Token& curToken = NextToken();
@@ -440,7 +440,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
         case TokenType::FullStop:
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
             func.Code.EmplaceBack(InstructionCode::Return);
-            LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::BlockEnd, func.Name, scope, settings);
+            LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::BlockEnd, func, scope, settings);
             return ParseResult::OK;
         case TokenType::KW_Break:
             if (!skippableBlock || !skippableBlock->AllowBreak)
@@ -448,7 +448,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
             skippableBlock->BreakStatements.PushBack(func.Code.Size());
             func.Code.EmplaceBack(InstructionCode::J, 0);
-            LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::BlockEnd, func.Name, scope, settings);
+            LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::BlockEnd, func, scope, settings);
             return ParseResult::OK;
         case TokenType::KW_Continue:
             if (!skippableBlock || !skippableBlock->AllowContinue)
@@ -456,7 +456,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
             skippableBlock->ContinueStatements.PushBack(func.Code.Size());
             func.Code.EmplaceBack(InstructionCode::J, 0);
-            LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::BlockEnd, func.Name, scope, settings);
+            LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::BlockEnd, func, scope, settings);
             return ParseResult::OK;
         case TokenType::KW_Do: {
             auto res = ParseDoBlock(module, func, scope, settings);
@@ -556,7 +556,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                     .Name = curToken.StringVal,
                     .DeclaredAt = curToken.SourcePos
                 });
-                LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::LocalScopeChanged, func.Name, scope, settings);
+                LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::LocalScopeChanged, func, scope, settings);
             } else {
                 localIdx = (int64_t)scope.Locals.Size()-1;
                 for (; localIdx >= 0 && scope.Locals[(size_t)localIdx].Name != curToken.StringVal; localIdx--);
@@ -566,7 +566,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                         int64_t globalIdx = (int64_t)globalNameIdxPair->Value();
                         if (module.Globals[(size_t)globalIdx].IsConstant)
                             return SetError(ParseResult::UnexpectedToken, curToken, "Trying to assign to constant global.");
-                        LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Global, globalIdx, func.Name, curToken, scope, settings);
+                        LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Global, globalIdx, func, curToken, scope, settings);
                         func.Code.EmplaceBack(
                             copyIntoLocal
                                 ? InstructionCode::CopyIntoGlobal
@@ -579,12 +579,12 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                         .Name = curToken.StringVal,
                         .DeclaredAt = curToken.SourcePos
                     });
-                    LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::LocalScopeChanged, func.Name, scope, settings);
+                    LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::LocalScopeChanged, func, scope, settings);
                 }
             }
             if (scope.Locals.Size() > func.LocalsCount)
                 func.LocalsCount = scope.Locals.Size();
-            LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Local, localIdx, func.Name, curToken, scope, settings);
+            LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Local, localIdx, func, curToken, scope, settings);
             func.Code.EmplaceBack(
                 copyIntoLocal
                     ? InstructionCode::CopyIntoLocal
@@ -652,14 +652,14 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                     return SetError(ParseResult::UsageOfUndeclaredNativeFunction, identToken, "Native function not declared.");
                 }
                 int64_t funcIdx = (int64_t)nativeNameIdxPair->Value();
-                LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::NativeFunction, funcIdx, func.Name, identToken, scope, settings);
+                LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::NativeFunction, funcIdx, func, identToken, scope, settings);
                 func.Code.EmplaceBack(InstructionCode::CallNative, funcIdx);
             } else {
                 auto funcNameIdxPair = scope.Global.Functions.Find(identToken.StringVal);
                 if (!funcNameIdxPair)
                     return SetError(ParseResult::UsageOfUndeclaredFunction, identToken, "Function not declared.");
                 int64_t funcIdx = (int64_t)funcNameIdxPair->Value();
-                LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Function, funcIdx, func.Name, identToken, scope, settings);
+                LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Function, funcIdx, func, identToken, scope, settings);
                 func.Code.EmplaceBack(InstructionCode::Call, funcIdx);
             }
         } break;
@@ -1114,11 +1114,11 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
             if (!globalNameIdxPair)
                 return SetError(ParseResult::UsageOfUndeclaredLocal, lvalue, "Local not declared.");
             int64_t globalIdx = (int64_t)globalNameIdxPair->Value();
-            LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Global, globalIdx, func.Name, lvalue, localScope, settings);
+            LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Global, globalIdx, func, lvalue, localScope, settings);
             func.Code.EmplaceBack(InstructionCode::PushGlobal, globalIdx);
             break;
         }
-        LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Local, localIdx, func.Name, lvalue, localScope, settings);
+        LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Local, localIdx, func, lvalue, localScope, settings);
         func.Code.EmplaceBack(InstructionCode::PushLocal, localIdx);
     } break;
     case TokenType::StringLiteral: {
@@ -1153,7 +1153,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
                 if (!nativeNameIdxPair)
                     return SetError(ParseResult::UsageOfUndeclaredNativeFunction, identToken, "Native function not declared.");
                 int64_t funcIdx = (int64_t)nativeNameIdxPair->Value();
-                LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::NativeFunction, funcIdx, func.Name, identToken, localScope, settings);
+                LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::NativeFunction, funcIdx, func, identToken, localScope, settings);
                 func.Code.EmplaceBack(InstructionCode::PushNativeFunctionReference, funcIdx);
                 break;
             }
@@ -1162,7 +1162,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
             if (!funcNameIdxPair)
                 return SetError(ParseResult::UsageOfUndeclaredFunction, identToken, "Function not declared.");
             int64_t funcIdx = (int64_t)funcNameIdxPair->Value();
-            LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Function, funcIdx, func.Name, identToken, localScope, settings);
+            LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Function, funcIdx, func, identToken, localScope, settings);
             func.Code.EmplaceBack(InstructionCode::PushFunctionReference, funcIdx);
         } else return SetError(ParseResult::UnexpectedToken, curToken, "Expected (function) or local to reference.");
     } break;
@@ -1181,11 +1181,11 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
             if (module.Globals[globalNameIdxPair->Value()].IsConstant)
                 return SetError(ParseResult::WritingToConstantGlobal, curToken, "Cannot move constant global.");
             int64_t globalIdx = (int64_t)globalNameIdxPair->Value();
-            LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Global, globalIdx, func.Name, lvalue, localScope, settings);
+            LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Global, globalIdx, func, lvalue, localScope, settings);
             func.Code.EmplaceBack(InstructionCode::MoveGlobal, globalIdx);
             break;
         }
-        LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Local, localIdx, func.Name, lvalue, localScope, settings);
+        LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Local, localIdx, func, lvalue, localScope, settings);
         func.Code.EmplaceBack(InstructionCode::MoveLocal, localIdx);
     } break;
     case TokenType::OpenBracket: {

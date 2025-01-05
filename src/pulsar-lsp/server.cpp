@@ -79,7 +79,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
 
         switch (params.Type) {
         case Pulsar::LSPBlockNotificationType::BlockStart: {
-            Pulsar::String fnId = params.FilePath + ":" + params.FnName;
+            Pulsar::String fnId = params.FilePath + ":" + params.FnDefinition.Name;
             auto fnPair = functions.Find(fnId);
             if (fnPair) {
                 auto& fn = fnPair->Value();
@@ -94,7 +94,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
             } else {
                 auto& fn = functions.Emplace(fnId).Value();
                 fn.FilePath = params.FilePath;
-                fn.Name = params.FnName;
+                fn.Name = params.FnDefinition.Name;
                 params.LocalScope.Global.Globals.ForEach([&fn](const auto& bucket) {
                     fn.Globals.EmplaceBack(bucket.Key());
                 });
@@ -112,7 +112,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
             }
         } break;
         case Pulsar::LSPBlockNotificationType::BlockEnd: {
-            Pulsar::String fnId = params.FilePath + ":" + params.FnName;
+            Pulsar::String fnId = params.FilePath + ":" + params.FnDefinition.Name;
             auto fnPair = functions.Find(fnId);
             if (fnPair) {
                 auto& fn = fnPair->Value();
@@ -122,7 +122,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
             }
         } break;
         case Pulsar::LSPBlockNotificationType::LocalScopeChanged: {
-            Pulsar::String fnId = params.FilePath + ":" + params.FnName;
+            Pulsar::String fnId = params.FilePath + ":" + params.FnDefinition.Name;
             auto fnPair = functions.Find(fnId);
             if (fnPair) {
                 auto& fn = fnPair->Value();
@@ -144,9 +144,9 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
     settings.LSPHooks.OnIdentifierUsage = [&path, extractAll, &functions](Pulsar::LSPHooks::OnIdentifierUsageParams&& params) {
         if (!extractAll && params.FilePath != path) return false;
 
-        Pulsar::String fnId = params.FilePath + ":" + params.FnName;
+        Pulsar::String fnId = params.FilePath + ":" + params.FnDefinition.Name;
         auto fnPair = functions.Find(fnId);
-        if (params.FnName.Length() <= 0 && !fnPair) {
+        if (params.FnDefinition.Name.Length() <= 0 && !fnPair) {
             // Create global scope
             fnPair = &functions.Emplace(fnId);
             auto& globalCtx = fnPair->Value();

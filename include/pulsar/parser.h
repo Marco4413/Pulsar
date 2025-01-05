@@ -154,7 +154,15 @@ namespace Pulsar
             LSPBlockNotificationType Type;
             SourcePosition Position;
             const String& FilePath;
-            const String& FnName;
+            /**
+             * FnDefinition.Name Empty if in global scope (parsing a Global Producer).
+             * The only properties available are:
+             * - `.Name`
+             * - `.Arity`
+             * - `.Returns`
+             * - `.StackArity`
+             */ 
+            const FunctionDefinition& FnDefinition;
             const Pulsar::LocalScope& LocalScope;
         };
         using OnBlockNotificationFn = std::function<bool(OnBlockNotificationParams&&)>;
@@ -166,8 +174,15 @@ namespace Pulsar
             // Meaning depends on .Type
             size_t BoundIdx;
             const String& FilePath;
-            // Empty if in global scope
-            const String& FnName;
+            /**
+             * FnDefinition.Name Empty if in global scope.
+             * The only properties available are:
+             * - `.Name`
+             * - `.Arity`
+             * - `.Returns`
+             * - `.StackArity`
+             */
+            const FunctionDefinition& FnDefinition;
             const Pulsar::Token& Token;
             const Pulsar::LocalScope& LocalScope;
         };
