@@ -5,6 +5,30 @@
 #include <lsp/messages.h>
 #include <lsp/messagehandler.h>
 
+const char* ValueTypeToString(Pulsar::ValueType type)
+{
+    switch (type) {
+    case Pulsar::ValueType::Void:
+        return "Void";
+    case Pulsar::ValueType::Integer:
+        return "Integer";
+    case Pulsar::ValueType::Double:
+        return "Double";
+    case Pulsar::ValueType::FunctionReference:
+        return "FunctionReference";
+    case Pulsar::ValueType::NativeFunctionReference:
+        return "NativeFunctionReference";
+    case Pulsar::ValueType::List:
+        return "List";
+    case Pulsar::ValueType::String:
+        return "String";
+    case Pulsar::ValueType::Custom:
+        return "Custom";
+    default:
+        return "Unknown";
+    }
+}
+
 lsp::Range SourcePositionToRange(Pulsar::SourcePosition pos)
 {
     return lsp::Range{
@@ -70,66 +94,67 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
     Pulsar::String path = URIToNormalizedPath(uri);
     Pulsar::Parser parser;
 
-    Pulsar::HashMap<Pulsar::String, Function> functions;
+    Pulsar::HashMap<Pulsar::String, FunctionScope> functionScopes;
+    Pulsar::List<FunctionDefinition> functionDefinitions;
 
     Pulsar::ParseSettings settings = Pulsar::ParseSettings_Default;
     settings.StoreDebugSymbols = true;
-    settings.LSPHooks.OnBlockNotification = [&path, extractAll, &functions](Pulsar::LSPHooks::OnBlockNotificationParams&& params) {
+    settings.LSPHooks.OnBlockNotification = [&path, extractAll, &functionScopes](Pulsar::LSPHooks::OnBlockNotificationParams&& params) {
         if (!extractAll && params.FilePath != path) return false;
 
         switch (params.Type) {
         case Pulsar::LSPBlockNotificationType::BlockStart: {
             Pulsar::String fnId = params.FilePath + ":" + params.FnDefinition.Name;
-            auto fnPair = functions.Find(fnId);
+            auto fnPair = functionScopes.Find(fnId);
             if (fnPair) {
                 auto& fn = fnPair->Value();
-                if (fn.Scopes.Size() > 0) {
-                    fn.Scopes.Back().EndPos = params.Position;
+                if (fn.LocalScopes.Size() > 0) {
+                    fn.LocalScopes.Back().EndPos = params.Position;
                 }
-                fn.Scopes.EmplaceBack(Scope{
+                fn.LocalScopes.EmplaceBack(LocalScope{
                     .StartPos = params.Position,
-                    .EndPos = params.Position,
-                    .Locals = params.LocalScope.Locals,
+                    .EndPos   = params.Position,
+                    .Locals   = params.LocalScope.Locals,
                 });
             } else {
-                auto& fn = functions.Emplace(fnId).Value();
+                auto& fn = functionScopes.Emplace(fnId).Value();
                 fn.FilePath = params.FilePath;
                 fn.Name = params.FnDefinition.Name;
                 params.LocalScope.Global.Globals.ForEach([&fn](const auto& bucket) {
-                    fn.Globals.EmplaceBack(bucket.Key());
+                    fn.Globals.EmplaceBack(bucket.Key(), bucket.Value());
                 });
                 params.LocalScope.Global.Functions.ForEach([&fn](const auto& bucket) {
-                    fn.Functions.EmplaceBack(bucket.Key());
+                    fn.Functions.EmplaceBack(bucket.Key(), bucket.Value());
                 });
                 params.LocalScope.Global.NativeFunctions.ForEach([&fn](const auto& bucket) {
-                    fn.NativeFunctions.EmplaceBack(bucket.Key());
+                    fn.NativeFunctions.EmplaceBack(bucket.Key(), bucket.Value());
                 });
-                fn.Scopes.EmplaceBack(Scope{
+                fn.LocalScopes.EmplaceBack(LocalScope{
                     .StartPos = params.Position,
-                    .EndPos = params.Position,
-                    .Locals = params.LocalScope.Locals,
+                    .EndPos   = params.Position,
+                    .Locals   = params.LocalScope.Locals,
                 });
             }
         } break;
         case Pulsar::LSPBlockNotificationType::BlockEnd: {
             Pulsar::String fnId = params.FilePath + ":" + params.FnDefinition.Name;
-            auto fnPair = functions.Find(fnId);
+            auto fnPair = functionScopes.Find(fnId);
             if (fnPair) {
                 auto& fn = fnPair->Value();
-                if (fn.Scopes.Size() > 0) {
-                    fn.Scopes.Back().EndPos = params.Position;
+                if (fn.LocalScopes.Size() > 0) {
+                    fn.LocalScopes.Back().EndPos = params.Position;
                 }
             }
         } break;
         case Pulsar::LSPBlockNotificationType::LocalScopeChanged: {
             Pulsar::String fnId = params.FilePath + ":" + params.FnDefinition.Name;
-            auto fnPair = functions.Find(fnId);
+            auto fnPair = functionScopes.Find(fnId);
             if (fnPair) {
                 auto& fn = fnPair->Value();
-                if (fn.Scopes.Size() > 0) {
-                    fn.Scopes.Back().EndPos = params.Position;
+                if (fn.LocalScopes.Size() > 0) {
+                    fn.LocalScopes.Back().EndPos = params.Position;
                 }
-                fn.Scopes.EmplaceBack(Scope{
+                fn.LocalScopes.EmplaceBack(LocalScope{
                     .StartPos = params.Position,
                     .EndPos = params.Position,
                     .Locals = params.LocalScope.Locals,
@@ -141,14 +166,14 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
 
         return false;
     };
-    settings.LSPHooks.OnIdentifierUsage = [&path, extractAll, &functions](Pulsar::LSPHooks::OnIdentifierUsageParams&& params) {
+    settings.LSPHooks.OnIdentifierUsage = [&path, extractAll, &functionScopes](Pulsar::LSPHooks::OnIdentifierUsageParams&& params) {
         if (!extractAll && params.FilePath != path) return false;
 
         Pulsar::String fnId = params.FilePath + ":" + params.FnDefinition.Name;
-        auto fnPair = functions.Find(fnId);
+        auto fnPair = functionScopes.Find(fnId);
         if (params.FnDefinition.Name.Length() <= 0 && !fnPair) {
             // Create global scope
-            fnPair = &functions.Emplace(fnId);
+            fnPair = &functionScopes.Emplace(fnId);
             auto& globalCtx = fnPair->Value();
             globalCtx.FilePath = params.FilePath;
             globalCtx.Name = "";
@@ -165,13 +190,23 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
 
         return false;
     };
+    settings.LSPHooks.OnFunctionDefinition = [&parsedDocument](Pulsar::LSPHooks::OnFunctionDefinitionParams&& params) {
+        parsedDocument.FunctionDefinitions.PushBack(FunctionDefinition{
+            .FilePath   = params.FilePath,
+            .IsNative   = params.IsNative,
+            .Index      = params.Index,
+            .Definition = params.FnDefinition,
+            .Args       = params.Args,
+        });
+
+        return false;
+    };
 
     if (parser.AddSourceFile(path) != Pulsar::ParseResult::OK) return {};
     parser.ParseIntoModule(parsedDocument.Module, settings);
 
-    Pulsar::List<Function> result;
-    functions.ForEach([&parsedDocument](auto& bucket) {
-        parsedDocument.Functions.EmplaceBack(std::move(bucket.Value()));
+    functionScopes.ForEach([&parsedDocument](auto& bucket) {
+        parsedDocument.FunctionScopes.EmplaceBack(std::move(bucket.Value()));
     });
 
     return parsedDocument;
@@ -212,11 +247,11 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
     if (!doc || !doc->Module.HasSourceDebugSymbols()) return {};
 
     Pulsar::String path = URIToNormalizedPath(uri);
-    for (size_t i = 0; i < doc->Functions.Size(); ++i) {
-        const Function& fn = doc->Functions[i];
-        if (fn.FilePath != path) continue;
-        for (size_t j = 0; j < fn.UsedIdentifiers.Size(); ++j) {
-            const IdentifierUsage& identUsage = fn.UsedIdentifiers[j];
+    for (size_t i = 0; i < doc->FunctionScopes.Size(); ++i) {
+        const FunctionScope& fnScope = doc->FunctionScopes[i];
+        if (fnScope.FilePath != path) continue;
+        for (size_t j = 0; j < fnScope.UsedIdentifiers.Size(); ++j) {
+            const IdentifierUsage& identUsage = fnScope.UsedIdentifiers[j];
             if (IsPositionInBetween(pos, identUsage.Identifier.SourcePos)) {
                 switch (identUsage.Type) {
                 case Pulsar::LSPIdentifierUsageType::Global: {
@@ -265,7 +300,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                     };
                 }
                 case Pulsar::LSPIdentifierUsageType::Local: {
-                    lsp::FileURI locUri = NormalizedPathToURI(fn.FilePath);
+                    lsp::FileURI locUri = NormalizedPathToURI(fnScope.FilePath);
                     return lsp::Location{
                         .uri = locUri,
                         .range = SourcePositionToRange(identUsage.LocalDeclaredAt)
@@ -280,49 +315,122 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
     return {};
 }
 
+lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global)
+{
+    lsp::CompletionItem item{};
+    item.label = global.Name.Data();
+    item.kind  = lsp::CompletionItemKind::Variable;
+
+    std::string detail;
+    if (global.Index < doc->Module.Globals.Size()) {
+        const Pulsar::GlobalDefinition& glblDef = doc->Module.Globals[global.Index];
+        if (glblDef.IsConstant) {
+            detail += "const ";
+        }
+        detail += ValueTypeToString(glblDef.InitialValue.Type());
+        detail += " -> ";
+        detail += glblDef.Name.Data();
+    }
+    item.detail = std::move(detail);
+
+    return item;
+}
+
+void InsertFunctionDefinitionDetails(lsp::CompletionItem& item, const PulsarLSP::FunctionDefinition& lspDef)
+{
+    const Pulsar::FunctionDefinition& def = lspDef.Definition;
+
+    std::string detail = "(";
+    if (lspDef.IsNative) detail += "*";
+
+    detail += def.Name.Data();
+    if (def.StackArity > 0) {
+        detail += " ";
+        detail += std::to_string(def.StackArity);
+    }
+
+    for (size_t i = 0; i < lspDef.Args.Size(); ++i) {
+        detail += " ";
+        detail += lspDef.Args[i].Name.Data();
+    }
+
+    detail += ")";
+    if (def.Returns > 0) {
+        detail += " -> ";
+        detail += std::to_string(def.Returns);
+    }
+
+    item.detail = std::move(detail);
+}
+
+lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundFunction& fn)
+{
+    lsp::CompletionItem item{};
+    item.label  = "(";
+    item.label += fn.Name.Data();
+    item.label += ")";
+    item.kind   = lsp::CompletionItemKind::Function;
+
+    for (size_t i = 0; i < doc->FunctionDefinitions.Size(); ++i) {
+        const FunctionDefinition& lspDef = doc->FunctionDefinitions[i];
+        if (!lspDef.IsNative && lspDef.Index == fn.Index) {
+            InsertFunctionDefinitionDetails(item, lspDef);
+            break;
+        }
+    }
+
+    return item;
+}
+
+lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundNativeFunction& nativeFn)
+{
+    lsp::CompletionItem item{};
+    item.label  = "(*";
+    item.label += nativeFn.Name.Data();
+    item.label += ")";
+    item.kind   = lsp::CompletionItemKind::Function;
+
+    for (size_t i = 0; i < doc->FunctionDefinitions.Size(); ++i) {
+        const FunctionDefinition& lspDef = doc->FunctionDefinitions[i];
+        if (lspDef.IsNative && lspDef.Index == nativeFn.Index) {
+            InsertFunctionDefinitionDetails(item, lspDef);
+            break;
+        }
+    }
+
+    return item;
+}
+
 std::vector<lsp::CompletionItem> PulsarLSP::Server::GetCompletionItems(const lsp::FileURI& uri, lsp::Position pos)
 {
     auto doc = GetOrParseDocument(uri);
     if (!doc) return {};
 
-    for (size_t i = 0; i < doc->Functions.Size(); ++i) {
-        const Scope* cursorScope = nullptr;
-        const Function& fn = doc->Functions[i];
-        for (size_t j = fn.Scopes.Size(); j > 0; --j) {
-            const Scope& scope = fn.Scopes[j-1];
-            if (IsPositionInBetween(pos, scope.StartPos, scope.EndPos)) {
-                cursorScope = &scope;
+    for (size_t i = 0; i < doc->FunctionScopes.Size(); ++i) {
+        const LocalScope* cursorLocalScope = nullptr;
+        const FunctionScope& fnScope = doc->FunctionScopes[i];
+        for (size_t j = fnScope.LocalScopes.Size(); j > 0; --j) {
+            const LocalScope& localScope = fnScope.LocalScopes[j-1];
+            if (IsPositionInBetween(pos, localScope.StartPos, localScope.EndPos)) {
+                cursorLocalScope = &localScope;
                 break;
             }
         }
 
-        if (cursorScope) {
+        if (cursorLocalScope) {
             std::vector<lsp::CompletionItem> result;
-            for (size_t j = 0; j < fn.Functions.Size(); ++j) {
-                lsp::CompletionItem item{};
-                item.label  = "(";
-                item.label += fn.Functions[j].Data();
-                item.label += ")";
-                item.kind   = lsp::CompletionItemKind::Function;
-                result.emplace_back(std::move(item));
+            for (size_t j = 0; j < fnScope.Functions.Size(); ++j) {
+                result.emplace_back(CreateCompletionItemForBoundEntity(doc, fnScope.Functions[j]));
             }
-            for (size_t j = 0; j < fn.NativeFunctions.Size(); ++j) {
-                lsp::CompletionItem item{};
-                item.label  = "(*";
-                item.label += fn.NativeFunctions[j].Data();
-                item.label += ")";
-                item.kind   = lsp::CompletionItemKind::Function;
-                result.emplace_back(std::move(item));
+            for (size_t j = 0; j < fnScope.NativeFunctions.Size(); ++j) {
+                result.emplace_back(CreateCompletionItemForBoundEntity(doc, fnScope.NativeFunctions[j]));
             }
-            for (size_t j = 0; j < fn.Globals.Size(); ++j) {
-                lsp::CompletionItem item{};
-                item.label = fn.Globals[j].Data();
-                item.kind  = lsp::CompletionItemKind::Variable;
-                result.emplace_back(std::move(item));
+            for (size_t j = 0; j < fnScope.Globals.Size(); ++j) {
+                result.emplace_back(CreateCompletionItemForBoundEntity(doc, fnScope.Globals[j]));
             }
-            for (size_t j = 0; j < cursorScope->Locals.Size(); ++j) {
+            for (size_t j = 0; j < cursorLocalScope->Locals.Size(); ++j) {
                 lsp::CompletionItem item{};
-                item.label = cursorScope->Locals[j].Name.Data();
+                item.label = cursorLocalScope->Locals[j].Name.Data();
                 item.kind  = lsp::CompletionItemKind::Variable;
                 result.emplace_back(std::move(item));
             }
@@ -331,6 +439,17 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetCompletionItems(const lsp
     }
 
     return {};
+}
+
+void PulsarLSP::Server::StripModule(Pulsar::Module& mod) const
+{
+    // Delete saved sources to save some memory
+    for (size_t i = 0; i < mod.SourceDebugSymbols.Size(); ++i) {
+        Pulsar::SourceDebugSymbol& srcSymbol = mod.SourceDebugSymbols[i];
+        srcSymbol.Source.Resize(0);
+        // FIXME: String doesn't allow shrinking of capacity
+        srcSymbol.Source.Reserve(0);
+    }
 }
 
 Pulsar::SharedRef<PulsarLSP::ParsedDocument> PulsarLSP::Server::ParseAndStoreDocument(const lsp::FileURI& uri)
@@ -343,15 +462,10 @@ Pulsar::SharedRef<PulsarLSP::ParsedDocument> PulsarLSP::Server::ParseAndStoreDoc
         return nullptr;
     }
 
-    // Delete saved sources to save some memory
-    for (size_t i = 0; i < doc->Module.SourceDebugSymbols.Size(); ++i) {
-        Pulsar::SourceDebugSymbol& srcSymbol = doc->Module.SourceDebugSymbols[i];
-        srcSymbol.Source.Resize(0);
-        srcSymbol.Source.Reserve(0);
-    }
+    StripModule(doc->Module);
 
     Pulsar::String path = URIToNormalizedPath(uri);
-    return m_DocumentCache.Emplace(path, Pulsar::SharedRef<ParsedDocument>::New(std::move(doc.value()))).Value();
+    return m_DocumentCache.Emplace(path, ParsedDocument::SharedRef::New(std::move(doc.value()))).Value();
 }
 
 void PulsarLSP::Server::Run(lsp::Connection& connection)

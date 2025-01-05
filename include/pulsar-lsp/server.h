@@ -14,7 +14,7 @@ namespace PulsarLSP
     Pulsar::String URIToNormalizedPath(const lsp::FileURI& uri);
     lsp::FileURI NormalizedPathToURI(const Pulsar::String& path);
 
-    struct Scope
+    struct LocalScope
     {
         Pulsar::SourcePosition StartPos;
         Pulsar::SourcePosition EndPos;
@@ -30,24 +30,61 @@ namespace PulsarLSP
         Pulsar::SourcePosition LocalDeclaredAt = {};
     };
 
-    struct Function
+    struct BoundGlobal
+    {
+        Pulsar::String Name;
+        size_t Index;
+    };
+
+    struct BoundFunction
+    {
+        Pulsar::String Name;
+        size_t Index;
+    };
+
+    struct BoundNativeFunction
+    {
+        Pulsar::String Name;
+        size_t Index;
+    };
+
+    // TODO: A FunctionScope should only contain the scope of a single function.
+    //       Currently all functions with the same name and in the same file are combined together.
+    struct FunctionScope
     {
         Pulsar::String FilePath;
         Pulsar::String Name;
-        Pulsar::List<Pulsar::String> Globals;
-        Pulsar::List<Pulsar::String> Functions;
-        Pulsar::List<Pulsar::String> NativeFunctions;
-        Pulsar::List<Scope> Scopes;
+        Pulsar::List<BoundGlobal> Globals;
+        Pulsar::List<BoundFunction> Functions;
+        Pulsar::List<BoundNativeFunction> NativeFunctions;
+        Pulsar::List<LocalScope> LocalScopes;
         Pulsar::List<IdentifierUsage> UsedIdentifiers;
+    };
+
+    struct FunctionDefinition
+    {
+        Pulsar::String FilePath;
+        bool IsNative;
+        size_t Index;
+        Pulsar::FunctionDefinition Definition;
+        Pulsar::List<Pulsar::LocalScope::LocalVar> Args;
     };
 
     struct ParsedDocument
     {
+        using SharedRef = Pulsar::SharedRef<ParsedDocument>;
+
         Pulsar::Module Module;
-        Pulsar::List<Function> Functions;
+        Pulsar::List<FunctionScope> FunctionScopes;
+        Pulsar::List<FunctionDefinition> FunctionDefinitions;
 
         static std::optional<ParsedDocument> From(const lsp::FileURI& uri, bool extractAll=false);
     };
+
+    // Does not modify `doc`
+    lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global);
+    lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundFunction& fn);
+    lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundNativeFunction& nativeFn);
 
     class Server
     {
@@ -55,8 +92,8 @@ namespace PulsarLSP
         Server() = default;
         ~Server() = default;
 
-        Pulsar::SharedRef<ParsedDocument> GetDocument(const lsp::FileURI& uri) const;
-        Pulsar::SharedRef<ParsedDocument> GetOrParseDocument(const lsp::FileURI& uri, bool forceCache=false);
+        ParsedDocument::SharedRef GetDocument(const lsp::FileURI& uri) const;
+        ParsedDocument::SharedRef GetOrParseDocument(const lsp::FileURI& uri, bool forceCache=false);
         void DropDocument(const lsp::FileURI& uri);
         void DropAllDocuments();
 
@@ -66,10 +103,11 @@ namespace PulsarLSP
         void Run(lsp::Connection& connection);
 
     private:
-        Pulsar::SharedRef<ParsedDocument> ParseAndStoreDocument(const lsp::FileURI& uri);
+        void StripModule(Pulsar::Module& mod) const;
+        ParsedDocument::SharedRef ParseAndStoreDocument(const lsp::FileURI& uri);
 
     private:
-        Pulsar::HashMap<Pulsar::String, Pulsar::SharedRef<ParsedDocument>> m_DocumentCache;
+        Pulsar::HashMap<Pulsar::String, ParsedDocument::SharedRef> m_DocumentCache;
     };
 
 }
