@@ -554,6 +554,12 @@ PulsarLSP::ParsedDocument::SharedRef PulsarLSP::Server::ParseDocument(const lsp:
     ).Value();
 }
 
+#define GET_INIT_BOOLEAN_OPTION(jsonField, structField) \
+    if (auto jsonField = userOptions.find(#jsonField);  \
+        jsonField != userOptions.end() &&               \
+        jsonField->second.isBoolean()                   \
+    ) this->m_Options.structField = jsonField->second.boolean()
+
 void PulsarLSP::Server::Run(lsp::Connection& connection)
 {
     lsp::MessageHandler messageHandler{connection};
@@ -566,13 +572,13 @@ void PulsarLSP::Server::Run(lsp::Connection& connection)
             if (params.initializationOptions && params.initializationOptions->isObject()) {
                 const auto& userOptions = params.initializationOptions->object();
 
-                if (auto mapGlobalProducersToVoid = userOptions.find("mapGlobalProducersToVoid");
-                    mapGlobalProducersToVoid != userOptions.end() &&
-                    mapGlobalProducersToVoid->second.isBoolean()
-                ) this->m_Options.MapGlobalProducersToVoid = mapGlobalProducersToVoid->second.boolean();
-                // TODO: Parse other settings.
+                GET_INIT_BOOLEAN_OPTION(diagnosticsOnOpen,        DiagnosticsOnOpen);
+                GET_INIT_BOOLEAN_OPTION(diagnosticsOnSave,        DiagnosticsOnSave);
+                GET_INIT_BOOLEAN_OPTION(diagnosticsOnChange,      DiagnosticsOnChange);
+                GET_INIT_BOOLEAN_OPTION(fullSyncOnSave,           FullSyncOnSave);
+                GET_INIT_BOOLEAN_OPTION(mapGlobalProducersToVoid, MapGlobalProducersToVoid);
             }
-            
+
             lsp::requests::Initialize::Result result;
 
             lsp::TextDocumentSyncOptions documentSyncOptions{};
