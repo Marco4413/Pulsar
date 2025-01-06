@@ -62,13 +62,13 @@ namespace Pulsar
         T* operator->() const { return m_Ptr; }
         T& operator*() const
         {
-            PULSAR_ASSERT(!Get(), "Dereferencing nullptr.");
+            PULSAR_ASSERT(Get(), "Dereferencing nullptr.");
             return *m_Ptr;
         }
 
         T& operator[](size_t idx) const
         {
-            PULSAR_ASSERT(!Get(), "Indexing nullptr.");
+            PULSAR_ASSERT(Get(), "Indexing nullptr.");
             return m_Ptr[idx];
         }
 
