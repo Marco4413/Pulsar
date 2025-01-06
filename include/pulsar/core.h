@@ -107,7 +107,7 @@ namespace Pulsar::Core
     {
         if (ptr) {
             ptr->~T();
-            PULSAR_FREE(ptr);
+            PULSAR_FREE((void*)ptr);
         }
     }
 }
