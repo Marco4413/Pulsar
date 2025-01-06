@@ -39,7 +39,7 @@ namespace Pulsar
 
         void Reserve(size_t newCapacity)
         {
-            if (m_Data && newCapacity <= m_Capacity)
+            if (m_Data && newCapacity <= m_Length)
                 return;
             m_Data = (char*)PULSAR_REALLOC((void*)m_Data, (newCapacity+1) * sizeof(char));
             m_Capacity = newCapacity;
