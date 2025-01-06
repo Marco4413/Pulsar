@@ -3,6 +3,7 @@
 
 #include <lsp/connection.h>
 #include <lsp/fileuri.h>
+#include <lsp/messagehandler.h>
 #include <lsp/types.h>
 
 #include "pulsar/parser.h"
@@ -13,6 +14,7 @@ namespace PulsarLSP
 {
     Pulsar::String URIToNormalizedPath(const lsp::FileURI& uri);
     lsp::FileURI NormalizedPathToURI(const Pulsar::String& path);
+    inline lsp::FileURI RecomputeURI(const lsp::FileURI& uri) { return NormalizedPathToURI(URIToNormalizedPath(uri)); }
 
     struct LocalScope
     {
@@ -85,6 +87,11 @@ namespace PulsarLSP
         Pulsar::List<FunctionScope> FunctionScopes;
         Pulsar::List<FunctionDefinition> FunctionDefinitions;
 
+        Pulsar::ParseResult ParseResult;
+        Pulsar::String         ErrorFilePath;
+        Pulsar::SourcePosition ErrorPosition;
+        Pulsar::String         ErrorMessage;
+
         static std::optional<ParsedDocument> From(const lsp::FileURI& uri, bool extractAll=false, UserProvidedOptions opt=UserProvidedOptions_Default);
     };
 
@@ -92,6 +99,8 @@ namespace PulsarLSP
     lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global);
     lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundFunction& fn);
     lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundNativeFunction& nativeFn);
+
+    using DiagnosticsForDocument = lsp::PublishDiagnosticsParams;
 
     class Server
     {
@@ -106,6 +115,10 @@ namespace PulsarLSP
 
         std::optional<lsp::Location> FindDeclaration(const lsp::FileURI& uri, lsp::Position pos);
         std::vector<lsp::CompletionItem> GetCompletionItems(const lsp::FileURI& uri, lsp::Position pos);
+        // Every element of the vector has a unique URI
+        std::vector<DiagnosticsForDocument> GetDiagnosticReport(const lsp::FileURI& uri, bool sameDocument=true);
+        void SendUpdatedDiagnosticReport(lsp::MessageHandler& handler, const lsp::FileURI& uri);
+        void ResetDiagnosticReport(lsp::MessageHandler& handler, const lsp::FileURI& uri);
 
         void Run(lsp::Connection& connection);
 
