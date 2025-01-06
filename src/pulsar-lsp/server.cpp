@@ -1,6 +1,7 @@
 #include "pulsar-lsp/server.h"
 
 #include <filesystem>
+#include <fstream>
 
 #include <lsp/messages.h>
 
@@ -87,6 +88,22 @@ lsp::FileURI PulsarLSP::NormalizedPathToURI(const Pulsar::String& path)
 }
 
 std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const lsp::FileURI& uri, bool extractAll, UserProvidedOptions opt)
+{
+    Pulsar::String internalPath  = URIToNormalizedPath(uri);
+    std::filesystem::path fsPath = internalPath.Data();
+    if (!std::filesystem::exists(fsPath)) return {};
+
+    std::ifstream file(fsPath, std::ios::binary);
+    size_t fileSize = (size_t)std::filesystem::file_size(fsPath);
+
+    std::string document;
+    document.resize(fileSize);
+    if (!file.read(document.data(), fileSize)) return {};
+
+    return FromInMemory(uri, document, extractAll, opt);
+}
+
+std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::FromInMemory(const lsp::FileURI& uri, const std::string& document, bool extractAll, UserProvidedOptions opt)
 {
     ParsedDocument parsedDocument;
 
@@ -202,7 +219,8 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
         return false;
     };
 
-    if (parser.AddSourceFile(path) != Pulsar::ParseResult::OK) return {};
+    Pulsar::String pulsarDocument(document.c_str());
+    if (!parser.AddSource(path, std::move(pulsarDocument))) return {};
     parsedDocument.ParseResult = parser.ParseIntoModule(parsedDocument.Module, settings);
     if (parsedDocument.ParseResult != Pulsar::ParseResult::OK) {
         parsedDocument.ErrorFilePath = *parser.GetErrorPath();
@@ -526,12 +544,27 @@ void PulsarLSP::Server::StripModule(Pulsar::Module& mod) const
     }
 }
 
-Pulsar::SharedRef<PulsarLSP::ParsedDocument> PulsarLSP::Server::ParseAndStoreDocument(const lsp::FileURI& uri)
+PulsarLSP::ParsedDocument::SharedRef PulsarLSP::Server::ParseAndStoreDocument(const lsp::FileURI& uri)
 {
     auto doc = ParsedDocument::From(uri, false, m_Options);
     if (!doc) {
         // Drop document that failed parsing.
         // This means that the document does not exist.
+        DropDocument(uri);
+        return nullptr;
+    }
+
+    StripModule(doc->Module);
+
+    Pulsar::String path = URIToNormalizedPath(uri);
+    return m_DocumentCache.Emplace(path, ParsedDocument::SharedRef::New(std::move(doc.value()))).Value();
+}
+
+PulsarLSP::ParsedDocument::SharedRef PulsarLSP::Server::ParseAndStoreInMemoryDocument(const lsp::FileURI& uri, const std::string& document)
+{
+    // Copy of ::ParseAndStoreDocument
+    auto doc = ParsedDocument::FromInMemory(uri, document, false, m_Options);
+    if (!doc) {
         DropDocument(uri);
         return nullptr;
     }
@@ -558,12 +591,15 @@ void PulsarLSP::Server::Run(lsp::Connection& connection)
                     mapGlobalProducersToVoid != userOptions.end() &&
                     mapGlobalProducersToVoid->second.isBoolean()
                 ) this->m_Options.MapGlobalProducersToVoid = mapGlobalProducersToVoid->second.boolean();
+                // TODO: Parse other settings.
             }
             
             lsp::requests::Initialize::Result result;
 
             lsp::TextDocumentSyncOptions documentSyncOptions{};
-            documentSyncOptions.save = true;
+            documentSyncOptions.save = lsp::SaveOptions{ .includeText = this->m_Options.ReceiveTextFromClient };
+            if (this->m_Options.ReceiveTextFromClient)
+                documentSyncOptions.change = lsp::TextDocumentSyncKind::Full;
 
             lsp::DiagnosticOptions diagnosticOptions{};
             diagnosticOptions.identifier = "pulsar";
@@ -603,14 +639,34 @@ void PulsarLSP::Server::Run(lsp::Connection& connection)
         })
         .add<lsp::notifications::TextDocument_DidSave>([this, &messageHandler](lsp::notifications::TextDocument_DidSave::Params&& params)
         {
-            auto doc = this->GetOrParseDocument(params.textDocument.uri, true);
-            if (!doc) {
-                // No file could be opened (deleted???)
-                this->DropDocument(params.textDocument.uri);
-                this->ResetDiagnosticReport(messageHandler, params.textDocument.uri);
-                return;
+            auto doc = this->m_Options.ReceiveTextFromClient && params.text.has_value()
+                ? this->ParseAndStoreInMemoryDocument(params.textDocument.uri, *params.text)
+                : this->ParseAndStoreDocument(params.textDocument.uri);
+            if (this->m_Options.DiagnosticsOnSave) {
+                if (doc) {
+                    this->SendUpdatedDiagnosticReport(messageHandler, params.textDocument.uri);
+                } else {
+                    this->ResetDiagnosticReport(messageHandler, params.textDocument.uri);
+                }
             }
-            this->SendUpdatedDiagnosticReport(messageHandler, params.textDocument.uri);
+        })
+        .add<lsp::notifications::TextDocument_DidChange>([this, &messageHandler](lsp::notifications::TextDocument_DidChange::Params&& params)
+        {
+            if (!this->m_Options.ReceiveTextFromClient) return;
+            for (size_t i = params.contentChanges.size(); i > 0; --i) {
+                const auto& changes = params.contentChanges[i-1];
+                if (std::holds_alternative<lsp::TextDocumentContentChangeEvent_Text>(changes)) {
+                    const std::string& document = std::get<lsp::TextDocumentContentChangeEvent_Text>(changes).text;
+                    auto doc = this->ParseAndStoreInMemoryDocument(params.textDocument.uri, document);
+                    if (this->m_Options.DiagnosticsOnChange) {
+                        if (doc) {
+                            this->SendUpdatedDiagnosticReport(messageHandler, params.textDocument.uri);
+                        } else {
+                            this->ResetDiagnosticReport(messageHandler, params.textDocument.uri);
+                        }
+                    }
+                }
+            }
         })
         .add<lsp::notifications::Exit>([&running]()
         {

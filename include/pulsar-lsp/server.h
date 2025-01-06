@@ -74,6 +74,11 @@ namespace PulsarLSP
 
     struct UserProvidedOptions
     {
+        bool DiagnosticsOnOpen   = true;
+        bool DiagnosticsOnSave   = true;
+        bool DiagnosticsOnChange = true;
+        // Required for DiagnosticsOnChange
+        bool ReceiveTextFromClient    = true;
         bool MapGlobalProducersToVoid = true;
     };
 
@@ -93,6 +98,7 @@ namespace PulsarLSP
         Pulsar::String         ErrorMessage;
 
         static std::optional<ParsedDocument> From(const lsp::FileURI& uri, bool extractAll=false, UserProvidedOptions opt=UserProvidedOptions_Default);
+        static std::optional<ParsedDocument> FromInMemory(const lsp::FileURI& uri, const std::string& document, bool extractAll=false, UserProvidedOptions opt=UserProvidedOptions_Default);
     };
 
     // Does not modify `doc`
@@ -122,9 +128,10 @@ namespace PulsarLSP
 
         void Run(lsp::Connection& connection);
 
+        ParsedDocument::SharedRef ParseAndStoreDocument(const lsp::FileURI& uri);
+        ParsedDocument::SharedRef ParseAndStoreInMemoryDocument(const lsp::FileURI& uri, const std::string& document);
     private:
         void StripModule(Pulsar::Module& mod) const;
-        ParsedDocument::SharedRef ParseAndStoreDocument(const lsp::FileURI& uri);
 
     private:
         Pulsar::HashMap<Pulsar::String, ParsedDocument::SharedRef> m_DocumentCache;
