@@ -10,12 +10,10 @@
 #include "pulsar/runtime.h"
 #include "pulsar/structures/hashmap.h"
 
+#include "pulsar-lsp/library.h"
+
 namespace PulsarLSP
 {
-    Pulsar::String URIToNormalizedPath(const lsp::FileURI& uri);
-    lsp::FileURI NormalizedPathToURI(const Pulsar::String& path);
-    inline lsp::FileURI RecomputeURI(const lsp::FileURI& uri) { return NormalizedPathToURI(URIToNormalizedPath(uri)); }
-
     struct LocalScope
     {
         Pulsar::SourcePosition StartPos;
@@ -74,11 +72,14 @@ namespace PulsarLSP
 
     struct UserProvidedOptions
     {
+        // Send diagnostics on open
         bool DiagnosticsOnOpen   = true;
+        // Send diagnostics on save
         bool DiagnosticsOnSave   = true;
+        // Send diagnostics on change
         bool DiagnosticsOnChange = true;
-        // Required for DiagnosticsOnChange
-        bool ReceiveTextFromClient    = true;
+        // Resync full document on save
+        bool FullSyncOnSave      = true;
         bool MapGlobalProducersToVoid = true;
     };
 
@@ -97,8 +98,7 @@ namespace PulsarLSP
         Pulsar::SourcePosition ErrorPosition;
         Pulsar::String         ErrorMessage;
 
-        static std::optional<ParsedDocument> From(const lsp::FileURI& uri, bool extractAll=false, UserProvidedOptions opt=UserProvidedOptions_Default);
-        static std::optional<ParsedDocument> FromInMemory(const lsp::FileURI& uri, const std::string& document, bool extractAll=false, UserProvidedOptions opt=UserProvidedOptions_Default);
+        static std::optional<ParsedDocument> From(const lsp::FileURI& uri, const Pulsar::String& document, bool extractAll=false, UserProvidedOptions opt=UserProvidedOptions_Default);
     };
 
     // Does not modify `doc`
@@ -114,10 +114,19 @@ namespace PulsarLSP
         Server() = default;
         ~Server() = default;
 
-        ParsedDocument::SharedRef GetDocument(const lsp::FileURI& uri) const;
-        ParsedDocument::SharedRef GetOrParseDocument(const lsp::FileURI& uri, bool forceCache=false);
-        void DropDocument(const lsp::FileURI& uri);
-        void DropAllDocuments();
+        ParsedDocument::SharedRef GetParsedDocument(const lsp::FileURI& uri) const;
+        ParsedDocument::SharedRef GetOrParseDocument(const lsp::FileURI& uri, bool forceLoad=false);
+
+        ParsedDocument::SharedRef ParseDocument(const lsp::FileURI& uri, bool forceLoad=false);
+
+        void DropParsedDocument(const lsp::FileURI& uri);
+        void DropAllParsedDocuments();
+
+        bool OpenDocument(const lsp::FileURI& uri, const std::string& docText, int version=-1);
+        void PatchDocument(const lsp::FileURI& uri, const DocumentPatches& patches, int version=-1);
+        void CloseDocument(const lsp::FileURI& uri);
+        // Close and drop parsed document
+        void DeleteDocument(const lsp::FileURI& uri);
 
         std::optional<lsp::Location> FindDeclaration(const lsp::FileURI& uri, lsp::Position pos);
         std::vector<lsp::CompletionItem> GetCompletionItems(const lsp::FileURI& uri, lsp::Position pos);
@@ -127,14 +136,13 @@ namespace PulsarLSP
         void ResetDiagnosticReport(lsp::MessageHandler& handler, const lsp::FileURI& uri);
 
         void Run(lsp::Connection& connection);
-
-        ParsedDocument::SharedRef ParseAndStoreDocument(const lsp::FileURI& uri);
-        ParsedDocument::SharedRef ParseAndStoreInMemoryDocument(const lsp::FileURI& uri, const std::string& document);
     private:
         void StripModule(Pulsar::Module& mod) const;
 
     private:
-        Pulsar::HashMap<Pulsar::String, ParsedDocument::SharedRef> m_DocumentCache;
+        Library m_Library;
+
+        Pulsar::HashMap<Pulsar::String, ParsedDocument::SharedRef> m_ParsedCache;
         UserProvidedOptions m_Options = UserProvidedOptions_Default;
     };
 
