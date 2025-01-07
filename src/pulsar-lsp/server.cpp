@@ -647,6 +647,12 @@ void PulsarLSP::Server::Run(lsp::Connection& connection)
                 this->SendUpdatedDiagnosticReport(messageHandler, params.textDocument.uri);
             }
         })
+        .add<lsp::requests::Shutdown>([](const lsp::jsonrpc::MessageId& id)
+            -> lsp::requests::Shutdown::Result
+        {
+            (void)id;
+            return nullptr;
+        })
         .add<lsp::notifications::Exit>([&running]()
         {
             running = false;
