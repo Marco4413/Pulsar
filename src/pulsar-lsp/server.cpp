@@ -638,6 +638,8 @@ void PulsarLSP::Server::Run(lsp::Connection& connection)
                 if (this->OpenDocument(params.textDocument.uri, *params.text) && this->m_Options.DiagnosticsOnSave) {
                     this->SendUpdatedDiagnosticReport(messageHandler, params.textDocument.uri);
                 }
+            } else if (this->m_Options.DiagnosticsOnSave) {
+                this->SendUpdatedDiagnosticReport(messageHandler, params.textDocument.uri);
             }
         })
         .add<lsp::notifications::TextDocument_DidChange>([this, &messageHandler](lsp::notifications::TextDocument_DidChange::Params&& params)
