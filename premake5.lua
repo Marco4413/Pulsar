@@ -3,6 +3,12 @@ print("WARNING: IF YOU SEE THIS MESSAGE AND YOU ARE TRYING TO INCLUDE THE PULSAR
 print("      -> If so, make sure to include the pulsar folder instead.")
 term.popColor()
 
+newoption {
+   trigger = "lsp-use-sanitizers",
+   description = "Use sanitizers when building Debug",
+   category = "Build Options"
+}
+
 workspace "pulsar"
    -- architecture "x64"
    configurations { "Debug", "Release" }
@@ -61,6 +67,8 @@ project "pulsar-lsp"
    language "C++"
    cppdialect "C++20"
 
+   dependson "lspgen"
+
    location "build/pulsar-lsp"
    targetdir "%{prj.location}/%{cfg.buildcfg}"
 
@@ -89,8 +97,9 @@ project "pulsar-lsp"
    filter "toolset:msc"
       buildoptions { "/W4", "/WX" }
 
-   filter { "configurations:Debug", "action:not vs*", "toolset:not msc" }
-      linkoptions { "-fsanitize=address,undefined" }
+   filter { "configurations:Debug", "options:lsp-use-sanitizers" }
+      buildoptions { "-fsanitize=address,undefined", "-fno-omit-frame-pointer" }
+      linkoptions  { "-fsanitize=address,undefined" }
 
    filter "configurations:Debug"
       defines "PULSAR_DEBUG"
