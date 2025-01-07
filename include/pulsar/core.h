@@ -3,6 +3,7 @@
 
 // All std includes from header files are here.
 #include <cinttypes>
+#include <cstdlib> // std::malloc, ::free, ...
 #include <cstring>
 #include <functional>
 #include <type_traits>
@@ -10,7 +11,6 @@
 
 #ifdef PULSAR_DEBUG
   #include <cstdio>
-  #include <cstdlib>
   #ifndef PULSAR_ASSERT
     #define PULSAR_ASSERT(cond, msg)                      \
         do {                                              \
