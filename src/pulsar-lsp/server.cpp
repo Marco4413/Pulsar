@@ -537,7 +537,9 @@ std::vector<PulsarLSP::DiagnosticsForDocument> PulsarLSP::Server::GetDiagnosticR
 
     lsp::Diagnostic error;
     error.range    = SourcePositionToRange(badDoc->ErrorPosition);
-    error.message  = badDoc->ErrorMessage.Data();
+    error.message  = Pulsar::ParseResultToString(badDoc->ParseResult);
+    error.message += ": ";
+    error.message += badDoc->ErrorMessage.Data();
     error.source   = "pulsar";
     error.severity = lsp::DiagnosticSeverity::Error;
     result.push_back(DiagnosticsForDocument{
