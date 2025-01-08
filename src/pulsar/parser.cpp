@@ -273,7 +273,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
             .Global = globalScope,
             .Function = &functionScope,
         };
-        auto result = ParseFunctionBody(module, dummyFunc, localScope, nullptr, subSettings);
+        auto result = ParseFunctionBody(module, dummyFunc, localScope, nullptr, false, subSettings);
         if (result != ParseResult::OK)
             return result;
         result = BackPatchFunctionLabels(dummyFunc, functionScope);
@@ -417,7 +417,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
             .Function = &functionScope,
             .Locals = std::move(args),
         };
-        ParseResult parseResult = ParseFunctionBody(module, def, localScope, nullptr, settings);
+        ParseResult parseResult = ParseFunctionBody(module, def, localScope, nullptr, false, settings);
         if (parseResult != ParseResult::OK)
             return parseResult;
         parseResult = BackPatchFunctionLabels(def, functionScope);
@@ -451,6 +451,7 @@ Pulsar::ParseResult Pulsar::Parser::BackPatchFunctionLabels(FunctionDefinition& 
 Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
     Module& module, FunctionDefinition& func,
     const LocalScope& localScope, SkippableBlock* skippableBlock,
+    bool allowEndKeyword,
     const ParseSettings& settings)
 {
     LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::BlockStart, func, localScope, settings);
@@ -477,6 +478,11 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
             skippableBlock->ContinueStatements.PushBack(func.Code.Size());
             func.Code.EmplaceBack(InstructionCode::J, 0);
+            LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::BlockEnd, func, scope, settings);
+            return ParseResult::OK;
+        case TokenType::KW_End:
+            if (!allowEndKeyword)
+                return SetError(ParseResult::UnexpectedToken, curToken, "Cannot use the 'end' keyword to close the current block.");
             LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::BlockEnd, func, scope, settings);
             return ParseResult::OK;
         case TokenType::KW_Do: {
@@ -805,34 +811,35 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
         jmpInstrCode = InvertJump(jmpInstrCode);
     func.Code.EmplaceBack(jmpInstrCode, 0);
     
-    auto res = ParseFunctionBody(module, func, localScope, skippableBlock, settings);
+    auto res = ParseFunctionBody(module, func, localScope, skippableBlock, true, settings);
     func.Code[ifIdx].Arg0 = func.Code.Size() - ifIdx;
     if (res == ParseResult::UnexpectedToken) {
-        switch (curToken.Type) {
-        case TokenType::KW_End:
-            ClearError();
-            return ParseResult::OK;
-        case TokenType::KW_Else:
-            ClearError();
-            break;
-        default:
+        if (curToken.Type != TokenType::KW_Else)
             return res;
-        }
-    } else if (res == ParseResult::OK) {
+        ClearError();
+        // FIXME: localScope is not the correct scope...
+        LSP_SEND_BLOCK_NOTIFICATION(LSPBlockNotificationType::BlockEnd, func, localScope, settings);
+    } else if (res != ParseResult::OK) {
+        return res;
+    } else {
+        // ... if <cmp> ...: ... (end|continue|break|.)
         if (!isSelfContained)
             return ParseResult::OK;
-        NextToken();
-        switch (curToken.Type) {
-        case TokenType::KW_End:
+        // if ... <cmp> ...: ... end
+        if (curToken.Type == TokenType::KW_End)
             return ParseResult::OK;
-        case TokenType::KW_Else:
-            break;
-        default:
+        // if ... <cmp> ...: ... (continue|break|.)
+        NextToken();
+        // We either want an else or an end
+        if (curToken.Type == TokenType::KW_End) {
+            return ParseResult::OK;
+        } else if (curToken.Type != TokenType::KW_Else) {
             return SetError(ParseResult::UnexpectedToken, curToken,
                 "Expected 'end' to close or 'else' to create a new branch of a self-contained if statement.");
         }
-    } else return res;
+    }
 
+    // If we get here, there's an else branch
     size_t elseIdx = func.Code.Size();
     PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
     func.Code.EmplaceBack(InstructionCode::J, 0);
@@ -840,17 +847,22 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
     NextToken(); // Consume 'else' Token
 
     if (curToken.Type == TokenType::Colon) {
-        res = ParseFunctionBody(module, func, localScope, skippableBlock, settings);
-        if (res == ParseResult::OK) {
-            if (isSelfContained) {
-                NextToken();
-                if (curToken.Type != TokenType::KW_End)
-                    return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'end' to close else branch.");
-            }
-        } else if (res != ParseResult::UnexpectedToken || curToken.Type != TokenType::KW_End)
+        // else: ...
+        res = ParseFunctionBody(module, func, localScope, skippableBlock, true, settings);
+        if (res != ParseResult::OK)
             return res;
 
-        ClearError();
+        if (isSelfContained && curToken.Type != TokenType::KW_End) {
+            // ... if ... <cmp> ...:
+            //     ...
+            // else:
+            //     ...
+            //     (continue|break|.)
+            NextToken();
+            if (curToken.Type != TokenType::KW_End)
+                return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'end' to close else branch.");
+        }
+
         func.Code[elseIdx].Arg0 = func.Code.Size() - elseIdx;
         return ParseResult::OK;
     } else if (curToken.Type == TokenType::KW_If) {
@@ -860,6 +872,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
         func.Code[elseIdx].Arg0 = func.Code.Size() - elseIdx;
         return res;
     }
+
     return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'else' block start or 'else if' compound statement.");
 }
 
@@ -935,15 +948,16 @@ Pulsar::ParseResult Pulsar::Parser::ParseLocalBlock(Module& module, FunctionDefi
         }
     }
 
-    // TODO: This is copy-pasted multiple times, find a better solution.
-    auto res = ParseFunctionBody(module, func, localScope ? *localScope : parentScope, skippableBlock, settings);
-    if (res == ParseResult::OK) {
+    auto res = ParseFunctionBody(module, func, localScope ? *localScope : parentScope, skippableBlock, true, settings);
+    if (res != ParseResult::OK)
+        return res;
+
+    if (curToken.Type != TokenType::KW_End) {
         NextToken();
         if (curToken.Type != TokenType::KW_End)
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'end' to close local block.");
-    } else if (res != ParseResult::UnexpectedToken || curToken.Type != TokenType::KW_End)
-        return res;
-    ClearError();
+    }
+
     return ParseResult::OK;
 }
 
@@ -1056,14 +1070,15 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
         func.Code.EmplaceBack(jmpInstrCode, 0);
     }
     
-    auto res = ParseFunctionBody(module, func, localScope, &block, settings);
-    if (res == ParseResult::OK) {
+    auto res = ParseFunctionBody(module, func, localScope, &block, true, settings);
+    if (res != ParseResult::OK)
+        return res;
+
+    if (curToken.Type != TokenType::KW_End) {
         NextToken();
         if (curToken.Type != TokenType::KW_End)
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'end' to close while loop body.");
-    } else if (res != ParseResult::UnexpectedToken || curToken.Type != TokenType::KW_End)
-        return res;
-    ClearError();
+    }
     
     for (size_t i = 0; i < block.ContinueStatements.Size(); i++)
         func.Code[block.ContinueStatements[i]].Arg0 = (int64_t)(whileIdx-block.ContinueStatements[i]);
@@ -1095,15 +1110,16 @@ Pulsar::ParseResult Pulsar::Parser::ParseDoBlock(Module& module, FunctionDefinit
         .AllowContinue = true,
     };
 
-    auto res = ParseFunctionBody(module, func, localScope, &block, settings);
-    if (res == ParseResult::OK) {
+    auto res = ParseFunctionBody(module, func, localScope, &block, true, settings);
+    if (res != ParseResult::OK)
+        return res;
+
+    if (curToken.Type != TokenType::KW_End) {
         NextToken();
         if (curToken.Type != TokenType::KW_End)
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'end' to close do block body.");
-    } else if (res != ParseResult::UnexpectedToken || curToken.Type != TokenType::KW_End)
-        return res;
-    ClearError();
-    
+    }
+
     for (size_t i = 0; i < block.ContinueStatements.Size(); i++)
         func.Code[block.ContinueStatements[i]].Arg0 = (int64_t)(doIdx-block.ContinueStatements[i]);
 
