@@ -16,9 +16,12 @@ namespace PulsarLSP
 {
     struct LocalScope
     {
+        using Local = Pulsar::LocalScope::LocalVar;
+
+        bool IsOpen; // True if the scope was never closed due to errors
         Pulsar::SourcePosition StartPos;
         Pulsar::SourcePosition EndPos;
-        Pulsar::List<Pulsar::LocalScope::LocalVar> Locals;
+        Pulsar::List<Local> Locals;
     };
 
     struct IdentifierUsage
@@ -61,13 +64,37 @@ namespace PulsarLSP
         Pulsar::List<IdentifierUsage> UsedIdentifiers;
     };
 
+    class FunctionScopeBuilder
+    {
+    public:
+        FunctionScopeBuilder() = default;
+        ~FunctionScopeBuilder() = default;
+
+        FunctionScopeBuilder& SetFilePath(const Pulsar::String& path);
+        FunctionScopeBuilder& SetName(const Pulsar::String& name);
+        FunctionScopeBuilder& AddGlobal(BoundGlobal&& global);
+        FunctionScopeBuilder& AddFunction(BoundFunction&& func);
+        FunctionScopeBuilder& AddNativeFunction(BoundNativeFunction&& nativeFunc);
+        FunctionScopeBuilder& AddIdentifierUsage(IdentifierUsage&& identUsage);
+
+        bool HasOpenBlock() const { return m_OpenLocalScopes.Size() > 0; }
+        FunctionScopeBuilder& StartBlock(Pulsar::SourcePosition pos, const Pulsar::List<LocalScope::Local>& locals);
+        FunctionScopeBuilder& EndBlock(Pulsar::SourcePosition pos);
+
+        FunctionScope&& Build();
+
+    private:
+        FunctionScope m_FunctionScope;
+        Pulsar::List<LocalScope> m_OpenLocalScopes;
+    };
+
     struct FunctionDefinition
     {
         Pulsar::String FilePath;
         bool IsNative;
         size_t Index;
         Pulsar::FunctionDefinition Definition;
-        Pulsar::List<Pulsar::LocalScope::LocalVar> Args;
+        Pulsar::List<LocalScope::Local> Args;
     };
 
     struct UserProvidedOptions
