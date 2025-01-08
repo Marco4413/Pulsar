@@ -132,6 +132,8 @@ namespace PulsarLSP
     lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global);
     lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundFunction& fn);
     lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundNativeFunction& nativeFn);
+    lsp::CompletionItem CreateCompletionItemForLocal(const LocalScope::Local& local);
+    lsp::CompletionItem CreateCompletionItemForInstruction(const Pulsar::String& instructionName);
 
     using DiagnosticsForDocument = lsp::PublishDiagnosticsParams;
 

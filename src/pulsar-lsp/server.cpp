@@ -380,6 +380,7 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
     lsp::CompletionItem item{};
     item.label = global.Name.Data();
     item.kind  = lsp::CompletionItemKind::Variable;
+    item.insertText = item.label;
 
     std::string detail;
     if (global.Index < doc->Module.Globals.Size()) {
@@ -430,6 +431,7 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
     item.label += fn.Name.Data();
     item.label += ")";
     item.kind   = lsp::CompletionItemKind::Function;
+    item.insertText = item.label;
 
     for (size_t i = 0; i < doc->FunctionDefinitions.Size(); ++i) {
         const FunctionDefinition& lspDef = doc->FunctionDefinitions[i];
@@ -449,6 +451,7 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
     item.label += nativeFn.Name.Data();
     item.label += ")";
     item.kind   = lsp::CompletionItemKind::Function;
+    item.insertText = item.label;
 
     for (size_t i = 0; i < doc->FunctionDefinitions.Size(); ++i) {
         const FunctionDefinition& lspDef = doc->FunctionDefinitions[i];
@@ -458,6 +461,29 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
         }
     }
 
+    return item;
+}
+
+lsp::CompletionItem PulsarLSP::CreateCompletionItemForLocal(const LocalScope::Local& local)
+{
+    lsp::CompletionItem item{};
+    item.label = local.Name.Data();
+    item.kind  = lsp::CompletionItemKind::Variable;
+    item.insertText = item.label;
+    return item;
+}
+
+lsp::CompletionItem PulsarLSP::CreateCompletionItemForInstruction(const Pulsar::String& instructionName)
+{
+    lsp::CompletionItem item{};
+    item.label  = "(!";
+    item.label += instructionName.Data();
+    item.label += ")";
+    // TODO: This may also be either Keyword or Operator.
+    // TODO: Add actual keywords and operators to auto-completion.
+    // TODO: Instructions, keywords and operators are all constant and may be pre-computed somewhere.
+    item.kind   = lsp::CompletionItemKind::Function;
+    item.insertText = item.label;
     return item;
 }
 
@@ -491,14 +517,14 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetCompletionItems(const lsp
             for (size_t j = 0; j < fnScope.NativeFunctions.Size(); ++j) {
                 result.emplace_back(CreateCompletionItemForBoundEntity(doc, fnScope.NativeFunctions[j]));
             }
+            Pulsar::InstructionMappings.ForEach([&result](const auto& bucket) {
+                result.emplace_back(CreateCompletionItemForInstruction(bucket.Key()));
+            });
             for (size_t j = 0; j < fnScope.Globals.Size(); ++j) {
                 result.emplace_back(CreateCompletionItemForBoundEntity(doc, fnScope.Globals[j]));
             }
             for (size_t j = 0; j < cursorLocalScope->Locals.Size(); ++j) {
-                lsp::CompletionItem item{};
-                item.label = cursorLocalScope->Locals[j].Name.Data();
-                item.kind  = lsp::CompletionItemKind::Variable;
-                result.emplace_back(std::move(item));
+                result.emplace_back(CreateCompletionItemForLocal(cursorLocalScope->Locals[j]));
             }
             return result;
         }
