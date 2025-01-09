@@ -910,7 +910,9 @@ Accepts `arg0`: if <= 1, 1 copy is pushed. If > 1, `arg0` copies are pushed.
 
 ### floor
 
-Truncates the last number on the stack converting it to an `Integer`.
+If the last number on the stack is an `Integer`, no action is performed.
+Otherwise, the biggest `Integer` lesser or equal to the value of the provided
+`Double` is pushed onto the stack.
 
 |        |         S0         |
 | :----- | :----------------: |
@@ -919,7 +921,9 @@ Truncates the last number on the stack converting it to an `Integer`.
 
 ### ceil
 
-Adds 1 and truncates the last number on the stack converting it to an `Integer`.
+If the last number on the stack is an `Integer`, no action is performed.
+Otherwise, the smallest `Integer` greater or equal to the value of the provided
+`Double` is pushed onto the stack.
 
 |        |         S0         |
 | :----- | :----------------: |
