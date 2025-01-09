@@ -3,6 +3,7 @@
 
 // All std includes from header files are here.
 #include <cinttypes>
+#include <cmath> // std::floor, std::ceil
 #include <cstdlib> // std::malloc, ::free, ...
 #include <cstring>
 #include <functional>

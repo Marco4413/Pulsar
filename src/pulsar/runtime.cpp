@@ -575,6 +575,7 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
             a.SetInteger((int64_t)((uint64_t)a.AsInteger() << -b.AsInteger()));
         else a.SetInteger((int64_t)((uint64_t)a.AsInteger() >> b.AsInteger()));
     } break;
+    // TODO: Add floor/double, ceil/double and truncate instructions.
     case InstructionCode::Floor: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
@@ -582,7 +583,7 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         if (!IsNumericValueType(val.Type()))
             return RuntimeState::TypeError;
         if (val.Type() == ValueType::Double)
-            val.SetInteger((int64_t)val.AsDouble());
+            val.SetInteger((int64_t)std::floor(val.AsDouble()));
     } break;
     case InstructionCode::Ceil: {
         if (frame.Stack.Size() < 1)
@@ -591,7 +592,7 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         if (!IsNumericValueType(val.Type()))
             return RuntimeState::TypeError;
         if (val.Type() == ValueType::Double)
-            val.SetInteger((int64_t)(val.AsDouble()+1.0));
+            val.SetInteger((int64_t)std::ceil(val.AsDouble()));
     } break;
     case InstructionCode::Compare: {
         if (frame.Stack.Size() < 2)
