@@ -209,7 +209,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
                 .SetName("");
         }
 
-        Pulsar::SourcePosition localDeclaredAt{0};
+        Pulsar::SourcePosition localDeclaredAt = NULL_SOURCE_POSITION;
         if (params.Type == Pulsar::LSPIdentifierUsageType::Local && params.BoundIdx < params.LocalScope.Locals.Size())
             localDeclaredAt = params.LocalScope.Locals[params.BoundIdx].DeclaredAt;
 
