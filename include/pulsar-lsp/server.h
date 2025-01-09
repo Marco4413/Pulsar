@@ -128,12 +128,15 @@ namespace PulsarLSP
         static std::optional<ParsedDocument> From(const lsp::FileURI& uri, const Pulsar::String& document, bool extractAll=false, UserProvidedOptions opt=UserProvidedOptions_Default);
     };
 
+    constexpr Pulsar::SourcePosition NULL_SOURCE_POSITION{0,0,0,0};
+
     // Does not modify `doc`
-    lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global);
-    lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundFunction& fn);
-    lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundNativeFunction& nativeFn);
-    lsp::CompletionItem CreateCompletionItemForLocal(const LocalScope::Local& local);
-    lsp::CompletionItem CreateCompletionItemForInstruction(const Pulsar::String& instructionName);
+    // If replaceWithName is non-zero, the characters referenced by it are replaced with the name of the entity.
+    lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global, Pulsar::SourcePosition replaceWithName=NULL_SOURCE_POSITION);
+    lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundFunction& fn, Pulsar::SourcePosition replaceWithName=NULL_SOURCE_POSITION);
+    lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundNativeFunction& nativeFn, Pulsar::SourcePosition replaceWithName=NULL_SOURCE_POSITION);
+    lsp::CompletionItem CreateCompletionItemForLocal(const LocalScope::Local& local, Pulsar::SourcePosition replaceWithName=NULL_SOURCE_POSITION);
+    lsp::CompletionItem CreateCompletionItemForInstruction(const Pulsar::String& instructionName, Pulsar::SourcePosition replaceWithName=NULL_SOURCE_POSITION);
 
     using DiagnosticsForDocument = lsp::PublishDiagnosticsParams;
 
@@ -167,6 +170,9 @@ namespace PulsarLSP
         void Run(lsp::Connection& connection);
     private:
         void StripModule(Pulsar::Module& mod) const;
+
+        std::vector<lsp::CompletionItem> GetErrorCompletionItems(ParsedDocument::SharedRef doc, const FunctionScope& funcScope, const LocalScope& localScope);
+        std::vector<lsp::CompletionItem> GetScopeCompletionItems(ParsedDocument::SharedRef doc, const FunctionScope& funcScope, const LocalScope& localScope);
 
     private:
         Library m_Library;

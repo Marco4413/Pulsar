@@ -375,12 +375,21 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
     return {};
 }
 
-lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global)
+lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global, Pulsar::SourcePosition replaceWithName)
 {
     lsp::CompletionItem item{};
     item.label = global.Name.Data();
     item.kind  = lsp::CompletionItemKind::Variable;
-    item.insertText = item.label;
+    if (replaceWithName == NULL_SOURCE_POSITION) {
+        item.insertText = item.label;
+    } else {
+        lsp::TextEdit edit{
+            .range   = SourcePositionToRange(replaceWithName),
+            .newText = item.label,
+        };
+        item.filterText = edit.newText;
+        item.textEdit = { std::move(edit) };
+    }
 
     std::string detail;
     if (global.Index < doc->Module.Globals.Size()) {
@@ -424,14 +433,23 @@ void InsertFunctionDefinitionDetails(lsp::CompletionItem& item, const PulsarLSP:
     item.detail = std::move(detail);
 }
 
-lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundFunction& fn)
+lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundFunction& fn, Pulsar::SourcePosition replaceWithName)
 {
     lsp::CompletionItem item{};
     item.label  = "(";
     item.label += fn.Name.Data();
     item.label += ")";
     item.kind   = lsp::CompletionItemKind::Function;
-    item.insertText = item.label;
+    if (replaceWithName == NULL_SOURCE_POSITION) {
+        item.insertText = item.label;
+    } else {
+        lsp::TextEdit edit{
+            .range   = SourcePositionToRange(replaceWithName),
+            .newText = fn.Name.Data(),
+        };
+        item.filterText = edit.newText;
+        item.textEdit = { std::move(edit) };
+    }
 
     for (size_t i = 0; i < doc->FunctionDefinitions.Size(); ++i) {
         const FunctionDefinition& lspDef = doc->FunctionDefinitions[i];
@@ -444,14 +462,23 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
     return item;
 }
 
-lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundNativeFunction& nativeFn)
+lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundNativeFunction& nativeFn, Pulsar::SourcePosition replaceWithName)
 {
     lsp::CompletionItem item{};
     item.label  = "(*";
     item.label += nativeFn.Name.Data();
     item.label += ")";
     item.kind   = lsp::CompletionItemKind::Function;
-    item.insertText = item.label;
+    if (replaceWithName == NULL_SOURCE_POSITION) {
+        item.insertText = item.label;
+    } else {
+        lsp::TextEdit edit{
+            .range   = SourcePositionToRange(replaceWithName),
+            .newText = nativeFn.Name.Data(),
+        };
+        item.filterText = edit.newText;
+        item.textEdit = { std::move(edit) };
+    }
 
     for (size_t i = 0; i < doc->FunctionDefinitions.Size(); ++i) {
         const FunctionDefinition& lspDef = doc->FunctionDefinitions[i];
@@ -464,16 +491,25 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
     return item;
 }
 
-lsp::CompletionItem PulsarLSP::CreateCompletionItemForLocal(const LocalScope::Local& local)
+lsp::CompletionItem PulsarLSP::CreateCompletionItemForLocal(const LocalScope::Local& local, Pulsar::SourcePosition replaceWithName)
 {
     lsp::CompletionItem item{};
     item.label = local.Name.Data();
     item.kind  = lsp::CompletionItemKind::Variable;
-    item.insertText = item.label;
+    if (replaceWithName == NULL_SOURCE_POSITION) {
+        item.insertText = item.label;
+    } else {
+        lsp::TextEdit edit{
+            .range   = SourcePositionToRange(replaceWithName),
+            .newText = item.label,
+        };
+        item.filterText = edit.newText;
+        item.textEdit = { std::move(edit) };
+    }
     return item;
 }
 
-lsp::CompletionItem PulsarLSP::CreateCompletionItemForInstruction(const Pulsar::String& instructionName)
+lsp::CompletionItem PulsarLSP::CreateCompletionItemForInstruction(const Pulsar::String& instructionName, Pulsar::SourcePosition replaceWithName)
 {
     lsp::CompletionItem item{};
     item.label  = "(!";
@@ -483,14 +519,21 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForInstruction(const Pulsar::
     // TODO: Add actual keywords and operators to auto-completion.
     // TODO: Instructions, keywords and operators are all constant and may be pre-computed somewhere.
     item.kind   = lsp::CompletionItemKind::Function;
-    item.insertText = item.label;
+    if (replaceWithName == NULL_SOURCE_POSITION) {
+        item.insertText = item.label;
+    } else {
+        lsp::TextEdit edit{
+            .range   = SourcePositionToRange(replaceWithName),
+            .newText = instructionName.Data(),
+        };
+        item.filterText = edit.newText;
+        item.textEdit = { std::move(edit) };
+    }
     return item;
 }
 
 std::vector<lsp::CompletionItem> PulsarLSP::Server::GetCompletionItems(const lsp::FileURI& uri, lsp::Position pos)
 {
-    // TODO: Check if pos is within an error token and provide a solution
-
     auto doc = GetOrParseDocument(uri);
     if (!doc) return {};
 
@@ -510,27 +553,79 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetCompletionItems(const lsp
         }
 
         if (cursorLocalScope) {
-            std::vector<lsp::CompletionItem> result;
-            for (size_t j = 0; j < fnScope.Functions.Size(); ++j) {
-                result.emplace_back(CreateCompletionItemForBoundEntity(doc, fnScope.Functions[j]));
+            Pulsar::String docPath = URIToNormalizedPath(uri);
+            if (doc->ParseResult != Pulsar::ParseResult::OK  &&
+                IsPositionInBetween(pos, doc->ErrorPosition) &&
+                doc->ErrorFilePath == docPath
+            ) {
+                return GetErrorCompletionItems(doc, fnScope, *cursorLocalScope);
+            } else {
+                return GetScopeCompletionItems(doc, fnScope, *cursorLocalScope);
             }
-            for (size_t j = 0; j < fnScope.NativeFunctions.Size(); ++j) {
-                result.emplace_back(CreateCompletionItemForBoundEntity(doc, fnScope.NativeFunctions[j]));
-            }
-            Pulsar::InstructionMappings.ForEach([&result](const auto& bucket) {
-                result.emplace_back(CreateCompletionItemForInstruction(bucket.Key()));
-            });
-            for (size_t j = 0; j < fnScope.Globals.Size(); ++j) {
-                result.emplace_back(CreateCompletionItemForBoundEntity(doc, fnScope.Globals[j]));
-            }
-            for (size_t j = 0; j < cursorLocalScope->Locals.Size(); ++j) {
-                result.emplace_back(CreateCompletionItemForLocal(cursorLocalScope->Locals[j]));
-            }
-            return result;
         }
     }
 
     return {};
+}
+
+std::vector<lsp::CompletionItem> PulsarLSP::Server::GetErrorCompletionItems(ParsedDocument::SharedRef doc, const FunctionScope& funcScope, const LocalScope& localScope)
+{
+    std::vector<lsp::CompletionItem> result;
+
+    switch (doc->ParseResult) {
+    case Pulsar::ParseResult::UsageOfUndeclaredLocal: {
+        for (size_t i = 0; i < funcScope.Globals.Size(); ++i) {
+            result.emplace_back(CreateCompletionItemForBoundEntity(doc, funcScope.Globals[i], doc->ErrorPosition));
+        }
+        for (size_t i = 0; i < localScope.Locals.Size(); ++i) {
+            result.emplace_back(CreateCompletionItemForLocal(localScope.Locals[i], doc->ErrorPosition));
+        }
+    } break;
+    case Pulsar::ParseResult::UsageOfUnknownInstruction: {
+        Pulsar::InstructionMappings.ForEach([&result, pos = doc->ErrorPosition](const auto& bucket) {
+            result.emplace_back(CreateCompletionItemForInstruction(bucket.Key(), pos));
+        });
+    } break;
+    case Pulsar::ParseResult::UsageOfUndeclaredFunction: {
+        for (size_t i = 0; i < funcScope.Functions.Size(); ++i) {
+            result.emplace_back(CreateCompletionItemForBoundEntity(doc, funcScope.Functions[i], doc->ErrorPosition));
+        }
+    } break;
+    case Pulsar::ParseResult::UsageOfUndeclaredNativeFunction: {
+        for (size_t i = 0; i < funcScope.NativeFunctions.Size(); ++i) {
+            result.emplace_back(CreateCompletionItemForBoundEntity(doc, funcScope.NativeFunctions[i], doc->ErrorPosition));
+        }
+    } break;
+    case Pulsar::ParseResult::UnexpectedToken:
+        // TODO: Add keywords.
+        break;
+    default: break;
+    }
+
+    return result;
+}
+
+std::vector<lsp::CompletionItem> PulsarLSP::Server::GetScopeCompletionItems(ParsedDocument::SharedRef doc, const FunctionScope& funcScope, const LocalScope& localScope)
+{
+    std::vector<lsp::CompletionItem> result;
+
+    for (size_t j = 0; j < funcScope.Functions.Size(); ++j) {
+        result.emplace_back(CreateCompletionItemForBoundEntity(doc, funcScope.Functions[j]));
+    }
+    for (size_t j = 0; j < funcScope.NativeFunctions.Size(); ++j) {
+        result.emplace_back(CreateCompletionItemForBoundEntity(doc, funcScope.NativeFunctions[j]));
+    }
+    Pulsar::InstructionMappings.ForEach([&result](const auto& bucket) {
+        result.emplace_back(CreateCompletionItemForInstruction(bucket.Key()));
+    });
+    for (size_t j = 0; j < funcScope.Globals.Size(); ++j) {
+        result.emplace_back(CreateCompletionItemForBoundEntity(doc, funcScope.Globals[j]));
+    }
+    for (size_t j = 0; j < localScope.Locals.Size(); ++j) {
+        result.emplace_back(CreateCompletionItemForLocal(localScope.Locals[j]));
+    }
+
+    return result;
 }
 
 std::vector<PulsarLSP::DiagnosticsForDocument> PulsarLSP::Server::GetDiagnosticReport(const lsp::FileURI& uri, bool sameDocument)
