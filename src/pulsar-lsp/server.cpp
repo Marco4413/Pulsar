@@ -5,6 +5,8 @@
 
 #include <lsp/messages.h>
 
+#include "pulsar-lsp/completion.h"
+
 const char* ValueTypeToString(Pulsar::ValueType type)
 {
     switch (type) {
@@ -582,8 +584,15 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetErrorCompletionItems(Pars
         }
     } break;
     case Pulsar::ParseResult::UsageOfUnknownInstruction: {
-        Pulsar::InstructionMappings.ForEach([&result, pos = doc->ErrorPosition](const auto& bucket) {
-            result.emplace_back(CreateCompletionItemForInstruction(bucket.Key(), pos));
+        PulsarLSP::Completion::GetInstructions().ForEach([&result, pos = doc->ErrorPosition](const auto& bucket) {
+            lsp::CompletionItem item = bucket.Value();
+            lsp::TextEdit edit{
+                .range   = SourcePositionToRange(pos),
+                .newText = bucket.Key(),
+            };
+            item.filterText = edit.newText;
+            item.textEdit = { std::move(edit) };
+            result.emplace_back(std::move(item));
         });
     } break;
     case Pulsar::ParseResult::UsageOfUndeclaredFunction: {
@@ -615,8 +624,10 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetScopeCompletionItems(Pars
     for (size_t j = 0; j < funcScope.NativeFunctions.Size(); ++j) {
         result.emplace_back(CreateCompletionItemForBoundEntity(doc, funcScope.NativeFunctions[j]));
     }
-    Pulsar::InstructionMappings.ForEach([&result](const auto& bucket) {
-        result.emplace_back(CreateCompletionItemForInstruction(bucket.Key()));
+    PulsarLSP::Completion::GetInstructions().ForEach([&result](const auto& bucket) {
+        lsp::CompletionItem item = bucket.Value();
+        item.insertText = item.label;
+        result.emplace_back(std::move(item));
     });
     for (size_t j = 0; j < funcScope.Globals.Size(); ++j) {
         result.emplace_back(CreateCompletionItemForBoundEntity(doc, funcScope.Globals[j]));
