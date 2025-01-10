@@ -152,9 +152,14 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
     settings.LSPHooks.OnBlockNotification = [&path, extractAll, &functionScopes](Pulsar::LSPHooks::OnBlockNotificationParams&& params) {
         if (!extractAll && params.FilePath != path) return false;
 
+        Pulsar::String selfIdx = ":";
+        if (auto idx = params.LocalScope.Global.Functions.Find(params.FnDefinition.Name); idx) {
+            selfIdx += Pulsar::UIntToString((uint64_t)idx->Value());
+        }
+        Pulsar::String fnId = params.FilePath + selfIdx + ":" + params.FnDefinition.Name;
+
         switch (params.Type) {
         case Pulsar::LSPBlockNotificationType::BlockStart: {
-            Pulsar::String fnId = params.FilePath + ":" + params.FnDefinition.Name;
             auto fnPair = functionScopes.Find(fnId);
             if (fnPair) {
                 fnPair->Value()
@@ -177,7 +182,6 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
             }
         } break;
         case Pulsar::LSPBlockNotificationType::BlockEnd: {
-            Pulsar::String fnId = params.FilePath + ":" + params.FnDefinition.Name;
             auto fnPair = functionScopes.Find(fnId);
             if (fnPair) {
                 fnPair->Value()
@@ -185,7 +189,6 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
             }
         } break;
         case Pulsar::LSPBlockNotificationType::LocalScopeChanged: {
-            Pulsar::String fnId = params.FilePath + ":" + params.FnDefinition.Name;
             auto fnPair = functionScopes.Find(fnId);
             if (fnPair) {
                 fnPair->Value()
@@ -201,7 +204,12 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
     settings.LSPHooks.OnIdentifierUsage = [&path, extractAll, &functionScopes](Pulsar::LSPHooks::OnIdentifierUsageParams&& params) {
         if (!extractAll && params.FilePath != path) return false;
 
-        Pulsar::String fnId = params.FilePath + ":" + params.FnDefinition.Name;
+        Pulsar::String selfIdx = ":";
+        if (auto idx = params.LocalScope.Global.Functions.Find(params.FnDefinition.Name); idx) {
+            selfIdx += Pulsar::UIntToString((uint64_t)idx->Value());
+        }
+        Pulsar::String fnId = params.FilePath + selfIdx + ":" + params.FnDefinition.Name;
+
         auto fnPair = functionScopes.Find(fnId);
         if (params.FnDefinition.Name.Length() <= 0 && !fnPair) {
             // Create global scope

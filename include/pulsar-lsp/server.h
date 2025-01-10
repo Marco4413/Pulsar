@@ -51,8 +51,6 @@ namespace PulsarLSP
         size_t Index;
     };
 
-    // TODO: A FunctionScope should only contain the scope of a single function.
-    //       Currently all functions with the same name and in the same file are combined together.
     struct FunctionScope
     {
         Pulsar::String FilePath;
