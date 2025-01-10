@@ -4,7 +4,7 @@
 #include <lsp/types.h>
 
 #include "pulsar/lexer.h"
-#include "pulsar/runtime/value.h"
+#include "pulsar/runtime.h"
 
 namespace PulsarLSP
 {
@@ -30,6 +30,22 @@ namespace PulsarLSP
         default:
             return "Unknown";
         }
+    }
+
+    // This overload resolves custom type names
+    inline Pulsar::String ValueTypeToString(const Pulsar::Value& value, const Pulsar::Module& mod)
+    {
+        Pulsar::ValueType type = value.Type();
+        if (type != Pulsar::ValueType::Custom) {
+            return ValueTypeToString(type);
+        }
+
+        uint64_t customType = value.AsCustom().Type;
+        if (!mod.HasCustomType(customType)) {
+            return ValueTypeToString(type);
+        }
+
+        return mod.GetCustomType(customType).Name;
     }
 
     constexpr lsp::Range SourcePositionToRange(Pulsar::SourcePosition pos)

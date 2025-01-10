@@ -348,7 +348,7 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
         if (glblDef.IsConstant) {
             detail += "const ";
         }
-        detail += ValueTypeToString(glblDef.InitialValue.Type());
+        detail += ValueTypeToString(glblDef.InitialValue, doc->Module).Data();
         detail += " -> ";
         detail += glblDef.Name.Data();
     }
