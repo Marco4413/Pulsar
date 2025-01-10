@@ -128,13 +128,14 @@ namespace PulsarLSP
 
     constexpr Pulsar::SourcePosition NULL_SOURCE_POSITION{0,0,0,0};
 
+    void InsertFunctionDefinitionDetails(lsp::CompletionItem& item, const FunctionDefinition& lspDef);
+
     // Does not modify `doc`
     // If replaceWithName is non-zero, the characters referenced by it are replaced with the name of the entity.
     lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global, Pulsar::SourcePosition replaceWithName=NULL_SOURCE_POSITION);
     lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundFunction& fn, Pulsar::SourcePosition replaceWithName=NULL_SOURCE_POSITION);
     lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundNativeFunction& nativeFn, Pulsar::SourcePosition replaceWithName=NULL_SOURCE_POSITION);
     lsp::CompletionItem CreateCompletionItemForLocal(const LocalScope::Local& local, Pulsar::SourcePosition replaceWithName=NULL_SOURCE_POSITION);
-    lsp::CompletionItem CreateCompletionItemForInstruction(const Pulsar::String& instructionName, Pulsar::SourcePosition replaceWithName=NULL_SOURCE_POSITION);
 
     using DiagnosticsForDocument = lsp::PublishDiagnosticsParams;
 

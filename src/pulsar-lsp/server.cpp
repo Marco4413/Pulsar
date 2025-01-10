@@ -6,66 +6,7 @@
 #include <lsp/messages.h>
 
 #include "pulsar-lsp/completion.h"
-
-const char* ValueTypeToString(Pulsar::ValueType type)
-{
-    switch (type) {
-    case Pulsar::ValueType::Void:
-        return "Void";
-    case Pulsar::ValueType::Integer:
-        return "Integer";
-    case Pulsar::ValueType::Double:
-        return "Double";
-    case Pulsar::ValueType::FunctionReference:
-        return "FunctionReference";
-    case Pulsar::ValueType::NativeFunctionReference:
-        return "NativeFunctionReference";
-    case Pulsar::ValueType::List:
-        return "List";
-    case Pulsar::ValueType::String:
-        return "String";
-    case Pulsar::ValueType::Custom:
-        return "Custom";
-    default:
-        return "Unknown";
-    }
-}
-
-lsp::Range SourcePositionToRange(Pulsar::SourcePosition pos)
-{
-    return lsp::Range{
-        .start = {
-            .line = (lsp::uint)pos.Line,
-            .character = (lsp::uint)pos.Char
-        },
-        .end = {
-            .line = (lsp::uint)pos.Line,
-            .character = (lsp::uint)(pos.Char+pos.CharSpan)
-        }
-    };
-}
-
-bool IsPositionAfter(lsp::Position pos, Pulsar::SourcePosition marker)
-{
-    return (pos.line == marker.Line && pos.character >= marker.Char)
-        || pos.line > marker.Line;
-}
-
-bool IsPositionBefore(lsp::Position pos, Pulsar::SourcePosition marker)
-{
-    return (pos.line == marker.Line && pos.character <= (marker.Char+marker.CharSpan))
-        || pos.line < marker.Line;
-}
-
-bool IsPositionInBetween(lsp::Position pos, Pulsar::SourcePosition start, Pulsar::SourcePosition end)
-{
-    return IsPositionAfter(pos, start) && IsPositionBefore(pos, end);
-}
-
-bool IsPositionInBetween(lsp::Position pos, Pulsar::SourcePosition span)
-{
-    return IsPositionInBetween(pos, span, span);
-}
+#include "pulsar-lsp/helpers.h"
 
 PulsarLSP::FunctionScopeBuilder& PulsarLSP::FunctionScopeBuilder::SetFilePath(const Pulsar::String& path)
 {
@@ -416,7 +357,7 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
     return item;
 }
 
-void InsertFunctionDefinitionDetails(lsp::CompletionItem& item, const PulsarLSP::FunctionDefinition& lspDef)
+void PulsarLSP::InsertFunctionDefinitionDetails(lsp::CompletionItem& item, const FunctionDefinition& lspDef)
 {
     const Pulsar::FunctionDefinition& def = lspDef.Definition;
 
@@ -512,29 +453,6 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForLocal(const LocalScope::Lo
         lsp::TextEdit edit{
             .range   = SourcePositionToRange(replaceWithName),
             .newText = item.label,
-        };
-        item.filterText = edit.newText;
-        item.textEdit = { std::move(edit) };
-    }
-    return item;
-}
-
-lsp::CompletionItem PulsarLSP::CreateCompletionItemForInstruction(const Pulsar::String& instructionName, Pulsar::SourcePosition replaceWithName)
-{
-    lsp::CompletionItem item{};
-    item.label  = "(!";
-    item.label += instructionName.Data();
-    item.label += ")";
-    // TODO: This may also be either Keyword or Operator.
-    // TODO: Add actual keywords and operators to auto-completion.
-    // TODO: Instructions, keywords and operators are all constant and may be pre-computed somewhere.
-    item.kind   = lsp::CompletionItemKind::Function;
-    if (replaceWithName == NULL_SOURCE_POSITION) {
-        item.insertText = item.label;
-    } else {
-        lsp::TextEdit edit{
-            .range   = SourcePositionToRange(replaceWithName),
-            .newText = instructionName.Data(),
         };
         item.filterText = edit.newText;
         item.textEdit = { std::move(edit) };
