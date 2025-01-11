@@ -76,7 +76,7 @@ PulsarLSP::FunctionScope&& PulsarLSP::FunctionScopeBuilder::Build()
     return std::move(m_FunctionScope);
 }
 
-std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const lsp::FileURI& uri, const Pulsar::String& document, bool extractAll, UserProvidedOptions opt)
+std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument(const lsp::FileURI& uri, const Pulsar::String& document, bool extractAll)
 {
     ParsedDocument parsedDocument;
 
@@ -89,7 +89,20 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::ParsedDocument::From(const l
 
     Pulsar::ParseSettings settings = Pulsar::ParseSettings_Default;
     settings.StoreDebugSymbols        = true;
-    settings.MapGlobalProducersToVoid = opt.MapGlobalProducersToVoid;
+    settings.MapGlobalProducersToVoid = m_Options.MapGlobalProducersToVoid;
+    settings.IncludeResolver = [this](Pulsar::Parser& parser, const Pulsar::String& cwf, const Pulsar::Token& token) {
+        std::filesystem::path targetPath(token.StringVal.Data());
+        std::filesystem::path workingPath(cwf.Data());
+        std::filesystem::path filePath = workingPath.parent_path() / targetPath;
+        lsp::FileURI filePathURI = filePath.generic_string().c_str();
+
+        Pulsar::String internalPath = URIToNormalizedPath(filePathURI);
+        auto text = this->m_Library.FindOrLoadDocument(filePathURI);
+        if (!text) return parser.SetError(Pulsar::ParseResult::FileNotRead, token, "Could not read file '" + internalPath + "'.");
+
+        parser.AddSource(internalPath, *text);
+        return Pulsar::ParseResult::OK;
+    };
     settings.LSPHooks.OnBlockNotification = [&path, extractAll, &functionScopes](Pulsar::LSPHooks::OnBlockNotificationParams&& params) {
         if (!extractAll && params.FilePath != path) return false;
 
@@ -655,9 +668,7 @@ PulsarLSP::ParsedDocument::SharedRef PulsarLSP::Server::ParseDocument(const lsp:
         return nullptr;
     }
 
-    // TODO: Maybe move functionality of ParsedDocument::From to Server.
-    //       Which will allow to use m_Library instead of reading files from disk.
-    auto doc = ParsedDocument::From(uri, *text, false, m_Options);
+    auto doc = CreateParsedDocument(uri, *text, false);
     if (!doc) {
         DropParsedDocument(uri);
         return nullptr;

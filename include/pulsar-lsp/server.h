@@ -122,8 +122,6 @@ namespace PulsarLSP
         Pulsar::String         ErrorFilePath;
         Pulsar::SourcePosition ErrorPosition;
         Pulsar::String         ErrorMessage;
-
-        static std::optional<ParsedDocument> From(const lsp::FileURI& uri, const Pulsar::String& document, bool extractAll=false, UserProvidedOptions opt=UserProvidedOptions_Default);
     };
 
     constexpr Pulsar::SourcePosition NULL_SOURCE_POSITION{0,0,0,0};
@@ -173,6 +171,7 @@ namespace PulsarLSP
         std::vector<lsp::CompletionItem> GetErrorCompletionItems(ParsedDocument::SharedRef doc, const FunctionScope& funcScope, const LocalScope& localScope);
         std::vector<lsp::CompletionItem> GetScopeCompletionItems(ParsedDocument::SharedRef doc, const FunctionScope& funcScope, const LocalScope& localScope);
 
+        std::optional<ParsedDocument> CreateParsedDocument(const lsp::FileURI& uri, const Pulsar::String& document, bool extractAll=false);
     private:
         Library m_Library;
 
