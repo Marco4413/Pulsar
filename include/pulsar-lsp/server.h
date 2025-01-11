@@ -140,7 +140,8 @@ namespace PulsarLSP
     class Server
     {
     public:
-        Server() = default;
+        // connection and this instance MUST NOT change address for the lifespan of the Server object.
+        Server(lsp::Connection& connection);
         ~Server() = default;
 
         ParsedDocument::SharedRef GetParsedDocument(const lsp::FileURI& uri) const;
@@ -161,18 +162,24 @@ namespace PulsarLSP
         std::vector<lsp::CompletionItem> GetCompletionItems(const lsp::FileURI& uri, lsp::Position pos);
         // Every element of the vector has a unique URI
         std::vector<DiagnosticsForDocument> GetDiagnosticReport(const lsp::FileURI& uri, bool sameDocument=true);
-        void SendUpdatedDiagnosticReport(lsp::MessageHandler& handler, const lsp::FileURI& uri);
-        void ResetDiagnosticReport(lsp::MessageHandler& handler, const lsp::FileURI& uri);
+        void SendUpdatedDiagnosticReport(const lsp::FileURI& uri);
+        void ResetDiagnosticReport(const lsp::FileURI& uri);
 
-        void Run(lsp::Connection& connection);
+        bool IsRunning() const { return m_IsRunning; }
+        void Run();
     private:
         void StripModule(Pulsar::Module& mod) const;
+
+        // normalizedPath MUST BE NORMALIZED
+        void ResetDiagnosticReport(const Pulsar::String& normalizedPath);
 
         std::vector<lsp::CompletionItem> GetErrorCompletionItems(ParsedDocument::SharedRef doc, const FunctionScope& funcScope, const LocalScope& localScope);
         std::vector<lsp::CompletionItem> GetScopeCompletionItems(ParsedDocument::SharedRef doc, const FunctionScope& funcScope, const LocalScope& localScope);
 
         std::optional<ParsedDocument> CreateParsedDocument(const lsp::FileURI& uri, const Pulsar::String& document, bool extractAll=false);
     private:
+        bool m_IsRunning = false;
+        lsp::MessageHandler m_MessageHandler;
         Library m_Library;
 
         Pulsar::HashMap<Pulsar::String, ParsedDocument::SharedRef> m_ParsedCache;

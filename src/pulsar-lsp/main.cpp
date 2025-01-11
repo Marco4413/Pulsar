@@ -8,8 +8,8 @@ int main(int argc, const char** argv)
     (void)argv;
 
     lsp::Connection connection{lsp::io::standardInput(), lsp::io::standardOutput()};
-    PulsarLSP::Server server;
-    server.Run(connection);
+    PulsarLSP::Server server(connection);
+    server.Run();
 
     return 0;
 }

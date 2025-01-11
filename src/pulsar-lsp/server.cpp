@@ -235,11 +235,15 @@ PulsarLSP::ParsedDocument::SharedRef PulsarLSP::Server::GetOrParseDocument(const
 void PulsarLSP::Server::DropParsedDocument(const lsp::FileURI& uri)
 {
     Pulsar::String path = URIToNormalizedPath(uri);
+    ResetDiagnosticReport(path);
     m_ParsedCache.Remove(path);
 }
 
 void PulsarLSP::Server::DropAllParsedDocuments()
 {
+    m_ParsedCache.ForEach([this](const auto& bucket) {
+        this->ResetDiagnosticReport(bucket.Key());
+    });
     m_ParsedCache.Clear();
 }
 
@@ -256,12 +260,12 @@ void PulsarLSP::Server::PatchDocument(const lsp::FileURI& uri, const DocumentPat
 
 void PulsarLSP::Server::CloseDocument(const lsp::FileURI& uri)
 {
-    m_Library.DeleteDocument(uri);
+    DeleteDocument(uri);
 }
 
 void PulsarLSP::Server::DeleteDocument(const lsp::FileURI& uri)
 {
-    CloseDocument(uri);
+    m_Library.DeleteDocument(uri);
     DropParsedDocument(uri);
 }
 
@@ -606,27 +610,30 @@ std::vector<PulsarLSP::DiagnosticsForDocument> PulsarLSP::Server::GetDiagnosticR
     auto badDoc = isErrorInSameDocument
         ? doc : GetOrParseDocument(NormalizedPathToURI(doc->ErrorFilePath));
 
-    lsp::Diagnostic error;
-    error.range    = SourcePositionToRange(badDoc->ErrorPosition);
-    error.message  = Pulsar::ParseResultToString(badDoc->ParseResult);
-    error.message += ": ";
-    error.message += badDoc->ErrorMessage.Data();
-    error.source   = "pulsar";
-    error.severity = lsp::DiagnosticSeverity::Error;
-    result.push_back(DiagnosticsForDocument{
-        .uri = NormalizedPathToURI(badDoc->ErrorFilePath),
-        .diagnostics = {std::move(error)},
-        .version = std::nullopt
-    });
+    // Make sure the file was retrieved correctly
+    if (badDoc) {
+        lsp::Diagnostic error;
+        error.range    = SourcePositionToRange(badDoc->ErrorPosition);
+        error.message  = Pulsar::ParseResultToString(badDoc->ParseResult);
+        error.message += ": ";
+        error.message += badDoc->ErrorMessage.Data();
+        error.source   = "pulsar";
+        error.severity = lsp::DiagnosticSeverity::Error;
+        result.push_back(DiagnosticsForDocument{
+            .uri = NormalizedPathToURI(badDoc->ErrorFilePath),
+            .diagnostics = {std::move(error)},
+            .version = std::nullopt
+        });
+    }
 
     return result;
 }
 
-void PulsarLSP::Server::SendUpdatedDiagnosticReport(lsp::MessageHandler& handler, const lsp::FileURI& uri)
+void PulsarLSP::Server::SendUpdatedDiagnosticReport(const lsp::FileURI& uri)
 {
     Pulsar::String docPath = URIToNormalizedPath(uri);
 
-    auto& messageDispatcher = handler.messageDispatcher();
+    auto& messageDispatcher = m_MessageHandler.messageDispatcher();
     auto diagnostics = this->GetDiagnosticReport(uri, false);
     for (size_t i = 0; i < diagnostics.size(); ++i) {
         messageDispatcher.sendNotification<lsp::notifications::TextDocument_PublishDiagnostics>(
@@ -634,13 +641,19 @@ void PulsarLSP::Server::SendUpdatedDiagnosticReport(lsp::MessageHandler& handler
     }
 }
 
-void PulsarLSP::Server::ResetDiagnosticReport(lsp::MessageHandler& handler, const lsp::FileURI& uri)
+void PulsarLSP::Server::ResetDiagnosticReport(const lsp::FileURI& uri)
 {
-    auto& messageDispatcher = handler.messageDispatcher();
+    Pulsar::String normalizedPath = URIToNormalizedPath(uri);
+    ResetDiagnosticReport(normalizedPath);
+}
+
+void PulsarLSP::Server::ResetDiagnosticReport(const Pulsar::String& normalizedPath)
+{
+    auto& messageDispatcher = m_MessageHandler.messageDispatcher();
     messageDispatcher.sendNotification<lsp::notifications::TextDocument_PublishDiagnostics>(
         lsp::notifications::TextDocument_PublishDiagnostics::Params{
             // FIXME: Some editors do not seem to like relative URIs (mayber they're serialized incorrectly by lsp-framework)
-            .uri = RecomputeURI(uri),
+            .uri = NormalizedPathToURI(normalizedPath),
             .diagnostics = {},
             .version = std::nullopt
         }
@@ -689,12 +702,12 @@ PulsarLSP::ParsedDocument::SharedRef PulsarLSP::Server::ParseDocument(const lsp:
         jsonField->second.isBoolean()                   \
     ) this->m_Options.structField = jsonField->second.boolean()
 
-void PulsarLSP::Server::Run(lsp::Connection& connection)
+PulsarLSP::Server::Server(lsp::Connection& connection)
+    : m_MessageHandler(connection),
+      m_Library(),
+      m_ParsedCache()
 {
-    lsp::MessageHandler messageHandler{connection};
-
-    bool running = true;
-    messageHandler.requestHandler()
+    m_MessageHandler.requestHandler()
         .add<lsp::requests::Initialize>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::Initialize::Params&& params)
         {
             (void)id;
@@ -708,27 +721,26 @@ void PulsarLSP::Server::Run(lsp::Connection& connection)
                 GET_INIT_BOOLEAN_OPTION(mapGlobalProducersToVoid, MapGlobalProducersToVoid);
             }
 
-            lsp::requests::Initialize::Result result;
-
-            lsp::TextDocumentSyncOptions documentSyncOptions{};
-            documentSyncOptions.save = lsp::SaveOptions{ .includeText = this->m_Options.FullSyncOnSave };
-            documentSyncOptions.change = lsp::TextDocumentSyncKind::Incremental;
-            documentSyncOptions.openClose = true;
-
-            lsp::DiagnosticOptions diagnosticOptions{};
-            diagnosticOptions.identifier = "pulsar";
-            diagnosticOptions.interFileDependencies = true;
-            diagnosticOptions.workspaceDiagnostics  = false;
-
-            result.capabilities.textDocumentSync    = documentSyncOptions;
-            result.capabilities.completionProvider  = lsp::CompletionOptions{};
-            result.capabilities.declarationProvider = true;
-            result.capabilities.diagnosticProvider  = diagnosticOptions;
-            result.serverInfo = lsp::InitializeResultServerInfo{
-                .name = "Pulsar",
-                .version = {}
+            return lsp::requests::Initialize::Result{
+                .capabilities = {
+                    .textDocumentSync    = lsp::TextDocumentSyncOptions{
+                        .openClose = true,
+                        .change    = lsp::TextDocumentSyncKind::Incremental,
+                        .save      = lsp::SaveOptions{ .includeText = this->m_Options.FullSyncOnSave },
+                    },
+                    .completionProvider  = lsp::CompletionOptions{},
+                    .declarationProvider = true,
+                    .diagnosticProvider  = lsp::DiagnosticOptions{
+                        .interFileDependencies = true,
+                        .workspaceDiagnostics  = false,
+                        .identifier            = "pulsar",
+                    }
+                },
+                .serverInfo = lsp::InitializeResultServerInfo{
+                    .name    = "Pulsar",
+                    .version = {}
+                }
             };
-            return result;
         })
         .add<lsp::requests::TextDocument_Completion>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::TextDocument_Completion::Params&& params)
             -> lsp::requests::TextDocument_Completion::Result
@@ -751,43 +763,53 @@ void PulsarLSP::Server::Run(lsp::Connection& connection)
             lsp::RelatedFullDocumentDiagnosticReport result;
             return result;
         })
-        .add<lsp::notifications::TextDocument_DidOpen>([this, &messageHandler](lsp::notifications::TextDocument_DidOpen::Params&& params)
+        .add<lsp::notifications::TextDocument_DidOpen>([this](lsp::notifications::TextDocument_DidOpen::Params&& params)
         {
             if (this->OpenDocument(params.textDocument.uri, params.textDocument.text, params.textDocument.version) && this->m_Options.DiagnosticsOnOpen) {
-                this->SendUpdatedDiagnosticReport(messageHandler, params.textDocument.uri);
+                this->SendUpdatedDiagnosticReport(params.textDocument.uri);
             }
         })
         .add<lsp::notifications::TextDocument_DidClose>([this](lsp::notifications::TextDocument_DidClose::Params&& params)
         {
             this->CloseDocument(params.textDocument.uri);
         })
-        .add<lsp::notifications::TextDocument_DidSave>([this, &messageHandler](lsp::notifications::TextDocument_DidSave::Params&& params)
+        .add<lsp::notifications::TextDocument_DidSave>([this](lsp::notifications::TextDocument_DidSave::Params&& params)
         {
             if (this->m_Options.FullSyncOnSave && params.text.has_value()) {
                 if (this->OpenDocument(params.textDocument.uri, *params.text) && this->m_Options.DiagnosticsOnSave) {
-                    this->SendUpdatedDiagnosticReport(messageHandler, params.textDocument.uri);
+                    this->SendUpdatedDiagnosticReport(params.textDocument.uri);
                 }
             } else if (this->m_Options.DiagnosticsOnSave) {
-                this->SendUpdatedDiagnosticReport(messageHandler, params.textDocument.uri);
+                this->SendUpdatedDiagnosticReport(params.textDocument.uri);
             }
         })
-        .add<lsp::notifications::TextDocument_DidChange>([this, &messageHandler](lsp::notifications::TextDocument_DidChange::Params&& params)
+        .add<lsp::notifications::TextDocument_DidChange>([this](lsp::notifications::TextDocument_DidChange::Params&& params)
         {
             this->PatchDocument(params.textDocument.uri, params.contentChanges, params.textDocument.version);
             if (this->m_Options.DiagnosticsOnChange) {
-                this->SendUpdatedDiagnosticReport(messageHandler, params.textDocument.uri);
+                this->SendUpdatedDiagnosticReport(params.textDocument.uri);
             }
         })
-        .add<lsp::requests::Shutdown>([](const lsp::jsonrpc::MessageId& id)
+        .add<lsp::requests::Shutdown>([this](const lsp::jsonrpc::MessageId& id)
             -> lsp::requests::Shutdown::Result
         {
             (void)id;
+            this->DropAllParsedDocuments();
+            this->m_Library.DeleteAllDocuments();
             return nullptr;
         })
-        .add<lsp::notifications::Exit>([&running]()
+        .add<lsp::notifications::Exit>([this]()
         {
-            running = false;
+            this->m_IsRunning = false;
         });
+}
 
-    while (running) messageHandler.processIncomingMessages();
+void PulsarLSP::Server::Run()
+{
+    if (m_IsRunning) return;
+
+    m_IsRunning = true;
+    while (m_IsRunning) {
+        m_MessageHandler.processIncomingMessages();
+    }
 }
