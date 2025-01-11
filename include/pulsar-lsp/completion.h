@@ -11,6 +11,9 @@ namespace PulsarLSP::Completion
     // An instruction name to completion item map.
     using InstructionMap = Pulsar::HashMap<std::string, lsp::CompletionItem>;
     const InstructionMap& GetInstructions();
+
+    using KeywordList = Pulsar::List<lsp::CompletionItem>;
+    const KeywordList& GetKeywords();
 }
 
 #endif // _PULSARLSP_COMPLETION_H

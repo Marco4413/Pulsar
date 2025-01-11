@@ -3,11 +3,28 @@
 #include <atomic>
 #include <mutex>
 
-static std::mutex InitializingInstructions;
-static std::atomic_bool InstructionsInitialized;
-static PulsarLSP::Completion::InstructionMap Instructions;
+static std::mutex g_InitializingInstructions;
+static std::atomic_bool g_InstructionsInitialized;
+static PulsarLSP::Completion::InstructionMap g_Instructions;
 
-#define DEFINE_INSTRUCTION(name, arg, signature, doc)       \
+#define KEYWORD(kw) \
+    (lsp::CompletionItem{ .label = (kw), .kind = lsp::CompletionItemKind::Keyword })
+
+static PulsarLSP::Completion::KeywordList g_Keywords{
+    KEYWORD("not"),
+    KEYWORD("if"),
+    KEYWORD("else"),
+    KEYWORD("end"),
+    KEYWORD("global"),
+    KEYWORD("const"),
+    KEYWORD("do"),
+    KEYWORD("while"),
+    KEYWORD("break"),
+    KEYWORD("continue"),
+    KEYWORD("local"),
+};
+
+#define DEFINE_INSTRUCTION(name, arg, signature, doc)        \
     do {                                                     \
         item.label = "(!" name ")";                          \
         item.kind = lsp::CompletionItemKind::Function;       \
@@ -20,7 +37,7 @@ static PulsarLSP::Completion::InstructionMap Instructions;
             .kind  = lsp::MarkupKind::Markdown,              \
             .value = (doc),                                  \
         };                                                   \
-        Instructions.Emplace((name), std::move(item));       \
+        g_Instructions.Emplace((name), std::move(item));     \
     } while (0)
 
 #define DEFINE_TYPE_CHECK_INSTRUCTION(name, checksFor) \
@@ -31,14 +48,14 @@ static PulsarLSP::Completion::InstructionMap Instructions;
 
 const PulsarLSP::Completion::InstructionMap& PulsarLSP::Completion::GetInstructions()
 {
-    if (InstructionsInitialized)
-        return Instructions;
+    if (g_InstructionsInitialized)
+        return g_Instructions;
     
-    std::lock_guard lock(InitializingInstructions);
-    if (InstructionsInitialized)
-        return Instructions;
+    std::lock_guard lock(g_InitializingInstructions);
+    if (g_InstructionsInitialized)
+        return g_Instructions;
 
-    // Initialize Instructions
+    // Initialize g_Instructions
     lsp::CompletionItem item{};
     DEFINE_INSTRUCTION(
         "pop", "count", "...Any ->",
@@ -186,6 +203,11 @@ const PulsarLSP::Completion::InstructionMap& PulsarLSP::Completion::GetInstructi
     DEFINE_CONDITIONAL_JUMP_INSTRUCTION("jlz!", "\\< 0");
     DEFINE_CONDITIONAL_JUMP_INSTRUCTION("jlez!", "\\<= 0");
 
-    InstructionsInitialized = true;
-    return Instructions;
+    g_InstructionsInitialized = true;
+    return g_Instructions;
+}
+
+const PulsarLSP::Completion::KeywordList& PulsarLSP::Completion::GetKeywords()
+{
+    return g_Keywords;
 }

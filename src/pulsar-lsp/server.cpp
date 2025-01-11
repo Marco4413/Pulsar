@@ -525,6 +525,20 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetErrorCompletionItems(Pars
         for (size_t i = 0; i < localScope.Locals.Size(); ++i) {
             result.emplace_back(CreateCompletionItemForLocal(localScope.Locals[i], doc->ErrorPosition));
         }
+        // Since the Server listens to TextDocument/DidChange,
+        //  and may send a Diagnostic if the user writes 'i',
+        //  if it's an unbound global/local, the LSP client should receive the 'if' keyword.
+        const PulsarLSP::Completion::KeywordList& kws = PulsarLSP::Completion::GetKeywords();
+        for (size_t i = 0; i < kws.Size(); ++i) {
+            lsp::CompletionItem item = kws[i];
+            lsp::TextEdit edit{
+                .range   = SourcePositionToRange(doc->ErrorPosition),
+                .newText = item.label,
+            };
+            item.filterText = edit.newText;
+            item.textEdit = { std::move(edit) };
+            result.emplace_back(std::move(item));
+        }
     } break;
     case Pulsar::ParseResult::UsageOfUnknownInstruction: {
         PulsarLSP::Completion::GetInstructions().ForEach([&result, pos = doc->ErrorPosition](const auto& bucket) {
@@ -548,9 +562,23 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetErrorCompletionItems(Pars
             result.emplace_back(CreateCompletionItemForBoundEntity(doc, funcScope.NativeFunctions[i], doc->ErrorPosition));
         }
     } break;
-    case Pulsar::ParseResult::UnexpectedToken:
-        // TODO: Add keywords.
-        break;
+    case Pulsar::ParseResult::UnexpectedToken: {
+        // The following error is catched by this:
+        //   else i
+        // The 'if' keyword should be sent.
+        // We send them all and let the editor filter the keyword.
+        const PulsarLSP::Completion::KeywordList& kws = PulsarLSP::Completion::GetKeywords();
+        for (size_t i = 0; i < kws.Size(); ++i) {
+            lsp::CompletionItem item = kws[i];
+            lsp::TextEdit edit{
+                .range   = SourcePositionToRange(doc->ErrorPosition),
+                .newText = item.label,
+            };
+            item.filterText = edit.newText;
+            item.textEdit = { std::move(edit) };
+            result.emplace_back(std::move(item));
+        }
+    } break;
     default: break;
     }
 
@@ -577,6 +605,13 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetScopeCompletionItems(Pars
     }
     for (size_t j = 0; j < localScope.Locals.Size(); ++j) {
         result.emplace_back(CreateCompletionItemForLocal(localScope.Locals[j]));
+    }
+
+    const PulsarLSP::Completion::KeywordList& kws = PulsarLSP::Completion::GetKeywords();
+    for (size_t j = 0; j < kws.Size(); ++j) {
+        lsp::CompletionItem item = kws[j];
+        item.insertText = item.label;
+        result.emplace_back(std::move(item));
     }
 
     return result;
