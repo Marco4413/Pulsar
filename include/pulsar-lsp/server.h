@@ -133,7 +133,10 @@ namespace PulsarLSP
 
     constexpr Pulsar::SourcePosition NULL_SOURCE_POSITION{0,0,0,0};
 
-    void InsertFunctionDefinitionDetails(lsp::CompletionItem& item, const FunctionDefinition& lspDef);
+    // Does not modify `doc`
+    // doc may be nullptr, it is used to resolve custom type names
+    std::string CreateGlobalDefinitionDetails(const Pulsar::GlobalDefinition& def, ParsedDocument::SharedRef doc);
+    std::string CreateFunctionDefinitionDetails(const FunctionDefinition& lspDef);
 
     // Does not modify `doc`
     // If replaceWithName is non-zero, the characters referenced by it are replaced with the name of the entity.
@@ -167,6 +170,7 @@ namespace PulsarLSP
 
         std::optional<lsp::Location> FindDeclaration(const lsp::FileURI& uri, lsp::Position pos);
         std::optional<lsp::Location> FindDefinition(const lsp::FileURI& uri, lsp::Position pos);
+        std::vector<lsp::DocumentSymbol> GetSymbols(const lsp::FileURI& uri);
         std::vector<lsp::CompletionItem> GetCompletionItems(const lsp::FileURI& uri, lsp::Position pos);
         // Every element of the vector has a unique URI
         std::vector<DiagnosticsForDocument> GetDiagnosticReport(const lsp::FileURI& uri, bool sameDocument=true);

@@ -364,6 +364,37 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDefinition(const lsp::FileUR
     return FindDeclaration(uri, pos);
 }
 
+std::vector<lsp::DocumentSymbol> PulsarLSP::Server::GetSymbols(const lsp::FileURI& uri)
+{
+    auto doc = GetOrParseDocument(uri);
+    if (!doc) return {};
+
+    std::vector<lsp::DocumentSymbol> result;
+    for (size_t i = 0; i < doc->Module.Globals.Size(); ++i) {
+        const auto& glblDef = doc->Module.Globals[i];
+        // TODO: Use this method EVERYWHERE. I don't know why I didn't think about this sooner.
+        // Index 0 is the root document of the module.
+        if (glblDef.DebugSymbol.SourceIdx != 0) continue;
+        result.emplace_back(lsp::DocumentSymbol{
+            .name = CreateGlobalDefinitionDetails(glblDef, doc),
+            .kind = lsp::SymbolKind::Variable,
+            .range = SourcePositionToRange(glblDef.DebugSymbol.Token.SourcePos),
+            .selectionRange = SourcePositionToRange(glblDef.DebugSymbol.Token.SourcePos),
+        });
+    }
+    for (size_t i = 0; i < doc->FunctionDefinitions.Size(); ++i) {
+        const auto& funcDef = doc->FunctionDefinitions[i];
+        if (funcDef.Definition.DebugSymbol.SourceIdx != 0) continue;
+        result.emplace_back(lsp::DocumentSymbol{
+            .name = CreateFunctionDefinitionDetails(funcDef),
+            .kind = lsp::SymbolKind::Function,
+            .range = SourcePositionToRange(funcDef.Definition.DebugSymbol.Token.SourcePos),
+            .selectionRange = SourcePositionToRange(funcDef.Definition.DebugSymbol.Token.SourcePos),
+        });
+    }
+    return result;
+}
+
 lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global, Pulsar::SourcePosition replaceWithName)
 {
     lsp::CompletionItem item{};
@@ -380,22 +411,31 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
         item.textEdit = { std::move(edit) };
     }
 
-    std::string detail;
     if (global.Index < doc->Module.Globals.Size()) {
         const Pulsar::GlobalDefinition& glblDef = doc->Module.Globals[global.Index];
-        if (glblDef.IsConstant) {
-            detail += "const ";
-        }
-        detail += ValueTypeToString(glblDef.InitialValue, doc->Module).Data();
-        detail += " -> ";
-        detail += glblDef.Name.Data();
+        item.detail = CreateGlobalDefinitionDetails(glblDef, doc);
     }
-    item.detail = std::move(detail);
 
     return item;
 }
 
-void PulsarLSP::InsertFunctionDefinitionDetails(lsp::CompletionItem& item, const FunctionDefinition& lspDef)
+std::string PulsarLSP::CreateGlobalDefinitionDetails(const Pulsar::GlobalDefinition& def, ParsedDocument::SharedRef doc)
+{
+    std::string detail;
+    if (def.IsConstant) {
+        detail += "const ";
+    }
+    if (doc) {
+        detail += ValueTypeToString(def.InitialValue, doc->Module).Data();
+    } else {
+        detail += ValueTypeToString(def.InitialValue.Type());
+    }
+    detail += " -> ";
+    detail += def.Name.Data();
+    return detail;
+}
+
+std::string PulsarLSP::CreateFunctionDefinitionDetails(const FunctionDefinition& lspDef)
 {
     const Pulsar::FunctionDefinition& def = lspDef.Definition;
 
@@ -419,7 +459,7 @@ void PulsarLSP::InsertFunctionDefinitionDetails(lsp::CompletionItem& item, const
         detail += std::to_string(def.Returns);
     }
 
-    item.detail = std::move(detail);
+    return detail;
 }
 
 lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundFunction& fn, Pulsar::SourcePosition replaceWithName)
@@ -443,7 +483,7 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
     for (size_t i = 0; i < doc->FunctionDefinitions.Size(); ++i) {
         const FunctionDefinition& lspDef = doc->FunctionDefinitions[i];
         if (!lspDef.IsNative && lspDef.Index == fn.Index) {
-            InsertFunctionDefinitionDetails(item, lspDef);
+            item.detail = CreateFunctionDefinitionDetails(lspDef);
             break;
         }
     }
@@ -472,7 +512,7 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
     for (size_t i = 0; i < doc->FunctionDefinitions.Size(); ++i) {
         const FunctionDefinition& lspDef = doc->FunctionDefinitions[i];
         if (lspDef.IsNative && lspDef.Index == nativeFn.Index) {
-            InsertFunctionDefinitionDetails(item, lspDef);
+            item.detail = CreateFunctionDefinitionDetails(lspDef);
             break;
         }
     }
@@ -779,15 +819,16 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
 
             return lsp::requests::Initialize::Result{
                 .capabilities = {
-                    .textDocumentSync    = lsp::TextDocumentSyncOptions{
+                    .textDocumentSync       = lsp::TextDocumentSyncOptions{
                         .openClose = true,
                         .change    = lsp::TextDocumentSyncKind::Incremental,
                         .save      = lsp::SaveOptions{ .includeText = this->m_Options.FullSyncOnSave },
                     },
-                    .completionProvider  = lsp::CompletionOptions{},
-                    .declarationProvider = true,
-                    .definitionProvider  = true,
-                    .diagnosticProvider  = lsp::DiagnosticOptions{
+                    .completionProvider     = lsp::CompletionOptions{},
+                    .declarationProvider    = true,
+                    .definitionProvider     = true,
+                    .documentSymbolProvider = true,
+                    .diagnosticProvider     = lsp::DiagnosticOptions{
                         .interFileDependencies = true,
                         .workspaceDiagnostics  = false,
                         .identifier            = "pulsar",
@@ -820,6 +861,12 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
             auto def = this->FindDefinition(params.textDocument.uri, params.position);
             if (def) return *def;
             return nullptr;
+        })
+        .add<lsp::requests::TextDocument_DocumentSymbol>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::TextDocument_DocumentSymbol::Params&& params)
+            -> lsp::requests::TextDocument_DocumentSymbol::Result
+        {
+            (void)id;
+            return this->GetSymbols(params.textDocument.uri);
         })
         .add<lsp::requests::TextDocument_Diagnostic>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::TextDocument_Diagnostic::Params&& params)
             -> lsp::requests::TextDocument_Diagnostic::Result
