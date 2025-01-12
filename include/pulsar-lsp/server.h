@@ -172,6 +172,7 @@ namespace PulsarLSP
         std::optional<lsp::Location> FindDefinition(const lsp::FileURI& uri, lsp::Position pos);
         std::vector<lsp::DocumentSymbol> GetSymbols(const lsp::FileURI& uri);
         std::vector<lsp::CompletionItem> GetCompletionItems(const lsp::FileURI& uri, lsp::Position pos);
+        std::optional<lsp::Hover> GetHover(const lsp::FileURI& uri, lsp::Position pos);
         // Every element of the vector has a unique URI
         std::vector<DiagnosticsForDocument> GetDiagnosticReport(const lsp::FileURI& uri, bool sameDocument=true);
         void SendUpdatedDiagnosticReport(const lsp::FileURI& uri);

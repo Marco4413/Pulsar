@@ -576,6 +576,87 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetCompletionItems(const lsp
     return {};
 }
 
+#define PULSAR_CODEBLOCK(code) \
+    ("```pulsar\n" + (code) + "\n```")
+
+std::optional<lsp::Hover> PulsarLSP::Server::GetHover(const lsp::FileURI& uri, lsp::Position pos)
+{
+    auto doc = GetOrParseDocument(uri);
+    if (!doc || !doc->Module.HasSourceDebugSymbols()) return std::nullopt;
+
+    // FIXME: Maybe refactor into a separate method, it's a copy of FindDeclaration
+    Pulsar::String path = URIToNormalizedPath(uri);
+    for (size_t i = 0; i < doc->FunctionScopes.Size(); ++i) {
+        const FunctionScope& fnScope = doc->FunctionScopes[i];
+        if (fnScope.FilePath != path) continue;
+        for (size_t j = 0; j < fnScope.UsedIdentifiers.Size(); ++j) {
+            const IdentifierUsage& identUsage = fnScope.UsedIdentifiers[j];
+            if (IsPositionInBetween(pos, identUsage.Identifier.SourcePos)) {
+                switch (identUsage.Type) {
+                case Pulsar::LSPIdentifierUsageType::Global: {
+                    if (identUsage.BoundIndex >= doc->Module.Globals.Size()) break;
+
+                    const Pulsar::GlobalDefinition& global = doc->Module.Globals[identUsage.BoundIndex];
+                    return lsp::Hover{
+                        .contents = lsp::MarkupContent{
+                            .kind = lsp::MarkupKind::Markdown,
+                            // Markdown should not have script execution (if it does it's non-standard)
+                            // So we don't care if custom type names have weird names
+                            .value = PULSAR_CODEBLOCK(CreateGlobalDefinitionDetails(global, doc)),
+                        },
+                        .range = SourcePositionToRange(identUsage.Identifier.SourcePos),
+                    };
+                }
+                case Pulsar::LSPIdentifierUsageType::Function: {
+                    if (identUsage.BoundIndex >= doc->Module.Functions.Size()) break;
+
+                    for (size_t k = 0; k < doc->FunctionDefinitions.Size(); ++k) {
+                        const FunctionDefinition& fnDef = doc->FunctionDefinitions[k];
+                        if (!fnDef.IsNative && fnDef.Index == identUsage.BoundIndex) {
+                            return lsp::Hover{
+                                .contents = lsp::MarkupContent{
+                                    .kind = lsp::MarkupKind::Markdown,
+                                    .value = PULSAR_CODEBLOCK(CreateFunctionDefinitionDetails(fnDef)),
+                                },
+                                .range = SourcePositionToRange(identUsage.Identifier.SourcePos),
+                            };
+                        }
+                    }
+                } break;
+                case Pulsar::LSPIdentifierUsageType::NativeFunction: {
+                    if (identUsage.BoundIndex >= doc->Module.NativeBindings.Size()) break;
+
+                    for (size_t k = 0; k < doc->FunctionDefinitions.Size(); ++k) {
+                        const FunctionDefinition& fnDef = doc->FunctionDefinitions[k];
+                        if (fnDef.IsNative && fnDef.Index == identUsage.BoundIndex) {
+                            return lsp::Hover{
+                                .contents = lsp::MarkupContent{
+                                    .kind = lsp::MarkupKind::Markdown,
+                                    .value = PULSAR_CODEBLOCK(CreateFunctionDefinitionDetails(fnDef)),
+                                },
+                                .range = SourcePositionToRange(identUsage.Identifier.SourcePos),
+                            };
+                        }
+                    }
+                } break;
+                case Pulsar::LSPIdentifierUsageType::Local: {
+                    return lsp::Hover{
+                        .contents = lsp::MarkupContent{
+                            .kind = lsp::MarkupKind::Markdown,
+                            .value = PULSAR_CODEBLOCK(identUsage.Identifier.StringVal).Data(),
+                        },
+                        .range = SourcePositionToRange(identUsage.Identifier.SourcePos),
+                    };
+                }
+                default: break;
+                }
+                return std::nullopt;
+            }
+        }
+    }
+    return std::nullopt;
+}
+
 std::vector<lsp::CompletionItem> PulsarLSP::Server::GetErrorCompletionItems(ParsedDocument::SharedRef doc, const FunctionScope& funcScope, const LocalScope& localScope)
 {
     std::vector<lsp::CompletionItem> result;
@@ -827,6 +908,7 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
                         .save      = lsp::SaveOptions{ .includeText = this->m_Options.FullSyncOnSave },
                     },
                     .completionProvider     = lsp::CompletionOptions{},
+                    .hoverProvider          = true,
                     .declarationProvider    = true,
                     .definitionProvider     = true,
                     .documentSymbolProvider = true,
@@ -847,6 +929,14 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
         {
             (void)id;
             return this->GetCompletionItems(params.textDocument.uri, params.position);
+        })
+        .add<lsp::requests::TextDocument_Hover>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::TextDocument_Hover::Params&& params)
+            -> lsp::requests::TextDocument_Hover::Result
+        {
+            (void)id;
+            auto hover = this->GetHover(params.textDocument.uri, params.position);
+            if (hover) return *hover;
+            return nullptr;
         })
         .add<lsp::requests::TextDocument_Declaration>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::TextDocument_Declaration::Params&& params)
             -> lsp::requests::TextDocument_Declaration::Result
