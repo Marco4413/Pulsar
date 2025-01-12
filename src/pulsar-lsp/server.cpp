@@ -421,15 +421,17 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
 
 std::string PulsarLSP::CreateGlobalDefinitionDetails(const Pulsar::GlobalDefinition& def, ParsedDocument::SharedRef doc)
 {
-    std::string detail;
+    std::string detail = "global ";
     if (def.IsConstant) {
         detail += "const ";
     }
+    detail += "(";
     if (doc) {
         detail += ValueTypeToString(def.InitialValue, doc->Module).Data();
     } else {
         detail += ValueTypeToString(def.InitialValue.Type());
     }
+    detail += ")";
     detail += " -> ";
     detail += def.Name.Data();
     return detail;
