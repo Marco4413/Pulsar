@@ -288,7 +288,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                 case Pulsar::LSPIdentifierUsageType::Global: {
                     if (identUsage.BoundIndex >= doc->Module.Globals.Size()) break;
                     
-                    const Pulsar::GlobalDefinition global = doc->Module.Globals[identUsage.BoundIndex];
+                    const Pulsar::GlobalDefinition& global = doc->Module.Globals[identUsage.BoundIndex];
                     if (!global.HasDebugSymbol()) break;
                     
                     if (global.DebugSymbol.SourceIdx >= doc->Module.SourceDebugSymbols.Size()) break;
@@ -303,7 +303,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                 case Pulsar::LSPIdentifierUsageType::Function: {
                     if (identUsage.BoundIndex >= doc->Module.Functions.Size()) break;
                     
-                    const Pulsar::FunctionDefinition func = doc->Module.Functions[identUsage.BoundIndex];
+                    const Pulsar::FunctionDefinition& func = doc->Module.Functions[identUsage.BoundIndex];
                     if (!func.HasDebugSymbol()) break;
                     
                     if (func.DebugSymbol.SourceIdx >= doc->Module.SourceDebugSymbols.Size()) break;
@@ -318,7 +318,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                 case Pulsar::LSPIdentifierUsageType::NativeFunction: {
                     if (identUsage.BoundIndex >= doc->Module.NativeBindings.Size()) break;
                     
-                    const Pulsar::FunctionDefinition func = doc->Module.NativeBindings[identUsage.BoundIndex];
+                    const Pulsar::FunctionDefinition& func = doc->Module.NativeBindings[identUsage.BoundIndex];
                     if (!func.HasDebugSymbol()) break;
                     
                     if (func.DebugSymbol.SourceIdx >= doc->Module.SourceDebugSymbols.Size()) break;
