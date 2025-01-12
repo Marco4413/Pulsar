@@ -95,6 +95,12 @@ namespace PulsarLSP
         Pulsar::List<LocalScope::Local> Args;
     };
 
+    struct IncludedFile
+    {
+        Pulsar::String FilePath;
+        Pulsar::SourcePosition IncludedAt;
+    };
+
     struct UserProvidedOptions
     {
         // Send diagnostics on open
@@ -115,6 +121,7 @@ namespace PulsarLSP
         using SharedRef = Pulsar::SharedRef<ParsedDocument>;
 
         Pulsar::Module Module;
+        Pulsar::List<IncludedFile> IncludedFiles;
         Pulsar::List<FunctionScope> FunctionScopes;
         Pulsar::List<FunctionDefinition> FunctionDefinitions;
 
@@ -159,6 +166,7 @@ namespace PulsarLSP
         void DeleteDocument(const lsp::FileURI& uri);
 
         std::optional<lsp::Location> FindDeclaration(const lsp::FileURI& uri, lsp::Position pos);
+        std::optional<lsp::Location> FindDefinition(const lsp::FileURI& uri, lsp::Position pos);
         std::vector<lsp::CompletionItem> GetCompletionItems(const lsp::FileURI& uri, lsp::Position pos);
         // Every element of the vector has a unique URI
         std::vector<DiagnosticsForDocument> GetDiagnosticReport(const lsp::FileURI& uri, bool sameDocument=true);

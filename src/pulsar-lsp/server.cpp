@@ -90,7 +90,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
     Pulsar::ParseSettings settings = Pulsar::ParseSettings_Default;
     settings.StoreDebugSymbols        = true;
     settings.MapGlobalProducersToVoid = m_Options.MapGlobalProducersToVoid;
-    settings.IncludeResolver = [this](Pulsar::Parser& parser, const Pulsar::String& cwf, const Pulsar::Token& token) {
+    settings.IncludeResolver = [this, &parsedDocument, &path](Pulsar::Parser& parser, const Pulsar::String& cwf, const Pulsar::Token& token) {
         std::filesystem::path targetPath(token.StringVal.Data());
         std::filesystem::path workingPath(cwf.Data());
         std::filesystem::path filePath = workingPath.parent_path() / targetPath;
@@ -100,7 +100,10 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
         auto text = this->m_Library.FindOrLoadDocument(filePathURI);
         if (!text) return parser.SetError(Pulsar::ParseResult::FileNotRead, token, "Could not read file '" + internalPath + "'.");
 
-        parser.AddSource(internalPath, *text);
+        if (parser.AddSource(internalPath, *text) && path == cwf) {
+            parsedDocument.IncludedFiles.EmplaceBack(internalPath, token.SourcePos);
+        }
+
         return Pulsar::ParseResult::OK;
     };
     settings.LSPHooks.OnBlockNotification = [&path, extractAll, &functionScopes](Pulsar::LSPHooks::OnBlockNotificationParams&& params) {
@@ -341,6 +344,24 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
         }
     }
     return {};
+}
+
+std::optional<lsp::Location> PulsarLSP::Server::FindDefinition(const lsp::FileURI& uri, lsp::Position pos)
+{
+    auto doc = GetOrParseDocument(uri);
+    if (!doc) return {};
+
+    for (size_t i = 0; i < doc->IncludedFiles.Size(); ++i) {
+        const auto& includedFile = doc->IncludedFiles[i];
+        if (IsPositionInBetween(pos, includedFile.IncludedAt)) {
+            return lsp::Location{
+                .uri = NormalizedPathToURI(includedFile.FilePath),
+                .range = lsp::Range{.start{.line=0,.character=0},.end{.line=0,.character=0}}
+            };
+        }
+    }
+
+    return FindDeclaration(uri, pos);
 }
 
 lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global, Pulsar::SourcePosition replaceWithName)
@@ -765,6 +786,7 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
                     },
                     .completionProvider  = lsp::CompletionOptions{},
                     .declarationProvider = true,
+                    .definitionProvider  = true,
                     .diagnosticProvider  = lsp::DiagnosticOptions{
                         .interFileDependencies = true,
                         .workspaceDiagnostics  = false,
@@ -788,7 +810,15 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
         {
             (void)id;
             auto decl = this->FindDeclaration(params.textDocument.uri, params.position);
-            if (decl.has_value()) return decl.value();
+            if (decl) return *decl;
+            return nullptr;
+        })
+        .add<lsp::requests::TextDocument_Definition>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::TextDocument_Definition::Params&& params)
+            -> lsp::requests::TextDocument_Definition::Result
+        {
+            (void)id;
+            auto def = this->FindDefinition(params.textDocument.uri, params.position);
+            if (def) return *def;
             return nullptr;
         })
         .add<lsp::requests::TextDocument_Diagnostic>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::TextDocument_Diagnostic::Params&& params)
