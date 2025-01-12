@@ -31,12 +31,12 @@
         }}                                                                            \
     } while (0)
 
-#define LSP_FUNCTION_DEFINITION(isNative, idx, fnDef, ident, args, settings) \
+#define LSP_FUNCTION_DEFINITION(isRedecl, isNative, idx, fnDef, ident, args, settings) \
     do {                                                                     \
         const Pulsar::String* filePath = this->CurrentPath();                \
         const auto& callback = (settings).LSPHooks.OnFunctionDefinition;     \
         if (filePath && callback) {                                          \
-            if (callback({(isNative), (size_t)(idx),                         \
+            if (callback({(isRedecl), (isNative), (size_t)(idx),             \
                          *filePath, (fnDef), (ident), (args)})) {            \
                 return SetError(                                             \
                     Pulsar::ParseResult::LSPHooksRequestedTermination,       \
@@ -396,7 +396,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
         // If the native already exists push symbols (the function may have been defined outside the Parser)
         auto nameIdxPair = globalScope.NativeFunctions.Find(def.Name);
         if (!nameIdxPair) {
-            LSP_FUNCTION_DEFINITION(true, module.NativeBindings.Size(), def, identToken, args, settings);
+            LSP_FUNCTION_DEFINITION(false, true, module.NativeBindings.Size(), def, identToken, args, settings);
             globalScope.NativeFunctions.Emplace(def.Name, module.NativeBindings.Size());
             module.NativeBindings.EmplaceBack(std::move(def));
         } else {
@@ -405,11 +405,12 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
             if (!nativeFunc.MatchesDeclaration(def))
                 return SetError(ParseResult::NativeFunctionRedeclaration, identToken, "Redeclaration of Native Function with different signature.");
             nativeFunc.DebugSymbol = def.DebugSymbol;
+            LSP_FUNCTION_DEFINITION(true, true, nativeIdx, nativeFunc, identToken, args, settings);
         }
     } else {
         if (curToken.Type != TokenType::Colon)
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected '->' for return count declaration or ':' to begin function body.");
-        LSP_FUNCTION_DEFINITION(false, module.Functions.Size(), def, identToken, args, settings);
+        LSP_FUNCTION_DEFINITION(false, false, module.Functions.Size(), def, identToken, args, settings);
         globalScope.Functions.Emplace(def.Name, module.Functions.Size());
         FunctionScope functionScope;
         LocalScope localScope{

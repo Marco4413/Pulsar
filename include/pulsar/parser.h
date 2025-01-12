@@ -190,6 +190,12 @@ namespace Pulsar
 
         struct OnFunctionDefinitionParams
         {
+            // A native function may be declared multiple times.
+            // The Pulsar parser by default saves the position of
+            //  the last declaration as a Debug symbol.
+            // In the future, a function may be declared at some
+            //  point in the code and defined later.
+            bool IsRedeclaration;
             bool IsNative;
             size_t Index;
             const String& FilePath;

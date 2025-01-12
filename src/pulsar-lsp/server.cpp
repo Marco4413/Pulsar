@@ -191,13 +191,30 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
         return false;
     };
     settings.LSPHooks.OnFunctionDefinition = [&parsedDocument](Pulsar::LSPHooks::OnFunctionDefinitionParams&& params) {
-        parsedDocument.FunctionDefinitions.PushBack(FunctionDefinition{
-            .FilePath   = params.FilePath,
-            .IsNative   = params.IsNative,
-            .Index      = params.Index,
-            .Definition = params.FnDefinition,
-            .Args       = params.Args,
-        });
+        if (!params.IsNative && params.IsRedeclaration) return false;
+
+        if (params.IsRedeclaration) {
+            // TODO: Split natives from non-natives. I'm getting tired of iterating over the array.
+            for (size_t i = 0; i < parsedDocument.FunctionDefinitions.Size(); ++i) {
+                FunctionDefinition& fnDef = parsedDocument.FunctionDefinitions[i];
+                if (fnDef.IsNative == params.IsNative && fnDef.Index == params.Index) {
+                    // May be redeclared in a different file
+                    fnDef.FilePath   = params.FilePath;
+                    // Update debug symbols
+                    fnDef.Definition = params.FnDefinition;
+                    fnDef.Args       = params.Args;
+                }
+            }
+        } else {
+            parsedDocument.FunctionDefinitions.PushBack(FunctionDefinition{
+                .FilePath   = params.FilePath,
+                .IsNative   = params.IsNative,
+                .Index      = params.Index,
+                .Definition = params.FnDefinition,
+                .Args       = params.Args,
+            });
+        }
+        
 
         return false;
     };
