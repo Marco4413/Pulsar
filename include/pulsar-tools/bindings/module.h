@@ -13,7 +13,7 @@ namespace PulsarTools
         class ModuleType : public Pulsar::CustomDataHolder, public Pulsar::Module
         {
         public:
-            using Ref_T = Pulsar::SharedRef<ModuleType>;
+            using Ref = Pulsar::SharedRef<ModuleType>;
             using Pulsar::Module::Module;
         };
 

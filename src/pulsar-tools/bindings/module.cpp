@@ -15,7 +15,7 @@ void PulsarTools::ModuleNativeBindings::BindToModule(Pulsar::Module& module)
 
 Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_FromFile(Pulsar::ExecutionContext& eContext, uint64_t type)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+    Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& modulePath = frame.Locals[0];
     if (modulePath.Type() != Pulsar::ValueType::String)
         return Pulsar::RuntimeState::TypeError;
@@ -28,7 +28,7 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_FromFile(Pulsar::
         return Pulsar::RuntimeState::OK;
     }
     
-    ModuleType::Ref_T module = ModuleType::Ref_T::New();
+    ModuleType::Ref module = ModuleType::Ref::New();
     result = parser.ParseIntoModule(*module, Pulsar::ParseSettings_Default);
     if (result != Pulsar::ParseResult::OK) {
         frame.Stack.EmplaceBack()
@@ -43,21 +43,21 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_FromFile(Pulsar::
 
 Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_Run(Pulsar::ExecutionContext& eContext, uint64_t type)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+    Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& moduleRef = frame.Locals[0];
     if (moduleRef.Type() != Pulsar::ValueType::Custom
         || moduleRef.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
     
-    ModuleType::Ref_T module = moduleRef.AsCustom().As<ModuleType>();
+    ModuleType::Ref module = moduleRef.AsCustom().As<ModuleType>();
 
-    Pulsar::ValueStack stack;
-    Pulsar::ExecutionContext context = module->CreateExecutionContext();
-    auto runtimeState = module->CallFunctionByName("main", stack, context);
+    Pulsar::ExecutionContext context(*module);
+    context.CallFunction("main");
+    auto runtimeState = context.Run();
     if (runtimeState != Pulsar::RuntimeState::OK)
         return runtimeState;
 
-    Pulsar::ValueList retValues(std::move(stack));
+    Pulsar::ValueList retValues(std::move(context.GetStack()));
     frame.Stack.EmplaceBack()
         .SetList(std::move(retValues));
     return Pulsar::RuntimeState::OK;
@@ -65,13 +65,13 @@ Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_Run(Pulsar::Execu
 
 Pulsar::RuntimeState PulsarTools::ModuleNativeBindings::Module_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+    Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& moduleRef = frame.Locals[0];
     if (moduleRef.Type() != Pulsar::ValueType::Custom
         || moduleRef.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
 
-    ModuleType::Ref_T module = moduleRef.AsCustom().As<ModuleType>();
+    ModuleType::Ref module = moduleRef.AsCustom().As<ModuleType>();
     frame.Stack.EmplaceBack()
         .SetInteger(module ? 1 : 0);
     return Pulsar::RuntimeState::OK;

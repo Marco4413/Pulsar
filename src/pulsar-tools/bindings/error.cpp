@@ -10,73 +10,80 @@ void PulsarTools::ErrorNativeBindings::BindToModule(Pulsar::Module& module)
 
 Pulsar::RuntimeState PulsarTools::ErrorNativeBindings::Error_Error(Pulsar::ExecutionContext& eContext)
 {
-    eContext.CallStack.PopFrame();
+    eContext.GetCallStack().PopFrame();
     return Pulsar::RuntimeState::Error;
 }
 
 Pulsar::RuntimeState PulsarTools::ErrorNativeBindings::Error_Type(Pulsar::ExecutionContext& eContext)
 {
-    eContext.CallStack.PopFrame();
+    eContext.GetCallStack().PopFrame();
     return Pulsar::RuntimeState::TypeError;
 }
 
 Pulsar::RuntimeState PulsarTools::ErrorNativeBindings::Error_SafeCall(Pulsar::ExecutionContext& eContext)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    Pulsar::Value& funcRef = frame.Locals[1];
-    if (funcRef.Type() != Pulsar::ValueType::FunctionReference)
-        return Pulsar::RuntimeState::TypeError;
-    Pulsar::Value& args = frame.Locals[0];
-    if (args.Type() != Pulsar::ValueType::List)
+    Pulsar::Frame& frame = eContext.CurrentFrame();
+
+    Pulsar::Value& functionReference = frame.Locals[1];
+    if (functionReference.Type() != Pulsar::ValueType::FunctionReference)
         return Pulsar::RuntimeState::TypeError;
 
-    int64_t funcIdx = funcRef.AsInteger();
-    Pulsar::ValueStack stack(std::move(args.AsList()));
+    Pulsar::Value& functionArguments = frame.Locals[0];
+    if (functionArguments.Type() != Pulsar::ValueType::List)
+        return Pulsar::RuntimeState::TypeError;
 
-    Pulsar::ExecutionContext ctx = eContext.OwnerModule->CreateExecutionContext(false, true);
-    eContext.CustomTypeData.ForEach([&ctx](const Pulsar::HashMapBucket<uint64_t, Pulsar::CustomTypeData::Ref_T>& b) mutable {
+    int64_t functionIdx = functionReference.AsInteger();
+
+    Pulsar::ExecutionContext safeContext(eContext.GetModule(), false);
+    safeContext.InitCustomTypeData();
+    eContext.GetAllCustomTypeData().ForEach([&safeContext](const auto& b) {
         PULSAR_ASSERT(b.Value(), "Reference to CustomTypeData is nullptr.");
-        uint64_t customType = b.Key();
-        Pulsar::CustomTypeData::Ref_T customData = b.Value()->Copy();
-        if (customData)
-            ctx.CustomTypeData.Insert(customType, customData);
+        uint64_t typeId = b.Key();
+        Pulsar::CustomTypeData::Ref typeDataCopy = b.Value()->Copy();
+        if (typeDataCopy) safeContext.SetCustomTypeData(typeId, typeDataCopy);
     });
-    ctx.Globals = eContext.Globals;
 
-    Pulsar::RuntimeState state = eContext.OwnerModule->CallFunction(funcIdx, stack, ctx);
-    if (state == Pulsar::RuntimeState::OK)
-        args.AsList() = Pulsar::ValueList(std::move(stack));
+    safeContext.GetStack() = Pulsar::ValueStack(std::move(functionArguments.AsList()));
+    safeContext.CallFunction(functionIdx);
+    Pulsar::RuntimeState callState = safeContext.Run();
+    if (callState == Pulsar::RuntimeState::OK)
+        functionArguments.AsList() = Pulsar::ValueList(std::move(safeContext.GetStack()));
     
-    frame.Stack.EmplaceBack(std::move(args));
-    frame.Stack.EmplaceBack()
-        .SetInteger((int64_t)state);
+    frame.Stack.EmplaceBack(std::move(functionArguments));
+    frame.Stack.EmplaceBack().SetInteger((int64_t)callState);
+
     return Pulsar::RuntimeState::OK;
 }
 
 Pulsar::RuntimeState PulsarTools::ErrorNativeBindings::Error_TryCall(Pulsar::ExecutionContext& eContext)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    Pulsar::Value& funcRef = frame.Locals[1];
-    if (funcRef.Type() != Pulsar::ValueType::FunctionReference)
+    Pulsar::Frame& frame = eContext.CurrentFrame();
+
+    Pulsar::Value& functionReference = frame.Locals[1];
+    if (functionReference.Type() != Pulsar::ValueType::FunctionReference)
         return Pulsar::RuntimeState::TypeError;
-    Pulsar::Value& args = frame.Locals[0];
-    if (args.Type() != Pulsar::ValueType::List)
+    Pulsar::Value& functionArguments = frame.Locals[0];
+    if (functionArguments.Type() != Pulsar::ValueType::List)
         return Pulsar::RuntimeState::TypeError;
 
-    int64_t funcIdx = funcRef.AsInteger();
-    Pulsar::ValueStack stack(std::move(args.AsList()));
+    int64_t functionIdx = functionReference.AsInteger();
 
-    Pulsar::ExecutionContext ctx = eContext.OwnerModule->CreateExecutionContext(false, false);
-    ctx.CustomTypeData = eContext.CustomTypeData;
-    ctx.Globals = std::move(eContext.Globals);
+    Pulsar::ExecutionContext ctx(eContext.GetModule(), false);
+    ctx.GetAllCustomTypeData() = std::move(eContext.GetAllCustomTypeData());
+    ctx.GetGlobals() = std::move(eContext.GetGlobals());
 
-    Pulsar::RuntimeState state = eContext.OwnerModule->CallFunction(funcIdx, stack, ctx);
-    if (state == Pulsar::RuntimeState::OK)
-        args.AsList() = Pulsar::ValueList(std::move(stack));
-    
-    frame.Stack.EmplaceBack(std::move(args));
+    ctx.GetStack() = Pulsar::ValueStack(std::move(functionArguments.AsList()));
+    ctx.CallFunction(functionIdx);
+    Pulsar::RuntimeState callState = ctx.Run();
+    if (callState == Pulsar::RuntimeState::OK)
+        functionArguments.AsList() = Pulsar::ValueList(std::move(ctx.GetStack()));
+
+    frame.Stack.EmplaceBack(std::move(functionArguments));
     frame.Stack.EmplaceBack()
-        .SetInteger((int64_t)state);
-    eContext.Globals = std::move(ctx.Globals);
+        .SetInteger((int64_t)callState);
+
+    eContext.GetAllCustomTypeData() = std::move(ctx.GetAllCustomTypeData());
+    eContext.GetGlobals() = std::move(ctx.GetGlobals());
+
     return Pulsar::RuntimeState::OK;
 }

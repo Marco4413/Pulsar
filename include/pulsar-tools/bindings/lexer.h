@@ -14,7 +14,7 @@ namespace PulsarTools
         class LexerType : public Pulsar::CustomDataHolder, public Pulsar::Lexer
         {
         public:
-            using Ref_T = Pulsar::SharedRef<LexerType>;
+            using Ref = Pulsar::SharedRef<LexerType>;
             using Pulsar::Lexer::Lexer;
         };
 

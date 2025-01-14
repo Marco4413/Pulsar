@@ -18,8 +18,6 @@ namespace PulsarTools
         struct PulsarThreadContext
         {
             Pulsar::ExecutionContext Context;
-            Pulsar::ValueStack Stack;
-            Pulsar::RuntimeState State;
             std::atomic_bool IsRunning = false;
         };
 
@@ -32,7 +30,7 @@ namespace PulsarTools
         class ThreadType : public Pulsar::CustomDataHolder, public PulsarThread
         {
         public:
-            using Ref_T = Pulsar::SharedRef<ThreadType>;
+            using Ref = Pulsar::SharedRef<ThreadType>;
             ThreadType(std::thread&& thread, Pulsar::SharedRef<PulsarThreadContext>&& threadContext)
                 : PulsarThread{ std::move(thread), std::move(threadContext) } { }
         };
@@ -49,7 +47,7 @@ namespace PulsarTools
         class ChannelType : public Pulsar::CustomDataHolder, public Channel
         {
         public:
-            using Ref_T = Pulsar::SharedRef<ChannelType>;
+            using Ref = Pulsar::SharedRef<ChannelType>;
             using Channel::Channel;
         };
 

@@ -58,22 +58,25 @@ void PulsarTools::PrintPrettyError(
 
 void PulsarTools::PrintPrettyRuntimeError(const Pulsar::ExecutionContext& context, TokenViewRange viewRange)
 {
-    if (context.CallStack.Size() == 0) {
+    const Pulsar::Module& module = context.GetModule();
+    const Pulsar::CallStack& callStack = context.GetCallStack();
+
+    if (callStack.Size() == 0) {
         PULSARTOOLS_PRINTF("No Runtime Error Information.");
         return;
     }
 
     Pulsar::String stackTrace = context.GetStackTrace(10);
-    const Pulsar::Frame& frame = context.CallStack.CurrentFrame();
-    if (!context.OwnerModule->HasSourceDebugSymbols()
+    const Pulsar::Frame& frame = callStack.CurrentFrame();
+    if (!module.HasSourceDebugSymbols()
         || !frame.Function->HasDebugSymbol()
-        || frame.Function->DebugSymbol.SourceIdx >= context.OwnerModule->SourceDebugSymbols.Size()) {
+        || frame.Function->DebugSymbol.SourceIdx >= module.SourceDebugSymbols.Size()) {
         PULSARTOOLS_PRINTF(
             "Error: Within function {}\n{}",
             frame.Function->Name, stackTrace);
         return;
     } else if (!frame.Function->HasCodeDebugSymbols()) {
-        const Pulsar::SourceDebugSymbol& srcSymbol = context.OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
+        const Pulsar::SourceDebugSymbol& srcSymbol = module.SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
         PrintPrettyError(
             &srcSymbol.Source, &srcSymbol.Path,
             frame.Function->DebugSymbol.Token,
@@ -83,7 +86,7 @@ void PulsarTools::PrintPrettyRuntimeError(const Pulsar::ExecutionContext& contex
         return;
     }
 
-    const Pulsar::SourceDebugSymbol& srcSymbol = context.OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
+    const Pulsar::SourceDebugSymbol& srcSymbol = module.SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
 
     size_t codeSymbolIdx = 0;
     if (frame.InstructionIndex > 0 && frame.Function->FindCodeDebugSymbolFor(frame.InstructionIndex-1, codeSymbolIdx)) {
