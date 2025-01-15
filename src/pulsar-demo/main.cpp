@@ -123,9 +123,9 @@ int main(int argc, const char** argv)
         .Returns = 0,
         // This is not necessary as by default it's the same as Arity.
         .LocalsCount = 1,
-    }, [](Pulsar::ExecutionContext& ctx) {
+    }, [](Pulsar::ExecutionContext& eContext) {
         // We get the frame of this function call.
-        Pulsar::Frame& frame = ctx.CallStack.CurrentFrame();
+        Pulsar::Frame& frame = eContext.CurrentFrame();
         // Since Arity and LocalsCount were set to 1,
         //   frame.Locals[0] exists and is some Value.
         const Pulsar::Value& str = frame.Locals[0];
@@ -138,26 +138,25 @@ int main(int argc, const char** argv)
         return Pulsar::RuntimeState::OK;
     });
 
-    // runtimeState will contain the state of the VM after a call.
-    Pulsar::RuntimeState runtimeState = Pulsar::RuntimeState::OK;
+    // A Module only contains the "code", it does not run it.
+    // So an ExecutionContext is needed, and we can create it from a module.
+    // ExecutionContext holds a reference to the specified module, so make sure
+    //   the module outlives the context.
+    Pulsar::ExecutionContext context(module);
     // We prepare the initial stack which must contain all arguments
     //   needed by the function to be called (main only needs a List).
-    Pulsar::ValueStack stack;
+    Pulsar::ValueStack& stack = context.GetStack();
     stack.EmplaceBack()
         .SetList(Pulsar::ValueList());
-    // A Module only contains the "code", it does not store any kind of state.
-    // So an ExecutionContext is needed, and we can create it from a module.
-    // ctx.OwnerModule is a pointer to module, so make sure that module outlives ctx
-    //   if you want to avoid SEGFAULTs (my beloved).
-    Pulsar::ExecutionContext ctx = module.CreateExecutionContext();
     // Call the last function named "main". We can assume it accepts 1 argument (args) and returns anything.
-    runtimeState = module.CallFunctionByName("main", stack, ctx);
+    context.CallFunction("main");
+    Pulsar::RuntimeState runtimeState = context.Run();
     if (runtimeState != Pulsar::RuntimeState::OK) {
         // Fortunately ExecutionContext::GetStackTrace exists
         //   and printing the stack trace is very simple.
         // It accepts a single argument which is the depth of the trace (how many calls to show).
         // It works because ExecutionContext is not modified on error, so it is the last state the VM was in.
-        Pulsar::String stackTrace = ctx.GetStackTrace(10);
+        Pulsar::String stackTrace = context.GetStackTrace(10);
         fmt::println("[RUNTIME ERROR]: {}\n{}",
             Pulsar::RuntimeStateToString(runtimeState),
             stackTrace.Data());

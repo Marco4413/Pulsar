@@ -285,17 +285,20 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
     dummyFunc.Name = "{g";
     dummyFunc.Name += identToken.StringVal;
     dummyFunc.Name += '}';
-    auto stack = ValueStack();
-    auto context = module.CreateExecutionContext();
+
+    ExecutionContext context(module);
+    ValueStack& stack = context.GetStack();
     auto evalResult = RuntimeState::OK;
+
     if (isProducer && settings.MapGlobalProducersToVoid) {
         stack.EmplaceBack().SetVoid();
     } else {
-        evalResult = module.ExecuteFunction(dummyFunc, stack, context);
+        context.CallFunction(dummyFunc);
+        evalResult = context.Run();
     }
 
-    if (evalResult != RuntimeState::OK || stack.Size() == 0) {
-        size_t instrIdx = context.CallStack[0].InstructionIndex;
+    if (evalResult != RuntimeState::OK) {
+        size_t instrIdx = context.GetCallStack()[0].InstructionIndex;
         size_t symbolIdx = 0;
         for (size_t i = 0; i < dummyFunc.CodeDebugSymbols.Size(); i++) {
             if (dummyFunc.CodeDebugSymbols[i].StartIdx >= instrIdx)
@@ -314,6 +317,8 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
             dummyFunc.CodeDebugSymbols[symbolIdx].Token,
             std::move(errorMsg));
     }
+
+    PULSAR_ASSERT(stack.Size() > 0, "Global producer did not match return count.");
     
     GlobalDefinition* globalDef;
     if (!globalNameIdxPair) {

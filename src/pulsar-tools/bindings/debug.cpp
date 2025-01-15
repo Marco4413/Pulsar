@@ -16,7 +16,7 @@ void PulsarTools::DebugNativeBindings::BindToModule(Pulsar::Module& module, bool
 
 Pulsar::RuntimeState PulsarTools::DebugNativeBindings::Debug_StackDump(Pulsar::ExecutionContext& eContext)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CallingFrame();
+    Pulsar::Frame& frame = eContext.GetCallStack().CallingFrame();
     std::string dump("Stack Dump: [");
     for (size_t i = 0; i < frame.Stack.Size(); i++) {
         if (i > 0) dump += ',';

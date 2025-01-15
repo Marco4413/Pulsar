@@ -1,15 +1,42 @@
 #include "pulsar/runtime.h"
 
+Pulsar::ExecutionContext::ExecutionContext(const Module& module, bool init)
+    : m_Module(module)
+{
+    if (init) Init();
+}
+
+void Pulsar::ExecutionContext::Init()
+{
+    InitGlobals();
+    InitCustomTypeData();
+}
+
+void Pulsar::ExecutionContext::InitGlobals()
+{
+    for (size_t i = 0; i < m_Module.Globals.Size(); i++)
+        m_Globals.EmplaceBack(m_Module.Globals[i].CreateInstance());
+}
+
+void Pulsar::ExecutionContext::InitCustomTypeData()
+{
+    m_CustomTypeData.Reserve(m_Module.CustomTypes.Count());
+    m_Module.CustomTypes.ForEach([this](const HashMapBucket<uint64_t, CustomType>& b) {
+        if (b.Value().DataFactory)
+            this->m_CustomTypeData.Emplace(b.Key(), b.Value().DataFactory());
+    });
+}
+
 Pulsar::String Pulsar::ExecutionContext::GetCallTrace(size_t callIdx) const
 {
-    const Frame& frame = CallStack[callIdx];
+    const Frame& frame = m_CallStack[callIdx];
     String trace;
     trace += "at (";
     if (frame.IsNative)
         trace += '*';
     trace += frame.Function->Name + ')';
-    if (frame.Function->HasDebugSymbol() && OwnerModule->HasSourceDebugSymbols()) {
-        const Pulsar::String& filePath = OwnerModule->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx].Path;
+    if (frame.Function->HasDebugSymbol() && m_Module.HasSourceDebugSymbols()) {
+        const Pulsar::String& filePath = m_Module.SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx].Path;
 
         size_t codeSymbolIdx = 0;
         if (frame.InstructionIndex > 0 && frame.Function->FindCodeDebugSymbolFor(frame.InstructionIndex-1, codeSymbolIdx)) {
@@ -31,16 +58,16 @@ Pulsar::String Pulsar::ExecutionContext::GetCallTrace(size_t callIdx) const
 
 Pulsar::String Pulsar::ExecutionContext::GetStackTrace(size_t maxDepth) const
 {
-    if (CallStack.Size() == 0 || maxDepth == 0)
+    if (m_CallStack.Size() == 0 || maxDepth == 0)
         return "";
 
     String trace("    ");
-    trace += GetCallTrace(CallStack.Size()-1);
-    if (CallStack.Size() == 1 || maxDepth == 1)
+    trace += GetCallTrace(m_CallStack.Size()-1);
+    if (m_CallStack.Size() == 1 || maxDepth == 1)
         return trace;
 
-    if (maxDepth > CallStack.Size())
-        maxDepth = CallStack.Size();
+    if (maxDepth > m_CallStack.Size())
+        maxDepth = m_CallStack.Size();
 
     // Show half of the top-most calls and half of the bottom ones.
     // (maxDepth+1) is to give "priority" to the top-most calls in case of odd numbers.
@@ -49,9 +76,9 @@ Pulsar::String Pulsar::ExecutionContext::GetStackTrace(size_t maxDepth) const
         trace += GetCallTrace(i);
     }
 
-    if (maxDepth < CallStack.Size()) {
+    if (maxDepth < m_CallStack.Size()) {
         trace += "\n    ... other ";
-        trace += UIntToString((uint64_t)(CallStack.Size()-maxDepth));
+        trace += UIntToString((uint64_t)(m_CallStack.Size()-maxDepth));
         trace += " calls";
     }
 
@@ -129,122 +156,66 @@ int64_t Pulsar::Module::DeclareAndBindNativeFunction(FunctionDefinition def, Nat
     return (int64_t)(NativeBindings.Size())-1;
 }
 
-uint64_t Pulsar::Module::BindCustomType(const String& name, CustomType::DataFactory_T dataFactory)
+uint64_t Pulsar::Module::BindCustomType(const String& name, CustomType::DataFactoryFn dataFactory)
 {
     while (CustomTypes.Find(++m_LastTypeId));
     CustomTypes.Emplace(m_LastTypeId, name, dataFactory);
     return m_LastTypeId;
 }
 
-Pulsar::RuntimeState Pulsar::Module::CallFunctionByName(const String& name, ValueStack& stack, ExecutionContext& context) const
+Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(const String& funcName)
 {
-    for (int64_t i = Functions.Size()-1; i >= 0; i--) {
-        const FunctionDefinition& other = Functions[(size_t)i];
-        if (other.Name != name)
+    for (size_t i = m_Module.Functions.Size(); i > 0; --i) {
+        const FunctionDefinition& funcDef = m_Module.Functions[i-1];
+        if (funcDef.Name != funcName)
             continue;
-        return CallFunction(i, stack, context);
+        return CallFunction(i-1);
     }
-    return RuntimeState::FunctionNotFound;
+    return m_State = RuntimeState::FunctionNotFound;
 }
 
-Pulsar::RuntimeState Pulsar::Module::CallFunctionByDefinition(const FunctionDefinition& def, ValueStack& stack, ExecutionContext& context) const
+Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(int64_t funcIdx)
 {
-    for (int64_t i = Functions.Size()-1; i >= 0; i--) {
-        const FunctionDefinition& other = Functions[(size_t)i];
-        if (!other.MatchesDeclaration(def))
-            continue;
-        return CallFunction(i, stack, context);
-    }
-    return RuntimeState::FunctionNotFound;
+    if (funcIdx < 0 || (size_t)funcIdx >= m_Module.Functions.Size())
+        return m_State = RuntimeState::OutOfBoundsFunctionIndex;
+    return CallFunction(m_Module.Functions[(size_t)funcIdx]);
 }
 
-Pulsar::RuntimeState Pulsar::Module::CallFunctionBySignature(const FunctionDefinition& sig, ValueStack& stack, ExecutionContext& context) const
+Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(const FunctionDefinition& funcDef)
 {
-    for (int64_t i = Functions.Size()-1; i >= 0; i--) {
-        const FunctionDefinition& other = Functions[(size_t)i];
-        if (!other.MatchesSignature(sig))
-            continue;
-        return CallFunction(i, stack, context);
-    }
-    return RuntimeState::FunctionNotFound;
-}
-
-Pulsar::ExecutionContext Pulsar::Module::CreateExecutionContext(bool initGlobals, bool initTypeData) const
-{
-    ExecutionContext context;
-    context.OwnerModule = this;
-    if (initGlobals) {
-        for (size_t i = 0; i < Globals.Size(); i++)
-            context.Globals.EmplaceBack(Globals[i].CreateInstance());
-    }
-    if (initTypeData) {
-        context.CustomTypeData.Reserve(CustomTypes.Count());
-        CustomTypes.ForEach([&context](const HashMapBucket<uint64_t, CustomType>& b) mutable {
-            if (b.Value().DataFactory)
-                context.CustomTypeData.Emplace(b.Key(), b.Value().DataFactory());
-        });
-    }
-    return context;
-}
-
-Pulsar::RuntimeState Pulsar::Module::CallFunction(int64_t funcIdx, ValueStack& stack, ExecutionContext& context) const
-{
-    if (funcIdx < 0 || (size_t)funcIdx >= Functions.Size())
-        return RuntimeState::OutOfBoundsFunctionIndex;
-    return ExecuteFunction(Functions[(size_t)funcIdx], stack, context);
-}
-
-Pulsar::RuntimeState Pulsar::Module::ExecuteFunction(const FunctionDefinition& func, ValueStack& stack, ExecutionContext& context) const
-{
-    { // Create Frame
-        Frame& frame = context.CallStack.CreateAndPushFrame(&func, false);
-        auto res = context.CallStack.PrepareFrame(frame, stack);
-        if (res != RuntimeState::OK)
-            return res;
-    }
-
-    while (true) {
-        while (true) {
-            Frame& frame = context.CallStack.CurrentFrame();
-            if (frame.InstructionIndex >= frame.Function->Code.Size())
-                break;
-            auto state = ExecuteInstruction(frame, context);
-            if (state != RuntimeState::OK)
-                return state;
-        }
-
-        if (context.IsAtEnd())
-            break;
-        if (!context.CallStack.HasCaller())
-            return RuntimeState::CallStackUnderflow;
-        Frame& callingFrame = context.CallStack.CallingFrame();
-
-        Frame& retFrame = context.CallStack.CurrentFrame();
-        if (retFrame.Stack.Size() < retFrame.Function->Returns)
-            return RuntimeState::StackUnderflow;
-        
-        for (size_t i = 0; i < retFrame.Function->Returns; i++) {
-            callingFrame.Stack.PushBack(std::move(
-                retFrame.Stack[retFrame.Stack.Size()-retFrame.Function->Returns+i]
-            ));
-        }
-        context.CallStack.PopFrame();
-    }
-
-    if (context.CallStack.Size() == 0)
-        return RuntimeState::CallStackUnderflow;
-    { // Move Return Values
-        Frame& thisFrame = context.CallStack[0];
-        if (thisFrame.Stack.Size() < thisFrame.Function->Returns)
-            return RuntimeState::StackUnderflow;
-        
-        for (size_t i = 0; i < thisFrame.Function->Returns; i++) {
-            stack.PushBack(std::move(
-                thisFrame.Stack[thisFrame.Stack.Size()-thisFrame.Function->Returns+i]
-            ));
-        }
-    }
+    ValueStack& callerStack = !m_CallStack.IsEmpty()
+        ? m_CallStack.CurrentFrame().Stack : m_Stack;
+    Frame frame = m_CallStack.CreateFrame(&funcDef, false);
+    if ((m_State = m_CallStack.PrepareFrame(frame, callerStack)) != RuntimeState::OK)
+        return m_State;
+    m_CallStack.PushFrame(std::move(frame));
     return RuntimeState::OK;
+}
+
+void Pulsar::ExecutionContext::InternalStep()
+{
+    Frame& frame = m_CallStack.CurrentFrame();
+    if (frame.InstructionIndex < frame.Function->Code.Size()) {
+        m_State = ExecuteInstruction(frame);
+        return;
+    }
+
+    ValueStack& callerStack = m_CallStack.HasCaller()
+        ? m_CallStack.CallingFrame().Stack : m_Stack;
+
+    Frame& returningFrame = m_CallStack.CurrentFrame();
+    if (returningFrame.Stack.Size() < returningFrame.Function->Returns) {
+        m_State = RuntimeState::StackUnderflow;
+        return;
+    }
+
+    for (size_t i = 0; i < returningFrame.Function->Returns; i++) {
+        size_t popIdx = returningFrame.Stack.Size()-returningFrame.Function->Returns+i;
+        callerStack.EmplaceBack(std::move(returningFrame.Stack[popIdx]));
+    }
+
+    m_CallStack.PopFrame();
+    return;
 }
 
 // Used within Pulsar::Module::ExecuteInstruction to implement type-checking instructions
@@ -276,7 +247,7 @@ inline bool _InstrTypeCheck(Pulsar::InstructionCode instrCode, Pulsar::ValueType
     }
 }
 
-Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionContext& eContext) const
+Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
 {
     const Instruction& instr = frame.Function->Code[frame.InstructionIndex++];
     switch (instr.Code) {
@@ -297,9 +268,9 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         frame.Stack.EmplaceBack().SetNativeFunctionReference(instr.Arg0);
         break;
     case InstructionCode::PushConst:
-        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= eContext.OwnerModule->Constants.Size())
+        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= m_Module.Constants.Size())
             return RuntimeState::OutOfBoundsConstantIndex;
-        frame.Stack.EmplaceBack(eContext.OwnerModule->Constants[(size_t)instr.Arg0]);
+        frame.Stack.EmplaceBack(m_Module.Constants[(size_t)instr.Arg0]);
         break;
     case InstructionCode::PushLocal:
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= frame.Locals.Size())
@@ -327,14 +298,14 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         frame.Locals[(size_t)instr.Arg0] = frame.Stack.Back();
         break;
     case InstructionCode::PushGlobal:
-        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= eContext.Globals.Size())
+        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= m_Globals.Size())
             return RuntimeState::OutOfBoundsGlobalIndex;
-        frame.Stack.PushBack(eContext.Globals[(size_t)instr.Arg0].Value);
+        frame.Stack.PushBack(m_Globals[(size_t)instr.Arg0].Value);
         break;
     case InstructionCode::MoveGlobal: {
-        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= eContext.Globals.Size())
+        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= m_Globals.Size())
             return RuntimeState::OutOfBoundsGlobalIndex;
-        GlobalInstance& global = eContext.Globals[(size_t)instr.Arg0];
+        GlobalInstance& global = m_Globals[(size_t)instr.Arg0];
         if (global.IsConstant)
             return RuntimeState::WritingOnConstantGlobal;
         frame.Stack.PushBack(std::move(global.Value));
@@ -342,9 +313,9 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
     case InstructionCode::PopIntoGlobal: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
-        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= eContext.Globals.Size())
+        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= m_Globals.Size())
             return RuntimeState::OutOfBoundsGlobalIndex;
-        GlobalInstance& global = eContext.Globals[(size_t)instr.Arg0];
+        GlobalInstance& global = m_Globals[(size_t)instr.Arg0];
         if (global.IsConstant)
             return RuntimeState::WritingOnConstantGlobal;
         global.Value = std::move(frame.Stack.Back());
@@ -353,9 +324,9 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
     case InstructionCode::CopyIntoGlobal: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
-        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= eContext.Globals.Size())
+        if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= m_Globals.Size())
             return RuntimeState::OutOfBoundsGlobalIndex;
-        GlobalInstance& global = eContext.Globals[(size_t)instr.Arg0];
+        GlobalInstance& global = m_Globals[(size_t)instr.Arg0];
         if (global.IsConstant)
             return RuntimeState::WritingOnConstantGlobal;
         global.Value = frame.Stack.Back();
@@ -386,30 +357,30 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
     } break;
     case InstructionCode::Call: {
         int64_t funcIdx = instr.Arg0;
-        if (funcIdx < 0 || (size_t)funcIdx >= Functions.Size())
+        if (funcIdx < 0 || (size_t)funcIdx >= m_Module.Functions.Size())
             return RuntimeState::OutOfBoundsFunctionIndex;
 
-        Frame callFrame = eContext.CallStack.CreateFrame(&Functions[(size_t)funcIdx], false);
-        auto res = eContext.CallStack.PrepareFrame(callFrame, frame.Stack);
+        Frame callFrame = m_CallStack.CreateFrame(&m_Module.Functions[(size_t)funcIdx], false);
+        auto res = m_CallStack.PrepareFrame(callFrame, frame.Stack);
         if (res != RuntimeState::OK)
             return res;
-        eContext.CallStack.PushFrame(std::move(callFrame));
+        m_CallStack.PushFrame(std::move(callFrame));
     } break;
     case InstructionCode::CallNative: {
-        if (NativeBindings.Size() != NativeFunctions.Size())
+        if (m_Module.NativeBindings.Size() != m_Module.NativeFunctions.Size())
             return RuntimeState::NativeFunctionBindingsMismatch;
         int64_t funcIdx = instr.Arg0;
-        if (funcIdx < 0 || (size_t)funcIdx >= NativeBindings.Size())
+        if (funcIdx < 0 || (size_t)funcIdx >= m_Module.NativeBindings.Size())
             return RuntimeState::OutOfBoundsFunctionIndex;
-        if (!NativeFunctions[(size_t)funcIdx])
+        if (!m_Module.NativeFunctions[(size_t)funcIdx])
             return RuntimeState::UnboundNativeFunction;
 
-        Frame callFrame = eContext.CallStack.CreateFrame(&NativeBindings[(size_t)funcIdx], true);
-        auto res = eContext.CallStack.PrepareFrame(callFrame, frame.Stack);
+        Frame callFrame = m_CallStack.CreateFrame(&m_Module.NativeBindings[(size_t)funcIdx], true);
+        auto res = m_CallStack.PrepareFrame(callFrame, frame.Stack);
         if (res != RuntimeState::OK)
             return res;
-        eContext.CallStack.PushFrame(std::move(callFrame));
-        return NativeFunctions[(size_t)funcIdx](eContext);
+        m_CallStack.PushFrame(std::move(callFrame));
+        return m_Module.NativeFunctions[(size_t)funcIdx](*this);
     }
     case InstructionCode::Return:
         frame.InstructionIndex = frame.Function->Code.Size();
@@ -421,29 +392,29 @@ Pulsar::RuntimeState Pulsar::Module::ExecuteInstruction(Frame& frame, ExecutionC
         frame.Stack.PopBack();
         if (funcIdxValue.Type() == ValueType::FunctionReference) {
             int64_t funcIdx = funcIdxValue.AsInteger();
-            if (funcIdx < 0 || (size_t)funcIdx >= Functions.Size())
+            if (funcIdx < 0 || (size_t)funcIdx >= m_Module.Functions.Size())
                 return RuntimeState::OutOfBoundsFunctionIndex;
-            Frame callFrame = eContext.CallStack.CreateFrame(&Functions[(size_t)funcIdx], false);
-            auto res = eContext.CallStack.PrepareFrame(callFrame, frame.Stack);
+            Frame callFrame = m_CallStack.CreateFrame(&m_Module.Functions[(size_t)funcIdx], false);
+            auto res = m_CallStack.PrepareFrame(callFrame, frame.Stack);
             if (res != RuntimeState::OK)
                 return res;
-            eContext.CallStack.PushFrame(std::move(callFrame));
+            m_CallStack.PushFrame(std::move(callFrame));
             break;
         } else if (funcIdxValue.Type() == ValueType::NativeFunctionReference) {
-            if (NativeBindings.Size() != NativeFunctions.Size())
+            if (m_Module.NativeBindings.Size() != m_Module.NativeFunctions.Size())
                 return RuntimeState::NativeFunctionBindingsMismatch;
             int64_t funcIdx = funcIdxValue.AsInteger();
-            if (funcIdx < 0 || (size_t)funcIdx >= NativeBindings.Size())
+            if (funcIdx < 0 || (size_t)funcIdx >= m_Module.NativeBindings.Size())
                 return RuntimeState::OutOfBoundsFunctionIndex;
-            if (!NativeFunctions[(size_t)funcIdx])
+            if (!m_Module.NativeFunctions[(size_t)funcIdx])
                 return RuntimeState::UnboundNativeFunction;
 
-            Frame callFrame = eContext.CallStack.CreateFrame(&NativeBindings[(size_t)funcIdx], true);
-            auto res = eContext.CallStack.PrepareFrame(callFrame, frame.Stack);
+            Frame callFrame = m_CallStack.CreateFrame(&m_Module.NativeBindings[(size_t)funcIdx], true);
+            auto res = m_CallStack.PrepareFrame(callFrame, frame.Stack);
             if (res != RuntimeState::OK)
                 return res;
-            eContext.CallStack.PushFrame(std::move(callFrame));
-            return NativeFunctions[(size_t)funcIdx](eContext);
+            m_CallStack.PushFrame(std::move(callFrame));
+            return m_Module.NativeFunctions[(size_t)funcIdx](*this);
         }
         return RuntimeState::TypeError;
     }

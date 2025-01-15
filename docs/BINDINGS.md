@@ -177,12 +177,6 @@ They won't be documented until they're stable.*
 
 Generic functions for printing any value.
 
-### hello-from-cpp!
-
-`*(*hello-from-cpp!).`
-
-C++ says Hi!
-
 ### print!
 
 `*(*print! val).`

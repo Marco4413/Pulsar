@@ -14,9 +14,8 @@ Pulsar::RuntimeState PulsarTools::TimeNativeBindings::Time_Time(Pulsar::Executio
 {
     auto time = std::chrono::system_clock::now();
     auto timeSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(time.time_since_epoch());
-    eContext.CallStack.CurrentFrame()
-        .Stack.EmplaceBack()
-        .SetInteger((int64_t)timeSinceEpoch.count());
+    eContext.CurrentFrame().Stack
+        .EmplaceBack().SetInteger((int64_t)timeSinceEpoch.count());
     return Pulsar::RuntimeState::OK;
 }
 
@@ -24,9 +23,8 @@ Pulsar::RuntimeState PulsarTools::TimeNativeBindings::Time_Steady(Pulsar::Execut
 {
     auto time = std::chrono::steady_clock::now();
     auto timeSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(time.time_since_epoch());
-    eContext.CallStack.CurrentFrame()
-        .Stack.EmplaceBack()
-        .SetInteger((int64_t)timeSinceEpoch.count());
+    eContext.CurrentFrame().Stack
+        .EmplaceBack().SetInteger((int64_t)timeSinceEpoch.count());
     return Pulsar::RuntimeState::OK;
 }
 
@@ -36,15 +34,13 @@ Pulsar::RuntimeState PulsarTools::TimeNativeBindings::Time_Micros(Pulsar::Execut
     if constexpr (std::chrono::high_resolution_clock::is_steady) {
         auto time = std::chrono::high_resolution_clock::now();
         auto timeSinceEpoch = std::chrono::duration_cast<std::chrono::microseconds>(time.time_since_epoch());
-        eContext.CallStack.CurrentFrame()
-            .Stack.EmplaceBack()
-            .SetInteger((int64_t)timeSinceEpoch.count());
+        eContext.CurrentFrame().Stack
+            .EmplaceBack().SetInteger((int64_t)timeSinceEpoch.count());
     } else {
         auto time = std::chrono::steady_clock::now();
         auto timeSinceEpoch = std::chrono::duration_cast<std::chrono::microseconds>(time.time_since_epoch());
-        eContext.CallStack.CurrentFrame()
-            .Stack.EmplaceBack()
-            .SetInteger((int64_t)timeSinceEpoch.count());
+        eContext.CurrentFrame().Stack
+            .EmplaceBack().SetInteger((int64_t)timeSinceEpoch.count());
     }
     return Pulsar::RuntimeState::OK;
 }

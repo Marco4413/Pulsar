@@ -4,21 +4,13 @@
 
 void PulsarTools::PrintNativeBindings::BindToModule(Pulsar::Module& module)
 {
-    module.BindNativeFunction({ "hello-from-cpp!", 0, 0 }, Print_HelloFromCpp);
     module.BindNativeFunction({ "print!",   1, 0 }, Print_Print);
     module.BindNativeFunction({ "println!", 1, 0 }, Print_Println);
 }
 
-Pulsar::RuntimeState PulsarTools::PrintNativeBindings::Print_HelloFromCpp(Pulsar::ExecutionContext& eContext)
-{
-    (void) eContext;
-    PULSARTOOLS_PRINTF("Hello from C++!\n");
-    return Pulsar::RuntimeState::OK;
-}
-
 Pulsar::RuntimeState PulsarTools::PrintNativeBindings::Print_Print(Pulsar::ExecutionContext& eContext)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+    Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& val = frame.Locals[0];
     if (val.Type() == Pulsar::ValueType::String)
         PULSARTOOLS_PRINTF("{}", val.AsString());
@@ -28,7 +20,7 @@ Pulsar::RuntimeState PulsarTools::PrintNativeBindings::Print_Print(Pulsar::Execu
 
 Pulsar::RuntimeState PulsarTools::PrintNativeBindings::Print_Println(Pulsar::ExecutionContext& eContext)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+    Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& val = frame.Locals[0];
     if (val.Type() == Pulsar::ValueType::String)
         PULSARTOOLS_PRINTF("{}\n", val.AsString());

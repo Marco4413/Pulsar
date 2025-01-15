@@ -11,7 +11,6 @@ namespace PulsarTools
     {
         void BindToModule(Pulsar::Module& module);
 
-        Pulsar::RuntimeState Print_HelloFromCpp(Pulsar::ExecutionContext& eContext);
         Pulsar::RuntimeState Print_Print(Pulsar::ExecutionContext& eContext);
         Pulsar::RuntimeState Print_Println(Pulsar::ExecutionContext& eContext);
     }
