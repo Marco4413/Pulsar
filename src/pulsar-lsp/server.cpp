@@ -977,7 +977,7 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
             (void)id;
             return this->GetSymbols(params.textDocument.uri);
         })
-        .add<lsp::requests::TextDocument_Diagnostic>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::TextDocument_Diagnostic::Params&& params)
+        .add<lsp::requests::TextDocument_Diagnostic>([](const lsp::jsonrpc::MessageId& id, lsp::requests::TextDocument_Diagnostic::Params&& params)
             -> lsp::requests::TextDocument_Diagnostic::Result
         {
             (void)id; (void)params;
