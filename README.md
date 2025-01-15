@@ -23,8 +23,8 @@ It can be found at [docs/LANGUAGE](docs/LANGUAGE.md).
 
 ## Editor Extensions
 
-If you want to enable Syntax Highlighting on VSCode for the Pulsar Language,
-you can download and package the official extension found at
+If you want to enable Syntax Highlighting and add support for the LSP Server
+on VSCode for the Pulsar Language, you can download and package the official extension found at
 [Marco4413/vscode-pulsar-language](https://github.com/Marco4413/vscode-pulsar-language).
 
 ## Dependencies
@@ -48,6 +48,10 @@ Alternatively `premake5 gmake2` will create Makefiles.
 
 C++20 is the standard used by the project.
 Supported compilers are `gcc` and `msvc`.
+
+**Compiler Versions:**
+- gcc 13.3.0
+- msvc from vs2022
 
 *`clang` should also work but it's not my go-to compiler,
 so it may break between commits.*
