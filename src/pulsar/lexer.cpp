@@ -51,6 +51,25 @@ bool Pulsar::IsIdentifier(const String& s)
     return true;
 }
 
+bool Pulsar::Lexer::SkipShaBang()
+{
+    if (m_SourceView.Length() < 2)
+        return false;
+    
+    if (m_SourceView[0] != '#' || m_SourceView[1] != '!')
+        return false;
+
+    while (m_SourceView.Length() > 0 && m_SourceView[0] != '\n')
+        m_SourceView.RemovePrefix(1);
+    if (!m_SourceView.Empty())
+        m_SourceView.RemovePrefix(1); // Remove new line char
+
+    m_Line++;
+    m_LineStartIdx = m_SourceView.GetStart();
+
+    return true;
+}
+
 Pulsar::Token Pulsar::Lexer::ParseNextToken()
 {
     while (m_SourceView.Length() > 0) {
@@ -106,7 +125,7 @@ Pulsar::Token Pulsar::Lexer::ParseNextToken()
                     auto kwNameTypePair = Keywords.Find(token.StringVal);
                     if (!kwNameTypePair)
                         return token;
-                    token.Type = *kwNameTypePair.Value;
+                    token.Type = kwNameTypePair->Value();
                     return token;
                 }
             }
@@ -226,7 +245,7 @@ Pulsar::Token Pulsar::Lexer::ParseCompilerDirective()
 
     auto cdNameValPair = CompilerDirectives.Find(token.StringVal);
     if (cdNameValPair)
-        token.IntegerVal = *cdNameValPair.Value;
+        token.IntegerVal = cdNameValPair->Value();
     return token;
 }
 
@@ -579,7 +598,8 @@ size_t Pulsar::Lexer::SkipComments()
     if (commentView[0] == '/') {
         while (commentView.Length() > 0 && commentView[0] != '\n')
             commentView.RemovePrefix(1);
-        commentView.RemovePrefix(1); // Remove new line char
+        if (!commentView.Empty())
+            commentView.RemovePrefix(1); // Remove new line char
         m_Line++;
         m_LineStartIdx = commentView.GetStart();
     } else if (commentView[0] == '*') {

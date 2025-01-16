@@ -96,6 +96,27 @@ by *visually* separating *logical* expressions.
 
 i.e. `10 -> x; x` is more readable than `10 -> x x`.
 
+## Sha-Bang
+
+For anyone who's not familiar with the Unix standard of specifying
+interpreters for text files, here's the [Wikipedia page](https://en.wikipedia.org/wiki/Shebang_%28Unix%29).
+
+Sha-bang(s) may only appear at the top of a source file and are
+treated like a line [comment](#comments).
+
+Of course it's platform independent, so it's only QoL for Unix
+users. Which means it doesn't hurt to place it at the top of your
+source files even if you're only planning to use the script on
+Windows.
+
+```sh
+#!/usr/bin/env pulsar-tools
+```
+
+The above example of a sha-bang expects the `pulsar-tools` executable
+to be in the `PATH`. If so, it will run the file it's in with the
+`pulsar-tools` interpreter.
+
 ## Identifiers
 
 Identifiers can start with any letter from the alphabeth or the underscore character.
@@ -571,9 +592,9 @@ However, that does not stop you from comparing two values bound to locals.
 
 The `end` keyword must be specified at the end of the last branch.
 
-### Weird cool variants?!?!
+### More Ifs
 
-All the variants can be described with the following string:
+The following pattern describes all available Ifs:
 
 `if [not] [[<lvalue>] [<comp> <lvalue>]]:`
 
@@ -767,9 +788,8 @@ As seen in the [globals example](../examples/intermediate/02-globals.pls), you c
 performance-heavy tasks during parsing. That means increasing compile
 time to improve runtime efficiency!
 
-That example goes from ~700ms of runtime to ~50us just by pre-computing
-the lists it uses (granted that sorting algorithm has its worst case
-scenario to deal with, pure nightmare if you ask me).
+That example goes from ~2.3ms of runtime to ~54us just by pre-computing
+the lists it uses.
 
 ## Labels
 
@@ -890,7 +910,9 @@ Accepts `arg0`: if <= 1, 1 copy is pushed. If > 1, `arg0` copies are pushed.
 
 ### floor
 
-Truncates the last number on the stack converting it to an `Integer`.
+If the last number on the stack is an `Integer`, no action is performed.
+Otherwise, the biggest `Integer` lesser or equal to the value of the provided
+`Double` is pushed onto the stack.
 
 |        |         S0         |
 | :----- | :----------------: |
@@ -899,7 +921,9 @@ Truncates the last number on the stack converting it to an `Integer`.
 
 ### ceil
 
-Adds 1 and truncates the last number on the stack converting it to an `Integer`.
+If the last number on the stack is an `Integer`, no action is performed.
+Otherwise, the smallest `Integer` greater or equal to the value of the provided
+`Double` is pushed onto the stack.
 
 |        |         S0         |
 | :----- | :----------------: |

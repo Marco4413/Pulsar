@@ -92,9 +92,15 @@ namespace Pulsar
 
     struct LocalScope
     {
+        struct LocalVar
+        {
+            String Name;
+            SourcePosition DeclaredAt;
+        };
+
         const GlobalScope& Global;
         FunctionScope* const Function;
-        List<String> Locals = List<String>();
+        List<LocalVar> Locals = List<LocalVar>();
     };
 
     enum class ParseResult
@@ -118,19 +124,105 @@ namespace Pulsar
         IllegalUsageOfLabel,
         LabelNotAllowedInContext,
         RedeclarationOfLabel,
+        LSPHooksRequestedTermination,
     };
 
     const char* ParseResultToString(ParseResult presult);
 
+    enum class LSPBlockNotificationType
+    {
+        BlockStart,
+        BlockEnd,
+        LocalScopeChanged,
+    };
+
+    enum class LSPIdentifierUsageType
+    {
+        Global,
+        Function,
+        NativeFunction,
+        Local,
+        // TODO: Maybe implement label support.
+        //       It's a bit tricky since they're back-patched.
+        // Label,
+    };
+
+    struct LSPHooks
+    {
+        // If a callback returns true, parsing is blocked with ParseResult::LSPHooksRequestedTermination
+
+        struct OnBlockNotificationParams
+        {
+            LSPBlockNotificationType Type;
+            SourcePosition Position;
+            const String& FilePath;
+            /**
+             * FnDefinition.Name Empty if in global scope (parsing a Global Producer).
+             * The only properties available are:
+             * - `.Name`
+             * - `.Arity`
+             * - `.Returns`
+             * - `.StackArity`
+             */ 
+            const FunctionDefinition& FnDefinition;
+            const Pulsar::LocalScope& LocalScope;
+        };
+        using OnBlockNotificationFn = std::function<bool(OnBlockNotificationParams&&)>;
+
+        struct OnIdentifierUsageParams
+        {
+            LSPIdentifierUsageType Type;
+            // The index the identifier is bound to
+            // Meaning depends on .Type
+            size_t BoundIdx;
+            const String& FilePath;
+            /**
+             * FnDefinition.Name Empty if in global scope.
+             * The only properties available are:
+             * - `.Name`
+             * - `.Arity`
+             * - `.Returns`
+             * - `.StackArity`
+             */
+            const FunctionDefinition& FnDefinition;
+            const Pulsar::Token& Token;
+            const Pulsar::LocalScope& LocalScope;
+        };
+        using OnIdentifierUsageFn = std::function<bool(OnIdentifierUsageParams&&)>;
+
+        struct OnFunctionDefinitionParams
+        {
+            // A native function may be declared multiple times.
+            // The Pulsar parser by default saves the position of
+            //  the last declaration as a Debug symbol.
+            // In the future, a function may be declared at some
+            //  point in the code and defined later.
+            bool IsRedeclaration;
+            bool IsNative;
+            size_t Index;
+            const String& FilePath;
+            /**
+             * The event is triggered at definition-time.
+             * The only properties available are:
+             * - `.Name`
+             * - `.Arity`
+             * - `.Returns`
+             * - `.StackArity`
+             */
+            const FunctionDefinition& FnDefinition;
+            const Pulsar::Token& Identifier;
+            const Pulsar::List<Pulsar::LocalScope::LocalVar>& Args;
+        };
+        using OnFunctionDefinitionFn = std::function<bool(OnFunctionDefinitionParams&&)>;
+
+        OnBlockNotificationFn  OnBlockNotification  = nullptr;
+        OnIdentifierUsageFn    OnIdentifierUsage    = nullptr;
+        OnFunctionDefinitionFn OnFunctionDefinition = nullptr;
+    };
+
     class Parser; // Forward Declaration
     struct ParseSettings
     {
-        bool StoreDebugSymbols              = true;
-        bool AppendStackTraceToErrorMessage = true;
-        size_t StackTraceMaxDepth           = 10;
-        bool AppendNotesToErrorMessage      = true;
-        bool AllowIncludeDirective          = true;
-        bool AllowLabels                    = true;
         /**
          * @brief (parser, cwf, token) -> ParseResult
          * @param parser The Parser that called the function.
@@ -138,7 +230,19 @@ namespace Pulsar
          * @param cwf The path to the current file.
          * @param token The StringLiteral Token containing the path to the file to include.
          */
-        std::function<ParseResult(Parser&, String, Token)> IncludeResolver = nullptr;
+        using IncludeResolverFn = std::function<ParseResult(Parser&, String, Token)>;
+
+        bool StoreDebugSymbols              = true;
+        bool AppendStackTraceToErrorMessage = true;
+        size_t StackTraceMaxDepth           = 10;
+        bool AppendNotesToErrorMessage      = true;
+        bool AllowIncludeDirective          = true;
+        bool AllowLabels                    = true;
+        // LSPs may set this to `true` to avoid infinite loops in global producers.
+        // If this is set to `true`, you shouldn't expect the module to run correctly.
+        bool MapGlobalProducersToVoid       = false;
+        IncludeResolverFn IncludeResolver   = nullptr;
+        Pulsar::LSPHooks LSPHooks           = {};
     };
 
     inline const ParseSettings ParseSettings_Default{};
@@ -169,7 +273,7 @@ namespace Pulsar
         ParseResult ParseGlobalDefinition(Module& module, GlobalScope& globalScope, const ParseSettings& settings);
         ParseResult ParseFunctionDefinition(Module& module, GlobalScope& globalScope, const ParseSettings& settings);
         ParseResult BackPatchFunctionLabels(FunctionDefinition& func, const FunctionScope& funcScope);
-        ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalScope& localScope, SkippableBlock* skippableBlock, const ParseSettings& settings);
+        ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalScope& localScope, SkippableBlock* skippableBlock, bool allowEndKeyword, const ParseSettings& settings);
         ParseResult ParseIfStatement(Module& module, FunctionDefinition& func, const LocalScope& localScope, SkippableBlock* skippableBlock, bool isChained, const ParseSettings& settings);
         ParseResult ParseLocalBlock(Module& module, FunctionDefinition& func, const LocalScope& localScope, SkippableBlock* skippableBlock, const ParseSettings& settings);
         ParseResult ParseWhileLoop(Module& module, FunctionDefinition& func, const LocalScope& localScope, const ParseSettings& settings);

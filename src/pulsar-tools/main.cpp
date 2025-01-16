@@ -134,7 +134,10 @@ void PrintFlagOptions(const Pulsar::List<NamedFlagOption>& opts)
                 size_t idx = StrIndexOf(view.DataFromStart(), '\n');
                 Pulsar::String line = view.GetPrefix(idx);
                 PULSARTOOLS_INFOF("        {0}", line);
-                view.RemovePrefix(idx+1);
+                view.RemovePrefix(idx);
+                // Remove new line
+                if (!view.Empty())
+                    view.RemovePrefix(1);
             } while (!view.Empty());
             PULSARTOOLS_INFO("");
         }
@@ -143,7 +146,7 @@ void PrintFlagOptions(const Pulsar::List<NamedFlagOption>& opts)
 
 bool IsFile(const Pulsar::String& filepath)
 {
-    std::filesystem::path path(filepath.Data());
+    std::filesystem::path path(filepath.CString());
     return std::filesystem::exists(path) && std::filesystem::is_regular_file(path);
 }
 
@@ -151,7 +154,7 @@ bool IsNeutronFile(const Pulsar::String& filepath)
 {
     if (!IsFile(filepath))
         return false;
-    std::ifstream file(filepath.Data(), std::ios::binary);
+    std::ifstream file(filepath.CString(), std::ios::binary);
     char sig[Pulsar::Binary::SIGNATURE_LENGTH];
     if (!file.read(sig, (std::streamsize)Pulsar::Binary::SIGNATURE_LENGTH))
         return false;
@@ -175,9 +178,9 @@ bool ParseOptions(
         auto runNameOptPair = RuntimeOptions.Find(option);
         
         if (parserFlags && parseNameOptPair) {
-            opt = parseNameOptPair.Value;
+            opt = &parseNameOptPair->Value();
         } else if (runtimeFlags && runNameOptPair) {
-            opt = runNameOptPair.Value;
+            opt = &runNameOptPair->Value();
         } else if (customParser && customParser(option, argc, argv)) {
             continue;
         } else {
@@ -239,12 +242,12 @@ bool ParseModuleFromFile(const Pulsar::String& filepath, Pulsar::Module& out, ui
         PulsarTools::DebugNativeBindings::BindToModule(module, true);
 
     PULSARTOOLS_INFOF("Parsing '{}'.", filepath);
-    auto startTime = std::chrono::high_resolution_clock::now();
+    auto startTime = std::chrono::steady_clock::now();
     Pulsar::Parser parser;
     auto parseResult = parser.AddSourceFile(filepath);
     if (parseResult == Pulsar::ParseResult::OK)
         parseResult = parser.ParseIntoModule(module, parserSettings);
-    auto endTime = std::chrono::high_resolution_clock::now();
+    auto endTime = std::chrono::steady_clock::now();
     auto parseTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
     PULSARTOOLS_INFOF("Parsing took: {}us", parseTime.count());
 
@@ -265,8 +268,9 @@ bool RunModule(const Pulsar::String& filepath, const Pulsar::String& entryPoint,
 {
     (void)flagOptions;
     PULSARTOOLS_INFOF("Running '{}'.", filepath);
-    auto startTime = std::chrono::high_resolution_clock::now();
-    Pulsar::ValueStack stack;
+    auto startTime = std::chrono::steady_clock::now();
+    Pulsar::ExecutionContext context(module);
+    Pulsar::ValueStack& stack = context.GetStack();
     { // Push argv into the Stack.
         Pulsar::ValueList argList;
         argList.Append()->Value().SetString(filepath);
@@ -274,14 +278,18 @@ bool RunModule(const Pulsar::String& filepath, const Pulsar::String& entryPoint,
             argList.Append()->Value().SetString(argv[i]);
         stack.EmplaceBack().SetList(std::move(argList));
     }
-    Pulsar::ExecutionContext context = module.CreateExecutionContext();
-    auto runtimeState = module.CallFunctionByName(entryPoint, stack, context);
-    auto endTime = std::chrono::high_resolution_clock::now();
+    context.CallFunction(entryPoint);
+    auto runtimeState = context.Run();
+    auto endTime = std::chrono::steady_clock::now();
     auto execTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
     PULSARTOOLS_PRINTF("\n"); // Add new line after script output
     PULSARTOOLS_INFOF("Execution took: {}us", execTime.count());
 
-    if (runtimeState != Pulsar::RuntimeState::OK) {
+    if (runtimeState == Pulsar::RuntimeState::FunctionNotFound) {
+        PULSARTOOLS_ERRORF("Runtime Error: {}", Pulsar::RuntimeStateToString(runtimeState));
+        PULSARTOOLS_ERRORF("Entry point function ({}) not found.", entryPoint);
+        return false;
+    } else if (runtimeState != Pulsar::RuntimeState::OK) {
         PULSARTOOLS_ERRORF("Runtime Error: {}", Pulsar::RuntimeStateToString(runtimeState));
         PulsarTools::PrintPrettyRuntimeError(context);
         PULSARTOOLS_PRINTF("\n");
@@ -392,7 +400,7 @@ bool Command_Compile(const char* executable, int argc, const char** argv)
 
     if (outputPath.Length() == 0) {
         // Swap extension
-        std::filesystem::path path(filepath.Data());
+        std::filesystem::path path(filepath.CString());
         path.replace_extension(".ntr");
         outputPath = path.generic_string().c_str();
     }
@@ -403,7 +411,7 @@ bool Command_Compile(const char* executable, int argc, const char** argv)
 
     { // Write to File
         PULSARTOOLS_INFOF("Writing to '{}'.", outputPath);
-        auto startTime = std::chrono::high_resolution_clock::now();
+        auto startTime = std::chrono::steady_clock::now();
 
         Pulsar::Binary::FileWriter moduleFile(outputPath);
         if (!Pulsar::Binary::WriteByteCode(moduleFile, module)) {
@@ -411,7 +419,7 @@ bool Command_Compile(const char* executable, int argc, const char** argv)
             return false;
         }
         
-        auto endTime = std::chrono::high_resolution_clock::now();
+        auto endTime = std::chrono::steady_clock::now();
         auto execTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
         PULSARTOOLS_INFOF("Writing took: {}us", execTime.count());
     }
@@ -479,7 +487,7 @@ bool Command_Run(const char* executable, int argc, const char** argv)
     if (IsNeutronFile(filepath)) {
         // Read Module
         PULSARTOOLS_INFOF("Reading '{}'.", filepath);
-        auto startTime = std::chrono::high_resolution_clock::now();
+        auto startTime = std::chrono::steady_clock::now();
         
         Pulsar::Binary::FileReader fileReader(filepath);
         auto readResult = Pulsar::Binary::ReadByteCode(fileReader, module);
@@ -488,7 +496,7 @@ bool Command_Run(const char* executable, int argc, const char** argv)
             return false;
         }
         
-        auto endTime = std::chrono::high_resolution_clock::now();
+        auto endTime = std::chrono::steady_clock::now();
         auto readTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
         PULSARTOOLS_INFOF("Reading took: {}us", readTime.count());
     } else if (!ParseModuleFromFile(filepath, module, flagOptions))

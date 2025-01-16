@@ -177,12 +177,6 @@ They won't be documented until they're stable.*
 
 Generic functions for printing any value.
 
-### hello-from-cpp!
-
-`*(*hello-from-cpp!).`
-
-C++ says Hi!
-
 ### print!
 
 `*(*print! val).`
@@ -411,3 +405,4 @@ Returns the current time in milliseconds as seen by the Monotonic Clock of the s
 Types: `-> Integer`
 
 Returns the current time in microseconds.
+The function is monotonic so it can be used to measure performance.

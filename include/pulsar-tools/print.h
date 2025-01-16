@@ -26,7 +26,7 @@ struct fmt::formatter<Pulsar::String> : formatter<string_view>
 {
     auto format(const Pulsar::String& val, format_context& ctx) const
     {
-        return fmt::format_to(ctx.out(), "{:.{}}", val.Data(), val.Length());
+        return fmt::format_to(ctx.out(), "{:.{}}", val.CString(), val.Length());
     }
 };
 

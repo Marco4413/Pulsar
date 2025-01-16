@@ -38,7 +38,7 @@ void PulsarTools::ThreadNativeBindings::BindToModule(Pulsar::Module& module)
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::ThisThread_Sleep(Pulsar::ExecutionContext& eContext)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+    Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& delay = frame.Locals[0];
     if (!Pulsar::IsNumericValueType(delay.Type()))
         return Pulsar::RuntimeState::TypeError;
@@ -51,56 +51,60 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::ThisThread_Sleep(Pulsar:
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Run(Pulsar::ExecutionContext& eContext, uint64_t threadType, uint64_t channelType)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    Pulsar::Value& threadFn = frame.Locals[1];
-    if (threadFn.Type() != Pulsar::ValueType::FunctionReference)
+    const Pulsar::Module& module = eContext.GetModule();
+    Pulsar::Frame& frame = eContext.CurrentFrame();
+
+    Pulsar::Value& threadFnReference = frame.Locals[1];
+    if (threadFnReference.Type() != Pulsar::ValueType::FunctionReference)
         return Pulsar::RuntimeState::TypeError;
-    int64_t funcIdx = threadFn.AsInteger();
-    if (funcIdx < 0 || (size_t)funcIdx >= eContext.OwnerModule->Functions.Size())
+    int64_t threadFnIdx = threadFnReference.AsInteger();
+    if (threadFnIdx < 0 || (size_t)threadFnIdx >= module.Functions.Size())
         return Pulsar::RuntimeState::OutOfBoundsFunctionIndex;
-    Pulsar::Value& threadArgs = frame.Locals[0];
-    if (threadArgs.Type() != Pulsar::ValueType::List)
+    Pulsar::Value& threadFnArgs = frame.Locals[0];
+    if (threadFnArgs.Type() != Pulsar::ValueType::List)
         return Pulsar::RuntimeState::TypeError;
     
-    const Pulsar::FunctionDefinition& func = eContext.OwnerModule->Functions[(size_t)funcIdx];
+    const Pulsar::FunctionDefinition& threadFn = module.Functions[(size_t)threadFnIdx];
     Pulsar::SharedRef<PulsarThreadContext> threadContext = Pulsar::SharedRef<PulsarThreadContext>::New(
-        eContext.OwnerModule->CreateExecutionContext(false, true),
-        Pulsar::ValueStack(std::move(threadArgs.AsList())),
-        Pulsar::RuntimeState::OK
+        Pulsar::ExecutionContext(module, false)
     );
 
-    eContext.CustomTypeData.ForEach([&threadContext](const Pulsar::HashMapBucket<uint64_t, Pulsar::CustomTypeData::Ref_T>& b) mutable {
+    threadContext->Context.InitCustomTypeData();
+    eContext.GetAllCustomTypeData().ForEach([&threadContext](const Pulsar::ExecutionContext::CustomTypeDataMap::BucketType& b) mutable {
         PULSAR_ASSERT(b.Value(), "Reference to CustomTypeData is nullptr.");
-        uint64_t customType = b.Key();
-        Pulsar::CustomTypeData::Ref_T customData = b.Value()->Copy();
-        if (customData)
-            threadContext->Context.CustomTypeData.Insert(customType, customData);
+        uint64_t typeId = b.Key();
+        Pulsar::CustomTypeData::Ref typeData = b.Value()->Copy();
+        if (typeData) threadContext->Context.SetCustomTypeData(typeId, typeData);
     });
 
-    threadContext->Context.Globals = eContext.Globals;
+    threadContext->Context.SetCustomTypeData(channelType, eContext.GetCustomTypeData<Pulsar::CustomTypeData>(channelType));
+    threadContext->Context.GetStack() = Pulsar::ValueStack(std::move(threadFnArgs.AsList()));
+
     threadContext->IsRunning.store(true);
-    std::thread nativeThread = std::thread([func, threadContext]() mutable {
-        threadContext->State = threadContext->Context.OwnerModule->ExecuteFunction(
-            func, threadContext->Stack, threadContext->Context);
+    std::thread nativeThread = std::thread([threadFn, threadContext]() {
+        threadContext->Context.CallFunction(threadFn);
+        threadContext->Context.Run();
         threadContext->IsRunning.store(false);
     });
 
-    threadContext->Context.CustomTypeData.Insert(channelType, eContext.GetCustomTypeData<Pulsar::CustomTypeData>(channelType));
-
     frame.Stack.EmplaceBack()
-        .SetCustom({ .Type=threadType, .Data=ThreadType::Ref_T::New(std::move(nativeThread), std::move(threadContext)) });
+        .SetCustom({
+            .Type=threadType,
+            .Data=ThreadType::Ref::New(std::move(nativeThread), std::move(threadContext))
+        });
+
     return Pulsar::RuntimeState::OK;
 }
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Join(Pulsar::ExecutionContext& eContext, uint64_t type)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    Pulsar::Value& threadRef = frame.Locals[0];
-    if (threadRef.Type() != Pulsar::ValueType::Custom
-        || threadRef.AsCustom().Type != type)
+    Pulsar::Frame& frame = eContext.CurrentFrame();
+    Pulsar::Value& threadReference = frame.Locals[0];
+    if (threadReference.Type() != Pulsar::ValueType::Custom
+        || threadReference.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
     
-    ThreadType::Ref_T thread = threadRef.AsCustom().As<ThreadType>();
+    ThreadType::Ref thread = threadReference.AsCustom().As<ThreadType>();
     if (!thread)
         return Pulsar::RuntimeState::InvalidCustomTypeReference;
 
@@ -110,22 +114,22 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Join(Pulsar::Exec
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_JoinAll(Pulsar::ExecutionContext& eContext, uint64_t type)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    Pulsar::Value& threadRefListValue = frame.Locals[0];
-    if (threadRefListValue.Type() != Pulsar::ValueType::List)
+    Pulsar::Frame& frame = eContext.CurrentFrame();
+    Pulsar::Value& threadReferencesList = frame.Locals[0];
+    if (threadReferencesList.Type() != Pulsar::ValueType::List)
         return Pulsar::RuntimeState::TypeError;
     
     Pulsar::ValueList threadResults;
-    Pulsar::ValueList& threadRefList = threadRefListValue.AsList();
-    Pulsar::ValueList::NodeType* threadRefNode = threadRefList.Front();
-    while (threadRefNode) {
-        Pulsar::Value& threadRef = threadRefNode->Value();
-        if (threadRef.Type() != Pulsar::ValueType::Custom
-            || threadRef.AsCustom().Type != type)
+    Pulsar::ValueList& threadReferences = threadReferencesList.AsList();
+    Pulsar::ValueList::NodeType* threadReferenceNode = threadReferences.Front();
+    while (threadReferenceNode) {
+        Pulsar::Value& threadReference = threadReferenceNode->Value();
+        if (threadReference.Type() != Pulsar::ValueType::Custom
+            || threadReference.AsCustom().Type != type)
             return Pulsar::RuntimeState::TypeError;
 
 
-        ThreadType::Ref_T thread = threadRef.AsCustom().As<ThreadType>();
+        ThreadType::Ref thread = threadReference.AsCustom().As<ThreadType>();
         if (!thread)
             return Pulsar::RuntimeState::InvalidCustomTypeReference;
         
@@ -138,7 +142,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_JoinAll(Pulsar::E
 
         threadResults.Append()->Value().SetList(std::move(threadResult));
 
-        threadRefNode = threadRefNode->Next();
+        threadReferenceNode = threadReferenceNode->Next();
     }
 
     frame.Stack.EmplaceBack()
@@ -148,13 +152,13 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_JoinAll(Pulsar::E
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_IsAlive(Pulsar::ExecutionContext& eContext, uint64_t type)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    Pulsar::Value& threadRef = frame.Locals[0];
-    if (threadRef.Type() != Pulsar::ValueType::Custom
-        || threadRef.AsCustom().Type != type)
+    Pulsar::Frame& frame = eContext.CurrentFrame();
+    Pulsar::Value& threadReference = frame.Locals[0];
+    if (threadReference.Type() != Pulsar::ValueType::Custom
+        || threadReference.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
     
-    ThreadType::Ref_T thread = threadRef.AsCustom().As<ThreadType>();
+    ThreadType::Ref thread = threadReference.AsCustom().As<ThreadType>();
     if (!thread)
         return Pulsar::RuntimeState::InvalidCustomTypeReference;
 
@@ -165,13 +169,13 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_IsAlive(Pulsar::E
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    Pulsar::Value& threadRef = frame.Locals[0];
-    if (threadRef.Type() != Pulsar::ValueType::Custom
-        || threadRef.AsCustom().Type != type)
+    Pulsar::Frame& frame = eContext.CurrentFrame();
+    Pulsar::Value& threadReference = frame.Locals[0];
+    if (threadReference.Type() != Pulsar::ValueType::Custom
+        || threadReference.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
     
-    ThreadType::Ref_T thread = threadRef.AsCustom().As<ThreadType>();
+    ThreadType::Ref thread = threadReference.AsCustom().As<ThreadType>();
     if (!thread)
         return Pulsar::RuntimeState::InvalidCustomTypeReference;
 
@@ -184,23 +188,24 @@ void PulsarTools::ThreadNativeBindings::ThreadJoin(Pulsar::SharedRef<PulsarThrea
 {
     thread->Thread.join();
     Pulsar::ValueList threadResult;
-    if (thread->ThreadContext->State != Pulsar::RuntimeState::OK) {
+    Pulsar::RuntimeState threadState = thread->ThreadContext->Context.GetState();
+    if (threadState != Pulsar::RuntimeState::OK) {
         // An error occurred
         stack.EmplaceBack().SetList(Pulsar::ValueList());
-        stack.EmplaceBack().SetInteger((int64_t)thread->ThreadContext->State);
+        stack.EmplaceBack().SetInteger((int64_t)threadState);
         return;
     }
 
-    Pulsar::ValueList returnValues(std::move(thread->ThreadContext->Stack));
+    Pulsar::ValueList returnValues(std::move(thread->ThreadContext->Context.GetStack()));
     stack.EmplaceBack().SetList(std::move(returnValues));
     stack.EmplaceBack().SetInteger(0);
 }
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_New(Pulsar::ExecutionContext& eContext, uint64_t type)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
+    Pulsar::Frame& frame = eContext.CurrentFrame();
     
-    ChannelType::Ref_T channel = ChannelType::Ref_T::New();
+    ChannelType::Ref channel = ChannelType::Ref::New();
     frame.Stack.EmplaceBack()
         .SetCustom({ .Type=type, .Data=channel });
     return Pulsar::RuntimeState::OK;
@@ -208,13 +213,13 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_New(Pulsar::Exec
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_Send(Pulsar::ExecutionContext& eContext, uint64_t type)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    Pulsar::Value& channelRef = frame.Locals[1];
-    if (channelRef.Type() != Pulsar::ValueType::Custom
-        || channelRef.AsCustom().Type != type)
+    Pulsar::Frame& frame = eContext.CurrentFrame();
+    Pulsar::Value& channelReference = frame.Locals[1];
+    if (channelReference.Type() != Pulsar::ValueType::Custom
+        || channelReference.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
 
-    ChannelType::Ref_T channel = channelRef.AsCustom().As<ChannelType>();
+    ChannelType::Ref channel = channelReference.AsCustom().As<ChannelType>();
     if (!channel)
         return Pulsar::RuntimeState::InvalidCustomTypeReference;
     
@@ -230,13 +235,13 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_Send(Pulsar::Exe
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_Receive(Pulsar::ExecutionContext& eContext, uint64_t type)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    Pulsar::Value& channelRef = frame.Locals[0];
-    if (channelRef.Type() != Pulsar::ValueType::Custom
-        || channelRef.AsCustom().Type != type)
+    Pulsar::Frame& frame = eContext.CurrentFrame();
+    Pulsar::Value& channelReference = frame.Locals[0];
+    if (channelReference.Type() != Pulsar::ValueType::Custom
+        || channelReference.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
 
-    ChannelType::Ref_T channel = channelRef.AsCustom().As<ChannelType>();
+    ChannelType::Ref channel = channelReference.AsCustom().As<ChannelType>();
     if (!channel)
         return Pulsar::RuntimeState::InvalidCustomTypeReference;
     
@@ -258,13 +263,13 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_Receive(Pulsar::
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_Close(Pulsar::ExecutionContext& eContext, uint64_t type)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    Pulsar::Value& channelRef = frame.Locals[0];
-    if (channelRef.Type() != Pulsar::ValueType::Custom
-        || channelRef.AsCustom().Type != type)
+    Pulsar::Frame& frame = eContext.CurrentFrame();
+    Pulsar::Value& channelReference = frame.Locals[0];
+    if (channelReference.Type() != Pulsar::ValueType::Custom
+        || channelReference.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
 
-    ChannelType::Ref_T channel = channelRef.AsCustom().As<ChannelType>();
+    ChannelType::Ref channel = channelReference.AsCustom().As<ChannelType>();
     if (!channel)
         return Pulsar::RuntimeState::InvalidCustomTypeReference;
     
@@ -276,13 +281,13 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_Close(Pulsar::Ex
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_IsEmpty(Pulsar::ExecutionContext& eContext, uint64_t type)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    Pulsar::Value& channelRef = frame.Locals[0];
-    if (channelRef.Type() != Pulsar::ValueType::Custom
-        || channelRef.AsCustom().Type != type)
+    Pulsar::Frame& frame = eContext.CurrentFrame();
+    Pulsar::Value& channelReference = frame.Locals[0];
+    if (channelReference.Type() != Pulsar::ValueType::Custom
+        || channelReference.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
 
-    ChannelType::Ref_T channel = channelRef.AsCustom().As<ChannelType>();
+    ChannelType::Ref channel = channelReference.AsCustom().As<ChannelType>();
     if (!channel)
         return Pulsar::RuntimeState::InvalidCustomTypeReference;
     
@@ -294,13 +299,13 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_IsEmpty(Pulsar::
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_IsClosed(Pulsar::ExecutionContext& eContext, uint64_t type)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    Pulsar::Value& channelRef = frame.Locals[0];
-    if (channelRef.Type() != Pulsar::ValueType::Custom
-        || channelRef.AsCustom().Type != type)
+    Pulsar::Frame& frame = eContext.CurrentFrame();
+    Pulsar::Value& channelReference = frame.Locals[0];
+    if (channelReference.Type() != Pulsar::ValueType::Custom
+        || channelReference.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
 
-    ChannelType::Ref_T channel = channelRef.AsCustom().As<ChannelType>();
+    ChannelType::Ref channel = channelReference.AsCustom().As<ChannelType>();
     if (!channel)
         return Pulsar::RuntimeState::InvalidCustomTypeReference;
     
@@ -312,13 +317,13 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_IsClosed(Pulsar:
 
 Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Channel_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    Pulsar::Value& channelRef = frame.Locals[0];
-    if (channelRef.Type() != Pulsar::ValueType::Custom
-        || channelRef.AsCustom().Type != type)
+    Pulsar::Frame& frame = eContext.CurrentFrame();
+    Pulsar::Value& channelReference = frame.Locals[0];
+    if (channelReference.Type() != Pulsar::ValueType::Custom
+        || channelReference.AsCustom().Type != type)
         return Pulsar::RuntimeState::TypeError;
 
-    ChannelType::Ref_T channel = channelRef.AsCustom().As<ChannelType>();
+    ChannelType::Ref channel = channelReference.AsCustom().As<ChannelType>();
     if (!channel)
         return Pulsar::RuntimeState::InvalidCustomTypeReference;
     

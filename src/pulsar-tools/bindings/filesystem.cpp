@@ -11,32 +11,34 @@ void PulsarTools::FileSystemNativeBindings::BindToModule(Pulsar::Module& module)
 
 Pulsar::RuntimeState PulsarTools::FileSystemNativeBindings::FS_Exists(Pulsar::ExecutionContext& eContext)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    if (frame.Locals[0].Type() != Pulsar::ValueType::String)
+    Pulsar::Frame& frame = eContext.CurrentFrame();
+    Pulsar::Value& filePath = frame.Locals[0];
+    if (filePath.Type() != Pulsar::ValueType::String)
         return Pulsar::RuntimeState::TypeError;
 
-    bool exists = std::filesystem::exists(frame.Locals[0].AsString().Data());
-    frame.Stack.EmplaceBack(std::move(frame.Locals[0]));
-    frame.Stack.EmplaceBack()
-        .SetInteger(exists ? 1 : 0);
+    bool fileExists = std::filesystem::exists(filePath.AsString().CString());
+    frame.Stack.EmplaceBack(std::move(filePath));
+    frame.Stack.EmplaceBack().SetInteger(fileExists ? 1 : 0);
     return Pulsar::RuntimeState::OK;
 }
 
 Pulsar::RuntimeState PulsarTools::FileSystemNativeBindings::FS_ReadAll(Pulsar::ExecutionContext& eContext)
 {
-    Pulsar::Frame& frame = eContext.CallStack.CurrentFrame();
-    if (frame.Locals[0].Type() != Pulsar::ValueType::String)
+    Pulsar::Frame& frame = eContext.CurrentFrame();
+    Pulsar::Value& filePath = frame.Locals[0];
+    if (filePath.Type() != Pulsar::ValueType::String)
         return Pulsar::RuntimeState::TypeError;
     
-    std::filesystem::path filePath(frame.Locals[0].AsString().Data());
-    if (!std::filesystem::is_regular_file(filePath))
+    std::filesystem::path fsPath(filePath.AsString().CString());
+    if (!std::filesystem::is_regular_file(fsPath))
         return Pulsar::RuntimeState::Error;
-    std::ifstream file(filePath, std::ios::binary);
-    size_t fileSize = (size_t)std::filesystem::file_size(filePath);
+
+    std::ifstream file(fsPath, std::ios::binary);
+    size_t fileSize = (size_t)std::filesystem::file_size(fsPath);
 
     Pulsar::String contents;
     contents.Resize(fileSize);
-    if (!file.read((char*)contents.Data(), fileSize))
+    if (!file.read(contents.Data(), fileSize))
         contents.Resize(0);
 
     frame.Stack.EmplaceBack()

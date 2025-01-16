@@ -12,14 +12,14 @@ namespace Pulsar
     class CustomDataHolder
     {
     public:
-        typedef SharedRef<Pulsar::CustomDataHolder> Ref_T;
+        using Ref = SharedRef<Pulsar::CustomDataHolder>;
         virtual ~CustomDataHolder() = default;
     };
 
     struct CustomData
     {
         uint64_t Type;
-        CustomDataHolder::Ref_T Data = nullptr;
+        CustomDataHolder::Ref Data = nullptr;
 
         // Should cast to a derived of CustomDataHolder
         template<typename T>
@@ -50,7 +50,7 @@ namespace Pulsar
     }
 
     class Value; // Forward Declaration
-    typedef LinkedList<Value> ValueList;
+    using ValueList = LinkedList<Value>;
 
     class Value
     {

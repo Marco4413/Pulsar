@@ -1,12 +1,9 @@
-*(*hello-from-cpp!).
-
-*(call func) -> 1:
-  10 func (!icall)
-  .
+*(*println! val).
 
 *(identity x) -> 1: x.
 
-*(main args) -> 1:
-  <& (identity) (call)
-  <& (*hello-from-cpp!) (call)
+*(main args):
+  "Hello, native!"
+    <& (identity) (!icall)
+    <& (*println!) (!icall)
   .

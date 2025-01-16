@@ -39,7 +39,7 @@ namespace Pulsar
 
         void Reserve(size_t newCapacity)
         {
-            if (m_Data && newCapacity <= m_Capacity)
+            if (m_Data && newCapacity <= m_Length)
                 return;
             m_Data = (char*)PULSAR_REALLOC((void*)m_Data, (newCapacity+1) * sizeof(char));
             m_Capacity = newCapacity;
@@ -175,7 +175,11 @@ namespace Pulsar
             return String(&m_Data[startIdx], endIdx-startIdx);
         }
 
+        char* Data()             { return m_Data; }
         const char* Data() const { return m_Data; }
+
+        const char* CString() const { return m_Data; }
+
         size_t Length() const { return m_Length; }
         size_t Capacity() const { return m_Capacity; }
     private:

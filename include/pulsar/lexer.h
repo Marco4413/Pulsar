@@ -74,6 +74,9 @@ namespace Pulsar
         size_t Char;
         size_t Index;
         size_t CharSpan;
+
+        bool operator==(const SourcePosition&) const = default;
+        bool operator!=(const SourcePosition&) const = default;
     };
 
     class Token
@@ -154,6 +157,10 @@ namespace Pulsar
 
         Lexer& operator=(const Lexer&) = delete;
         Lexer& operator=(Lexer&&) = delete;
+
+        // Skips a sha-bang at the current position
+        // Use this after creating a Lexer to ignore it
+        bool SkipShaBang();
 
         Token NextToken()               { return ParseNextToken(); }
         bool IsEndOfFile() const        { return m_SourceView.Length() == 0; }

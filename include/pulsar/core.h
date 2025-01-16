@@ -3,6 +3,8 @@
 
 // All std includes from header files are here.
 #include <cinttypes>
+#include <cmath> // std::floor, std::ceil
+#include <cstdlib> // std::malloc, ::free, ...
 #include <cstring>
 #include <functional>
 #include <type_traits>
@@ -10,7 +12,6 @@
 
 #ifdef PULSAR_DEBUG
   #include <cstdio>
-  #include <cstdlib>
   #ifndef PULSAR_ASSERT
     #define PULSAR_ASSERT(cond, msg)                      \
         do {                                              \
@@ -107,7 +108,7 @@ namespace Pulsar::Core
     {
         if (ptr) {
             ptr->~T();
-            PULSAR_FREE(ptr);
+            PULSAR_FREE((void*)ptr);
         }
     }
 }
