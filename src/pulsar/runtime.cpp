@@ -333,6 +333,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     } break;
     case InstructionCode::Pack: {
         ValueList list;
+        // If Arg0 <= 0, push an empty list
         if (instr.Arg0 > 0) {
             size_t packing = (size_t)instr.Arg0;
             if (frame.Stack.Size() < packing)
@@ -341,11 +342,6 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
                 list.Prepend(std::move(frame.Stack.Back()));
                 frame.Stack.PopBack();
             }
-        } else {
-            // TODO: Not implemented.
-            // To follow the unpack instruction, this should pack the entire stack.
-            // Though is that useful? I think it would only create issues.
-            return RuntimeState::Error;
         }
         frame.Stack.EmplaceBack()
             .SetList(std::move(list));
@@ -733,27 +729,27 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::Unpack: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
-        size_t listIdx = frame.Stack.Size()-1;
-        if (frame.Stack[listIdx].Type() == ValueType::List) {
-            ValueList::NodeType* node = frame.Stack[listIdx].AsList().Front();
-            if (instr.Arg0 > 0) {
-                size_t unpacked = 0;
-                for (int64_t i = 0; i < instr.Arg0; i++) {
-                    if (!node)
-                        return RuntimeState::ListIndexOutOfBounds;
-                    frame.Stack.PushBack(std::move(node->Value()));
-                    node = node->Next();
-                    ++unpacked;
-                }
-                frame.Stack[listIdx].AsList().RemoveFront(unpacked);
-            } else {
-                while (node) {
-                    frame.Stack.PushBack(std::move(node->Value()));
-                    node = node->Next();
-                }
-                frame.Stack[listIdx].AsList().Clear();
+        if (frame.Stack.Back().Type() != ValueType::List)
+            return RuntimeState::TypeError;
+
+        ValueList listToUnpack = std::move(frame.Stack.Back()).AsList();
+        frame.Stack.PopBack();
+
+        // If Arg0 <= 0, pop list
+        if (instr.Arg0 > 0) {
+            size_t unpackCount = (size_t)instr.Arg0;
+
+            ValueList::NodeType* node = listToUnpack.Back();
+            for (size_t i = 1; i < unpackCount && node; i++) {
+                node = node->Prev();
             }
-        } else return RuntimeState::TypeError;
+
+            for (size_t i = 0; i < unpackCount; i++) {
+                if (!node) return RuntimeState::ListIndexOutOfBounds;
+                frame.Stack.PushBack(std::move(node->Value()));
+                node = node->Next();
+            }
+        }
     } break;
     case InstructionCode::Index: {
         if (frame.Stack.Size() < 2)
