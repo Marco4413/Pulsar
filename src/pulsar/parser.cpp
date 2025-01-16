@@ -1232,105 +1232,12 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
         func.Code.EmplaceBack(InstructionCode::MoveLocal, localIdx);
     } break;
     case TokenType::OpenBracket: {
-        /**
-         * Given the following list:
-         *   [ 1, 2, 3, foo, bar, "baz", 4, 5, 6 ]
-         * Split the parts which have constant
-         *   numeric values from the other ones:
-         *   [ 1, 2, 3 ], [ foo, bar, "baz", ], [ 4, 5, 6 ]
-         * - Now the ones that only contain numbers
-         *   can be cached in module.Constants and Pushed.
-         * - For the other values we must push them
-         *   individually and then Append those values.
-         * - After a const list is pushed we must concat
-         *   it with the previous one.
-         * - For lists inside lists we can just call recursively.
-         *   And expect a list value to be appended.
-         * PUSH []
-         * PUSH [ 1, 2, 3, ]
-         * CONCAT
-         * APPEND foo
-         * APPEND bar
-         * APPEND "baz"
-         * PUSH [ 4, 5, 6, ]
-         * CONCAT
-         * 
-         * What 'mayRemoveEmptyInstr' does:
-         * PUSH []
-         * * mayRemoveEmptyInstr=true
-         * * remove the last push if []
-         * PUSH [ 1, 2, 3, ]
-         * * only if [] was not removed add CONCAT
-         * CONCAT
-         * * mayRemoveEmptyInstr=false
-         * * ... same as the previous method
-         * Which means that PUSH [ 1, 2, 3, ]
-         *  is the only instruction being produced.
-         * If there's a non-const value at the start of the list,
-         *  mayRemoveEmptyInstr=false is assigned right away.
-         */
-        Value constList;
-        constList.SetList(ValueList());
-        // This variable stores whether the first PushEmptyList instruction can be removed
-        bool mayRemoveEmptyInstr = true;
+        int64_t listSize = 0;
         const Token& curToken = NextToken();
-        func.Code.EmplaceBack(InstructionCode::PushEmptyList);
         while (true) {
             switch (curToken.Type) {
-            case TokenType::LeftArrow:
-            case TokenType::PushReference:
-            case TokenType::StringLiteral:
-            case TokenType::Identifier:
-            case TokenType::OpenBracket:
-                // Do not create a new list for consecutive non-const values.
-                if (!constList.AsList().Front()) {
-                    // PushEmptyList cannot be removed because
-                    //  the following values are not simple constants.
-                    // We don't care if it was previously possible.
-                    mayRemoveEmptyInstr = false;
-                    break;
-                }
-                [[fallthrough]];
-            case TokenType::CloseBracket: {
-                if (!constList.AsList().Front())
-                    return ParseResult::OK; // Empty List
-                // Check for an already existing list with the same values.
-                int64_t constIdx = (int64_t)module.Constants.Size()-1;
-                for (; constIdx >= 0 && module.Constants[(size_t)constIdx] != constList; constIdx--);
-                if (constIdx < 0) {
-                    constIdx = module.Constants.Size();
-                    module.Constants.EmplaceBack(constList);
-                }
-                constList.AsList().Clear();
-                if (mayRemoveEmptyInstr) {
-                    // We can remove the PushEmptyList instruction if there is one
-                    if (func.Code.Back().Code == InstructionCode::PushEmptyList)
-                        func.Code.PopBack();
-                    // Otherwise we set the var to false because we want the Concat instruction later
-                    else mayRemoveEmptyInstr = false;
-                }
-                PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
-                func.Code.EmplaceBack(InstructionCode::PushConst, constIdx);
-                // If we can't remove the PushEmptyList instruction,
-                //  we must put a Concat Instruction to join lists.
-                if (!mayRemoveEmptyInstr)
-                    func.Code.EmplaceBack(InstructionCode::Concat);
-                if (curToken.Type == TokenType::CloseBracket)
-                    return ParseResult::OK;
-                // After the first const list there's no need to try removing the instruction.
-                mayRemoveEmptyInstr = false;
-            } break;
             case TokenType::IntegerLiteral:
-                constList.AsList().Append()->Value().SetInteger(curToken.IntegerVal);
-                break;
             case TokenType::DoubleLiteral:
-                constList.AsList().Append()->Value().SetDouble(curToken.DoubleVal);
-                break;
-            default:
-                break;
-            }
-
-            switch (curToken.Type) {
             case TokenType::LeftArrow:
             case TokenType::PushReference:
             case TokenType::StringLiteral:
@@ -1339,12 +1246,18 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
                 auto res = PushLValue(module, func, localScope, curToken, settings);
                 if (res != ParseResult::OK)
                     return res;
-                PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
-                func.Code.EmplaceBack(InstructionCode::Append);
+                ++listSize;
             } break;
-            case TokenType::IntegerLiteral:
-            case TokenType::DoubleLiteral:
-                break;
+            case TokenType::CloseBracket:
+                if (listSize <= 0) {
+                    // Empty List
+                    func.Code.EmplaceBack(InstructionCode::PushEmptyList);
+                    return ParseResult::OK;
+                }
+
+                PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
+                func.Code.EmplaceBack(InstructionCode::Pack, listSize);
+                return ParseResult::OK;
             default:
                 return SetError(ParseResult::UnexpectedToken, curToken, "Expected lvalue.");
             }

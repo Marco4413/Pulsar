@@ -11,11 +11,8 @@
 
 *(fib-list x) -> 1:
   x if <= 1:
-    // [ x ]; x 1 -; (!append)
-    // Would produce the same bytecode
-    (!empty-list)
-    x 1 - (!prepend)
-    x     (!prepend)
+    x; x 1 -
+      (!pack 2)
     .
   x 1 - (fib-list)
   (!head)  -> fib_x-1

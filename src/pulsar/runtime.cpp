@@ -331,6 +331,21 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
             return RuntimeState::WritingOnConstantGlobal;
         global.Value = frame.Stack.Back();
     } break;
+    case InstructionCode::Pack: {
+        ValueList list;
+        // If Arg0 <= 0, push an empty list
+        if (instr.Arg0 > 0) {
+            size_t packing = (size_t)instr.Arg0;
+            if (frame.Stack.Size() < packing)
+                return RuntimeState::StackUnderflow;
+            for (size_t i = 0; i < packing; i++) {
+                list.Prepend(std::move(frame.Stack.Back()));
+                frame.Stack.PopBack();
+            }
+        }
+        frame.Stack.EmplaceBack()
+            .SetList(std::move(list));
+    } break;
     case InstructionCode::Pop: {
         size_t popCount = (size_t)(instr.Arg0 > 0 ? instr.Arg0 : 1);
         if (frame.Stack.Size() < popCount)
@@ -688,7 +703,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
         frame.Stack.PopBack();
         Value& list = frame.Stack.Back();
         if (toConcat.Type() == ValueType::List && list.Type() == ValueType::List) {
-            list.AsList().Concat(toConcat.AsList());
+            list.AsList().Concat(std::move(toConcat.AsList()));
         } else return RuntimeState::TypeError;
     } break;
     case InstructionCode::Head: {
@@ -710,6 +725,31 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
         if (list.Type() == ValueType::List) {
             list.AsList().RemoveFront(1);
         } else return RuntimeState::TypeError;
+    } break;
+    case InstructionCode::Unpack: {
+        if (frame.Stack.Size() < 1)
+            return RuntimeState::StackUnderflow;
+        if (frame.Stack.Back().Type() != ValueType::List)
+            return RuntimeState::TypeError;
+
+        ValueList listToUnpack = std::move(frame.Stack.Back()).AsList();
+        frame.Stack.PopBack();
+
+        // If Arg0 <= 0, pop list
+        if (instr.Arg0 > 0) {
+            size_t unpackCount = (size_t)instr.Arg0;
+
+            ValueList::NodeType* node = listToUnpack.Back();
+            for (size_t i = 1; i < unpackCount && node; i++) {
+                node = node->Prev();
+            }
+
+            for (size_t i = 0; i < unpackCount; i++) {
+                if (!node) return RuntimeState::ListIndexOutOfBounds;
+                frame.Stack.PushBack(std::move(node->Value()));
+                node = node->Next();
+            }
+        }
     } break;
     case InstructionCode::Index: {
         if (frame.Stack.Size() < 2)

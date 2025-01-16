@@ -99,14 +99,9 @@ global const -> snake/window/frame:
     (!prepend)
   .
 
-*(vec2/pack x y) -> 1: [ x, y ] .
+*(vec2/pack 2) -> 1: (!pack 2) .
 
-*(vec2/unpack v) -> 2:
-  <- v
-    (!head) -> x
-    (!head) -> y
-  x y
-  .
+*(vec2/unpack 1) -> 2: (!unpack 2) .
 
 *(vec2/add v1 v2) -> 1:
   <- v1 (vec2/unpack)

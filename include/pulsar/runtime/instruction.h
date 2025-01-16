@@ -12,6 +12,7 @@ namespace Pulsar
         PushFunctionReference       = 0x03,
         PushNativeFunctionReference = 0x04,
         PushEmptyList = 0x05,
+        Pack = 0x06,
 
         Pop  = 0x0D,
         Swap = 0x0E,
@@ -71,6 +72,7 @@ namespace Pulsar
         Concat = 0x78,
         Head   = 0x79,
         Tail   = 0x7A,
+        Unpack = 0x7B,
         //   String-Specific
         Prefix = 0x7C,
         Suffix = 0x7D,

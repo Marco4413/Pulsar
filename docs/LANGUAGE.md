@@ -1001,15 +1001,6 @@ Checking for empty on big lists is faster than checking for their length.
 | Pops   | `List`/`String` |           |
 | Pushes | `List`/`String` | `Integer` |
 
-### empty-list
-
-Pushes a new empty `List` into the stack.
-
-|        |  S+1   |
-| :----- | :----: |
-| Pops   |        |
-| Pushes | `List` |
-
 ### prepend
 
 Adds a value to the start of a `List` or `String`.
@@ -1060,6 +1051,28 @@ Removes the first value of a `List`.
 | :----- | :----: |
 | Pops   | `List` |
 | Pushes | `List` |
+
+### pack
+
+Packs the last `arg0` values of the stack into a `List`.
+
+Accepts `arg0`: if <= 0, an empty list is pushed. If >= 1, `arg0` values are packed into a `List`.
+
+|        |    S0     |
+| :----- | :-------: |
+| Pops   |   `...T`  |
+| Pushes |  `[...T]` |
+
+### unpack
+
+Unpacks `arg0` values of a `List`.
+
+Accepts `arg0`: if <= 0, the `List` is popped. If >= 1, `arg0` values are unpacked from the `List`.
+
+|        |    S0     |
+| :----- | :-------: |
+| Pops   |  `[...T]` |
+| Pushes |   `...T`  |
 
 ### index
 
