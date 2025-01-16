@@ -150,6 +150,18 @@ const PulsarLSP::Completion::InstructionMap& PulsarLSP::Completion::GetInstructi
     );
 
     DEFINE_INSTRUCTION(
+        "pack", "count", "...T -> [ ...T ]",
+        "Creates an empty list if `count` <= 0.\n"
+        "Packs the last `count` values on the stack into a list if `count` > 0."
+    );
+
+    DEFINE_INSTRUCTION(
+        "unpack", "count", "[ ...T ] -> ...T",
+        "Pops the last list on the stack if `count` <= 0.\n"
+        "Unpacks the last `count` values of the list on the stack if `count` > 0."
+    );
+
+    DEFINE_INSTRUCTION(
         "index", "", "T, Integer -> T, U",
         "Where T is either a List or String. And U:\n"
         "- If T is a List: Any\n"
