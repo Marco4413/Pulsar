@@ -750,8 +750,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
             } else if (length.AsInteger() < 0 || (size_t)length.AsInteger() > str.AsString().Length())
                 return RuntimeState::StringIndexOutOfBounds;
             size_t prefLen = (size_t)length.AsInteger();
-            String prefix(str.AsString().Data(), prefLen);
-            String postPrefix(&str.AsString().Data()[prefLen], str.AsString().Length()-prefLen);
+            String prefix(str.AsString().CString(), prefLen);
+            String postPrefix(&str.AsString().CString()[prefLen], str.AsString().Length()-prefLen);
             str.SetString(std::move(postPrefix));
             length.SetString(std::move(prefix));
         } else return RuntimeState::TypeError;
@@ -771,8 +771,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
             } else if (length.AsInteger() < 0 || (size_t)length.AsInteger() > str.AsString().Length())
                 return RuntimeState::StringIndexOutOfBounds;
             size_t sufLen = (size_t)length.AsInteger();
-            String suffix(&str.AsString().Data()[str.AsString().Length()-sufLen], sufLen);
-            String preSuffix(str.AsString().Data(), str.AsString().Length()-sufLen);
+            String suffix(&str.AsString().CString()[str.AsString().Length()-sufLen], sufLen);
+            String preSuffix(str.AsString().CString(), str.AsString().Length()-sufLen);
             str.SetString(std::move(preSuffix));
             length.SetString(std::move(suffix));
         } else return RuntimeState::TypeError;

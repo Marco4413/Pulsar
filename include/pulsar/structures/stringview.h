@@ -11,7 +11,7 @@ namespace Pulsar
     {
     public:
         StringView(const String& str)
-            : StringView(str.Data(), str.Length()) { }
+            : StringView(str.CString(), str.Length()) { }
 
         StringView(const char* str)
             : StringView(str, std::strlen(str)) { }

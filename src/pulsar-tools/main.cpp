@@ -146,7 +146,7 @@ void PrintFlagOptions(const Pulsar::List<NamedFlagOption>& opts)
 
 bool IsFile(const Pulsar::String& filepath)
 {
-    std::filesystem::path path(filepath.Data());
+    std::filesystem::path path(filepath.CString());
     return std::filesystem::exists(path) && std::filesystem::is_regular_file(path);
 }
 
@@ -154,7 +154,7 @@ bool IsNeutronFile(const Pulsar::String& filepath)
 {
     if (!IsFile(filepath))
         return false;
-    std::ifstream file(filepath.Data(), std::ios::binary);
+    std::ifstream file(filepath.CString(), std::ios::binary);
     char sig[Pulsar::Binary::SIGNATURE_LENGTH];
     if (!file.read(sig, (std::streamsize)Pulsar::Binary::SIGNATURE_LENGTH))
         return false;
@@ -400,7 +400,7 @@ bool Command_Compile(const char* executable, int argc, const char** argv)
 
     if (outputPath.Length() == 0) {
         // Swap extension
-        std::filesystem::path path(filepath.Data());
+        std::filesystem::path path(filepath.CString());
         path.replace_extension(".ntr");
         outputPath = path.generic_string().c_str();
     }

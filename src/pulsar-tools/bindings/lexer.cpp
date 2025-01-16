@@ -24,7 +24,7 @@ Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_FromFile(Pulsar::Ex
     if (filePath.Type() != Pulsar::ValueType::String)
         return Pulsar::RuntimeState::TypeError;
 
-    std::filesystem::path fsPath(filePath.AsString().Data());
+    std::filesystem::path fsPath(filePath.AsString().CString());
     if (!std::filesystem::exists(fsPath)) {
         frame.Stack.EmplaceBack()
             .SetCustom({ type });
@@ -36,7 +36,7 @@ Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_FromFile(Pulsar::Ex
 
     Pulsar::String source;
     source.Resize(fileSize);
-    if (!file.read((char*)source.Data(), fileSize)) {
+    if (!file.read(source.Data(), fileSize)) {
         frame.Stack.EmplaceBack()
             .SetCustom({ type });
         return Pulsar::RuntimeState::OK;

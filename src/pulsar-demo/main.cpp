@@ -73,7 +73,7 @@ int main(int argc, const char** argv)
         // Pulsar::String is null-terminated, there's no need to worry about reading invalid memory.
         fmt::println("[PARSE ERROR]: {}: {}",
             Pulsar::ParseResultToString(parseResult),
-            parser.GetErrorMessage().Data());
+            parser.GetErrorMessage().CString());
         return 1;
     }
 
@@ -109,7 +109,7 @@ int main(int argc, const char** argv)
             errorToken.SourcePos.Line+1,
             errorToken.SourcePos.Char,
             Pulsar::ParseResultToString(parseResult),
-            parser.GetErrorMessage().Data());
+            parser.GetErrorMessage().CString());
         return 1;
     }
 
@@ -134,7 +134,7 @@ int main(int argc, const char** argv)
         //   pulsar-tools uses. pulsar-tools allows any value to be printed)
         if (str.Type() != Pulsar::ValueType::String)
             return Pulsar::RuntimeState::TypeError;
-        fmt::println("{}", str.AsString().Data());
+        fmt::println("{}", str.AsString().CString());
         return Pulsar::RuntimeState::OK;
     });
 
@@ -159,7 +159,7 @@ int main(int argc, const char** argv)
         Pulsar::String stackTrace = context.GetStackTrace(10);
         fmt::println("[RUNTIME ERROR]: {}\n{}",
             Pulsar::RuntimeStateToString(runtimeState),
-            stackTrace.Data());
+            stackTrace.CString());
         return 1;
     }
 

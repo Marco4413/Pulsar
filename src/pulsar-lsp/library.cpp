@@ -16,7 +16,7 @@ Pulsar::String PulsarLSP::URIToNormalizedPath(const lsp::FileURI& uri)
 
 lsp::FileURI PulsarLSP::NormalizedPathToURI(const Pulsar::String& path)
 {
-    std::filesystem::path relPath(path.Data());
+    std::filesystem::path relPath(path.CString());
     std::error_code error;
     std::filesystem::path absPath = std::filesystem::absolute(relPath, error);
     lsp::FileURI uri = !(error || absPath.empty())
@@ -28,7 +28,7 @@ lsp::FileURI PulsarLSP::NormalizedPathToURI(const Pulsar::String& path)
 bool PulsarLSP::ReadFile(const lsp::FileURI& uri, std::string& buffer)
 {
     Pulsar::String path  = URIToNormalizedPath(uri);
-    std::filesystem::path fsPath = path.Data();
+    std::filesystem::path fsPath = path.CString();
     if (!std::filesystem::exists(fsPath)) return false;
 
     std::ifstream file(fsPath, std::ios::binary);
@@ -41,14 +41,14 @@ bool PulsarLSP::ReadFile(const lsp::FileURI& uri, std::string& buffer)
 bool PulsarLSP::ReadFile(const lsp::FileURI& uri, Pulsar::String& buffer)
 {
     Pulsar::String path  = URIToNormalizedPath(uri);
-    std::filesystem::path fsPath = path.Data();
+    std::filesystem::path fsPath = path.CString();
     if (!std::filesystem::exists(fsPath)) return false;
 
     std::ifstream file(fsPath, std::ios::binary);
     size_t fileSize = (size_t)std::filesystem::file_size(fsPath);
 
     buffer.Resize(fileSize);
-    return (bool)file.read((char*)buffer.Data(), fileSize);
+    return (bool)file.read(buffer.Data(), fileSize);
 }
 
 PulsarLSP::ConstSharedText PulsarLSP::Library::FindDocument(const lsp::FileURI& uri) const

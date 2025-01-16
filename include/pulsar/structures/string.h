@@ -175,7 +175,11 @@ namespace Pulsar
             return String(&m_Data[startIdx], endIdx-startIdx);
         }
 
+        char* Data()             { return m_Data; }
         const char* Data() const { return m_Data; }
+
+        const char* CString() const { return m_Data; }
+
         size_t Length() const { return m_Length; }
         size_t Capacity() const { return m_Capacity; }
     private:

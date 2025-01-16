@@ -16,7 +16,7 @@ Pulsar::RuntimeState PulsarTools::FileSystemNativeBindings::FS_Exists(Pulsar::Ex
     if (filePath.Type() != Pulsar::ValueType::String)
         return Pulsar::RuntimeState::TypeError;
 
-    bool fileExists = std::filesystem::exists(filePath.AsString().Data());
+    bool fileExists = std::filesystem::exists(filePath.AsString().CString());
     frame.Stack.EmplaceBack(std::move(filePath));
     frame.Stack.EmplaceBack().SetInteger(fileExists ? 1 : 0);
     return Pulsar::RuntimeState::OK;
@@ -29,7 +29,7 @@ Pulsar::RuntimeState PulsarTools::FileSystemNativeBindings::FS_ReadAll(Pulsar::E
     if (filePath.Type() != Pulsar::ValueType::String)
         return Pulsar::RuntimeState::TypeError;
     
-    std::filesystem::path fsPath(filePath.AsString().Data());
+    std::filesystem::path fsPath(filePath.AsString().CString());
     if (!std::filesystem::is_regular_file(fsPath))
         return Pulsar::RuntimeState::Error;
 
@@ -38,7 +38,7 @@ Pulsar::RuntimeState PulsarTools::FileSystemNativeBindings::FS_ReadAll(Pulsar::E
 
     Pulsar::String contents;
     contents.Resize(fileSize);
-    if (!file.read((char*)contents.Data(), fileSize))
+    if (!file.read(contents.Data(), fileSize))
         contents.Resize(0);
 
     frame.Stack.EmplaceBack()

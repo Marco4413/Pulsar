@@ -91,8 +91,8 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
     settings.StoreDebugSymbols        = true;
     settings.MapGlobalProducersToVoid = m_Options.MapGlobalProducersToVoid;
     settings.IncludeResolver = [this, &parsedDocument, &path](Pulsar::Parser& parser, const Pulsar::String& cwf, const Pulsar::Token& token) {
-        std::filesystem::path targetPath(token.StringVal.Data());
-        std::filesystem::path workingPath(cwf.Data());
+        std::filesystem::path targetPath(token.StringVal.CString());
+        std::filesystem::path workingPath(cwf.CString());
         std::filesystem::path filePath = workingPath.parent_path() / targetPath;
         lsp::FileURI filePathURI = filePath.generic_string().c_str();
 
@@ -415,7 +415,7 @@ std::vector<lsp::DocumentSymbol> PulsarLSP::Server::GetSymbols(const lsp::FileUR
 lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global, Pulsar::SourcePosition replaceWithName)
 {
     lsp::CompletionItem item{};
-    item.label = global.Name.Data();
+    item.label = global.Name.CString();
     item.kind  = lsp::CompletionItemKind::Variable;
     if (replaceWithName == NULL_SOURCE_POSITION) {
         item.insertText = item.label;
@@ -444,13 +444,13 @@ std::string PulsarLSP::CreateGlobalDefinitionDetails(const Pulsar::GlobalDefinit
     }
     detail += "(";
     if (doc) {
-        detail += ValueTypeToString(def.InitialValue, doc->Module).Data();
+        detail += ValueTypeToString(def.InitialValue, doc->Module).CString();
     } else {
         detail += ValueTypeToString(def.InitialValue.Type());
     }
     detail += ")";
     detail += " -> ";
-    detail += def.Name.Data();
+    detail += def.Name.CString();
     return detail;
 }
 
@@ -461,7 +461,7 @@ std::string PulsarLSP::CreateFunctionDefinitionDetails(const FunctionDefinition&
     std::string detail = "(";
     if (lspDef.IsNative) detail += "*";
 
-    detail += def.Name.Data();
+    detail += def.Name.CString();
     if (def.StackArity > 0) {
         detail += " ";
         detail += std::to_string(def.StackArity);
@@ -469,7 +469,7 @@ std::string PulsarLSP::CreateFunctionDefinitionDetails(const FunctionDefinition&
 
     for (size_t i = 0; i < lspDef.Args.Size(); ++i) {
         detail += " ";
-        detail += lspDef.Args[i].Name.Data();
+        detail += lspDef.Args[i].Name.CString();
     }
 
     detail += ")";
@@ -485,7 +485,7 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
 {
     lsp::CompletionItem item{};
     item.label  = "(";
-    item.label += fn.Name.Data();
+    item.label += fn.Name.CString();
     item.label += ")";
     item.kind   = lsp::CompletionItemKind::Function;
     if (replaceWithName == NULL_SOURCE_POSITION) {
@@ -493,7 +493,7 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
     } else {
         lsp::TextEdit edit{
             .range   = SourcePositionToRange(replaceWithName),
-            .newText = fn.Name.Data(),
+            .newText = fn.Name.CString(),
         };
         item.filterText = edit.newText;
         item.textEdit = { std::move(edit) };
@@ -514,7 +514,7 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
 {
     lsp::CompletionItem item{};
     item.label  = "(*";
-    item.label += nativeFn.Name.Data();
+    item.label += nativeFn.Name.CString();
     item.label += ")";
     item.kind   = lsp::CompletionItemKind::Function;
     if (replaceWithName == NULL_SOURCE_POSITION) {
@@ -522,7 +522,7 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
     } else {
         lsp::TextEdit edit{
             .range   = SourcePositionToRange(replaceWithName),
-            .newText = nativeFn.Name.Data(),
+            .newText = nativeFn.Name.CString(),
         };
         item.filterText = edit.newText;
         item.textEdit = { std::move(edit) };
@@ -542,7 +542,7 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
 lsp::CompletionItem PulsarLSP::CreateCompletionItemForLocal(const LocalScope::Local& local, Pulsar::SourcePosition replaceWithName)
 {
     lsp::CompletionItem item{};
-    item.label = local.Name.Data();
+    item.label = local.Name.CString();
     item.kind  = lsp::CompletionItemKind::Variable;
     if (replaceWithName == NULL_SOURCE_POSITION) {
         item.insertText = item.label;
@@ -660,7 +660,7 @@ std::optional<lsp::Hover> PulsarLSP::Server::GetHover(const lsp::FileURI& uri, l
                     return lsp::Hover{
                         .contents = lsp::MarkupContent{
                             .kind = lsp::MarkupKind::Markdown,
-                            .value = PULSAR_CODEBLOCK(identUsage.Identifier.StringVal).Data(),
+                            .value = PULSAR_CODEBLOCK(identUsage.Identifier.StringVal).CString(),
                         },
                         .range = SourcePositionToRange(identUsage.Identifier.SourcePos),
                     };
@@ -812,7 +812,7 @@ std::vector<PulsarLSP::DiagnosticsForDocument> PulsarLSP::Server::GetDiagnosticR
         error.range    = SourcePositionToRange(badDoc->ErrorPosition);
         error.message  = Pulsar::ParseResultToString(badDoc->ParseResult);
         error.message += ": ";
-        error.message += badDoc->ErrorMessage.Data();
+        error.message += badDoc->ErrorMessage.CString();
         error.source   = "pulsar";
         error.severity = lsp::DiagnosticSeverity::Error;
         result.push_back(DiagnosticsForDocument{

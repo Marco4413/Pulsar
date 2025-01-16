@@ -15,7 +15,7 @@ namespace Pulsar::Binary
     {
     public:
         FileWriter(const String& path)
-            : m_File(path.Data(), std::ios::binary) { }
+            : m_File(path.CString(), std::ios::binary) { }
 
         bool WriteData(uint64_t size, const uint8_t* data) override
         {

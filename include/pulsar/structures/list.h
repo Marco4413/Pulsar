@@ -161,6 +161,7 @@ namespace Pulsar
             m_Size = 0;
         }
 
+        T* Data()               { return m_Data; }
         const T* Data() const   { return m_Data; }
         size_t Size() const     { return m_Size; }
         size_t Capacity() const { return m_Capacity; }

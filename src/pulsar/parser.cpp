@@ -106,7 +106,7 @@ Pulsar::ParseResult Pulsar::Parser::AddSourceFile(const String& path)
     Token token = CurrentToken();
     return SetError(ParseResult::FileSystemNotAvailable, token, "Could not read '" + path + "' because filesystem was disabled.");
 #else // PULSAR_NO_FILESYSTEM
-    auto fsPath = std::filesystem::path(path.Data());
+    auto fsPath = std::filesystem::path(path.CString());
     std::error_code error;
     auto relativePath = std::filesystem::relative(fsPath, error);
 
@@ -126,7 +126,7 @@ Pulsar::ParseResult Pulsar::Parser::AddSourceFile(const String& path)
 
     Pulsar::String source;
     source.Resize(fileSize);
-    if (!file.read((char*)source.Data(), fileSize))
+    if (!file.read(source.Data(), fileSize))
         return SetError(ParseResult::FileNotRead, token, "Could not read file '" + internalPath + "'.");
 
     AddSource(internalPath, std::move(source));
@@ -191,7 +191,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseModuleStatement(Module& module, GlobalS
 #else // PULSAR_NO_FILESYSTEM
             const String* cwf = CurrentPath();
             PULSAR_ASSERT(cwf != nullptr, "CWF should not be nullptr.");
-            std::filesystem::path targetPath(curToken.StringVal.Data());
+            std::filesystem::path targetPath(curToken.StringVal.CString());
             std::filesystem::path workingPath(cwf->Data());
             std::filesystem::path filePath = workingPath.parent_path() / targetPath;
             auto result = AddSourceFile(filePath.generic_string().data());
