@@ -1052,6 +1052,28 @@ Removes the first value of a `List`.
 | Pops   | `List` |
 | Pushes | `List` |
 
+### pack
+
+Packs the last `arg0` values of the stack into a `List`.
+
+Accepts `arg0`: if <= 0, an empty list is pushed. If >= 1, `arg0` values are packed into a `List`.
+
+|        |    S0     |
+| :----- | :-------: |
+| Pops   |   `...T`  |
+| Pushes |  `[...T]` |
+
+### unpack
+
+Unpacks `arg0` values of a `List`.
+
+Accepts `arg0`: if <= 0, the `List` is popped. If >= 1, `arg0` values are unpacked from the `List`.
+
+|        |    S0     |
+| :----- | :-------: |
+| Pops   |  `[...T]` |
+| Pushes |   `...T`  |
+
 ### index
 
 Copies the value at a specific index of a `String` or a `List`.
