@@ -15,23 +15,23 @@ namespace Pulsar
     {
     public:
         friend LinkedList<T>;
-        typedef LinkedListNode<T> SelfType;
+        using Self = LinkedListNode<T>;
         
         template<typename ...Args>
         LinkedListNode(Args&& ...init)
             : m_Value(init...) { }
-        ~LinkedListNode() { PULSAR_DELETE(SelfType, m_Next); }
+        ~LinkedListNode() { PULSAR_DELETE(Self, m_Next); }
 
         // Delete Copy & Move Constructors/Assignments
-        LinkedListNode(const SelfType&) = delete;
-        SelfType& operator=(const SelfType&) = delete;
-        LinkedListNode(SelfType&&) = delete;
-        SelfType& operator=(SelfType&&) = delete;
+        LinkedListNode(const Self&) = delete;
+        Self& operator=(const Self&) = delete;
+        LinkedListNode(Self&&) = delete;
+        Self& operator=(Self&&) = delete;
 
         size_t Length() const
         {
             size_t length = 1;
-            const SelfType* next = Next();
+            const Self* next = Next();
             while (next) {
                 length++;
                 next = next->Next();
@@ -42,18 +42,18 @@ namespace Pulsar
         T& Value()             { return m_Value; }
         const T& Value() const { return m_Value; }
 
-        SelfType* Prev()             { return m_Prev; }
-        const SelfType* Prev() const { return m_Prev; }
+        Self* Prev()             { return m_Prev; }
+        const Self* Prev() const { return m_Prev; }
 
-        SelfType* Next()             { return m_Next; }
-        const SelfType* Next() const { return m_Next; }
+        Self* Next()             { return m_Next; }
+        const Self* Next() const { return m_Next; }
 
         bool HasPrev() const { return m_Prev; }
         bool HasNext() const { return m_Next; }
     private:
         T m_Value;
-        SelfType* m_Prev = nullptr;
-        SelfType* m_Next = nullptr;
+        Self* m_Prev = nullptr;
+        Self* m_Next = nullptr;
     };
 
     template<typename T>
@@ -63,11 +63,11 @@ namespace Pulsar
     class LinkedList
     {
     public:
-        typedef LinkedList<T> SelfType;
-        typedef LinkedListNode<T> NodeType;
+        using Self = LinkedList<T>;
+        using Node = LinkedListNode<T>;
 
         LinkedList() = default;
-        ~LinkedList() { PULSAR_DELETE(NodeType, m_Start); }
+        ~LinkedList() { PULSAR_DELETE(Node, m_Start); }
 
         explicit LinkedList(const List<T>& list)
             : LinkedList()
@@ -84,14 +84,14 @@ namespace Pulsar
             list.Clear();
         }
 
-        LinkedList(const SelfType& other) { *this = other; }
-        SelfType& operator=(const SelfType& other)
+        LinkedList(const Self& other) { *this = other; }
+        Self& operator=(const Self& other)
         {
             if (m_Start)
-                PULSAR_DELETE(NodeType, m_Start);
+                PULSAR_DELETE(Node, m_Start);
             m_Start = nullptr;
             m_End = nullptr;
-            NodeType* next = other.m_Start;
+            Node* next = other.m_Start;
             while (next) {
                 Append()->m_Value = next->m_Value;
                 next = next->m_Next;
@@ -99,11 +99,11 @@ namespace Pulsar
             return *this;
         }
 
-        LinkedList(SelfType&& other) { *this = std::move(other); }
-        SelfType& operator=(SelfType&& other)
+        LinkedList(Self&& other) { *this = std::move(other); }
+        Self& operator=(Self&& other)
         {
             if (m_Start)
-                PULSAR_DELETE(NodeType, m_Start);
+                PULSAR_DELETE(Node, m_Start);
             m_Start = other.m_Start;
             m_End = other.m_End;
             other.m_Start = nullptr;
@@ -112,16 +112,16 @@ namespace Pulsar
         }
 
         template<typename ...Args>
-        NodeType* Prepend(Args&& ...init)
+        Node* Prepend(Args&& ...init)
         {
             if (!m_Start) {
                 PULSAR_ASSERT(!m_End, "LinkedList has an end but doesn't have a start.");
-                m_Start = PULSAR_NEW(NodeType, std::forward<Args>(init)...);
+                m_Start = PULSAR_NEW(Node, std::forward<Args>(init)...);
                 m_End = m_Start;
                 return m_Start;
             }
 
-            NodeType* newStart = PULSAR_NEW(NodeType, std::forward<Args>(init)...);
+            Node* newStart = PULSAR_NEW(Node, std::forward<Args>(init)...);
             newStart->m_Next = m_Start;
             m_Start->m_Prev = newStart;
 
@@ -130,16 +130,16 @@ namespace Pulsar
         }
 
         template<typename ...Args>
-        NodeType* Append(Args&& ...init)
+        Node* Append(Args&& ...init)
         {
             if (!m_Start) {
                 PULSAR_ASSERT(!m_End, "LinkedList has an end but doesn't have a start.");
-                m_Start = PULSAR_NEW(NodeType, std::forward<Args>(init)...);
+                m_Start = PULSAR_NEW(Node, std::forward<Args>(init)...);
                 m_End = m_Start;
                 return m_Start;
             }
 
-            NodeType* newEnd = PULSAR_NEW(NodeType, std::forward<Args>(init)...);
+            Node* newEnd = PULSAR_NEW(Node, std::forward<Args>(init)...);
             newEnd->m_Prev = m_End;
             m_End->m_Next = newEnd;
 
@@ -147,7 +147,7 @@ namespace Pulsar
             return m_End;
         }
 
-        SelfType& Concat(SelfType&& other)
+        Self& Concat(Self&& other)
         {
             if (!other.m_Start) {
                 return *this;
@@ -166,17 +166,17 @@ namespace Pulsar
             return *this;
         }
 
-        SelfType& RemoveFront(size_t n)
+        Self& RemoveFront(size_t n)
         {
             if (n == 0)
                 return *this;
             // This is the node before the new starting one
-            NodeType* newStart = m_Start;
+            Node* newStart = m_Start;
             for (size_t i = 0; i < n && newStart; i++)
                 newStart = newStart->m_Next;
 
             if (!newStart) {
-                PULSAR_DELETE(NodeType, m_Start);
+                PULSAR_DELETE(Node, m_Start);
                 m_Start = nullptr;
                 m_End = nullptr;
                 return *this;
@@ -188,22 +188,22 @@ namespace Pulsar
             newStart->m_Prev = nullptr;
 
             // Delete previous nodes
-            PULSAR_DELETE(NodeType, m_Start);
+            PULSAR_DELETE(Node, m_Start);
             m_Start = newStart;
 
             return *this;
         }
 
-        NodeType* Front()             { return m_Start; }
-        const NodeType* Front() const { return m_Start; }
-        NodeType* Back()              { return m_End; }
-        const NodeType* Back() const  { return m_End; }
+        Node* Front()             { return m_Start; }
+        const Node* Front() const { return m_Start; }
+        Node* Back()              { return m_End; }
+        const Node* Back() const  { return m_End; }
 
-        void Clear()          { PULSAR_DELETE(NodeType, m_Start); m_Start = nullptr; m_End = nullptr; }
+        void Clear()          { PULSAR_DELETE(Node, m_Start); m_Start = nullptr; m_End = nullptr; }
         size_t Length() const { return m_Start ? m_Start->Length() : 0; }
     private:
-        NodeType* m_Start = nullptr;
-        NodeType* m_End = nullptr;
+        Node* m_Start = nullptr;
+        Node* m_End = nullptr;
     };
 }
 

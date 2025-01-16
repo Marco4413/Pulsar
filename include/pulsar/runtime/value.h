@@ -129,8 +129,8 @@ namespace Pulsar
                 return AsCustom().Type == other.AsCustom().Type
                     && AsCustom().Data == other.AsCustom().Data;
             case ValueType::List:
-                const ValueList::NodeType* aNext = AsList().Front();
-                const ValueList::NodeType* bNext = other.AsList().Front();
+                const ValueList::Node* aNext = AsList().Front();
+                const ValueList::Node* bNext = other.AsList().Front();
                 while (true) {
                     if (aNext == bNext)
                         return true;

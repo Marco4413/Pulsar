@@ -14,7 +14,7 @@ namespace Pulsar
     class List
     {
     public:
-        typedef List<T> SelfType;
+        using Self = List<T>;
 
         List() = default;
         List(size_t initCapacity) { Reserve(initCapacity); }
@@ -53,8 +53,8 @@ namespace Pulsar
             ll.Clear();
         }
 
-        List(const SelfType& other) { *this = other; }
-        SelfType& operator=(const SelfType& other)
+        List(const Self& other) { *this = other; }
+        Self& operator=(const Self& other)
         {
             size_t oldSize = m_Size;
             ResizeUninitialized(other.Size());
@@ -66,8 +66,8 @@ namespace Pulsar
             return *this;
         }
 
-        List(SelfType&& other) { *this = std::move(other); }
-        SelfType& operator=(SelfType&& other)
+        List(Self&& other) { *this = std::move(other); }
+        Self& operator=(Self&& other)
         {
             size_t oldSize = m_Size;
             ResizeUninitialized(other.Size());

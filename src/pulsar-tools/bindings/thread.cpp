@@ -70,7 +70,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Run(Pulsar::Execu
     );
 
     threadContext->Context.InitCustomTypeData();
-    eContext.GetAllCustomTypeData().ForEach([&threadContext](const Pulsar::ExecutionContext::CustomTypeDataMap::BucketType& b) mutable {
+    eContext.GetAllCustomTypeData().ForEach([&threadContext](const Pulsar::ExecutionContext::CustomTypeDataMap::Bucket& b) mutable {
         PULSAR_ASSERT(b.Value(), "Reference to CustomTypeData is nullptr.");
         uint64_t typeId = b.Key();
         Pulsar::CustomTypeData::Ref typeData = b.Value()->Copy();
@@ -121,7 +121,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_JoinAll(Pulsar::E
     
     Pulsar::ValueList threadResults;
     Pulsar::ValueList& threadReferences = threadReferencesList.AsList();
-    Pulsar::ValueList::NodeType* threadReferenceNode = threadReferences.Front();
+    Pulsar::ValueList::Node* threadReferenceNode = threadReferences.Front();
     while (threadReferenceNode) {
         Pulsar::Value& threadReference = threadReferenceNode->Value();
         if (threadReference.Type() != Pulsar::ValueType::Custom

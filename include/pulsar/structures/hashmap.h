@@ -14,15 +14,15 @@ namespace Pulsar
     class HashMapBucket
     {
     public:
-        typedef HashMapBucket<K, V> SelfType;
-        typedef HashMap<K, V> MapType;
-        friend MapType;
+        using Self = HashMapBucket<K, V>;
+        using Map = HashMap<K, V>;
+        friend Map;
 
         HashMapBucket()
             : m_KeyStorage{}, m_ValueStorage{} { };
         ~HashMapBucket() { Delete(); }
 
-        HashMapBucket(const SelfType& other)
+        HashMapBucket(const Self& other)
         {
             if (other.IsPopulated()) {
                 Fill(other.m_Key, other.m_Value);
@@ -32,7 +32,7 @@ namespace Pulsar
             }
         }
 
-        HashMapBucket(SelfType&& other)
+        HashMapBucket(Self&& other)
         {
             if (other.IsPopulated()) {
                 Fill(std::move(other.m_Key), std::move(other.m_Value));
@@ -43,8 +43,8 @@ namespace Pulsar
             other.Delete();
         }
 
-        SelfType& operator=(const SelfType& other) = delete;
-        SelfType& operator=(SelfType&& other) = delete;
+        Self& operator=(const Self& other) = delete;
+        Self& operator=(Self&& other) = delete;
 
         void Delete()
         {
@@ -118,8 +118,8 @@ namespace Pulsar
     class HashMap
     {
     public:
-        typedef HashMap<K, V> SelfType;
-        typedef HashMapBucket<K, V> BucketType;
+        using Self = HashMap<K, V>;
+        using Bucket = HashMapBucket<K, V>;
 
         struct Pair
         {
@@ -153,7 +153,7 @@ namespace Pulsar
             if (newCapacity <= 0)
                 newCapacity = 1;
 
-            List<BucketType> buckets(std::move(m_Buckets));
+            List<Bucket> buckets(std::move(m_Buckets));
             m_Buckets.Reserve(newCapacity);
             m_Buckets.Resize(newCapacity);
             for (size_t i = 0; i < buckets.Size(); i++) {
@@ -165,21 +165,21 @@ namespace Pulsar
             }
         }
 
-        BucketType& Insert(const K& key, const V& value) { return Emplace(key, value); }
-        BucketType& Insert(const K& key, V&& value)      { return Emplace(key, std::move(value)); }
-        BucketType& Insert(K&& key, const V& value)      { return Emplace(std::move(key), value); }
-        BucketType& Insert(K&& key, V&& value)           { return Emplace(std::move(key), std::move(value)); }
+        Bucket& Insert(const K& key, const V& value) { return Emplace(key, value); }
+        Bucket& Insert(const K& key, V&& value)      { return Emplace(key, std::move(value)); }
+        Bucket& Insert(K&& key, const V& value)      { return Emplace(std::move(key), value); }
+        Bucket& Insert(K&& key, V&& value)           { return Emplace(std::move(key), std::move(value)); }
 
         template<typename ...Args>
-        BucketType& Emplace(const K& key, Args&& ...args) { K _k = key; return Emplace(std::move(_k), std::forward<Args>(args)...); }
+        Bucket& Emplace(const K& key, Args&& ...args) { K _k = key; return Emplace(std::move(_k), std::forward<Args>(args)...); }
 
         template<typename ...Args>
-        BucketType& Emplace(K&& key, Args&& ...args)
+        Bucket& Emplace(K&& key, Args&& ...args)
         {
             size_t keyHash = HashKey(key);
             for (size_t probeIdx = 0; probeIdx < m_Buckets.Size(); probeIdx++) {
                 size_t hash = HashProbe(keyHash, probeIdx);
-                BucketType& bucket = m_Buckets[hash];
+                Bucket& bucket = m_Buckets[hash];
                 if (!bucket.IsPopulated()) {
                     bucket.Fill(
                         std::move(key),
@@ -200,15 +200,15 @@ namespace Pulsar
 
         /**
          * Returns nullptr if key is not in this map.
-         * If the returned value is not nullptr then the method BucketType::IsPopulated() must return true.
+         * If the returned value is not nullptr then the method Bucket::IsPopulated() must return true.
          * Which means that the value returned by the Value() method is valid.
          */
-        BucketType* Find(const K& key)
+        Bucket* Find(const K& key)
         {
             size_t keyHash = HashKey(key);
             for (size_t probeIdx = 0; probeIdx < m_Buckets.Size(); probeIdx++) {
                 size_t hash = HashProbe(keyHash, probeIdx);
-                BucketType& bucket = m_Buckets[hash];
+                Bucket& bucket = m_Buckets[hash];
                 if (bucket.IsDeleted()) {
                     continue;
                 } else if (!bucket.IsPopulated()) {
@@ -220,12 +220,12 @@ namespace Pulsar
             return nullptr;
         }
 
-        const BucketType* Find(const K& key) const
+        const Bucket* Find(const K& key) const
         {
             size_t keyHash = HashKey(key);
             for (size_t probeIdx = 0; probeIdx < m_Buckets.Size(); probeIdx++) {
                 size_t hash = HashProbe(keyHash, probeIdx);
-                const BucketType& bucket = m_Buckets[hash];
+                const Bucket& bucket = m_Buckets[hash];
                 if (bucket.IsDeleted()) {
                     continue;
                 } else if (!bucket.IsPopulated()) {
@@ -239,7 +239,7 @@ namespace Pulsar
 
         bool Remove(const K& key)
         {
-            BucketType* bucket = Find(key);
+            Bucket* bucket = Find(key);
             if (bucket) {
                 PULSAR_ASSERT(bucket->IsPopulated(), "HashMap::Find returned a non-populated bucket.");
                 bucket->Delete();
@@ -250,7 +250,7 @@ namespace Pulsar
 
         void ReHash()
         {
-            List<BucketType> buckets(std::move(m_Buckets));
+            List<Bucket> buckets(std::move(m_Buckets));
             m_Buckets.Reserve(buckets.Size());
             m_Buckets.Resize(buckets.Size());
             for (size_t i = 0; i < buckets.Size(); i++) {
@@ -262,7 +262,7 @@ namespace Pulsar
             }
         }
 
-        void ForEach(std::function<void(const BucketType&)> fn) const
+        void ForEach(std::function<void(const Bucket&)> fn) const
         {
             for (size_t i = 0; i < m_Buckets.Size(); i++) {
                 if (m_Buckets[i].IsPopulated())
@@ -270,7 +270,7 @@ namespace Pulsar
             }
         }
 
-        void ForEach(std::function<void(BucketType&)> fn)
+        void ForEach(std::function<void(Bucket&)> fn)
         {
             for (size_t i = 0; i < m_Buckets.Size(); i++) {
                 if (m_Buckets[i].IsPopulated())
@@ -310,7 +310,7 @@ namespace Pulsar
             return (keyHash + probeIdx) % Capacity();
         }
     private:
-        List<BucketType> m_Buckets;
+        List<Bucket> m_Buckets;
     };
 }
 

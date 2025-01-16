@@ -227,7 +227,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
         parsedDocument.ErrorMessage  = parser.GetErrorMessage();
     }
 
-    functionScopes.ForEach([&parsedDocument](FunctionScopesMap::BucketType& bucket) {
+    functionScopes.ForEach([&parsedDocument](FunctionScopesMap::Bucket& bucket) {
         parsedDocument.FunctionScopes.EmplaceBack(bucket.Value().Build());
     });
 
