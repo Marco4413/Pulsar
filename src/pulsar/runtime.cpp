@@ -730,7 +730,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
             list.AsList().RemoveFront(1);
         } else return RuntimeState::TypeError;
     } break;
-    case InstructionCode::UnpackHead: {
+    case InstructionCode::Unpack: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
         size_t listIdx = frame.Stack.Size()-1;

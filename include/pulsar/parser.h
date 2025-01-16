@@ -29,7 +29,7 @@ namespace Pulsar
         { "concat",     { InstructionCode::Concat               } },
         { "head",       { InstructionCode::Head                 } },
         { "tail",       { InstructionCode::Tail                 } },
-        { "unpack",     { InstructionCode::UnpackHead           } },
+        { "unpack",     { InstructionCode::Unpack               } },
         { "index",      { InstructionCode::Index                } },
         { "prefix",     { InstructionCode::Prefix               } },
         { "suffix",     { InstructionCode::Suffix               } },
