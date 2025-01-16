@@ -42,7 +42,10 @@ The Language itself has no dependencies except for the C++20 standard library.
 
 This project uses `premake5` as its build system.
 
-Run `premake5 vs2022` to create solution files for VS.
+Run `premake5 --arch=amd64 vs2022` to create solution files for VS.
+
+**NOTE:** Run `premake5 --help` to get a list of available architectures.
+I sometimes test Pulsar on ARM64 so it should also compile to that just fine.
 
 Alternatively `premake5 gmake2` will create Makefiles.
 
