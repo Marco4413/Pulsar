@@ -707,7 +707,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
         frame.Stack.PopBack();
         Value& list = frame.Stack.Back();
         if (toConcat.Type() == ValueType::List && list.Type() == ValueType::List) {
-            list.AsList().Concat(toConcat.AsList());
+            list.AsList().Concat(std::move(toConcat.AsList()));
         } else return RuntimeState::TypeError;
     } break;
     case InstructionCode::Head: {
