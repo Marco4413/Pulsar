@@ -116,12 +116,6 @@ const PulsarLSP::Completion::InstructionMap& PulsarLSP::Completion::GetInstructi
     );
 
     DEFINE_INSTRUCTION(
-        "empty-list", "", "-> List",
-        "Pushes a new empty list onto the stack.\n\n"
-        "**NOTE:** Prefer using a List Literal instead."
-    );
-
-    DEFINE_INSTRUCTION(
         "prepend", "", "T, U -> T",
         "Where T is either a List or String. And U:\n"
         "- If T is a List: Any\n"

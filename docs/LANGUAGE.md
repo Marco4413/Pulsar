@@ -1001,15 +1001,6 @@ Checking for empty on big lists is faster than checking for their length.
 | Pops   | `List`/`String` |           |
 | Pushes | `List`/`String` | `Integer` |
 
-### empty-list
-
-Pushes a new empty `List` into the stack.
-
-|        |  S+1   |
-| :----- | :----: |
-| Pops   |        |
-| Pushes | `List` |
-
 ### prepend
 
 Adds a value to the start of a `List` or `String`.
