@@ -9,10 +9,31 @@ newoption {
    category = "Build Options"
 }
 
+newoption {
+   trigger = "arch",
+   value = "ARCH",
+   description = "Choose architecture to build for",
+   allowed = {
+      { "amd64", "x86_64"
+         },
+      { "arm64", "ARM64"
+         },
+      { "default", "Chosen by the Build System"
+         }
+   },
+   default = "default"
+}
+
 workspace "pulsar"
    -- architecture "x64"
    configurations { "Debug", "Release" }
    startproject "pulsar-tools"
+
+   filter "options:arch=amd64"
+      architecture "amd64"
+
+   filter "options:arch=arm64"
+      architecture "ARM64"
 
 include "pulsar"
 include "libs/fmt"
