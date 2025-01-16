@@ -278,6 +278,9 @@ if (state != RuntimeState::OK) // ERROR
             InternalStep();
             m_Running = false;
 
+            if (m_StopRequested)
+                m_StopRequested = false;
+
             return m_State;
         }
 
@@ -291,12 +294,27 @@ if (state != RuntimeState::OK) // ERROR
                 return m_State;
 
             m_Running = true;
-            while (!IsDone() && m_State == RuntimeState::OK) {
+            while (!IsDone() && m_State == RuntimeState::OK && !m_StopRequested) {
                 InternalStep();
             }
             m_Running = false;
 
+            if (m_StopRequested)
+                m_StopRequested = false;
+
             return m_State;
+        }
+
+        /**
+         * This function may be called at any point. Calls to `::Run()` will
+         * terminate as soon as the current instruction terminates execution.
+         * Useful to create "breakpoint" native functions.
+         */
+        void Stop()
+        {
+            if (m_Running && !m_StopRequested) {
+                m_StopRequested = true;
+            }
         }
 
     private:
@@ -314,6 +332,7 @@ if (state != RuntimeState::OK) // ERROR
         CustomTypeDataMap m_CustomTypeData;
 
         bool m_Running = false;
+        bool m_StopRequested = false;
         RuntimeState m_State = RuntimeState::OK;
     };
 }
