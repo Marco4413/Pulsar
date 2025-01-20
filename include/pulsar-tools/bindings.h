@@ -5,11 +5,19 @@
 
 #include "pulsar-tools/cli.h"
 #include "pulsar-tools/bindings/debug.h"
+#include "pulsar-tools/bindings/error.h"
+#include "pulsar-tools/bindings/filesystem.h"
 #include "pulsar-tools/bindings/print.h"
+#include "pulsar-tools/bindings/stdio.h"
+#include "pulsar-tools/bindings/time.h"
 
 #define __PULSARTOOLS_BINDINGS \
     X(Debug)                   \
-    X(Print)
+    X(Error)                   \
+    X(FileSystem)              \
+    X(Print)                   \
+    X(Stdio)                   \
+    X(Time)
 
 namespace PulsarTools
 {
