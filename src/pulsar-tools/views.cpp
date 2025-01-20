@@ -75,7 +75,7 @@ std::string PulsarTools::CreateParserErrorMessage(const Pulsar::Parser& parser, 
     );
 }
 
-std::string PulsarTools::CreateRuntimeErrorMessage(const Pulsar::ExecutionContext& context, TokenViewRange viewRange)
+std::string PulsarTools::CreateRuntimeErrorMessage(const Pulsar::ExecutionContext& context, size_t stackTraceDepth, TokenViewRange viewRange)
 {
     const Pulsar::Module& module = context.GetModule();
     const Pulsar::CallStack& callStack = context.GetCallStack();
@@ -84,14 +84,18 @@ std::string PulsarTools::CreateRuntimeErrorMessage(const Pulsar::ExecutionContex
         return "No Runtime Error Information.";
     }
 
-    Pulsar::String stackTrace = context.GetStackTrace(10);
+    Pulsar::String stackTrace = context.GetStackTrace(stackTraceDepth);
+
     const Pulsar::Frame& frame = callStack.CurrentFrame();
     if (!module.HasSourceDebugSymbols()
         || !frame.Function->HasDebugSymbol()
         || frame.Function->DebugSymbol.SourceIdx >= module.SourceDebugSymbols.Size()) {
-        return fmt::format(
-            "Error: Within function {}\n{}",
+        std::string result = fmt::format(
+            "Error: Within function {}",
             frame.Function->Name, stackTrace);
+        if (stackTrace.Length() > 0)
+            result += fmt::format("\n{}", stackTrace);
+        return result;
     } else if (!frame.Function->HasCodeDebugSymbols()) {
         const Pulsar::SourceDebugSymbol& srcSymbol = module.SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
         std::string result = CreateSourceErrorMessage(
@@ -99,7 +103,8 @@ std::string PulsarTools::CreateRuntimeErrorMessage(const Pulsar::ExecutionContex
             frame.Function->DebugSymbol.Token,
             "Within function " + frame.Function->Name,
             viewRange);
-        result += fmt::format("\n{}", stackTrace);
+        if (stackTrace.Length() > 0)
+            result += fmt::format("\n{}", stackTrace);
         return result;
     }
 
@@ -111,7 +116,8 @@ std::string PulsarTools::CreateRuntimeErrorMessage(const Pulsar::ExecutionContex
             frame.Function->CodeDebugSymbols[codeSymbolIdx].Token,
             "In function " + frame.Function->Name,
             viewRange);
-        result += fmt::format("\n{}", stackTrace);
+        if (stackTrace.Length() > 0)
+            result += fmt::format("\n{}", stackTrace);
         return result;
     }
 

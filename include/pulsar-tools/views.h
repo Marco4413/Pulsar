@@ -26,7 +26,7 @@ namespace PulsarTools
             TokenViewRange viewRange = TokenViewRange_Default);
 
     std::string CreateParserErrorMessage(const Pulsar::Parser& parser, TokenViewRange viewRange = TokenViewRange_Default);
-    std::string CreateRuntimeErrorMessage(const Pulsar::ExecutionContext& context, TokenViewRange viewRange = TokenViewRange_Default);
+    std::string CreateRuntimeErrorMessage(const Pulsar::ExecutionContext& context, size_t stackTraceDepth=10, TokenViewRange viewRange = TokenViewRange_Default);
 }
 
 #endif // _PULSARTOOLS_VIEWS_H
