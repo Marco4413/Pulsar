@@ -95,6 +95,12 @@ $ pulsar-tools run path/to/pulsar/file.pls
 
 If an example requires external arguments, just append them to the command.
 
+A help message can be printed with:
+
+```sh
+$ pulsar-tools help
+```
+
 ### Including Pulsar in your Project
 
 There's a fully working demo within the `pulsar-demo` project.
