@@ -8,6 +8,7 @@
 #include "pulsar-tools/bindings/error.h"
 #include "pulsar-tools/bindings/filesystem.h"
 #include "pulsar-tools/bindings/lexer.h"
+#include "pulsar-tools/bindings/module.h"
 #include "pulsar-tools/bindings/print.h"
 #include "pulsar-tools/bindings/stdio.h"
 #include "pulsar-tools/bindings/thread.h"
@@ -18,6 +19,7 @@
     X(Error)                   \
     X(FileSystem)              \
     X(Lexer)                   \
+    X(Module)                  \
     X(Print)                   \
     X(Stdio)                   \
     X(Thread)                  \
