@@ -44,6 +44,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Error::FSafeCall(Pulsar::ExecutionCo
         if (typeDataCopy) safeContext.SetCustomTypeData(typeId, typeDataCopy);
     });
 
+    safeContext.GetGlobals() = eContext.GetGlobals();
     safeContext.GetStack() = Pulsar::ValueStack(std::move(functionArguments.AsList()));
     safeContext.CallFunction(functionIdx);
     Pulsar::RuntimeState callState = safeContext.Run();
