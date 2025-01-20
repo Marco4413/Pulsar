@@ -1,6 +1,10 @@
 #include "pulsar-tools/cli.h"
 
 #include <chrono>
+#include <filesystem>
+
+#include "pulsar/bytecode.h"
+#include "pulsar/binary/filewriter.h"
 
 #include "pulsar-tools/utils.h"
 #include "pulsar-tools/views.h"
@@ -56,11 +60,31 @@ int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const In
     return 0;
 }
 
-int PulsarTools::CLI::Action::Write(const Pulsar::Module& module, const CompilerOptions& compilerOptions)
+int PulsarTools::CLI::Action::Write(const Pulsar::Module& module, const CompilerOptions& compilerOptions, const InputFileArgs& input)
 {
-    ARGUE_UNUSED(module);
-    ARGUE_UNUSED(compilerOptions);
-    return 1;
+    Logger& logger = GetLogger();
+
+    std::string outputPath = *compilerOptions.OutputFile;
+    if (outputPath.empty()) {
+        std::filesystem::path path(*input.FilePath);
+        path.replace_extension(".ntr");
+        outputPath = path.generic_string();
+    }
+
+    logger.Info("Writing to '{}'.", outputPath);
+    auto startTime = std::chrono::steady_clock::now();
+
+    Pulsar::Binary::FileWriter moduleFile(outputPath.c_str());
+    if (!Pulsar::Binary::WriteByteCode(moduleFile, module)) {
+        logger.Error("Could not write to '{}'.", outputPath);
+        return 1;
+    }
+
+    auto endTime = std::chrono::steady_clock::now();
+    auto writeTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
+    logger.Info("Writing took: {}us", writeTime.count());
+
+    return 0;
 }
 
 int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input)

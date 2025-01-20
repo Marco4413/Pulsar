@@ -131,7 +131,7 @@ namespace PulsarTools::CLI
     namespace Action
     {
         int Check(const ParserOptions& parserOptions, const InputFileArgs& input);
-        int Write(const Pulsar::Module& module, const CompilerOptions& compilerOptions);
+        int Write(const Pulsar::Module& module, const CompilerOptions& compilerOptions, const InputFileArgs& input);
         int Parse(Pulsar::Module& module, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input);
         int Run(const Pulsar::Module& module, const RuntimeOptions& runtimeOptions, const InputProgramArgs& input);
     }
@@ -174,7 +174,7 @@ namespace PulsarTools::CLI
             Pulsar::Module module;
             int exitCode = Action::Parse(module, m_ParserOptions, m_RuntimeOptions, m_Input);
             if (exitCode) return exitCode;
-            return Action::Write(module, m_CompilerOptions);
+            return Action::Write(module, m_CompilerOptions, m_Input);
         }
 
     private:
