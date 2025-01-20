@@ -17,14 +17,47 @@ PulsarTools::Logger& PulsarTools::CLI::GetLogger()
     return g_Logger;
 }
 
+// TODO: Move into Pulsar so that it can be used by other projects
+using IncludePaths = std::vector<std::string>;
+
+Pulsar::ParseSettings::IncludeResolverFn CreateIncludeResolver(const IncludePaths& includePaths)
+{
+    return [includePaths](Pulsar::Parser& parser, Pulsar::String cwf, Pulsar::Token token) {
+        std::filesystem::path targetPath(token.StringVal.CString());
+
+        Pulsar::ParseResult result;
+        { // Try relative path first
+            std::filesystem::path workingPath(cwf.CString());
+            std::filesystem::path filePath = workingPath.parent_path() / targetPath;
+            result = parser.AddSourceFile(filePath.generic_string().c_str());
+            if (result == Pulsar::ParseResult::OK) return result;
+        }
+
+        for (size_t i = includePaths.size(); i > 0; --i) {
+            std::filesystem::path workingPath(includePaths[i-1]);
+            std::filesystem::path filePath = workingPath / targetPath;
+            if (std::filesystem::exists(filePath) &&
+                std::filesystem::is_regular_file(filePath)
+            ) {
+                parser.ClearError();
+                return parser.AddSourceFile(filePath.generic_string().c_str());
+            }
+        }
+
+        return result;
+    };
+}
+
 Pulsar::ParseSettings ToParseSettings(const PulsarTools::CLI::ParserOptions& parserOptions)
 {
-    // TODO: Add Include folders
     Pulsar::ParseSettings settings = Pulsar::ParseSettings_Default;
     settings.StoreDebugSymbols         = *parserOptions.Debug;
     settings.AppendNotesToErrorMessage = *parserOptions.ErrorNotes;
     settings.AllowIncludeDirective     = *parserOptions.AllowInclude;
     settings.AllowLabels               = *parserOptions.AllowLabels;
+    if (!(*parserOptions.IncludeFolders).empty()) {
+        settings.IncludeResolver = CreateIncludeResolver(*parserOptions.IncludeFolders);
+    }
     return settings;
 }
 

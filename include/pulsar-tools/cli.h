@@ -27,9 +27,9 @@ namespace PulsarTools::CLI
     struct ParserOptions
     {
         ParserOptions(Argue::IArgParser& cmd) :
-            IncludeFolders(cmd, "include", "I", "FOLDER",
-                "Adds FOLDER to the include paths.\n"
-                "#include directives will search these folders if no relative file can be found.",
+            IncludeFolders(cmd, "include", "I", "PATH",
+                "Adds PATH to the include paths. The last specified PATH is the one with the highest priority.\n"
+                "#include directives will search the specified PATHs if no relative file can be found.",
                 false),
             DeclareBoundNatives(cmd, "declare-natives", "N",
                 "Automatically declare bound natives so that they can be used in global producers. (default: false)",
