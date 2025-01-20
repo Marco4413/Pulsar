@@ -27,6 +27,9 @@ namespace PulsarTools
         using NativeFunction = Pulsar::Module::NativeFunction;
         using NativeFunctionFactoryFn = std::function<NativeFunction(const CustomTypeResolver&)>;
 
+        template<typename ...Types>
+        using ExpandedNativeFunction = std::function<Pulsar::RuntimeState(Pulsar::ExecutionContext&, Types...)>;
+
         struct NativeFunctionBinding
         {
             Pulsar::FunctionDefinition Definition;
@@ -45,6 +48,19 @@ namespace PulsarTools
 
         void BindTypes(Pulsar::Module& module) const;
         void BindFunctions(Pulsar::Module& module, bool declareAndBind) const;
+
+    public:
+        // TODO: These may become a template, I'm not smart enough to do that though.
+
+        // These methods will wrap native functions that take 1 or 2 type ids.
+        // Those Ids will be resolved at bind time.
+        static NativeFunctionFactoryFn CreateMonoTypeBoundFactory(
+                ExpandedNativeFunction<uint64_t> nativeFn,
+                Pulsar::String type1);
+
+        static NativeFunctionFactoryFn CreateBiTypeBoundFactory(
+                ExpandedNativeFunction<uint64_t, uint64_t> nativeFn,
+                Pulsar::String type1, Pulsar::String type2);
 
     protected:
         void BindCustomType(const Pulsar::String& name, Pulsar::CustomType::DataFactoryFn dataFactory = nullptr)

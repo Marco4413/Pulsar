@@ -35,3 +35,35 @@ void PulsarTools::IBinding::BindFunctions(Pulsar::Module& module, bool declareAn
         }
     }
 }
+
+PulsarTools::IBinding::NativeFunctionFactoryFn PulsarTools::IBinding::CreateMonoTypeBoundFactory(
+        ExpandedNativeFunction<uint64_t> nativeFn,
+        Pulsar::String type1)
+{
+    return [nativeFn, type1 = std::move(type1)](const auto& resolver)
+        -> PulsarTools::IBinding::NativeFunction
+    {
+        auto typeId1Opt = resolver.ResolveType(type1);
+        PULSAR_ASSERT(typeId1Opt, "Call to CreateMonoTypeBoundFactory tried to access invalid type1.");
+        return [nativeFn, typeId1 = *typeId1Opt](Pulsar::ExecutionContext& context) {
+            return nativeFn(context, typeId1);
+        };
+    };
+}
+
+PulsarTools::IBinding::NativeFunctionFactoryFn PulsarTools::IBinding::CreateBiTypeBoundFactory(
+        ExpandedNativeFunction<uint64_t, uint64_t> nativeFn,
+        Pulsar::String type1, Pulsar::String type2)
+{
+    return [nativeFn, type1 = std::move(type1), type2 = std::move(type2)](const auto& resolver)
+        -> PulsarTools::IBinding::NativeFunction
+    {
+        auto typeId1Opt = resolver.ResolveType(type1);
+        PULSAR_ASSERT(typeId1Opt, "Call to CreateBiTypeBoundFactory tried to access invalid type1.");
+        auto typeId2Opt = resolver.ResolveType(type2);
+        PULSAR_ASSERT(typeId2Opt, "Call to CreateBiTypeBoundFactory tried to access invalid type2.");
+        return [nativeFn, typeId1 = *typeId1Opt, typeId2 = *typeId2Opt](Pulsar::ExecutionContext& context) {
+            return nativeFn(context, typeId1, typeId2);
+        };
+    };
+}
