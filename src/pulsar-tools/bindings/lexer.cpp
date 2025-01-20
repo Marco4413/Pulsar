@@ -9,12 +9,9 @@ PulsarTools::Bindings::Lexer::Lexer() :
     IBinding()
 {
     BindCustomType("Pulsar-Tools/Lexer");
-    BindNativeFunction({ "lexer/from-file", 1, 1 },
-        CreateMonoTypeBoundFactory(FFromFile, "Pulsar-Tools/Lexer"));
-    BindNativeFunction({ "lexer/next-token", 1, 1 },
-        CreateMonoTypeBoundFactory(FNextToken, "Pulsar-Tools/Lexer"));
-    BindNativeFunction({ "lexer/valid?", 1, 1 },
-        CreateMonoTypeBoundFactory(FIsValid, "Pulsar-Tools/Lexer"));
+    BindNativeFunction({ "lexer/from-file",  1, 1 }, CreateTypeBoundFactory(FFromFile,  "Pulsar-Tools/Lexer"));
+    BindNativeFunction({ "lexer/next-token", 1, 1 }, CreateTypeBoundFactory(FNextToken, "Pulsar-Tools/Lexer"));
+    BindNativeFunction({ "lexer/valid?",     1, 1 }, CreateTypeBoundFactory(FIsValid,   "Pulsar-Tools/Lexer"));
 }
 
 Pulsar::RuntimeState PulsarTools::Bindings::Lexer::FFromFile(Pulsar::ExecutionContext& eContext, uint64_t type)

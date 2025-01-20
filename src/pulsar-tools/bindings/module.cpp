@@ -6,12 +6,9 @@ PulsarTools::Bindings::Module::Module() :
     IBinding()
 {
     BindCustomType("Pulsar-Tools/Module");
-    BindNativeFunction({ "module/from-file", 1, 1 },
-        CreateMonoTypeBoundFactory(FFromFile, "Pulsar-Tools/Module"));
-    BindNativeFunction({ "module/run", 1, 1 },
-        CreateMonoTypeBoundFactory(FRun, "Pulsar-Tools/Module"));
-    BindNativeFunction({ "module/valid?", 1, 1 },
-        CreateMonoTypeBoundFactory(FIsValid, "Pulsar-Tools/Module"));
+    BindNativeFunction({ "module/from-file", 1, 1 }, CreateTypeBoundFactory(FFromFile, "Pulsar-Tools/Module"));
+    BindNativeFunction({ "module/run",       1, 1 }, CreateTypeBoundFactory(FRun,      "Pulsar-Tools/Module"));
+    BindNativeFunction({ "module/valid?",    1, 1 }, CreateTypeBoundFactory(FIsValid,  "Pulsar-Tools/Module"));
 }
 
 Pulsar::RuntimeState PulsarTools::Bindings::Module::FFromFile(Pulsar::ExecutionContext& eContext, uint64_t type)
