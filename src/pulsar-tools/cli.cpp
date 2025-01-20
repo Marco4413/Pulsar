@@ -2,6 +2,7 @@
 
 #include <chrono>
 
+#include "pulsar-tools/utils.h"
 #include "pulsar-tools/views.h"
 
 static PulsarTools::Logger g_Logger(stdout, stderr);
@@ -11,11 +12,48 @@ PulsarTools::Logger& PulsarTools::CLI::GetLogger()
     return g_Logger;
 }
 
+Pulsar::ParseSettings ToParseSettings(const PulsarTools::CLI::ParserOptions& parserOptions)
+{
+    // TODO: Add Include folders
+    Pulsar::ParseSettings settings = Pulsar::ParseSettings_Default;
+    settings.StoreDebugSymbols              = *parserOptions.Debug;
+    settings.AppendStackTraceToErrorMessage = *parserOptions.StackTrace;
+    settings.StackTraceMaxDepth             = static_cast<size_t>(*parserOptions.StackTraceDepth);
+    settings.AppendNotesToErrorMessage      = *parserOptions.ErrorNotes;
+    settings.AllowIncludeDirective          = *parserOptions.AllowInclude;
+    settings.AllowLabels                    = *parserOptions.AllowLabels;
+    return settings;
+}
+
 int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const InputFileArgs& input)
 {
-    ARGUE_UNUSED(parserOptions);
-    ARGUE_UNUSED(input);
-    return 1;
+    Logger& logger = GetLogger();
+
+    Pulsar::ParseSettings parserSettings = ToParseSettings(parserOptions);
+    parserSettings.MapGlobalProducersToVoid = true;
+
+    logger.Info("Parsing '{}'.", *input.FilePath);
+    Pulsar::String filepath = (*input.FilePath).c_str();
+    Pulsar::Module module;
+
+    auto startTime = std::chrono::steady_clock::now();
+
+    Pulsar::Parser parser;
+    auto parseResult = parser.AddSourceFile(filepath);
+    if (parseResult == Pulsar::ParseResult::OK)
+        parseResult = parser.ParseIntoModule(module, parserSettings);
+
+    auto endTime = std::chrono::steady_clock::now();
+    auto parseTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
+    logger.Info("Parsing took: {}us", parseTime.count());
+
+    if (parseResult != Pulsar::ParseResult::OK) {
+        logger.Error("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
+        logger.Error(CreateParserErrorMessage(parser));
+        return 1;
+    }
+
+    return 0;
 }
 
 int PulsarTools::CLI::Action::Write(const Pulsar::Module& module, const CompilerOptions& compilerOptions)
@@ -32,15 +70,7 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
     // TODO: Bind natives
     ARGUE_UNUSED(runtimeOptions);
 
-    // TODO: Add Include folders
-    Pulsar::ParseSettings parserSettings{
-        .StoreDebugSymbols              = *parserOptions.Debug,
-        .AppendStackTraceToErrorMessage = *parserOptions.StackTrace,
-        .StackTraceMaxDepth             = static_cast<size_t>(*parserOptions.StackTraceDepth),
-        .AppendNotesToErrorMessage      = *parserOptions.ErrorNotes,
-        .AllowIncludeDirective          = *parserOptions.AllowInclude,
-        .AllowLabels                    = *parserOptions.AllowLabels,
-    };
+    Pulsar::ParseSettings parserSettings = ToParseSettings(parserOptions);
 
     logger.Info("Parsing '{}'.", *input.FilePath);
     Pulsar::String filepath = (*input.FilePath).c_str();
