@@ -4,6 +4,7 @@
 #include <array>
 #include <functional>
 #include <optional>
+#include <type_traits>
 #include <vector>
 
 #include "pulsar/runtime.h"
@@ -36,7 +37,7 @@ namespace PulsarTools
 
     public:
         IBinding() = default;
-        virtual ~IBinding() = default;
+        virtual ~IBinding();
 
         void BindAll(Pulsar::Module& module, bool declareAndBind=false) const
         {
@@ -83,6 +84,16 @@ namespace PulsarTools
         }
 
     protected:
+        // Dependencies are IBindings which are bound before this
+        template<typename T>
+        void AddDependency(T&& dep)
+            requires(std::is_base_of_v<IBinding, T>)
+        {
+            T* depPtr = new T(std::forward<T>(dep));
+            PULSAR_ASSERT(depPtr, "Failed to allocate memory.");
+            m_Dependencies.push_back(depPtr);
+        }
+
         void BindCustomType(const Pulsar::String& name, Pulsar::CustomType::DataFactoryFn dataFactory = nullptr)
         {
             m_CustomTypesPool.emplace_back(name, dataFactory);
@@ -99,6 +110,7 @@ namespace PulsarTools
         }
 
     private:
+        std::vector<IBinding*> m_Dependencies;
         std::vector<Pulsar::CustomType> m_CustomTypesPool;
         std::vector<NativeFunctionBinding> m_NativeFunctionsPool;
     };

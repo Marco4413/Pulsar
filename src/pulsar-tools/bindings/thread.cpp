@@ -6,15 +6,17 @@
 PulsarTools::Bindings::Thread::Thread() :
     IBinding()
 {
-    IBinding::BindCustomType("Pulsar-Tools/Thread");
+    AddDependency(Channel());
 
-    IBinding::BindNativeFunction({ "this-thread/sleep!", 1, 0 }, FThisSleep);
+    BindCustomType("Pulsar-Tools/Thread");
 
-    IBinding::BindNativeFunction({ "thread/run",      2, 1 }, CreateTypeBoundFactory(FRun,     "Pulsar-Tools/Thread", "Pulsar-Tools/Channel"));
-    IBinding::BindNativeFunction({ "thread/join",     1, 2 }, CreateTypeBoundFactory(FJoin,    "Pulsar-Tools/Thread"));
-    IBinding::BindNativeFunction({ "thread/join-all", 1, 1 }, CreateTypeBoundFactory(FJoinAll, "Pulsar-Tools/Thread"));
-    IBinding::BindNativeFunction({ "thread/alive?",   1, 1 }, CreateTypeBoundFactory(FIsAlive, "Pulsar-Tools/Thread"));
-    IBinding::BindNativeFunction({ "thread/valid?",   1, 1 }, CreateTypeBoundFactory(FIsValid, "Pulsar-Tools/Thread"));
+    BindNativeFunction({ "this-thread/sleep!", 1, 0 }, FThisSleep);
+
+    BindNativeFunction({ "thread/run",      2, 1 }, CreateTypeBoundFactory(FRun,     "Pulsar-Tools/Thread", "Pulsar-Tools/Channel"));
+    BindNativeFunction({ "thread/join",     1, 2 }, CreateTypeBoundFactory(FJoin,    "Pulsar-Tools/Thread"));
+    BindNativeFunction({ "thread/join-all", 1, 1 }, CreateTypeBoundFactory(FJoinAll, "Pulsar-Tools/Thread"));
+    BindNativeFunction({ "thread/alive?",   1, 1 }, CreateTypeBoundFactory(FIsAlive, "Pulsar-Tools/Thread"));
+    BindNativeFunction({ "thread/valid?",   1, 1 }, CreateTypeBoundFactory(FIsValid, "Pulsar-Tools/Thread"));
 }
 
 Pulsar::RuntimeState PulsarTools::Bindings::Thread::FThisSleep(Pulsar::ExecutionContext& eContext)

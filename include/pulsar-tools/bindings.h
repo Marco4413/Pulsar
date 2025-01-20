@@ -29,11 +29,6 @@ namespace PulsarTools
 {
     inline void BindNatives(Pulsar::Module& module, const CLI::RuntimeOptions& runtimeOptions, bool declareNatives)
     {
-        if (*runtimeOptions.BindThread) {
-            Bindings::Channel __Channel;
-            __Channel.BindAll(module, declareNatives);
-        }
-
         #define X(name)                          \
             if (*runtimeOptions.Bind##name) {    \
                 Bindings::name __##name;         \

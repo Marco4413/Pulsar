@@ -11,8 +11,17 @@ std::optional<uint64_t> PulsarTools::CustomTypeResolver::ResolveType(const Pulsa
     return result;
 }
 
+PulsarTools::IBinding::~IBinding()
+{
+    for (IBinding* dep : m_Dependencies)
+        delete dep;
+}
+
 void PulsarTools::IBinding::BindTypes(Pulsar::Module& module) const
 {
+    for (IBinding* dep : m_Dependencies) {
+        dep->BindTypes(module);
+    }
     for (const auto& customType : m_CustomTypesPool) {
         module.BindCustomType(customType.Name, customType.DataFactory);
     }
@@ -20,6 +29,10 @@ void PulsarTools::IBinding::BindTypes(Pulsar::Module& module) const
 
 void PulsarTools::IBinding::BindFunctions(Pulsar::Module& module, bool declareAndBind) const
 {
+    for (IBinding* dep : m_Dependencies) {
+        dep->BindFunctions(module, declareAndBind);
+    }
+
     CustomTypeResolver typeResolver(module);
     if (declareAndBind) {
         for (const auto& nativeFnBinding : m_NativeFunctionsPool) {
