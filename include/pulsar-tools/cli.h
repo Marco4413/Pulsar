@@ -37,12 +37,6 @@ namespace PulsarTools::CLI
             Debug(cmd, "debug", "g",
                 "Generate debug symbols for better runtime errors. (default: true)",
                 true),
-            StackTrace(cmd, "stack-trace", "",
-                "Print stack trace on global evaluation error. (default: true)",
-                true),
-            StackTraceDepth(cmd, "stack-trace-depth", "", "DEPTH",
-                "Sets the max depth of the printed stack-trace. (default: 10)",
-                10),
             ErrorNotes(cmd, "error-notes", "",
                 "Print error notes on parsing errors. (default: true)",
                 true),
@@ -58,8 +52,6 @@ namespace PulsarTools::CLI
 
         Argue::FlagOption DeclareBoundNatives;
         Argue::FlagOption Debug;
-        Argue::FlagOption StackTrace;
-        Argue::IntOption  StackTraceDepth;
         Argue::FlagOption ErrorNotes;
         Argue::FlagOption AllowInclude;
         Argue::FlagOption AllowLabels;
@@ -68,6 +60,12 @@ namespace PulsarTools::CLI
     struct RuntimeOptions
     {
         RuntimeOptions(Argue::IArgParser& cmd) :
+            StackTrace(cmd, "stack-trace", "",
+                "Print stack trace on global evaluation error. (default: true)",
+                true),
+            StackTraceDepth(cmd, "stack-trace-depth", "s", "DEPTH",
+                "Sets the max depth of the printed stack-trace. (default: 10)",
+                10),
             EntryPoint(cmd, "entry-point", "e", "FUNC", "Set entry point. (default: main)", "main"),
             BindDebug(cmd, "bind-debug", "", "Debugging utilities."),
             BindError(cmd, "bind-error", "", "Error handling bindings."),
@@ -83,6 +81,9 @@ namespace PulsarTools::CLI
         {
             BindAll.SetValue(true);
         }
+
+        Argue::FlagOption StackTrace;
+        Argue::IntOption  StackTraceDepth;
 
         Argue::StrOption EntryPoint;
 

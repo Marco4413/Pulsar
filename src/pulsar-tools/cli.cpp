@@ -20,12 +20,10 @@ Pulsar::ParseSettings ToParseSettings(const PulsarTools::CLI::ParserOptions& par
 {
     // TODO: Add Include folders
     Pulsar::ParseSettings settings = Pulsar::ParseSettings_Default;
-    settings.StoreDebugSymbols              = *parserOptions.Debug;
-    settings.AppendStackTraceToErrorMessage = *parserOptions.StackTrace;
-    settings.StackTraceMaxDepth             = static_cast<size_t>(*parserOptions.StackTraceDepth);
-    settings.AppendNotesToErrorMessage      = *parserOptions.ErrorNotes;
-    settings.AllowIncludeDirective          = *parserOptions.AllowInclude;
-    settings.AllowLabels                    = *parserOptions.AllowLabels;
+    settings.StoreDebugSymbols         = *parserOptions.Debug;
+    settings.AppendNotesToErrorMessage = *parserOptions.ErrorNotes;
+    settings.AllowIncludeDirective     = *parserOptions.AllowInclude;
+    settings.AllowLabels               = *parserOptions.AllowLabels;
     return settings;
 }
 
@@ -117,9 +115,10 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
     Logger& logger = GetLogger();
 
     // TODO: Bind natives
-    ARGUE_UNUSED(runtimeOptions);
 
     Pulsar::ParseSettings parserSettings = ToParseSettings(parserOptions);
+    parserSettings.AppendStackTraceToErrorMessage = *runtimeOptions.StackTrace;
+    parserSettings.StackTraceMaxDepth             = static_cast<size_t>(*runtimeOptions.StackTraceDepth);
 
     logger.Info("Parsing '{}'.", *input.FilePath);
     Pulsar::String filepath = (*input.FilePath).c_str();
@@ -147,6 +146,10 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
 int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOptions& runtimeOptions, const InputProgramArgs& input)
 {
     Logger& logger = GetLogger();
+
+    size_t stackTraceDepth = static_cast<size_t>(
+        (*runtimeOptions.StackTraceDepth) *
+        (*runtimeOptions.StackTrace));
 
     logger.Info("Running '{}'.", *input.FilePath);
 
@@ -176,7 +179,7 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
         return 1;
     } else if (runtimeState != Pulsar::RuntimeState::OK) {
         logger.Error("Runtime Error: {}", Pulsar::RuntimeStateToString(runtimeState));
-        logger.Error(CreateRuntimeErrorMessage(context));
+        logger.Error(CreateRuntimeErrorMessage(context, stackTraceDepth));
         return 1;
     }
 
