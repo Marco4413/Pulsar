@@ -7,6 +7,7 @@
 #include "pulsar/binary/filereader.h"
 #include "pulsar/binary/filewriter.h"
 
+#include "pulsar-tools/bindings.h"
 #include "pulsar-tools/views.h"
 
 static PulsarTools::Logger g_Logger(stdout, stderr);
@@ -58,7 +59,7 @@ int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const In
     return 0;
 }
 
-int PulsarTools::CLI::Action::Read(Pulsar::Module& module, const ParserOptions& parserOptions, const InputFileArgs& input)
+int PulsarTools::CLI::Action::Read(Pulsar::Module& module, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input)
 {
     Logger& logger = GetLogger();
 
@@ -80,6 +81,7 @@ int PulsarTools::CLI::Action::Read(Pulsar::Module& module, const ParserOptions& 
     auto readTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
     logger.Info("Reading took: {}us", readTime.count());
 
+    BindNatives(module, runtimeOptions, false);
     return 0;
 }
 
@@ -114,7 +116,12 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
 {
     Logger& logger = GetLogger();
 
-    // TODO: Bind natives
+    if (*parserOptions.DeclareBoundNatives) {
+        BindNatives(module, runtimeOptions, true);
+    } else if (*parserOptions.Debug) {
+        Bindings::Debug debug;
+        debug.BindAll(module, true);
+    }
 
     Pulsar::ParseSettings parserSettings = ToParseSettings(parserOptions);
     parserSettings.AppendStackTraceToErrorMessage = *runtimeOptions.StackTrace;
@@ -138,6 +145,10 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
         logger.Error("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
         logger.Error(CreateParserErrorMessage(parser));
         return 1;
+    }
+
+    if (!*parserOptions.DeclareBoundNatives) {
+        BindNatives(module, runtimeOptions, false);
     }
 
     return 0;

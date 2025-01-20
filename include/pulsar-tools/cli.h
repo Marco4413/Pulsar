@@ -133,7 +133,7 @@ namespace PulsarTools::CLI
     namespace Action
     {
         int Check(const ParserOptions& parserOptions, const InputFileArgs& input);
-        int Read(Pulsar::Module& module, const ParserOptions& parserOptions, const InputFileArgs& input);
+        int Read(Pulsar::Module& module, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input);
         int Write(const Pulsar::Module& module, const CompilerOptions& compilerOptions, const InputFileArgs& input);
         int Parse(Pulsar::Module& module, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input);
         int Run(const Pulsar::Module& module, const RuntimeOptions& runtimeOptions, const InputProgramArgs& input);
@@ -176,7 +176,7 @@ namespace PulsarTools::CLI
         {
             Pulsar::Module module;
             int exitCode = IsNeutronFile(*m_Input.FilePath)
-                ? Action::Read(module, m_ParserOptions, m_Input)
+                ? Action::Read(module, m_ParserOptions, m_RuntimeOptions, m_Input)
                 : Action::Parse(module, m_ParserOptions, m_RuntimeOptions, m_Input);
             if (exitCode) return exitCode;
             return Action::Write(module, m_CompilerOptions, m_Input);
@@ -205,7 +205,7 @@ namespace PulsarTools::CLI
         {
             Pulsar::Module module;
             int exitCode = IsNeutronFile(*m_Input.FilePath)
-                ? Action::Read(module, m_ParserOptions, m_Input)
+                ? Action::Read(module, m_ParserOptions, m_RuntimeOptions, m_Input)
                 : Action::Parse(module, m_ParserOptions, m_RuntimeOptions, m_Input);
             if (exitCode) return exitCode;
             return Action::Run(module, m_RuntimeOptions, m_Input);
