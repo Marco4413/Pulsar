@@ -104,7 +104,7 @@ int PulsarTools::CLI::Action::Read(Pulsar::Module& module, const ParserOptions& 
     auto startTime = std::chrono::steady_clock::now();
 
     Pulsar::Binary::FileReader fileReader(inputPath.c_str());
-    auto readResult = Pulsar::Binary::ReadByteCode(fileReader, module);
+    auto readResult = Pulsar::Binary::ReadByteCode(fileReader, module, readerSettings);
     if (readResult != Pulsar::Binary::ReadResult::OK) {
         logger.Error("Read Error: {}", Pulsar::Binary::ReadResultToString(readResult));
         return 1;
