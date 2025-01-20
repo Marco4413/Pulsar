@@ -4,9 +4,9 @@
 #include <filesystem>
 
 #include "pulsar/bytecode.h"
+#include "pulsar/binary/filereader.h"
 #include "pulsar/binary/filewriter.h"
 
-#include "pulsar-tools/utils.h"
 #include "pulsar-tools/views.h"
 
 static PulsarTools::Logger g_Logger(stdout, stderr);
@@ -56,6 +56,31 @@ int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const In
         logger.Error(CreateParserErrorMessage(parser));
         return 1;
     }
+
+    return 0;
+}
+
+int PulsarTools::CLI::Action::Read(Pulsar::Module& module, const ParserOptions& parserOptions, const InputFileArgs& input)
+{
+    Logger& logger = GetLogger();
+
+    Pulsar::Binary::ReadSettings readerSettings = Pulsar::Binary::ReadSettings_Default;
+    readerSettings.LoadDebugSymbols = *parserOptions.Debug;
+
+    std::string inputPath = *input.FilePath;
+    logger.Info("Reading '{}'.", inputPath);
+    auto startTime = std::chrono::steady_clock::now();
+
+    Pulsar::Binary::FileReader fileReader(inputPath.c_str());
+    auto readResult = Pulsar::Binary::ReadByteCode(fileReader, module);
+    if (readResult != Pulsar::Binary::ReadResult::OK) {
+        logger.Error("Read Error: {}", Pulsar::Binary::ReadResultToString(readResult));
+        return 1;
+    }
+
+    auto endTime = std::chrono::steady_clock::now();
+    auto readTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
+    logger.Info("Reading took: {}us", readTime.count());
 
     return 0;
 }
