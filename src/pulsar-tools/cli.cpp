@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+#include "pulsar-tools/views.h"
+
 static PulsarTools::Logger g_Logger(stdout, stderr);
 
 PulsarTools::Logger& PulsarTools::CLI::GetLogger()
@@ -56,7 +58,7 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
 
     if (parseResult != Pulsar::ParseResult::OK) {
         logger.Error("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
-        // TODO: Print token view
+        logger.Error(CreateParserErrorMessage(parser));
         return 1;
     }
 
@@ -95,7 +97,7 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
         return 1;
     } else if (runtimeState != Pulsar::RuntimeState::OK) {
         logger.Error("Runtime Error: {}", Pulsar::RuntimeStateToString(runtimeState));
-        // TODO: Print error view
+        logger.Error(CreateRuntimeErrorMessage(context));
         return 1;
     }
 
