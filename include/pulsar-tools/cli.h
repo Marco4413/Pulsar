@@ -69,7 +69,7 @@ namespace PulsarTools::CLI
             EntryPoint(cmd, "entry-point", "e", "FUNC", "Set entry point. (default: main)", "main"),
             BindDebug(cmd, "bind-debug", "", "Debugging utilities."),
             BindError(cmd, "bind-error", "", "Error handling bindings."),
-            BindFilesystem(cmd, "bind-filesystem", "", "Bind File System natives."),
+            BindFileSystem(cmd, "bind-filesystem", "", "Bind File System natives."),
             BindLexer(cmd, "bind-lexer", "", "Bindings to the Pulsar Lexer."),
             BindModule(cmd, "bind-module", "", "Bind Module natives."),
             BindPrint(cmd, "bind-print", "", "Printing functions."),
@@ -77,7 +77,7 @@ namespace PulsarTools::CLI
             BindThread(cmd, "bind-thread", "", "Bind Thread natives."),
             BindTime(cmd, "bind-time", "", "Bindings to the system clock."),
             BindAll(cmd, "bind-all", "", "Bind all available natives. (default: true)", true,
-                BindDebug, BindError, BindFilesystem, BindLexer, BindModule, BindPrint, BindStdio, BindThread, BindTime)
+                BindDebug, BindError, BindFileSystem, BindLexer, BindModule, BindPrint, BindStdio, BindThread, BindTime)
         {
             BindAll.SetValue(true);
         }
@@ -89,7 +89,7 @@ namespace PulsarTools::CLI
 
         Argue::FlagOption BindDebug;
         Argue::FlagOption BindError;
-        Argue::FlagOption BindFilesystem;
+        Argue::FlagOption BindFileSystem;
         Argue::FlagOption BindLexer;
         Argue::FlagOption BindModule;
         Argue::FlagOption BindPrint;
