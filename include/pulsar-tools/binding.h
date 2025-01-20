@@ -15,7 +15,7 @@ namespace PulsarTools
         CustomTypeResolver(Pulsar::Module& module)
             : m_Module(module) {}
 
-        std::optional<uint64_t> ResolveType(const Pulsar::String& typeName);
+        std::optional<uint64_t> ResolveType(const Pulsar::String& typeName) const;
 
     private:
         Pulsar::Module& m_Module;

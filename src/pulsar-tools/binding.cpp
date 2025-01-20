@@ -1,6 +1,6 @@
 #include "pulsar-tools/binding.h"
 
-std::optional<uint64_t> PulsarTools::CustomTypeResolver::ResolveType(const Pulsar::String& typeName)
+std::optional<uint64_t> PulsarTools::CustomTypeResolver::ResolveType(const Pulsar::String& typeName) const
 {
     std::optional<uint64_t> result = std::nullopt;
     m_Module.CustomTypes.ForEach([&result, &typeName](const auto& idTypePair) {
