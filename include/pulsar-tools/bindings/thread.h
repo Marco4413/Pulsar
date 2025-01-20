@@ -60,7 +60,7 @@ namespace PulsarTools::Bindings
         struct ThreadData
         {
             std::thread Thread;
-            Pulsar::SharedRef<ThreadContext> ThreadContext;
+            Pulsar::SharedRef<Thread::ThreadContext> ThreadContext;
         };
 
         class ThreadType :
