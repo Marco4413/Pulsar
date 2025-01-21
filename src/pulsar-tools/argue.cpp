@@ -30,7 +30,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 void Argue::TextBuilder::PutText(std::string_view text)
 {
     std::string_view::size_type newLineIdx;
-    while ((newLineIdx = text.find("\n")) != std::string_view::npos) {
+    while ((newLineIdx = text.find('\n')) != std::string_view::npos) {
         PutLine(text.substr(0, newLineIdx));
         text.remove_prefix(newLineIdx+1);
         NewLine();
@@ -41,7 +41,10 @@ void Argue::TextBuilder::PutText(std::string_view text)
 void Argue::TextBuilder::NewLine()
 {
     if (m_CurrentLine.length() > 0) {
-        m_Text += '\n';
+        if (!m_Text.empty()) m_Text += '\n';
+
+        while (m_CurrentLine.length() > 0 && IsSpace(m_CurrentLine.back()))
+            m_CurrentLine.pop_back();
         m_Text += m_CurrentLine;
 
         m_CurrentLineIndentLength = 0;
@@ -69,12 +72,19 @@ void Argue::TextBuilder::DeIndent()
 
 std::string Argue::TextBuilder::Build()
 {
-    std::string result = m_Text;
-    result += '\n';
-    result += m_CurrentLine;
-    while (!result.empty() && (result.back() == ' ' || result.back() == '\n'))
+    std::string result;
+    if (m_Text.empty()) {
+        result += m_CurrentLine;
+    } else {
+        result += m_Text;
+        result += '\n';
+        result += m_CurrentLine;
+    }
+
+    while (!result.empty() && IsSpace(result.back()))
         result.pop_back();
     result += '\n';
+
     return result;
 }
 
@@ -82,29 +92,43 @@ void Argue::TextBuilder::PutLine(std::string_view text)
 {
     while (true) {
         size_t currentLineWidth = m_CurrentLine.length() - m_CurrentLineIndentLength;
-        bool wrap = currentLineWidth >= m_MaxParagraphWidth;
-        if (wrap) NewLine();
+        bool hasWrapped = !m_CurrentLine.empty()    &&
+            currentLineWidth >= m_MaxParagraphWidth &&
+            (
+                IsSpace(m_CurrentLine.back()) ||
+                (!text.empty() && IsSpace(text[0]))
+            );
 
-        if (m_CurrentLine.empty()) {
-            m_CurrentLineIndentLength = m_IndentationLevel * m_Indent.length();
-            if (wrap && m_IndentOnWrap) {
-                m_CurrentLineIndentLength += m_Indent.length();
-                m_CurrentLine += m_Indent;
-            }
+        if (hasWrapped) NewLine();
+        PutLineIndent(hasWrapped);
 
-            for (size_t i = 0; i < m_IndentationLevel; ++i)
-                m_CurrentLine += m_Indent;
-        }
-
-        std::string_view::size_type nextWordIdx = text.find(' ');
+        std::string_view::size_type nextWordIdx = text.find_first_of(SPACE_CHARS);
         if (nextWordIdx == std::string_view::npos) {
             m_CurrentLine += text;
             break;
         }
 
-        m_CurrentLine += text.substr(0, nextWordIdx);
-        m_CurrentLine += ' ';
+        if (nextWordIdx > 0) {
+            m_CurrentLine += text.substr(0, nextWordIdx);
+            m_CurrentLine += ' ';
+        } else if (!hasWrapped) {
+            m_CurrentLine += ' ';
+        }
         text.remove_prefix(nextWordIdx+1);
+    }
+}
+
+void Argue::TextBuilder::PutLineIndent(bool hasWrapped)
+{
+    if (m_CurrentLine.empty()) {
+        m_CurrentLineIndentLength = m_IndentationLevel * m_Indent.length();
+        if (hasWrapped && m_IndentOnWrap) {
+            m_CurrentLineIndentLength += m_Indent.length();
+            m_CurrentLine += m_Indent;
+        }
+
+        for (size_t i = 0; i < m_IndentationLevel; ++i)
+            m_CurrentLine += m_Indent;
     }
 }
 

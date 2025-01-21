@@ -54,6 +54,12 @@ namespace Argue
         return result;
     }
 
+    constexpr std::string_view SPACE_CHARS = " \f\n\r\t\v";
+    constexpr bool IsSpace(char ch)
+    {
+        return SPACE_CHARS.find(ch) != std::string_view::npos;
+    }
+
     class ITextBuilder
     {
     public:
@@ -94,11 +100,18 @@ namespace Argue
         void Indent() override;
         void DeIndent() override;
 
+        /**
+         * The built text will start with a non-space character
+         * and end with a new line preceded by a non-space character.
+         * Space characters are defined by the `::IsSpace()` function
+         * and `SPACE_CHARS` variable.
+         */
         std::string Build() override;
     
     protected:
         // Call this if text does not contain new lines
         void PutLine(std::string_view text);
+        void PutLineIndent(bool hasWrapped);
 
     private:
         std::string m_Text = "";
