@@ -166,7 +166,7 @@ namespace Argue
         virtual bool ParseValue(std::string_view val)
         {
             ARGUE_UNUSED(val);
-            return SetError("Value parsing was not implemented.");
+            return SetError(s("Value parsing was not implemented for '", GetName(), "'."));
         }
 
         // Always returns false, this allows `return SetError(...)` in ::Parse functions.
