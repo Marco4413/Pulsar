@@ -409,6 +409,7 @@ namespace Argue
     
     public:
         bool IsVarOptional() const override { return true; }
+        void WriteHint(ITextBuilder& hint) const override;
         void WriteHelp(ITextBuilder& help) const override;
 
         bool Parse(std::string_view arg, bool isShort) override;

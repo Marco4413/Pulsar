@@ -432,14 +432,25 @@ bool Argue::IArgParser::Parse(std::stack<std::string_view> args)
     return !HasError();
 }
 
-void Argue::FlagOption::WriteHelp(ITextBuilder& help) const
+void Argue::FlagOption::WriteHint(ITextBuilder& hint) const
 {
     const IArgParser& parser = GetParser();
     if (parser.HasShortPrefix() && HasShortName()) {
-        help.PutText(s(parser.GetPrefix(), GetName(), ", ", parser.GetPrefix(), "no-", GetName(), ", ", parser.GetShortPrefix(), GetShortName()));
+        hint.PutText(s(parser.GetPrefix(), GetName(), ", ", parser.GetShortPrefix(), GetShortName()));
     } else {
-        help.PutText(s(parser.GetPrefix(), GetName(), ", ", parser.GetPrefix(), "no-", GetName()));
+        hint.PutText(s(parser.GetPrefix(), GetName()));
     }
+}
+
+void Argue::FlagOption::WriteHelp(ITextBuilder& help) const
+{
+    const IArgParser& parser = GetParser();
+
+    WriteHint(help);
+    help.PutText(", ");
+    if (parser.HasShortPrefix() && HasShortName())
+        help.NewLine();
+    help.PutText(s(GetParser().GetPrefix(), "no-", GetName()));
 
     if (HasDescription()) {
         help.NewLine();
