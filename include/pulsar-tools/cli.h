@@ -31,7 +31,7 @@ namespace PulsarTools::CLI
                 "Adds PATH to the include paths. The last specified PATH is the one with the highest priority.\n"
                 "#include directives will search the specified PATHs if no relative file can be found.",
                 false),
-            DeclareBoundNatives(cmd, "declare-natives", "N",
+            DeclareBoundNatives(cmd, "declare-natives", "n",
                 "Automatically declare bound natives so that they can be used in global producers. (default: false)",
                 false),
             Debug(cmd, "debug", "g",
@@ -43,7 +43,7 @@ namespace PulsarTools::CLI
             AllowInclude(cmd, "allow-include", "",
                 "Allow the usage of the #include directive. (default: true)",
                 true),
-            AllowLabels(cmd, "allow-labels", "L",
+            AllowLabels(cmd, "allow-labels", "l",
                 "Allow the usage of labels. (default: false)",
                 false)
         {}
@@ -63,19 +63,19 @@ namespace PulsarTools::CLI
             StackTrace(cmd, "stack-trace", "",
                 "Print stack trace on global evaluation error. (default: true)",
                 true),
-            StackTraceDepth(cmd, "stack-trace-depth", "s", "DEPTH",
-                "Sets the max depth of the printed stack-trace. (default: 10)",
+            StackTraceDepth(cmd, "stack-trace-depth", "S", "DEPTH",
+                "Sets the max depth of the printed stack-trace on error. (default: 10)",
                 10),
-            EntryPoint(cmd, "entry-point", "e", "FUNC", "Set entry point. (default: main)", "main"),
-            BindDebug(cmd, "bind-debug", "", "Debugging utilities."),
-            BindError(cmd, "bind-error", "", "Error handling bindings."),
-            BindFileSystem(cmd, "bind-filesystem", "", "Bind File System natives."),
-            BindLexer(cmd, "bind-lexer", "", "Bindings to the Pulsar Lexer."),
+            EntryPoint(cmd, "entry-point", "E", "FUNC", "Set entry point. (default: main)", "main"),
+            BindDebug(cmd, "bind-debug", "", "Bind debugging utilities."),
+            BindError(cmd, "bind-error", "", "Bind error handling natives."),
+            BindFileSystem(cmd, "bind-filesystem", "", "Bind file system natives."),
+            BindLexer(cmd, "bind-lexer", "", "Bind the Pulsar Lexer."),
             BindModule(cmd, "bind-module", "", "Bind Module natives."),
-            BindPrint(cmd, "bind-print", "", "Printing functions."),
-            BindStdio(cmd, "bind-stdio", "", "Direct access to stdio for String IO."),
+            BindPrint(cmd, "bind-print", "", "Bind generic printing functions."),
+            BindStdio(cmd, "bind-stdio", "", "Bind String IO functions."),
             BindThread(cmd, "bind-thread", "", "Bind Thread natives."),
-            BindTime(cmd, "bind-time", "", "Bindings to the system clock."),
+            BindTime(cmd, "bind-time", "", "Bind system clock natives."),
             BindAll(cmd, "bind-all", "", "Bind all available natives. (default: true)", true,
                 BindDebug, BindError, BindFileSystem, BindLexer, BindModule, BindPrint, BindStdio, BindThread, BindTime)
         {
@@ -103,7 +103,7 @@ namespace PulsarTools::CLI
     {
         CompilerOptions(Argue::IArgParser& cmd) :
             OutputFile(cmd, "out", "o", "OUTPUT",
-                "Tells the compiler where to save the compiled Neutron file. (default: <INFILENAME>.ntr)",
+                "Tells the compiler where to save the compiled Neutron file. (default: <FILEPATH>.ntr)",
                 "")
         {}
 
@@ -113,7 +113,7 @@ namespace PulsarTools::CLI
     struct InputFileArgs
     {
         InputFileArgs(Argue::IArgParser& cmd) :
-            FilePath(cmd, "The file to be ran.", "FILEPATH")
+            FilePath(cmd, "A Pulsar file.", "FILEPATH")
         {}
 
         Argue::StrArgument FilePath;
@@ -124,7 +124,7 @@ namespace PulsarTools::CLI
     {
         InputProgramArgs(Argue::IArgParser& cmd) :
             InputFileArgs(cmd),
-            Args(cmd, "Arguments to be passed to the program.", "ARG")
+            Args(cmd, "Arguments to be passed to the script.", "ARG")
         {}
 
         Argue::StrVarArgument Args;
@@ -143,7 +143,7 @@ namespace PulsarTools::CLI
     {
     public:
         CheckCommand(Argue::IArgParser& parser) :
-            m_Command(parser, "check", "Checks the specified Pulsar file for syntax errors."),
+            m_Command(parser, "check", "Checks a Pulsar file for syntax errors."),
             m_ParserOptions(m_Command),
             m_Input(m_Command)
         {}
@@ -221,7 +221,23 @@ namespace PulsarTools::CLI
     struct Program
     {
         Program(const char* path) :
-            Parser(path, "*(*PulsarTools file) -> 1."),
+            Parser(path,
+                "*(*pulsar-tools file) -> 1.\n\n"
+                "     111=\n"
+                "    0 ?   !3a\n"
+                "   1   ! :::\n"
+                "  1    =a!!!\n"
+                "        bccc\n"
+                "  0?ab   :::   =a?0\n"
+                "   !ac;:: : :::cb!\n"
+                "         :::\n"
+                "       ;:: ::;\n"
+                "     ,aab   bbaa\n"
+                "    110a     ?011\n"
+                "             !!   23\n"
+                "              0  23\n"
+                "          3221-12\n"
+            ),
             Options(Parser),
             CmdHelp(Parser),
             CmdRun(Parser),
