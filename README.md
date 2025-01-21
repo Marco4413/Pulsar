@@ -29,14 +29,18 @@ on VSCode for the Pulsar Language, you can download and package the official ext
 
 ## Dependencies
 
-**None!**
+> All dependencies are git submodules which reference forks/repos owned by
+> [Marco4413](https://github.com/Marco4413) of the projects specified here.
 
-Except for the `pulsar-demo` and `pulsar-tools` projects
-which use `fmt` for pretty printing.
-
-And the `pulsar-lsp` project which uses `lsp-framework`.
-
-The Language itself has no dependencies except for the C++20 standard library.
+- Pulsar:
+  - **None!**
+- Pulsar-Demo:
+  - [`{fmt}`](https://github.com/fmtlib/fmt)
+- Pulsar-LSP:
+  - [`lsp-framework`](https://github.com/leon-bckl/lsp-framework)
+- Pulsar-Tools:
+  - [`{fmt}`](https://github.com/fmtlib/fmt)
+  - [`Argue`](https://github.com/Marco4413/Argue)
 
 ## Building
 
