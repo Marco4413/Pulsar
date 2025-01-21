@@ -31,7 +31,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <stack>
 #include <string>
 #include <string_view>
-#include <utility>
+#include <utility> // std::forward
 #include <vector>
 
 #define ARGUE_DELETE_MOVE_COPY(className)            \
@@ -445,7 +445,9 @@ namespace Argue
         virtual ~FlagGroupOption() = default;
 
         ARGUE_DELETE_MOVE_COPY(FlagGroupOption)
-    
+
+        const std::vector<FlagOption*>& GetGroup() const { return m_Group; }
+
     public:
         void SetValue(bool flag) override
         {
@@ -484,6 +486,9 @@ namespace Argue
     public:
         bool IsVarOptional() const override { return false; }
         bool HasValue() const override { return m_Parsed || m_HasDefault; }
+
+        bool HasDefaultValue() const { return m_HasDefault; }
+        int64_t GetDefaultValue() const { return m_Default; }
 
         int64_t operator*() const { return GetValue(); }
         int64_t GetValue() const
@@ -529,6 +534,9 @@ namespace Argue
     public:
         bool IsVarOptional() const override { return false; }
         bool HasValue() const override { return m_Parsed || m_HasDefault; }
+
+        bool HasDefaultValue() const { return m_HasDefault; }
+        const std::string& GetDefaultValue() const { return m_Default; }
 
         const std::string& operator*() const { return GetValue(); }
         const std::string& GetValue() const
@@ -596,6 +604,14 @@ namespace Argue
         bool IsVarOptional() const override { return false; }
         bool HasValue() const override { return m_Parsed || m_HasDefault; }
 
+        bool HasDefaultValue() const { return m_HasDefault; }
+        std::string_view GetDefaultValue() const
+        {
+            if (m_Choices.empty() || !m_HasDefault)
+                return "";
+            return m_Choices[m_DefaultIdx];
+        }
+
         std::string_view operator*() const { return GetValue(); }
         std::string_view GetValue() const
         {
@@ -639,7 +655,7 @@ namespace Argue
 
         ARGUE_DELETE_MOVE_COPY(CollectionOption)
 
-        const std::string& GetMetaVar() const { return m_MetaVar; }
+        bool AcceptsEmptyValues() const { return m_AcceptEmptyValues; }
 
     public:
         bool IsVarOptional() const override { return m_AcceptEmptyValues; }
@@ -684,6 +700,8 @@ namespace Argue
 
         bool Parse(std::string_view arg) override;
         bool HasValue() const override { return m_Parsed || m_HasDefault; }
+
+        const std::string& GetDefaultValue() const { return m_Default; }
 
         const std::string& operator*() const { return GetValue(); }
         const std::string& GetValue() const
