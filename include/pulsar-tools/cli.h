@@ -1,10 +1,11 @@
 #ifndef _PULSARTOOLS_CLI_H
 #define _PULSARTOOLS_CLI_H
 
+#include "argue.hpp"
+
 #include "pulsar/parser.h"
 #include "pulsar/runtime.h"
 
-#include "pulsar-tools/argue.h"
 #include "pulsar-tools/logger.h"
 #include "pulsar-tools/utils.h"
 
@@ -113,7 +114,7 @@ namespace PulsarTools::CLI
     struct InputFileArgs
     {
         InputFileArgs(Argue::IArgParser& cmd) :
-            FilePath(cmd, "A Pulsar file.", "FILEPATH")
+            FilePath(cmd, "FILEPATH", "A Pulsar file.")
         {}
 
         Argue::StrArgument FilePath;
@@ -124,7 +125,7 @@ namespace PulsarTools::CLI
     {
         InputProgramArgs(Argue::IArgParser& cmd) :
             InputFileArgs(cmd),
-            Args(cmd, "Arguments to be passed to the script.", "ARG")
+            Args(cmd, "ARG", "Arguments to be passed to the script.")
         {}
 
         Argue::StrVarArgument Args;
