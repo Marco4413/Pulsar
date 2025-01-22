@@ -77,6 +77,7 @@ Pulsar::RuntimeState PulsarTools::ThreadNativeBindings::Thread_Run(Pulsar::Execu
         if (typeData) threadContext->Context.SetCustomTypeData(typeId, typeData);
     });
 
+    threadContext->Context.GetGlobals() = eContext.GetGlobals();
     threadContext->Context.SetCustomTypeData(channelType, eContext.GetCustomTypeData<Pulsar::CustomTypeData>(channelType));
     threadContext->Context.GetStack() = Pulsar::ValueStack(std::move(threadFnArgs.AsList()));
 
