@@ -38,13 +38,13 @@ namespace PulsarTools::Bindings
         Channel();
 
     public:
-        static Pulsar::RuntimeState FNew(Pulsar::ExecutionContext& eContext, uint64_t type);
-        static Pulsar::RuntimeState FSend(Pulsar::ExecutionContext& eContext, uint64_t type);
-        static Pulsar::RuntimeState FReceive(Pulsar::ExecutionContext& eContext, uint64_t type);
-        static Pulsar::RuntimeState FClose(Pulsar::ExecutionContext& eContext, uint64_t type);
-        static Pulsar::RuntimeState FIsEmpty(Pulsar::ExecutionContext& eContext, uint64_t type);
-        static Pulsar::RuntimeState FIsClosed(Pulsar::ExecutionContext& eContext, uint64_t type);
-        static Pulsar::RuntimeState FIsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
+        static Pulsar::RuntimeState FNew(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId);
+        static Pulsar::RuntimeState FSend(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId);
+        static Pulsar::RuntimeState FReceive(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId);
+        static Pulsar::RuntimeState FClose(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId);
+        static Pulsar::RuntimeState FIsEmpty(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId);
+        static Pulsar::RuntimeState FIsClosed(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId);
+        static Pulsar::RuntimeState FIsValid(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId);
     };
 
     class Thread :
@@ -78,11 +78,11 @@ namespace PulsarTools::Bindings
 
     public:
         static Pulsar::RuntimeState FThisSleep(Pulsar::ExecutionContext& eContext);
-        static Pulsar::RuntimeState FRun(Pulsar::ExecutionContext& eContext, uint64_t threadType, uint64_t channelType);
-        static Pulsar::RuntimeState FJoin(Pulsar::ExecutionContext& eContext, uint64_t type);
-        static Pulsar::RuntimeState FJoinAll(Pulsar::ExecutionContext& eContext, uint64_t type);
-        static Pulsar::RuntimeState FIsAlive(Pulsar::ExecutionContext& eContext, uint64_t type);
-        static Pulsar::RuntimeState FIsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
+        static Pulsar::RuntimeState FRun(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId, uint64_t channelTypeId);
+        static Pulsar::RuntimeState FJoin(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
+        static Pulsar::RuntimeState FJoinAll(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
+        static Pulsar::RuntimeState FIsAlive(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
+        static Pulsar::RuntimeState FIsValid(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
 
         static void Join(Pulsar::SharedRef<ThreadData> thread, Pulsar::ValueStack& stack);
     };

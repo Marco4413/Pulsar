@@ -11,7 +11,7 @@ PulsarTools::Bindings::Module::Module() :
     BindNativeFunction({ "module/valid?",    1, 1 }, CreateTypeBoundFactory(FIsValid,  "Pulsar-Tools/Module"));
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Module::FFromFile(Pulsar::ExecutionContext& eContext, uint64_t type)
+Pulsar::RuntimeState PulsarTools::Bindings::Module::FFromFile(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& modulePath = frame.Locals[0];
@@ -22,7 +22,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Module::FFromFile(Pulsar::ExecutionC
     auto result = parser.AddSourceFile(modulePath.AsString());
     if (result != Pulsar::ParseResult::OK) {
         frame.Stack.EmplaceBack()
-            .SetCustom({ type });
+            .SetCustom({ moduleTypeId });
         return Pulsar::RuntimeState::OK;
     }
     
@@ -30,21 +30,21 @@ Pulsar::RuntimeState PulsarTools::Bindings::Module::FFromFile(Pulsar::ExecutionC
     result = parser.ParseIntoModule(*module, Pulsar::ParseSettings_Default);
     if (result != Pulsar::ParseResult::OK) {
         frame.Stack.EmplaceBack()
-            .SetCustom({ type });
+            .SetCustom({ moduleTypeId });
         return Pulsar::RuntimeState::OK;
     }
 
     frame.Stack.EmplaceBack()
-        .SetCustom({ .Type=type, .Data=module });
+        .SetCustom({ .Type=moduleTypeId, .Data=module });
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Module::FRun(Pulsar::ExecutionContext& eContext, uint64_t type)
+Pulsar::RuntimeState PulsarTools::Bindings::Module::FRun(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& moduleRef = frame.Locals[0];
     if (moduleRef.Type() != Pulsar::ValueType::Custom
-        || moduleRef.AsCustom().Type != type)
+        || moduleRef.AsCustom().Type != moduleTypeId)
         return Pulsar::RuntimeState::TypeError;
     
     ModuleType::Ref module = moduleRef.AsCustom().As<ModuleType>();
@@ -61,12 +61,12 @@ Pulsar::RuntimeState PulsarTools::Bindings::Module::FRun(Pulsar::ExecutionContex
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Module::FIsValid(Pulsar::ExecutionContext& eContext, uint64_t type)
+Pulsar::RuntimeState PulsarTools::Bindings::Module::FIsValid(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& moduleRef = frame.Locals[0];
     if (moduleRef.Type() != Pulsar::ValueType::Custom
-        || moduleRef.AsCustom().Type != type)
+        || moduleRef.AsCustom().Type != moduleTypeId)
         return Pulsar::RuntimeState::TypeError;
 
     ModuleType::Ref module = moduleRef.AsCustom().As<ModuleType>();

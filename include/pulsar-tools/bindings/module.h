@@ -22,9 +22,9 @@ namespace PulsarTools::Bindings
         Module();
 
     public:
-        static Pulsar::RuntimeState FFromFile(Pulsar::ExecutionContext& eContext, uint64_t type);
-        static Pulsar::RuntimeState FRun(Pulsar::ExecutionContext& eContext, uint64_t type);
-        static Pulsar::RuntimeState FIsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
+        static Pulsar::RuntimeState FFromFile(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId);
+        static Pulsar::RuntimeState FRun(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId);
+        static Pulsar::RuntimeState FIsValid(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId);
     };
 }
 

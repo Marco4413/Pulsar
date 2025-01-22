@@ -24,9 +24,9 @@ namespace PulsarTools::Bindings
         Lexer();
 
     public:
-        static Pulsar::RuntimeState FFromFile(Pulsar::ExecutionContext& eContext, uint64_t type);
-        static Pulsar::RuntimeState FNextToken(Pulsar::ExecutionContext& eContext, uint64_t type);
-        static Pulsar::RuntimeState FIsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
+        static Pulsar::RuntimeState FFromFile(Pulsar::ExecutionContext& eContext, uint64_t lexerTypeId);
+        static Pulsar::RuntimeState FNextToken(Pulsar::ExecutionContext& eContext, uint64_t lexerTypeId);
+        static Pulsar::RuntimeState FIsValid(Pulsar::ExecutionContext& eContext, uint64_t lexerTypeId);
     };
 }
 
