@@ -398,6 +398,11 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
         return m_Module.NativeFunctions[(size_t)funcIdx](*this);
     }
     case InstructionCode::Return:
+        // Because we use frame.InstructionIndex to find where an error occurred,
+        //  WE MUST check if we can actually return here, otherwise the error will
+        //  appear at the end of the function.
+        if (frame.Stack.Size() < frame.Function->Returns)
+            return RuntimeState::StackUnderflow;
         frame.InstructionIndex = frame.Function->Code.Size();
         break;
     case InstructionCode::ICall: {
