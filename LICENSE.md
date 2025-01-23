@@ -7,7 +7,9 @@
 
 # Pulsar
 
-Copyright (c) 2024 [Marco4413](https://github.com/Marco4413/Pulsar)
+**Argue was also done by me and it is under the same LICENSE.**
+
+Copyright (c) 2025 [Marco4413](https://github.com/Marco4413/Pulsar)
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
