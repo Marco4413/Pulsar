@@ -1,15 +1,17 @@
 #include "pulsar-tools/bindings/filesystem.h"
 
+#include <cinttypes>
 #include <filesystem>
 #include <fstream>
 
-void PulsarTools::FileSystemNativeBindings::BindToModule(Pulsar::Module& module)
+PulsarTools::Bindings::FileSystem::FileSystem() :
+    IBinding()
 {
-    module.BindNativeFunction({ "fs/exists?", 1, 2 }, FS_Exists);
-    module.BindNativeFunction({ "fs/read-all", 1, 1 }, FS_ReadAll);
+    BindNativeFunction({ "fs/exists?", 1, 2 }, FExists);
+    BindNativeFunction({ "fs/read-all", 1, 1 }, FReadAll);
 }
 
-Pulsar::RuntimeState PulsarTools::FileSystemNativeBindings::FS_Exists(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::FileSystem::FExists(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& filePath = frame.Locals[0];
@@ -22,7 +24,7 @@ Pulsar::RuntimeState PulsarTools::FileSystemNativeBindings::FS_Exists(Pulsar::Ex
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::FileSystemNativeBindings::FS_ReadAll(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::FileSystem::FReadAll(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& filePath = frame.Locals[0];

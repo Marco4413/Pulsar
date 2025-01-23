@@ -1,29 +1,32 @@
 #include "pulsar-tools/bindings/print.h"
 
-#include "pulsar-tools/print.h"
+#include "pulsar-tools/fmt.h"
 
-void PulsarTools::PrintNativeBindings::BindToModule(Pulsar::Module& module)
+#include "fmt/base.h"
+
+PulsarTools::Bindings::Print::Print() :
+    IBinding()
 {
-    module.BindNativeFunction({ "print!",   1, 0 }, Print_Print);
-    module.BindNativeFunction({ "println!", 1, 0 }, Print_Println);
+    BindNativeFunction({ "print!",   1, 0 }, FPrint);
+    BindNativeFunction({ "println!", 1, 0 }, FPrintln);
 }
 
-Pulsar::RuntimeState PulsarTools::PrintNativeBindings::Print_Print(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::Print::FPrint(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& val = frame.Locals[0];
     if (val.Type() == Pulsar::ValueType::String)
-        PULSARTOOLS_PRINTF("{}", val.AsString());
-    else PULSARTOOLS_PRINTF("{}", val);
+        fmt::print("{}", val.AsString());
+    else fmt::print("{}", val);
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::PrintNativeBindings::Print_Println(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::Print::FPrintln(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& val = frame.Locals[0];
     if (val.Type() == Pulsar::ValueType::String)
-        PULSARTOOLS_PRINTF("{}\n", val.AsString());
-    else PULSARTOOLS_PRINTF("{}\n", val);
+        fmt::println(stdout, "{}", val.AsString());
+    else fmt::println(stdout, "{}", val);
     return Pulsar::RuntimeState::OK;
 }

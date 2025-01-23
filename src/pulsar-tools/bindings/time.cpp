@@ -3,14 +3,15 @@
 #include <chrono>
 #include <ctime>
 
-void PulsarTools::TimeNativeBindings::BindToModule(Pulsar::Module& module)
+PulsarTools::Bindings::Time::Time() :
+    IBinding()
 {
-    module.BindNativeFunction({ "time", 0, 1 }, Time_Time);
-    module.BindNativeFunction({ "time/steady", 0, 1 }, Time_Steady);
-    module.BindNativeFunction({ "time/micros", 0, 1 }, Time_Micros);
+    BindNativeFunction({ "time", 0, 1 }, FTime);
+    BindNativeFunction({ "time/steady", 0, 1 }, FSteady);
+    BindNativeFunction({ "time/micros", 0, 1 }, FMicros);
 }
 
-Pulsar::RuntimeState PulsarTools::TimeNativeBindings::Time_Time(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::Time::FTime(Pulsar::ExecutionContext& eContext)
 {
     auto time = std::chrono::system_clock::now();
     auto timeSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(time.time_since_epoch());
@@ -19,7 +20,7 @@ Pulsar::RuntimeState PulsarTools::TimeNativeBindings::Time_Time(Pulsar::Executio
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::TimeNativeBindings::Time_Steady(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::Time::FSteady(Pulsar::ExecutionContext& eContext)
 {
     auto time = std::chrono::steady_clock::now();
     auto timeSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(time.time_since_epoch());
@@ -28,7 +29,7 @@ Pulsar::RuntimeState PulsarTools::TimeNativeBindings::Time_Steady(Pulsar::Execut
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::TimeNativeBindings::Time_Micros(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::Time::FMicros(Pulsar::ExecutionContext& eContext)
 {
     // Use the high resolution clock only if it's monotonic
     if constexpr (std::chrono::high_resolution_clock::is_steady) {

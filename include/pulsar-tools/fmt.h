@@ -1,25 +1,11 @@
-#ifndef _PULSARTOOLS_PRINT_H
-#define _PULSARTOOLS_PRINT_H
-
-#include "pulsar-tools/core.h"
+#ifndef _PULSARTOOLS_FMT_H
+#define _PULSARTOOLS_FMT_H
 
 #include "pulsar/lexer.h"
-#include "pulsar/runtime.h"
+#include "pulsar/runtime/value.h"
 #include "pulsar/structures/string.h"
-#include "pulsar/structures/stringview.h"
 
-namespace PulsarTools
-{
-    struct TokenViewRange { size_t Before; size_t After; };
-    constexpr TokenViewRange TokenViewRange_Default{20, 20};
-
-    size_t PrintTokenView(const Pulsar::String& source, const Pulsar::Token& token, TokenViewRange viewRange = TokenViewRange_Default);
-    void PrintPrettyError(
-        const Pulsar::String* source, const Pulsar::String* filepath,
-        const Pulsar::Token& token, const Pulsar::String& message,
-        TokenViewRange viewRange = TokenViewRange_Default);
-    void PrintPrettyRuntimeError(const Pulsar::ExecutionContext& context, TokenViewRange viewRange = TokenViewRange_Default);
-}
+#include "fmt/format.h"
 
 template <>
 struct fmt::formatter<Pulsar::String> : formatter<string_view>
@@ -27,15 +13,6 @@ struct fmt::formatter<Pulsar::String> : formatter<string_view>
     auto format(const Pulsar::String& val, format_context& ctx) const
     {
         return fmt::format_to(ctx.out(), "{:.{}}", val.CString(), val.Length());
-    }
-};
-
-template <>
-struct fmt::formatter<Pulsar::StringView> : formatter<string_view>
-{
-    auto format(const Pulsar::StringView& val, format_context& ctx) const
-    {
-        return fmt::format_to(ctx.out(), "{:.{}}", val.DataFromStart(), val.Length());
     }
 };
 
@@ -75,4 +52,4 @@ struct fmt::formatter<Pulsar::Value> : formatter<string_view>
     }
 };
 
-#endif // _PULSARTOOLS_PRINT_H
+#endif // _PULSARTOOLS_FMT_H

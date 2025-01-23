@@ -1,29 +1,33 @@
 #ifndef _PULSARTOOLS_BINDINGS_LEXER_H
 #define _PULSARTOOLS_BINDINGS_LEXER_H
 
-#include "pulsar-tools/core.h"
-
 #include "pulsar/lexer.h"
-#include "pulsar/runtime.h"
-#include "pulsar/structures/hashmap.h"
 
-namespace PulsarTools
+#include "pulsar-tools/binding.h"
+
+namespace PulsarTools::Bindings
 {
-    namespace LexerNativeBindings
+    class Lexer :
+        public IBinding
     {
-        class LexerType : public Pulsar::CustomDataHolder, public Pulsar::Lexer
+    public:
+        class LexerType :
+            public Pulsar::CustomDataHolder,
+            public Pulsar::Lexer
         {
         public:
             using Ref = Pulsar::SharedRef<LexerType>;
             using Pulsar::Lexer::Lexer;
         };
 
-        void BindToModule(Pulsar::Module& module);
+    public:
+        Lexer();
 
-        Pulsar::RuntimeState Lexer_FromFile(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Lexer_NextToken(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Lexer_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
-    }
+    public:
+        static Pulsar::RuntimeState FFromFile(Pulsar::ExecutionContext& eContext, uint64_t lexerTypeId);
+        static Pulsar::RuntimeState FNextToken(Pulsar::ExecutionContext& eContext, uint64_t lexerTypeId);
+        static Pulsar::RuntimeState FIsValid(Pulsar::ExecutionContext& eContext, uint64_t lexerTypeId);
+    };
 }
 
 #endif // _PULSARTOOLS_BINDINGS_LEXER_H

@@ -2,14 +2,15 @@
 
 #include <iostream>
 
-void PulsarTools::STDIONativeBindings::BindToModule(Pulsar::Module& module)
+PulsarTools::Bindings::Stdio::Stdio() :
+    IBinding()
 {
-    module.BindNativeFunction({ "stdin/read",      0, 1 }, STDIN_Read);
-    module.BindNativeFunction({ "stdout/write!",   1, 0 }, STDOUT_Write);
-    module.BindNativeFunction({ "stdout/writeln!", 1, 0 }, STDOUT_WriteLn);
+    BindNativeFunction({ "stdin/read",      0, 1 }, FInRead);
+    BindNativeFunction({ "stdout/write!",   1, 0 }, FOutWrite);
+    BindNativeFunction({ "stdout/writeln!", 1, 0 }, FOutWriteLn);
 }
 
-Pulsar::RuntimeState PulsarTools::STDIONativeBindings::STDIN_Read(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::Stdio::FInRead(Pulsar::ExecutionContext& eContext)
 {
     constexpr size_t BUFFER_CAPACITY = 256;
     char buffer[BUFFER_CAPACITY];
@@ -27,7 +28,7 @@ Pulsar::RuntimeState PulsarTools::STDIONativeBindings::STDIN_Read(Pulsar::Execut
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::STDIONativeBindings::STDOUT_Write(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::Stdio::FOutWrite(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& message = frame.Locals[0];
@@ -37,7 +38,7 @@ Pulsar::RuntimeState PulsarTools::STDIONativeBindings::STDOUT_Write(Pulsar::Exec
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::STDIONativeBindings::STDOUT_WriteLn(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::Stdio::FOutWriteLn(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& message = frame.Locals[0];

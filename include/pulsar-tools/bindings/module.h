@@ -1,28 +1,31 @@
 #ifndef _PULSARTOOLS_BINDINGS_MODULE_H
 #define _PULSARTOOLS_BINDINGS_MODULE_H
 
-#include "pulsar-tools/core.h"
+#include "pulsar-tools/binding.h"
 
-#include "pulsar/runtime.h"
-#include "pulsar/structures/hashmap.h"
-
-namespace PulsarTools
+namespace PulsarTools::Bindings
 {
-    namespace ModuleNativeBindings
+    class Module :
+        public IBinding
     {
-        class ModuleType : public Pulsar::CustomDataHolder, public Pulsar::Module
+    public:
+        class ModuleType :
+            public Pulsar::CustomDataHolder,
+            public Pulsar::Module
         {
         public:
             using Ref = Pulsar::SharedRef<ModuleType>;
             using Pulsar::Module::Module;
         };
 
-        void BindToModule(Pulsar::Module& module);
+    public:
+        Module();
 
-        Pulsar::RuntimeState Module_FromFile(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Module_Run(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Module_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
-    }
+    public:
+        static Pulsar::RuntimeState FFromFile(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId);
+        static Pulsar::RuntimeState FRun(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId);
+        static Pulsar::RuntimeState FIsValid(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId);
+    };
 }
 
 #endif // _PULSARTOOLS_BINDINGS_MODULE_H

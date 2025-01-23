@@ -137,8 +137,11 @@ project "pulsar-tools"
    location "build/pulsar-tools"
    targetdir "%{prj.location}/%{cfg.buildcfg}"
 
-   includedirs { "include", "libs/fmt/include" }
-   files { "src/pulsar-tools/**.cpp", "include/pulsar-tools/**.h" }
+   includedirs { "include", "libs/fmt/include", "libs/argue" }
+   files {
+      "src/pulsar-tools/**.cpp", "include/pulsar-tools/**.h",
+      "libs/argue/argue.hpp"
+   }
    links { "pulsar", "fmt" }
 
    filter "toolset:clang"

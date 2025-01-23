@@ -5,18 +5,16 @@
 
 #include "pulsar/parser.h"
 
-void PulsarTools::LexerNativeBindings::BindToModule(Pulsar::Module& module)
+PulsarTools::Bindings::Lexer::Lexer() :
+    IBinding()
 {
-    uint64_t type = module.BindCustomType("Pulsar-Tools/Lexer");
-    module.BindNativeFunction({ "lexer/from-file", 1, 1 },
-        [type](auto& ctx) { return Lexer_FromFile(ctx, type); });
-    module.BindNativeFunction({ "lexer/next-token", 1, 1 },
-        [type](auto& ctx) { return Lexer_NextToken(ctx, type); });
-    module.BindNativeFunction({ "lexer/valid?", 1, 1 },
-        [type](auto& ctx) { return Lexer_IsValid(ctx, type); });
+    BindCustomType("Pulsar-Tools/Lexer");
+    BindNativeFunction({ "lexer/from-file",  1, 1 }, CreateTypeBoundFactory(FFromFile,  "Pulsar-Tools/Lexer"));
+    BindNativeFunction({ "lexer/next-token", 1, 1 }, CreateTypeBoundFactory(FNextToken, "Pulsar-Tools/Lexer"));
+    BindNativeFunction({ "lexer/valid?",     1, 1 }, CreateTypeBoundFactory(FIsValid,   "Pulsar-Tools/Lexer"));
 }
 
-Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_FromFile(Pulsar::ExecutionContext& eContext, uint64_t type)
+Pulsar::RuntimeState PulsarTools::Bindings::Lexer::FFromFile(Pulsar::ExecutionContext& eContext, uint64_t lexerTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
 
@@ -27,7 +25,7 @@ Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_FromFile(Pulsar::Ex
     std::filesystem::path fsPath(filePath.AsString().CString());
     if (!std::filesystem::exists(fsPath)) {
         frame.Stack.EmplaceBack()
-            .SetCustom({ type });
+            .SetCustom({ lexerTypeId });
         return Pulsar::RuntimeState::OK;
     }
 
@@ -38,21 +36,21 @@ Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_FromFile(Pulsar::Ex
     source.Resize(fileSize);
     if (!file.read(source.Data(), fileSize)) {
         frame.Stack.EmplaceBack()
-            .SetCustom({ type });
+            .SetCustom({ lexerTypeId });
         return Pulsar::RuntimeState::OK;
     }
 
     frame.Stack.EmplaceBack()
-        .SetCustom({ .Type=type, .Data=LexerType::Ref::New(std::move(source)) });
+        .SetCustom({ .Type=lexerTypeId, .Data=LexerType::Ref::New(std::move(source)) });
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_NextToken(Pulsar::ExecutionContext& eContext, uint64_t type)
+Pulsar::RuntimeState PulsarTools::Bindings::Lexer::FNextToken(Pulsar::ExecutionContext& eContext, uint64_t lexerTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& lexerReference = frame.Locals[0];
     if (lexerReference.Type() != Pulsar::ValueType::Custom
-        || lexerReference.AsCustom().Type != type)
+        || lexerReference.AsCustom().Type != lexerTypeId)
         return Pulsar::RuntimeState::TypeError;
 
     LexerType::Ref lexer = lexerReference.AsCustom().As<LexerType>();
@@ -80,12 +78,12 @@ Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_NextToken(Pulsar::E
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::LexerNativeBindings::Lexer_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type)
+Pulsar::RuntimeState PulsarTools::Bindings::Lexer::FIsValid(Pulsar::ExecutionContext& eContext, uint64_t lexerTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& lexerReference = frame.Locals[0];
     if (lexerReference.Type() != Pulsar::ValueType::Custom
-        || lexerReference.AsCustom().Type != type)
+        || lexerReference.AsCustom().Type != lexerTypeId)
         return Pulsar::RuntimeState::TypeError;
 
     LexerType::Ref lexer = lexerReference.AsCustom().As<LexerType>();

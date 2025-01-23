@@ -1,20 +1,17 @@
 #include "pulsar-tools/bindings/debug.h"
 
-#include "pulsar-tools/print.h"
+#include <string>
 
-void PulsarTools::DebugNativeBindings::BindToModule(Pulsar::Module& module, bool declare)
+#include "pulsar-tools/fmt.h"
+
+PulsarTools::Bindings::Debug::Debug() :
+    IBinding()
 {
-    if (declare) {
-        module.DeclareAndBindNativeFunction({ "stack-dump!", 0, 0 }, Debug_StackDump);
-        module.DeclareAndBindNativeFunction({ "trace-call!", 0, 0 }, Debug_TraceCall);
-        return;
-    }
-
-    module.BindNativeFunction({ "stack-dump!", 0, 0 }, Debug_StackDump);
-    module.BindNativeFunction({ "trace-call!", 0, 0 }, Debug_TraceCall);
+    BindNativeFunction({ "stack-dump!", 0, 0 }, FStackDump);
+    BindNativeFunction({ "trace-call!", 0, 0 }, FTraceCall);
 }
 
-Pulsar::RuntimeState PulsarTools::DebugNativeBindings::Debug_StackDump(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::Debug::FStackDump(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::Frame& frame = eContext.GetCallStack().CallingFrame();
     std::string dump("Stack Dump: [");
@@ -22,13 +19,14 @@ Pulsar::RuntimeState PulsarTools::DebugNativeBindings::Debug_StackDump(Pulsar::E
         if (i > 0) dump += ',';
         dump += fmt::format(" {}", frame.Stack[i]);
     }
-    PULSARTOOLS_PRINTF("{} ]\n", dump);
+    dump += " ]";
+    fmt::println(stdout, "{}", dump);
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::DebugNativeBindings::Debug_TraceCall(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::Debug::FTraceCall(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::String stackTrace = eContext.GetStackTrace(~(size_t)0);
-    PULSARTOOLS_PRINTF("Stack Trace:\n{}\n", stackTrace);
+    fmt::println(stdout, "Stack Trace:\n{}", stackTrace);
     return Pulsar::RuntimeState::OK;
 }

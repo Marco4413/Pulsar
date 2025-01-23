@@ -1,26 +1,27 @@
 #include "pulsar-tools/bindings/error.h"
 
-void PulsarTools::ErrorNativeBindings::BindToModule(Pulsar::Module& module)
+PulsarTools::Bindings::Error::Error() :
+    IBinding()
 {
-    module.BindNativeFunction({ "error!",      0, 0 }, Error_Error);
-    module.BindNativeFunction({ "error/type!", 0, 0 }, Error_Type);
-    module.BindNativeFunction({ "scall",       2, 2 }, Error_SafeCall);
-    module.BindNativeFunction({ "tcall",       2, 2 }, Error_TryCall);
+    BindNativeFunction({ "error!",      0, 0 }, FError);
+    BindNativeFunction({ "error/type!", 0, 0 }, FType);
+    BindNativeFunction({ "scall",       2, 2 }, FSafeCall);
+    BindNativeFunction({ "tcall",       2, 2 }, FTryCall);
 }
 
-Pulsar::RuntimeState PulsarTools::ErrorNativeBindings::Error_Error(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::Error::FError(Pulsar::ExecutionContext& eContext)
 {
     eContext.GetCallStack().PopFrame();
     return Pulsar::RuntimeState::Error;
 }
 
-Pulsar::RuntimeState PulsarTools::ErrorNativeBindings::Error_Type(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::Error::FType(Pulsar::ExecutionContext& eContext)
 {
     eContext.GetCallStack().PopFrame();
     return Pulsar::RuntimeState::TypeError;
 }
 
-Pulsar::RuntimeState PulsarTools::ErrorNativeBindings::Error_SafeCall(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::Error::FSafeCall(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
 
@@ -56,7 +57,7 @@ Pulsar::RuntimeState PulsarTools::ErrorNativeBindings::Error_SafeCall(Pulsar::Ex
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::ErrorNativeBindings::Error_TryCall(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarTools::Bindings::Error::FTryCall(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
 

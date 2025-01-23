@@ -1,19 +1,20 @@
 #ifndef _PULSARTOOLS_BINDINGS_PRINT_H
 #define _PULSARTOOLS_BINDINGS_PRINT_H
 
-#include "pulsar-tools/core.h"
+#include "pulsar-tools/binding.h"
 
-#include "pulsar/runtime.h"
-
-namespace PulsarTools
+namespace PulsarTools::Bindings
 {
-    namespace PrintNativeBindings
+    class Print :
+        public IBinding
     {
-        void BindToModule(Pulsar::Module& module);
+    public:
+        Print();
 
-        Pulsar::RuntimeState Print_Print(Pulsar::ExecutionContext& eContext);
-        Pulsar::RuntimeState Print_Println(Pulsar::ExecutionContext& eContext);
-    }
+    public:
+        static Pulsar::RuntimeState FPrint(Pulsar::ExecutionContext& eContext);
+        static Pulsar::RuntimeState FPrintln(Pulsar::ExecutionContext& eContext);
+    };
 }
 
 #endif // _PULSARTOOLS_BINDINGS_PRINT_H

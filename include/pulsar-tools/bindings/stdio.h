@@ -1,20 +1,21 @@
 #ifndef _PULSARTOOLS_BINDINGS_STDIO_H
 #define _PULSARTOOLS_BINDINGS_STDIO_H
 
-#include "pulsar-tools/core.h"
+#include "pulsar-tools/binding.h"
 
-#include "pulsar/runtime.h"
-
-namespace PulsarTools
+namespace PulsarTools::Bindings
 {
-    namespace STDIONativeBindings
+    class Stdio :
+        public IBinding
     {
-        void BindToModule(Pulsar::Module& module);
+    public:
+        Stdio();
 
-        Pulsar::RuntimeState STDIN_Read(Pulsar::ExecutionContext& eContext);
-        Pulsar::RuntimeState STDOUT_Write(Pulsar::ExecutionContext& eContext);
-        Pulsar::RuntimeState STDOUT_WriteLn(Pulsar::ExecutionContext& eContext);
-    }
+    public:
+        static Pulsar::RuntimeState FInRead(Pulsar::ExecutionContext& eContext);
+        static Pulsar::RuntimeState FOutWrite(Pulsar::ExecutionContext& eContext);
+        static Pulsar::RuntimeState FOutWriteLn(Pulsar::ExecutionContext& eContext);
+    };
 }
 
 #endif // _PULSARTOOLS_BINDINGS_STDIO_H

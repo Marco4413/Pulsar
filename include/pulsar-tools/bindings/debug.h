@@ -1,19 +1,20 @@
 #ifndef _PULSARTOOLS_BINDINGS_DEBUG_H
 #define _PULSARTOOLS_BINDINGS_DEBUG_H
 
-#include "pulsar-tools/core.h"
+#include "pulsar-tools/binding.h"
 
-#include "pulsar/runtime.h"
-
-namespace PulsarTools
+namespace PulsarTools::Bindings
 {
-    namespace DebugNativeBindings
+    class Debug :
+        public IBinding
     {
-        void BindToModule(Pulsar::Module& module, bool declare = true);
+    public:
+        Debug();
 
-        Pulsar::RuntimeState Debug_StackDump(Pulsar::ExecutionContext& eContext);
-        Pulsar::RuntimeState Debug_TraceCall(Pulsar::ExecutionContext& eContext);
-    }
+    public:
+        static Pulsar::RuntimeState FStackDump(Pulsar::ExecutionContext& eContext);
+        static Pulsar::RuntimeState FTraceCall(Pulsar::ExecutionContext& eContext);
+    };
 }
 
 #endif // _PULSARTOOLS_BINDINGS_DEBUG_H

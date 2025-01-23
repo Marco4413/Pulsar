@@ -1,21 +1,22 @@
 #ifndef _PULSARTOOLS_BINDINGS_ERROR_H
 #define _PULSARTOOLS_BINDINGS_ERROR_H
 
-#include "pulsar-tools/core.h"
+#include "pulsar-tools/binding.h"
 
-#include "pulsar/runtime.h"
-
-namespace PulsarTools
+namespace PulsarTools::Bindings
 {
-    namespace ErrorNativeBindings
+    class Error :
+        public IBinding
     {
-        void BindToModule(Pulsar::Module& module);
+    public:
+        Error();
 
-        Pulsar::RuntimeState Error_Error(Pulsar::ExecutionContext& eContext);
-        Pulsar::RuntimeState Error_Type(Pulsar::ExecutionContext& eContext);
-        Pulsar::RuntimeState Error_SafeCall(Pulsar::ExecutionContext& eContext);
-        Pulsar::RuntimeState Error_TryCall(Pulsar::ExecutionContext& eContext);
-    }
+    public:
+        static Pulsar::RuntimeState FError(Pulsar::ExecutionContext& eContext);
+        static Pulsar::RuntimeState FType(Pulsar::ExecutionContext& eContext);
+        static Pulsar::RuntimeState FSafeCall(Pulsar::ExecutionContext& eContext);
+        static Pulsar::RuntimeState FTryCall(Pulsar::ExecutionContext& eContext);
+    };
 }
 
 #endif // _PULSARTOOLS_BINDINGS_ERROR_H

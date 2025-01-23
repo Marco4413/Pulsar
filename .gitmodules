@@ -6,3 +6,7 @@
 	path = libs/lsp-framework
 	url = https://github.com/Marco4413/cpp-lsp-framework
 	shallow = true
+[submodule "libs/argue"]
+	path = libs/argue
+	url = https://github.com/Marco4413/Argue
+	shallow = true

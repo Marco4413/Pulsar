@@ -6,36 +6,17 @@
 #include <mutex>
 #include <thread>
 
-#include "pulsar-tools/core.h"
+#include <iostream>
 
-#include "pulsar/runtime.h"
-#include "pulsar/structures/hashmap.h"
+#include "pulsar-tools/binding.h"
 
-namespace PulsarTools
+namespace PulsarTools::Bindings
 {
-    namespace ThreadNativeBindings
+    class Channel :
+        public IBinding
     {
-        struct PulsarThreadContext
-        {
-            Pulsar::ExecutionContext Context;
-            std::atomic_bool IsRunning = false;
-        };
-
-        struct PulsarThread
-        {
-            std::thread Thread;
-            Pulsar::SharedRef<PulsarThreadContext> ThreadContext;
-        };
-
-        class ThreadType : public Pulsar::CustomDataHolder, public PulsarThread
-        {
-        public:
-            using Ref = Pulsar::SharedRef<ThreadType>;
-            ThreadType(std::thread&& thread, Pulsar::SharedRef<PulsarThreadContext>&& threadContext)
-                : PulsarThread{ std::move(thread), std::move(threadContext) } { }
-        };
-
-        struct Channel
+    public:
+        struct ChannelData
         {
             // FIFO List
             Pulsar::ValueList Pipe;
@@ -44,33 +25,67 @@ namespace PulsarTools
             std::condition_variable CV;
         };
 
-        class ChannelType : public Pulsar::CustomDataHolder, public Channel
+        class ChannelType :
+            public Pulsar::CustomDataHolder,
+            public ChannelData
         {
         public:
             using Ref = Pulsar::SharedRef<ChannelType>;
-            using Channel::Channel;
+            using ChannelData::ChannelData;
         };
 
-        void BindToModule(Pulsar::Module& module);
+    public:
+        Channel();
 
-        Pulsar::RuntimeState ThisThread_Sleep(Pulsar::ExecutionContext& eContext);
+    public:
+        static Pulsar::RuntimeState FNew(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId);
+        static Pulsar::RuntimeState FSend(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId);
+        static Pulsar::RuntimeState FReceive(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId);
+        static Pulsar::RuntimeState FClose(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId);
+        static Pulsar::RuntimeState FIsEmpty(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId);
+        static Pulsar::RuntimeState FIsClosed(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId);
+        static Pulsar::RuntimeState FIsValid(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId);
+    };
 
-        Pulsar::RuntimeState Thread_Run(Pulsar::ExecutionContext& eContext, uint64_t threadType, uint64_t channelType);
-        Pulsar::RuntimeState Thread_Join(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Thread_JoinAll(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Thread_IsAlive(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Thread_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
+    class Thread :
+        public IBinding
+    {
+    public:
+        struct ThreadContext
+        {
+            Pulsar::ExecutionContext Context;
+            std::atomic_bool IsRunning = false;
+        };
 
-        Pulsar::RuntimeState Channel_New(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Channel_Send(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Channel_Receive(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Channel_Close(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Channel_IsEmpty(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Channel_IsClosed(Pulsar::ExecutionContext& eContext, uint64_t type);
-        Pulsar::RuntimeState Channel_IsValid(Pulsar::ExecutionContext& eContext, uint64_t type);
+        struct ThreadData
+        {
+            std::thread Thread;
+            Pulsar::SharedRef<Thread::ThreadContext> ThreadContext;
+        };
 
-        void ThreadJoin(Pulsar::SharedRef<PulsarThread> thread, Pulsar::ValueStack& stack);
-    }
+        class ThreadType :
+            public Pulsar::CustomDataHolder,
+            public ThreadData
+        {
+        public:
+            using Ref = Pulsar::SharedRef<ThreadType>;
+            ThreadType(std::thread&& thread, Pulsar::SharedRef<Thread::ThreadContext>&& threadContext)
+                : ThreadData{ std::move(thread), std::move(threadContext) } { }
+        };
+
+    public:
+        Thread();
+
+    public:
+        static Pulsar::RuntimeState FThisSleep(Pulsar::ExecutionContext& eContext);
+        static Pulsar::RuntimeState FRun(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId, uint64_t channelTypeId);
+        static Pulsar::RuntimeState FJoin(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
+        static Pulsar::RuntimeState FJoinAll(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
+        static Pulsar::RuntimeState FIsAlive(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
+        static Pulsar::RuntimeState FIsValid(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
+
+        static void Join(Pulsar::SharedRef<ThreadData> thread, Pulsar::ValueStack& stack);
+    };
 }
 
 #endif // _PULSARTOOLS_BINDINGS_THREAD_H
