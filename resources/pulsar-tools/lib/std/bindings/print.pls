@@ -1,0 +1,2 @@
+*(*print!   value).
+*(*println! value).
