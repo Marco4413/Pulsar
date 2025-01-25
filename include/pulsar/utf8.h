@@ -35,7 +35,7 @@ namespace UTF8
 
         Decoder& operator=(const Decoder&) = default;
 
-        operator bool() const { return !m_IsInvalidEncoding && HasData(); }
+        operator bool() const { return !IsInvalidEncoding() && HasData(); }
 
         bool HasData() const { return m_Data.Length() > 0; }
         bool IsInvalidEncoding() const { return m_IsInvalidEncoding; }
