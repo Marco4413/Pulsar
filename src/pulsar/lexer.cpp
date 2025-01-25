@@ -557,7 +557,7 @@ Pulsar::Token Pulsar::Lexer::ParseCharacterLiteral()
             }
             if (digits == 0)
                 break;
-            ch = (char)(code);
+            ch = (unsigned char)(code);
             if (decoder.Peek() == ';')
                 decoder.Skip();
         } break;
