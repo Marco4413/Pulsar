@@ -10,7 +10,9 @@
         "src/pulsar/binary/writer.cpp",
         "src/pulsar/lexer.cpp",
         "src/pulsar/parser.cpp",
-        "src/pulsar/runtime.cpp"
+        "src/pulsar/runtime.cpp",
+        "src/pulsar/unicode.cpp",
+        "src/pulsar/utf8.cpp"
       ],
       "direct_dependent_settings": {
         "include_dirs": [ "include" ]
