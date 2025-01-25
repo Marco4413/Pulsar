@@ -5,39 +5,73 @@
 #include "fmt/color.h"
 #include "fmt/format.h"
 
+#include "pulsar/utf8.h"
+#include "pulsar/structures/stringview.h"
+
 #include "pulsar-tools/fmt.h"
 
 PulsarTools::TokenViewLine PulsarTools::CreateTokenView(const Pulsar::String& source, const Pulsar::Token& token, TokenViewRange viewRange)
 {
-    std::string_view errorView(source.CString());
-    errorView.remove_prefix(token.SourcePos.Index-token.SourcePos.Char);
-    size_t lineChars = 0;
-    for (; lineChars < errorView.length() && errorView[lineChars] != '\r' && errorView[lineChars] != '\n'; lineChars++);
-    errorView.remove_suffix(errorView.length()-lineChars);
+    Pulsar::StringView errorView = source;
+    { // Trim errorView to only contain the token's line
+        size_t prevLineIndex = token.SourcePos.Index;
+        for (size_t i = prevLineIndex; i > 0 && errorView[i] != '\r' && errorView[i] != '\n'; --i)
+            prevLineIndex = i; // Only save i for previous iteration, we don't want to stop at '\n'
+        errorView.RemovePrefix(prevLineIndex);
 
-    size_t charsAfterToken = errorView.length()-token.SourcePos.Char - token.SourcePos.CharSpan;
-    size_t trimmedFromStart = 0;
-    if (token.SourcePos.Char > viewRange.Before) {
-        trimmedFromStart = token.SourcePos.Char - viewRange.Before;
-        errorView.remove_prefix(trimmedFromStart);
+        size_t lineBytes = 0;
+        while (lineBytes < errorView.Length() && errorView[lineBytes] != '\r' && errorView[lineBytes] != '\n')
+            ++lineBytes;
+        errorView.RemoveSuffix(errorView.Length()-lineBytes);
     }
 
-    size_t trimmedFromEnd = 0;
-    if (charsAfterToken > viewRange.After) {
-        trimmedFromEnd = charsAfterToken - viewRange.After;
-        errorView.remove_suffix(trimmedFromEnd);
+    size_t charsTrimmedFromStart = 0;
+    size_t charsTrimmedFromEnd = 0;
+    { // Trim errorView to fit viewRange
+        Pulsar::UTF8::Decoder decoder(errorView);
+        size_t errorViewLen = Pulsar::UTF8::Length(errorView);
+
+        PULSAR_ASSERT((token.SourcePos.Char + token.SourcePos.CharSpan) <= errorViewLen, "Error line is smaller than what advertised. We don't like false advertising.");
+        size_t charsAfterToken = errorViewLen - (token.SourcePos.Char + token.SourcePos.CharSpan);
+
+        if (token.SourcePos.Char > viewRange.Before) {
+            charsTrimmedFromStart = token.SourcePos.Char - viewRange.Before;
+            for (size_t i = 0; i < charsTrimmedFromStart; ++i)
+                errorView.RemovePrefix(decoder.Skip());
+        }
+
+        for (size_t i = 0; i < token.SourcePos.CharSpan; ++i)
+            decoder.Skip();
+
+        if (charsAfterToken > viewRange.After) {
+            charsTrimmedFromEnd = charsAfterToken - viewRange.After;
+            for (size_t i = 0; i < charsTrimmedFromEnd; ++i)
+                errorView.RemoveSuffix(decoder.Skip());
+        }
+    }
+
+    size_t tokenStart = token.SourcePos.Char-charsTrimmedFromStart;
+    size_t tokenStartWidth = 0;
+    { // Calculate char width
+        Pulsar::UTF8::Decoder decoder(errorView);
+        for (size_t i = 0; i < tokenStart; ++i) {
+            int chWidth = Pulsar::Unicode::Width(decoder.Next());
+            if (tokenStartWidth == 0 && chWidth < 0)
+                continue;
+            tokenStartWidth += chWidth;
+        }
     }
 
     std::string lineContents;
-    if (trimmedFromStart > 0)
+    if (charsTrimmedFromStart > 0)
         lineContents += "... ";
-    lineContents += errorView;
-    if (trimmedFromEnd > 0)
+    lineContents.append(errorView.DataFromStart(), errorView.Length());
+    if (charsTrimmedFromEnd > 0)
         lineContents += " ...";
 
     return {
         .Contents = std::move(lineContents),
-        .TokenStart = token.SourcePos.Char-trimmedFromStart + ((trimmedFromStart > 0) * 4),
+        .TokenStart = tokenStartWidth + ((charsTrimmedFromStart > 0) * 4),
     };
 }
 
