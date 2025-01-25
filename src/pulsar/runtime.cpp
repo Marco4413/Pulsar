@@ -776,7 +776,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
         } else if (list.Type() == ValueType::String) {
             if (index.AsInteger() < 0 || (size_t)index.AsInteger() >= list.AsString().Length())
                 return RuntimeState::StringIndexOutOfBounds;
-            int64_t ch = list.AsString()[(size_t)index.AsInteger()];
+            int64_t ch = (unsigned char)list.AsString()[(size_t)index.AsInteger()];
             index.SetInteger(ch);
         } else return RuntimeState::TypeError;
     } break;
