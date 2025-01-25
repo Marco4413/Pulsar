@@ -575,7 +575,16 @@ Pulsar::Token Pulsar::Lexer::ParseCharacterLiteral()
 
 void Pulsar::Lexer::SkipUntilNewline()
 {
-    while (m_Decoder && m_Decoder.Next() != '\n');
+    while (m_Decoder) {
+        Codepoint ch = m_Decoder.Next();
+        if (ch == '\n') {
+            break;
+        } else if (ch == '\r') {
+            if (m_Decoder.Peek() == '\n')
+                m_Decoder.Skip();
+            break;
+        }
+    }
 
     ++m_Line;
     m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
@@ -588,6 +597,11 @@ bool Pulsar::Lexer::SkipWhiteSpaces()
         hasSkipped = true;
         m_Decoder.Skip();
         if (ch == '\n') {
+            ++m_Line;
+            m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
+        } else if (ch == '\r') {
+            if (m_Decoder.Peek() == '\n')
+                m_Decoder.Skip();
             ++m_Line;
             m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
         }
@@ -613,12 +627,22 @@ bool Pulsar::Lexer::SkipComments()
     if (m_Decoder.Peek(2) != '*')
         return false;
 
+    // We must skip "/*", otherwise "/*/" would be valid.
+    m_Decoder.Skip();
+    m_Decoder.Skip();
+
     while (m_Decoder) {
         Codepoint ch = m_Decoder.Next();
         if (ch == '\n') {
             ++m_Line;
             m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
-        } else if (ch == '*' && m_Decoder.Next() == '/') {
+        } else if (ch == '\r') {
+            if (m_Decoder.Peek() == '\n')
+                m_Decoder.Skip();
+            ++m_Line;
+            m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
+        } else if (ch == '*' && m_Decoder.Peek() == '/') {
+            m_Decoder.Skip();
             break;
         }
     }
