@@ -3,6 +3,7 @@
 
 #include "pulsar/core.h"
 
+#include "pulsar/utf8.h"
 #include "pulsar/structures/hashmap.h"
 #include "pulsar/structures/stringview.h"
 
@@ -71,8 +72,11 @@ namespace Pulsar
     struct SourcePosition
     {
         size_t Line;
+        // How many codepoints to traverse within Line to reach Index
         size_t Char;
+        // Byte index of the Token start (where Line and Char point to)
         size_t Index;
+        // How many codepoints this Token takes
         size_t CharSpan;
 
         bool operator==(const SourcePosition&) const = default;
@@ -104,24 +108,14 @@ namespace Pulsar
         SourcePosition SourcePos = {0,0,0,0};
     };
 
-    inline bool IsControlCharacter(char ch)      { return (ch >= 0x00 && ch <= 0x1F) || ch == 0x7F; }
-    inline bool IsSpace(char ch)                 { return ch == ' ' || (ch >= '\t' && ch <= '\r'); }
-    inline bool IsAlphaCharacter(char ch)        { return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'); }
-    inline bool IsDigit(char ch)                 { return ch >= '0' && ch <= '9'; }
-    inline bool IsHexDigit(char ch)              { return IsDigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F'); }
-    inline bool IsOctDigit(char ch)              { return ch >= '0' && ch <= '7'; }
-    inline bool IsBinDigit(char ch)              { return ch == '0' || ch == '1'; }
-    inline bool IsAlphaNumericCharacter(char ch) { return IsAlphaCharacter(ch) || IsDigit(ch); }
-    inline char ToLowerCase(char ch)             { return (ch >= 'A' && ch <= 'Z') ? ch+('a'-'A') : ch; }
-
-    inline bool IsIdentifierStart(char ch) { return IsAlphaCharacter(ch) || ch == '_'; }
-    inline bool IsIdentifierContinuation(char ch)
+    constexpr bool IsIdentifierStart(Unicode::Codepoint code) { return Unicode::IsAlpha(code) || code == '_'; }
+    constexpr bool IsIdentifierContinuation(Unicode::Codepoint code)
     {
-        return IsIdentifierStart(ch) || IsDigit(ch)
-            || (ch >= '<' && ch <= '?') // < = > ?
-            || ch == '+' || ch == '-'
-            || ch == '*' || ch == '/'
-            || ch == '!';
+        return IsIdentifierStart(code) || Unicode::IsDecimalDigit(code)
+            || (code >= '<' && code <= '?') // < = > ?
+            || code == '+' || code == '-'
+            || code == '*' || code == '/'
+            || code == '!';
     }
 
     // Checks if the given String is a valid Identifier
@@ -131,44 +125,28 @@ namespace Pulsar
     class Lexer
     {
     public:
-        Lexer(const String& src)
-            : m_Source(src), m_SourceView(m_Source) { }
-        Lexer(String&& src)
-            : m_Source(src), m_SourceView(m_Source) { }
+        using Decoder   = UTF8::Decoder;
+        using Codepoint = UTF8::Codepoint;
 
-        Lexer(const Lexer& other)
-            : m_Source(other.m_Source), m_SourceView(m_Source)
-        {
-            m_SourceView.RemovePrefix(other.m_SourceView.GetStart());
-            m_SourceView.RemoveSuffix(m_SourceView.Length()-other.m_SourceView.Length());
-            m_Line = other.m_Line;
-            m_LineStartIdx = other.m_LineStartIdx;
-        }
+    public:
+        Lexer(const String& src) :
+            m_Decoder(src)
+        {}
 
-        Lexer(Lexer&& other)
-            : m_Source(std::move(other.m_Source)), m_SourceView(m_Source)
-        {
-            m_SourceView.RemovePrefix(other.m_SourceView.GetStart());
-            m_SourceView.RemoveSuffix(m_SourceView.Length()-other.m_SourceView.Length());
-            other.m_SourceView.RemoveSuffix(other.m_SourceView.Length());
-            m_Line = other.m_Line;
-            m_LineStartIdx = other.m_LineStartIdx;
-        }
+        Lexer(const Lexer& other) = default;
 
-        Lexer& operator=(const Lexer&) = delete;
-        Lexer& operator=(Lexer&&) = delete;
+        ~Lexer() = default;
+
+        Lexer& operator=(const Lexer&) = default;
 
         // Skips a sha-bang at the current position
         // Use this after creating a Lexer to ignore it
         bool SkipShaBang();
 
-        Token NextToken()               { return ParseNextToken(); }
-        bool IsEndOfFile() const        { return m_SourceView.Length() == 0; }
-        const String& GetSource() const { return m_Source; }
-        SourcePosition GetSourcePosition(size_t span=0) const
-            { return { m_Line, m_SourceView.GetStart() - m_LineStartIdx, m_SourceView.GetStart(), span }; }
+        Token NextToken();
+        bool IsEndOfFile() const { return !m_Decoder; }
+
     private:
-        Token ParseNextToken();
         Token ParseIdentifier();
         Token ParseLabel();
         Token ParseCompilerDirective();
@@ -179,30 +157,40 @@ namespace Pulsar
         Token ParseDoubleLiteral();
         Token ParseStringLiteral();
         Token ParseCharacterLiteral();
-        size_t SkipWhitespaces();
-        size_t SkipComments();
+
+        void SkipUntilNewline();
+        bool SkipWhiteSpaces();
+        bool SkipComments();
 
         template<typename ...Args>
-        Token TrimToToken(size_t length, Args&& ...args)
+        Token PullToken(Decoder decoder, Args&& ...args)
         {
+            // size_t tokenBytes = decoder.GetDecodedBytes() - m_Decoder.GetDecodedBytes();
+            size_t charSpan = decoder.GetDecodedCodepoints() - m_Decoder.GetDecodedCodepoints();
+
             Token token(std::forward<Args>(args)...);
-            token.SourcePos = GetSourcePosition(length);
-            if (length > 0)
-                m_SourceView.RemovePrefix(length);
+            token.SourcePos = {
+                .Line = m_Line,
+                .Char = m_Decoder.GetDecodedCodepoints() - m_LineStartCodepoint,
+                .Index = m_Decoder.GetDecodedBytes(),
+                .CharSpan = charSpan
+            };
+
+            m_Decoder = decoder;
             return token;
         }
 
         Token CreateNoneToken() const
         {
-            Token token = Token(TokenType::None);
-            token.SourcePos = GetSourcePosition(0);
+            Token token(TokenType::None);
+            token.SourcePos = {0,0,0,0};
             return token;
         }
     private:
-        String m_Source;
-        StringView m_SourceView;
+        Decoder m_Decoder;
+
         size_t m_Line = 0;
-        size_t m_LineStartIdx = 0;
+        size_t m_LineStartCodepoint = 0;
     };
 }
 

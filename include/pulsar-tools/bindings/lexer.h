@@ -2,6 +2,7 @@
 #define _PULSARTOOLS_BINDINGS_LEXER_H
 
 #include "pulsar/lexer.h"
+#include "pulsar/structures/string.h"
 
 #include "pulsar-tools/binding.h"
 
@@ -12,12 +13,25 @@ namespace PulsarTools::Bindings
     {
     public:
         class LexerType :
-            public Pulsar::CustomDataHolder,
-            public Pulsar::Lexer
+            public Pulsar::CustomDataHolder
         {
         public:
             using Ref = Pulsar::SharedRef<LexerType>;
-            using Pulsar::Lexer::Lexer;
+
+            LexerType(Pulsar::String&& source) :
+                m_Source(std::move(source)),
+                m_Lexer(m_Source)
+            {}
+
+            virtual ~LexerType() = default;
+
+            // Lexer has no virtual destructor so we must wrap it
+            Pulsar::Lexer& operator*() { return m_Lexer; }
+            const Pulsar::Lexer& operator*() const { return m_Lexer; }
+
+        private:
+            Pulsar::String m_Source;
+            Pulsar::Lexer m_Lexer;
         };
 
     public:

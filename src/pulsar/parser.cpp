@@ -79,7 +79,9 @@ bool Pulsar::Parser::AddSource(const String& path, const String& src)
         m_ParsedSources.Emplace(path);
     }
 
-    m_LexerPool.EmplaceBack(path, src);
+    LexerSource& lexSource = m_LexerPool.EmplaceBack(path, src, Lexer(""));
+    lexSource.Lexer = Lexer(lexSource.Source);
+
     m_Lexer = &m_LexerPool.Back().Lexer;
     m_Lexer->SkipShaBang();
     return true;
@@ -94,7 +96,9 @@ bool Pulsar::Parser::AddSource(const String& path, String&& src)
         m_ParsedSources.Emplace(path);
     }
 
-    m_LexerPool.EmplaceBack(path, std::move(src));
+    LexerSource& lexSource = m_LexerPool.EmplaceBack(path, std::move(src), Lexer(""));
+    lexSource.Lexer = Lexer(lexSource.Source);
+
     m_Lexer = &m_LexerPool.Back().Lexer;
     m_Lexer->SkipShaBang();
     return true;
@@ -141,7 +145,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, const ParseS
     if (settings.StoreDebugSymbols) {
         for (size_t i = 0; i < m_LexerPool.Size(); i++) {
             globalScope.SourceDebugSymbols.Emplace(m_LexerPool[i].Path, module.SourceDebugSymbols.Size());
-            module.SourceDebugSymbols.EmplaceBack(m_LexerPool[i].Path, m_LexerPool[i].Lexer.GetSource());
+            module.SourceDebugSymbols.EmplaceBack(m_LexerPool[i].Path, m_LexerPool[i].Source);
         }
     }
     for (size_t i = 0; i < module.Functions.Size(); i++)
@@ -1300,7 +1304,7 @@ const Pulsar::String* Pulsar::Parser::CurrentPath() const
 const Pulsar::String* Pulsar::Parser::CurrentSource() const
 {
     if (m_LexerPool.Size() > 0)
-        return &m_LexerPool.Back().Lexer.GetSource();
+        return &m_LexerPool.Back().Source;
     return nullptr;
 }
 

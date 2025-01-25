@@ -291,6 +291,7 @@ namespace Pulsar
         struct LexerSource
         {
             String Path;
+            String Source;
             Pulsar::Lexer Lexer;
         };
 

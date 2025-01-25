@@ -56,7 +56,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Lexer::FNextToken(Pulsar::ExecutionC
     LexerType::Ref lexer = lexerReference.AsCustom().As<LexerType>();
     if (!lexer) return Pulsar::RuntimeState::InvalidCustomTypeReference;
 
-    Pulsar::Token token = lexer->NextToken();
+    Pulsar::Token token = (**lexer).NextToken();
 
     Pulsar::ValueList tokenAsList;
     tokenAsList.Append()->Value().SetInteger((int64_t)token.Type);
