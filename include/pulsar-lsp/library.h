@@ -6,6 +6,7 @@
 #include <lsp/fileuri.h>
 #include <lsp/types.h>
 
+#include "pulsar/utf8.h"
 #include "pulsar/structures/hashmap.h"
 #include "pulsar/structures/list.h"
 #include "pulsar/structures/ref.h"
@@ -33,6 +34,25 @@ namespace PulsarLSP
     };
 
     using DocumentPatches = std::vector<lsp::TextDocumentContentChangeEvent>;
+    using PositionEncodingKind = lsp::PositionEncodingKind::ValueIndex;
+
+    namespace Unicode
+    {
+        using Codepoint = Pulsar::Unicode::Codepoint;
+        size_t GetEncodedSize(Codepoint code, PositionEncodingKind encodingKind);
+    }
+
+    namespace UTF8
+    {
+        using Decoder = Pulsar::UTF8::Decoder;
+        using Codepoint = Pulsar::UTF8::Codepoint;
+
+        namespace DecoderExt
+        {
+            void AdvanceToLine(Decoder& decoder, size_t startLine, size_t line);
+            void AdvanceToChar(Decoder& decoder, size_t startChar, size_t character, PositionEncodingKind encodingKind);
+        }
+    }
 
     // A class which stores documents and can apply changes to them
     class Library
@@ -52,8 +72,16 @@ namespace PulsarLSP
         void DeleteDocument(const lsp::FileURI& uri);
         void DeleteAllDocuments();
 
+        PositionEncodingKind GetPositionEncoding() const    { return m_PositionEncoding; }
+        void SetPositionEncoding(PositionEncodingKind kind) { m_PositionEncoding = kind; }
     private:
+        std::pair<size_t, size_t> GetRangeIndices(const Pulsar::String& text, lsp::Range range) const;
+        void PutRangePatch(Pulsar::String& text, const lsp::TextDocumentContentChangeEvent_Range_Text& change);
+
+    private:
+        // Text is UTF8-encoded. However, positions are UTF16-encoded by default.
         Pulsar::HashMap<Pulsar::String, CachedDocument::SharedRef> m_Documents;
+        PositionEncodingKind m_PositionEncoding = PositionEncodingKind::UTF16;
     };
 
 }

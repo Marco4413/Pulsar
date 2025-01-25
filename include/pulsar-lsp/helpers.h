@@ -62,6 +62,12 @@ namespace PulsarLSP
         };
     }
 
+    constexpr bool IsNullRange(lsp::Range range)
+    {
+        return range.start.line == 0 && range.start.character == 0 &&
+               range.end.line == 0 && range.end.character == 0;
+    }
+
     constexpr bool IsPositionAfter(lsp::Position pos, Pulsar::SourcePosition marker)
     {
         return (pos.line == marker.Line && pos.character >= marker.Char)

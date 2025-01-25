@@ -132,6 +132,7 @@ namespace PulsarLSP
     };
 
     constexpr Pulsar::SourcePosition NULL_SOURCE_POSITION{0,0,0,0};
+    constexpr lsp::Range NULL_RANGE{.start={0,0},.end={0,0}};
 
     // Does not modify `doc`
     // doc may be nullptr, it is used to resolve custom type names
@@ -140,10 +141,10 @@ namespace PulsarLSP
 
     // Does not modify `doc`
     // If replaceWithName is non-zero, the characters referenced by it are replaced with the name of the entity.
-    lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global, Pulsar::SourcePosition replaceWithName=NULL_SOURCE_POSITION);
-    lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundFunction& fn, Pulsar::SourcePosition replaceWithName=NULL_SOURCE_POSITION);
-    lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundNativeFunction& nativeFn, Pulsar::SourcePosition replaceWithName=NULL_SOURCE_POSITION);
-    lsp::CompletionItem CreateCompletionItemForLocal(const LocalScope::Local& local, Pulsar::SourcePosition replaceWithName=NULL_SOURCE_POSITION);
+    lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global, lsp::Range replaceWithName=NULL_RANGE);
+    lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundFunction& fn, lsp::Range replaceWithName=NULL_RANGE);
+    lsp::CompletionItem CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundNativeFunction& nativeFn, lsp::Range replaceWithName=NULL_RANGE);
+    lsp::CompletionItem CreateCompletionItemForLocal(const LocalScope::Local& local, lsp::Range replaceWithName=NULL_RANGE);
 
     using DiagnosticsForDocument = lsp::PublishDiagnosticsParams;
 
@@ -180,11 +181,25 @@ namespace PulsarLSP
 
         bool IsRunning() const { return m_IsRunning; }
         void Run();
+
+        PositionEncodingKind GetPositionEncoding() const { return m_Library.GetPositionEncoding(); }
     private:
         void StripModule(Pulsar::Module& mod) const;
 
         // normalizedPath MUST BE NORMALIZED
         void ResetDiagnosticReport(const Pulsar::String& normalizedPath);
+
+        lsp::Position DocumentPositionToEditorPosition(ConstSharedText doc, lsp::Position pos) const;
+        lsp::Position EditorPositionToDocumentPosition(ConstSharedText doc, lsp::Position pos) const;
+
+        lsp::Position DocumentPositionToEditorPosition(const lsp::FileURI& uri, lsp::Position pos) const;
+        lsp::Position EditorPositionToDocumentPosition(const lsp::FileURI& uri, lsp::Position pos) const;
+
+        lsp::Range DocumentRangeToEditorRange(ConstSharedText doc, lsp::Range range) const;
+        lsp::Range EditorRangeToDocumentRange(ConstSharedText doc, lsp::Range range) const;
+
+        lsp::Range DocumentRangeToEditorRange(const lsp::FileURI& uri, lsp::Range range) const;
+        lsp::Range EditorRangeToDocumentRange(const lsp::FileURI& uri, lsp::Range range) const;
 
         std::vector<lsp::CompletionItem> GetErrorCompletionItems(ParsedDocument::SharedRef doc, const FunctionScope& funcScope, const LocalScope& localScope);
         std::vector<lsp::CompletionItem> GetScopeCompletionItems(ParsedDocument::SharedRef doc, const FunctionScope& funcScope, const LocalScope& localScope);
