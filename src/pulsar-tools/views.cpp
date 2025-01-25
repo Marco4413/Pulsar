@@ -55,7 +55,7 @@ PulsarTools::TokenViewLine PulsarTools::CreateTokenView(const Pulsar::String& so
     { // Calculate char width
         Pulsar::UTF8::Decoder decoder(errorView);
         for (size_t i = 0; i < tokenStart; ++i) {
-            int chWidth = Pulsar::Unicode::Width(decoder.Next());
+            size_t chWidth = Pulsar::Unicode::Width(decoder.Next());
             if (tokenStartWidth == 0 && chWidth < 0)
                 continue;
             tokenStartWidth += chWidth;
