@@ -4,6 +4,7 @@
 #include "pulsar/core.h"
 
 #include "pulsar/unicode.h"
+#include "pulsar/structures/string.h"
 #include "pulsar/structures/stringview.h"
 
 namespace Pulsar
@@ -25,6 +26,8 @@ namespace UTF8
         else if (code <= 0xFFFF) return 3;
         return 4;
     }
+
+    Pulsar::String Encode(Codepoint code);
 
     class Decoder
     {

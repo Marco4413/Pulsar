@@ -1,5 +1,42 @@
 #include "pulsar/utf8.h"
 
+Pulsar::String Pulsar::UTF8::Encode(Codepoint code)
+{
+    char encoded[MAX_ENCODED_SIZE] = {0};
+
+    if (!IsValidCodepoint(code))
+        code = REPLACEMENT_CHARACTER;
+
+    size_t encodedLength = GetEncodedSize(code);
+    switch (encodedLength) {
+    case 1: {
+        // We don't really need & 0x7F
+        // However, I prefer to play it safe.
+        encoded[0] = (char)(code & 0x7F);
+    } break;
+    case 2: {
+        encoded[0] = (char)(( code >>  6) | 0xC0);
+        encoded[1] = (char)(((code      ) & 0x3F) | 0x80);
+    } break;
+    case 3: {
+        encoded[0] = (char)(( code >> 12) | 0xE0);
+        encoded[1] = (char)(((code >>  6) & 0x3F) | 0x80);
+        encoded[2] = (char)(((code      ) & 0x3F) | 0x80);
+    } break;
+    case 4: {
+        encoded[0] = (char)(( code >> 18) | 0xF0);
+        encoded[1] = (char)(((code >> 12) & 0x3F) | 0x80);
+        encoded[2] = (char)(((code >>  6) & 0x3F) | 0x80);
+        encoded[3] = (char)(((code      ) & 0x3F) | 0x80);
+    } break;
+    default:
+        PULSAR_ASSERT(false, "Unhandled encoding length.");
+        return "";
+    }
+
+    return String(encoded, encodedLength);
+}
+
 Pulsar::UTF8::Codepoint Pulsar::UTF8::Decoder::Next()
 {
     if (!HasData()) return 0;
