@@ -67,6 +67,9 @@ namespace Pulsar
 
     const char* TokenTypeToString(TokenType ttype);
 
+    // maxHexDigits must be >= 1, conversion will stop when outputted digits are >= maxHexDigits
+    void PutHexString(String& out, uint64_t n, size_t maxHexDigits);
+
     String ToStringLiteral(const String& str);
 
     struct SourcePosition
