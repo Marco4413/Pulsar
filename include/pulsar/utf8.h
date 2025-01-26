@@ -13,7 +13,11 @@ namespace Pulsar
 namespace UTF8
 {
     using Codepoint = Unicode::Codepoint;
+    constexpr Codepoint MAX_CODEPOINT = Unicode::MAX_CODEPOINT;
+    constexpr Codepoint REPLACEMENT_CHARACTER = Unicode::REPLACEMENT_CHARACTER;
+    constexpr bool IsValidCodepoint(Codepoint code) { return Unicode::IsValidCodepoint(code); }
 
+    constexpr size_t MAX_ENCODED_SIZE = 4;
     constexpr size_t GetEncodedSize(Codepoint code)
     {
         if (code <= 0x7F) return 1;

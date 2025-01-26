@@ -10,6 +10,13 @@ namespace Pulsar
 namespace Unicode
 {
     using Codepoint = uint32_t;
+    constexpr Codepoint MAX_CODEPOINT = 0x10FFFF;
+    constexpr Codepoint REPLACEMENT_CHARACTER = 0xFFFD;
+    constexpr bool IsValidCodepoint(Codepoint code)
+    {
+        // TODO: There are some codepoints in between (0,MAX_CODEPOINT] which should be removed.
+        return code > 0 && code <= MAX_CODEPOINT;
+    }
 
     /**
      * Gets the display width of a codepoint on a terminal.

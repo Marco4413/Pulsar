@@ -19,6 +19,7 @@ Pulsar::UTF8::Codepoint Pulsar::UTF8::Decoder::Next()
 
     unsigned char byte1 = (unsigned char)m_Data[0];
     if ((byte1 & 0x80) == 0) {
+        // ASCII is always valid Unicode
         m_Data.RemovePrefix(1);
         ++m_DecodedCodepoints;
         return byte1;
@@ -26,51 +27,79 @@ Pulsar::UTF8::Codepoint Pulsar::UTF8::Decoder::Next()
 
     if (m_Data.Length() < 2) {
         m_IsInvalidEncoding = true;
-        return 0;
+        m_Data.RemovePrefix(m_Data.Length());
+        return REPLACEMENT_CHARACTER;
     }
 
     if ((byte1 & 0xE0) == 0xC0) {
         unsigned char byte2 = (unsigned char)m_Data[1];
-        m_Data.RemovePrefix(2);
-        ++m_DecodedCodepoints;
-        return ((Codepoint)(byte1 & 0x1F) << 6) |
-               ((Codepoint)(byte2 & 0x3F)     ) ;
+        if ((byte2 & 0xC0) == 0x80) {
+            m_Data.RemovePrefix(2);
+            ++m_DecodedCodepoints;
+            Codepoint code =
+                ((Codepoint)(byte1 & 0x1F) << 6) |
+                ((Codepoint)(byte2 & 0x3F)     ) ;
+            if (IsValidCodepoint(code))
+                return code;
+        }
+        m_IsInvalidEncoding = true;
+        m_Data.RemovePrefix(m_Data.Length());
+        return REPLACEMENT_CHARACTER;
     }
 
     if (m_Data.Length() < 3) {
         m_IsInvalidEncoding = true;
-        return 0;
+        m_Data.RemovePrefix(m_Data.Length());
+        return REPLACEMENT_CHARACTER;
     }
 
     if ((byte1 & 0xF0) == 0xE0) {
         unsigned char byte2 = (unsigned char)m_Data[1];
         unsigned char byte3 = (unsigned char)m_Data[2];
-        m_Data.RemovePrefix(3);
-        ++m_DecodedCodepoints;
-        return ((Codepoint)(byte1 & 0x0F) << 12) |
-               ((Codepoint)(byte2 & 0x3F) <<  6) |
-               ((Codepoint)(byte3 & 0x3F)      ) ;
+        if (((byte2 | byte3) & 0xC0) == 0x80) {
+            m_Data.RemovePrefix(3);
+            ++m_DecodedCodepoints;
+            Codepoint code =
+                ((Codepoint)(byte1 & 0x0F) << 12) |
+                ((Codepoint)(byte2 & 0x3F) <<  6) |
+                ((Codepoint)(byte3 & 0x3F)      ) ;
+            if (IsValidCodepoint(code))
+                return code;
+        }
+        m_IsInvalidEncoding = true;
+        m_Data.RemovePrefix(m_Data.Length());
+        return REPLACEMENT_CHARACTER;
     }
 
     if (m_Data.Length() < 4) {
         m_IsInvalidEncoding = true;
-        return 0;
+        m_Data.RemovePrefix(m_Data.Length());
+        return REPLACEMENT_CHARACTER;
     }
 
     if ((byte1 & 0xF8) == 0xF0) {
         unsigned char byte2 = (unsigned char)m_Data[1];
         unsigned char byte3 = (unsigned char)m_Data[2];
         unsigned char byte4 = (unsigned char)m_Data[3];
-        m_Data.RemovePrefix(4);
-        ++m_DecodedCodepoints;
-        return ((Codepoint)(byte1 & 0x07) << 18) |
-               ((Codepoint)(byte2 & 0x3F) << 12) |
-               ((Codepoint)(byte3 & 0x3F) <<  6) |
-               ((Codepoint)(byte4 & 0x3F)      ) ;
+        if (((byte2 | byte3 | byte4) & 0xC0) == 0x80) {
+            m_Data.RemovePrefix(4);
+            ++m_DecodedCodepoints;
+            Codepoint code =
+                ((Codepoint)(byte1 & 0x07) << 18) |
+                ((Codepoint)(byte2 & 0x3F) << 12) |
+                ((Codepoint)(byte3 & 0x3F) <<  6) |
+                ((Codepoint)(byte4 & 0x3F)      ) ;
+            if (IsValidCodepoint(code))
+                return code;
+        }
+        m_IsInvalidEncoding = true;
+        m_Data.RemovePrefix(m_Data.Length());
+        return REPLACEMENT_CHARACTER;
     }
 
     m_IsInvalidEncoding = true;
-    return 0;
+    m_Data.RemovePrefix(m_Data.Length());
+    return REPLACEMENT_CHARACTER;
 }
 
 size_t Pulsar::UTF8::Decoder::Skip()
