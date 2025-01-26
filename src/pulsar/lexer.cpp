@@ -440,11 +440,36 @@ Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
                 }
                 if (digits == 0) {
                     val += 'x';
-                    break;
+                } else {
+                    val += (char)(code);
+                    if (decoder.Peek() == ';')
+                        decoder.Skip();
                 }
-                val += (char)(code);
-                if (decoder.Peek() == ';')
-                    decoder.Skip();
+            } break;
+            case 'u': {
+                // See UTF8::MAX_CODEPOINT for digits
+                size_t digits = 6;
+                Codepoint code = 0;
+                for (size_t i = 0; i < digits; i++) {
+                    Codepoint digit = Unicode::ToLowerCase(decoder.Peek());
+                    if (digit >= 'a' && digit <= 'f') {
+                        code = (code << 4) + (uint8_t)(digit-'a'+10);
+                        decoder.Skip();
+                    } else if (digit >= '0' && digit <= '9') {
+                        code = (code << 4) + (uint8_t)(digit-'0');
+                        decoder.Skip();
+                    } else {
+                        digits = i;
+                        break;
+                    }
+                }
+                if (digits == 0) {
+                    val += 'u';
+                } else {
+                    val += UTF8::Encode(code);
+                    if (decoder.Peek() == ';')
+                        decoder.Skip();
+                }
             } break;
             default: {
                 StringView data = decoder.Data();
