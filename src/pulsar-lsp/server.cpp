@@ -366,12 +366,12 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
     return {};
 }
 
-std::optional<lsp::Location> PulsarLSP::Server::FindDefinition(const lsp::FileURI& uri, lsp::Position pos)
+std::optional<lsp::Location> PulsarLSP::Server::FindDefinition(const lsp::FileURI& uri, lsp::Position editorPos)
 {
     auto doc = GetOrParseDocument(uri);
     if (!doc) return {};
     
-    pos = EditorPositionToDocumentPosition(uri, pos);
+    lsp::Position pos = EditorPositionToDocumentPosition(uri, editorPos);
 
     for (size_t i = 0; i < doc->IncludedFiles.Size(); ++i) {
         const auto& includedFile = doc->IncludedFiles[i];
@@ -383,7 +383,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDefinition(const lsp::FileUR
         }
     }
 
-    return FindDeclaration(uri, pos);
+    return FindDeclaration(uri, editorPos);
 }
 
 std::vector<lsp::DocumentSymbol> PulsarLSP::Server::GetSymbols(const lsp::FileURI& uri)
