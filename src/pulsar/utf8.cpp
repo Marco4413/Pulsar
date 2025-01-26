@@ -75,7 +75,7 @@ Pulsar::UTF8::Codepoint Pulsar::UTF8::Decoder::Next()
             Codepoint code =
                 ((Codepoint)(byte1 & 0x1F) << 6) |
                 ((Codepoint)(byte2 & 0x3F)     ) ;
-            if (IsValidCodepoint(code))
+            if (GetEncodedSize(code) == 2 && IsValidCodepoint(code))
                 return code;
         }
         m_IsInvalidEncoding = true;
@@ -97,7 +97,7 @@ Pulsar::UTF8::Codepoint Pulsar::UTF8::Decoder::Next()
                 ((Codepoint)(byte1 & 0x0F) << 12) |
                 ((Codepoint)(byte2 & 0x3F) <<  6) |
                 ((Codepoint)(byte3 & 0x3F)      ) ;
-            if (IsValidCodepoint(code))
+            if (GetEncodedSize(code) == 3 && IsValidCodepoint(code))
                 return code;
         }
         m_IsInvalidEncoding = true;
@@ -121,7 +121,7 @@ Pulsar::UTF8::Codepoint Pulsar::UTF8::Decoder::Next()
                 ((Codepoint)(byte2 & 0x3F) << 12) |
                 ((Codepoint)(byte3 & 0x3F) <<  6) |
                 ((Codepoint)(byte4 & 0x3F)      ) ;
-            if (IsValidCodepoint(code))
+            if (GetEncodedSize(code) == 4 && IsValidCodepoint(code))
                 return code;
         }
         m_IsInvalidEncoding = true;
