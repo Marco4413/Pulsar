@@ -25,8 +25,7 @@ namespace Unicode
      * - https://unicode.org/Public/16.0.0/ucd/EastAsianWidth.txt
      * - https://unicode.org/Public/emoji/16.0/emoji-sequences.txt
      * 
-     * NOTE: Multi-codepoint emojis will break any calculation.
-     * TODO: Add support for Unicode zero-width characters.
+     * NOTE: Multi-codepoint emojis may break any calculation.
      */
     size_t Width(Codepoint code);
 
