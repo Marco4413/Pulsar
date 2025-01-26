@@ -298,7 +298,7 @@ Pulsar::Token Pulsar::Lexer::ParseHexIntegerLiteral()
     int64_t val = 0;
     while (decoder) {
         Codepoint digit = Unicode::ToLowerCase(decoder.Peek());
-        if (IsIdentifierStart(digit))
+        if (IsIdentifierStart(digit) && !Unicode::IsHexDigit(digit))
             return CreateNoneToken();
         else if (!Unicode::IsHexDigit(digit))
             break;
