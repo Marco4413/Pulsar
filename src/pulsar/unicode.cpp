@@ -91,7 +91,7 @@ constexpr Range EmojiCharacters[EmojiCharacters_Count] = {
 };
 
 constexpr size_t GeneralZeroWidthCharacters_Count = 335;
-// https://www.unicode.org/Public/16.0.0/ucd/extracted/DerivedGeneralCategory.txt
+// https://unicode.org/Public/16.0.0/ucd/extracted/DerivedGeneralCategory.txt
 // Exported categories: Cf, Me, Zl, Mn, Zp, Mc
 constexpr Range GeneralZeroWidthCharacters[GeneralZeroWidthCharacters_Count] = {
     { 0x00AD, 0x00AD }, { 0x0300, 0x036F }, { 0x0483, 0x0489 }, { 0x0591, 0x05BD },
@@ -182,7 +182,7 @@ constexpr Range GeneralZeroWidthCharacters[GeneralZeroWidthCharacters_Count] = {
 };
 
 constexpr size_t GeneralWideCharacters_Count = 3;
-// https://www.unicode.org/Public/16.0.0/ucd/extracted/DerivedGeneralCategory.txt
+// https://unicode.org/Public/16.0.0/ucd/extracted/DerivedGeneralCategory.txt
 // Exported categories: Sk
 constexpr Range GeneralWideCharacters[GeneralWideCharacters_Count] = {
     { 0xFF3E, 0xFF3E }, //       FULLWIDTH CIRCUMFLEX ACCENT
