@@ -39,7 +39,7 @@ Pulsar::String Pulsar::UTF8::Encode(Codepoint code)
 
 Pulsar::UTF8::Codepoint Pulsar::UTF8::Decoder::Next()
 {
-    if (!HasData()) return 0;
+    if (!*this) return 0;
 
     // == PEEK CACHE == //
     if (m_PeekedCodepoint != 0 && GetEncodedSize(m_PeekedCodepoint) <= m_Data.Length()) {
@@ -64,7 +64,6 @@ Pulsar::UTF8::Codepoint Pulsar::UTF8::Decoder::Next()
 
     if (m_Data.Length() < 2) {
         m_IsInvalidEncoding = true;
-        m_Data.RemovePrefix(m_Data.Length());
         return REPLACEMENT_CHARACTER;
     }
 
@@ -80,13 +79,11 @@ Pulsar::UTF8::Codepoint Pulsar::UTF8::Decoder::Next()
                 return code;
         }
         m_IsInvalidEncoding = true;
-        m_Data.RemovePrefix(m_Data.Length());
         return REPLACEMENT_CHARACTER;
     }
 
     if (m_Data.Length() < 3) {
         m_IsInvalidEncoding = true;
-        m_Data.RemovePrefix(m_Data.Length());
         return REPLACEMENT_CHARACTER;
     }
 
@@ -104,13 +101,11 @@ Pulsar::UTF8::Codepoint Pulsar::UTF8::Decoder::Next()
                 return code;
         }
         m_IsInvalidEncoding = true;
-        m_Data.RemovePrefix(m_Data.Length());
         return REPLACEMENT_CHARACTER;
     }
 
     if (m_Data.Length() < 4) {
         m_IsInvalidEncoding = true;
-        m_Data.RemovePrefix(m_Data.Length());
         return REPLACEMENT_CHARACTER;
     }
 
@@ -130,18 +125,16 @@ Pulsar::UTF8::Codepoint Pulsar::UTF8::Decoder::Next()
                 return code;
         }
         m_IsInvalidEncoding = true;
-        m_Data.RemovePrefix(m_Data.Length());
         return REPLACEMENT_CHARACTER;
     }
 
     m_IsInvalidEncoding = true;
-    m_Data.RemovePrefix(m_Data.Length());
     return REPLACEMENT_CHARACTER;
 }
 
 size_t Pulsar::UTF8::Decoder::Skip()
 {
-    if (!HasData()) return 0;
+    if (!*this) return 0;
 
     // == PEEK CACHE == //
     if (m_PeekedCodepoint != 0 && GetEncodedSize(m_PeekedCodepoint) <= m_Data.Length()) {
