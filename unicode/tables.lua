@@ -123,6 +123,94 @@ function TableParser:Save()
     outFile:close()
 end
 
+--== DERIVED GENERAL CATEGORY TABLE PARSER ==--
+
+local DerivedGeneralCategoryTableParser = setmetatable({}, { __index = TableParser })
+-- See: https://www.unicode.org/reports/tr44/#GC_Values_Table
+DerivedGeneralCategoryTableParser.DEFAULT_EXPORTED_CATEGORIES = {
+    ["Mn"] = true,
+    ["Mc"] = true,
+    ["Me"] = true,
+    ["Zl"] = true,
+    ["Zp"] = true,
+    ["Cf"] = true
+}
+
+function DerivedGeneralCategoryTableParser.New(docURL, inPath, outPath, toExport, storeRangeComments)
+    local self = TableParser.New(docURL, inPath, outPath)
+    self._StoreRangeComments = storeRangeComments
+    self._ExportedCategories = DerivedGeneralCategoryTableParser.DEFAULT_EXPORTED_CATEGORIES
+    if toExport then
+        self._ExportedCategories = {}
+        for _, cat in next, toExport do
+            self._ExportedCategories[cat] = true
+        end
+    end
+
+    return setmetatable(self, {
+        __index = DerivedGeneralCategoryTableParser
+    })
+end
+
+function DerivedGeneralCategoryTableParser:_ParseComment(line, storeComments)
+    local comment = line:match("^%s*#(.*)")
+    if not comment then return false; end
+    if storeComments then
+        table.insert(self._DocComments, comment)
+    end
+    return true
+end
+
+function DerivedGeneralCategoryTableParser:_ParseField(line, storeComments)
+    local a, b
+    local code, category, comment = line:match("^%s*(%x+)%s*;%s*(%a+)%s*#(.*)")
+
+    if code then
+        a = code
+        b = code
+    else
+        a, b, category, comment = line:match("^%s*(%x+)%.%.(%x+)%s*;%s*(%a+)%s*#(.*)")
+        if not a then return false; end
+    end
+
+    if not self._ExportedCategories[category] then
+        return true
+    end
+
+    if storeComments or self._StoreRangeComments then
+        table.insert(self._Ranges, {a, b, {comment}})
+    else
+        table.insert(self._Ranges, {a, b, {}})
+    end
+
+    return true
+end
+
+function DerivedGeneralCategoryTableParser:Parse(storeComments)
+    TableParser.Parse(self, storeComments)
+    table.sort(self._Ranges, function (a, b)
+        return tonumber(a[1], 16) < tonumber(b[1], 16)
+    end)
+end
+
+function DerivedGeneralCategoryTableParser:_WriteHead(outFile)
+    local rangesCount = #self._Ranges
+    outFile:write(table.concat{"constexpr size_t DerivedGeneralCategoryCharacters_Count = ", tostring(rangesCount), ";\n"})
+
+    outFile:write("// " .. self:GetURL() .. "\n")
+    local exportedCategories = {}
+    for t, _ in next, self._ExportedCategories do
+        table.insert(exportedCategories, t)
+    end
+    outFile:write("// Exported categories: " .. table.concat(exportedCategories, ", ") .. "\n")
+
+    outFile:write("constexpr Range DerivedGeneralCategoryCharacters[DerivedGeneralCategoryCharacters_Count] = {\n")
+end
+
+function DerivedGeneralCategoryTableParser:_WriteTail(outFile)
+    outFile:write("};\n")
+end
+
 --== EAST ASIAN WIDTH TABLE PARSER ==--
 
 local EastAsianWidthTableParser = setmetatable({}, { __index = TableParser })
@@ -263,6 +351,21 @@ end
 
 local function main(storeComments)
     local tables = {
+        DerivedGeneralCategoryTableParser.New(
+            "https://unicode.org/Public/16.0.0/ucd/extracted/DerivedGeneralCategory.txt",
+            "DerivedGeneralCategory.txt",
+            "DerivedGeneralCategory.zero.cpp"
+        ),
+        -- Filter full width and emoji modifiers from comments:
+        -- - Full Width are 2 wide (duh)
+        -- - Emoji Modifiers we can assume are 0-width
+        DerivedGeneralCategoryTableParser.New(
+            "https://unicode.org/Public/16.0.0/ucd/extracted/DerivedGeneralCategory.txt",
+            "DerivedGeneralCategory.txt",
+            "DerivedGeneralCategory.unknown.cpp",
+            { "Sk" },
+            true
+        ),
         EastAsianWidthTableParser.New(
             "https://unicode.org/Public/16.0.0/ucd/EastAsianWidth.txt",
             "EastAsianWidth.txt",

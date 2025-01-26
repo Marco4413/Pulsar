@@ -8,6 +8,7 @@ yup, they put "Ambiguous" on an official spec document) but we
 don't care about those.
 
 The `tables.lua` script will be able to parse the following tables:
+- https://unicode.org/Public/16.0.0/ucd/extracted/DerivedGeneralCategory.txt
 - https://unicode.org/Public/16.0.0/ucd/EastAsianWidth.txt
 - https://unicode.org/Public/emoji/16.0/emoji-sequences.txt
 
