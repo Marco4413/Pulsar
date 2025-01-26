@@ -224,19 +224,19 @@ It's your usual double-quoted string which can contain escape characters.
 When a `\` is found within quotes, the next character is parsed as is
 except for some special ones which are turned into other characters:
 
-| Escape Sequence |     Character     |
-| :-------------: | :---------------: |
-|      `\n`       |     New Line      |
-|      `\r`       |  Carriage Return  |
-|      `\t`       |    Tabulation     |
-|    `\xHH;`      |  Char Code 0xHH   |
+| Escape Sequence |      Character      |
+| :-------------: | :-----------------: |
+|      `\n`       |      New Line       |
+|      `\r`       |   Carriage Return   |
+|      `\t`       |     Tabulation      |
+|    `\xHH;`      |   Char Code 0xHH    |
+|   `\uHHHHHH;`   |  Codepoint 0xHHHHHH |
 
 Where H is an hex digit.
 
-Unicode characters may be present within Strings.
-However, the language itself does not handle their encoding (yet).
+Strings are stored as a mix of UTF8-encoded text and raw bytes.
 
-i.e. The [`index`](#index) instruction will index a single byte within the String.
+**Note:** The [`index`](#index) instruction will index a single byte within a String.
 
 #### Multi-Line String Literals
 
@@ -1006,7 +1006,7 @@ Checking for empty on big lists is faster than checking for their length.
 Adds a value to the start of a `List` or `String`.
 
 Only `Integer`s or `String`s can be prepended to `String`s.
-`Integer`s are converted to ASCII characters.
+`Integer`s are clamped to bytes.
 
 |        |       S-1       |  S0   |
 | :----- | :-------------: | :---: |
@@ -1018,7 +1018,7 @@ Only `Integer`s or `String`s can be prepended to `String`s.
 Adds a value to the end of a `List` or `String`.
 
 Only `Integer`s or `String`s can be appended to `String`s.
-`Integer`s are converted to ASCII characters.
+`Integer`s are clamped to bytes.
 
 |        |       S-1       |  S0   |
 | :----- | :-------------: | :---: |
@@ -1078,7 +1078,7 @@ Accepts `arg0`: if <= 0, the `List` is popped. If >= 1, `arg0` values are unpack
 
 Copies the value at a specific index of a `String` or a `List`.
 
-`String` characters are converted to `Integer`s.
+In the case of `String`s, a single byte is indexed.
 
 |        |       S-1       |    S0     |
 | :----- | :-------------: | :-------: |
@@ -1088,7 +1088,7 @@ Copies the value at a specific index of a `String` or a `List`.
 ### prefix
 
 Given a `String` and an `Integer` on the stack, takes the **first**
-N characters of the `String` and pushes the result to the Stack.
+N bytes of the `String` and pushes the result to the Stack.
 Removes the new `String` from the old one.
 
 |        |   S-1    |    S0     |
@@ -1099,7 +1099,7 @@ Removes the new `String` from the old one.
 ### suffix
 
 Given a `String` and an `Integer` on the stack, takes the **last**
-N characters of the `String` and pushes the result to the Stack.
+N bytes of the `String` and pushes the result to the Stack.
 Removes the new `String` from the old one.
 
 |        |   S-1    |    S0     |

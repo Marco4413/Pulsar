@@ -121,7 +121,7 @@ const PulsarLSP::Completion::InstructionMap& PulsarLSP::Completion::GetInstructi
         "- If T is a List: Any\n"
         "- If T is a String: Integer or String\n\n"
         "The result is of type T and is the top-most element on the stack prepended to the one after it. "
-        "If T is a String and U an Integer, U is treated as the ASCII *(may become Unicode in the future)* representation of a character."
+        "If T is a String and U an Integer, U is clamped to a single byte."
     );
 
     DEFINE_INSTRUCTION(
@@ -130,7 +130,7 @@ const PulsarLSP::Completion::InstructionMap& PulsarLSP::Completion::GetInstructi
         "- If T is a List: Any\n"
         "- If T is a String: Integer or String\n\n"
         "The result is of type T and is the top-most element on the stack appended to the one after it. "
-        "If T is a String and U an Integer, U is treated as the ASCII *(may become Unicode in the future)* representation of a character."
+        "If T is a String and U an Integer, U is clamped to a single byte."
     );
 
     DEFINE_INSTRUCTION(
@@ -167,17 +167,17 @@ const PulsarLSP::Completion::InstructionMap& PulsarLSP::Completion::GetInstructi
         "- If T is a List: Any\n"
         "- If T is a String: Integer\n\n"
         "Copies the value at a certain index in T. "
-        "If T is a String, U is the Integer representation of the ASCII *(may become Unicode in the future)* character at the specified index."
+        "If T is a String, U is an Integer and is the byte stored at the specified index."
     );
 
     DEFINE_INSTRUCTION(
         "prefix", "", "String, Integer -> String, String",
-        "Removes the first chars of a String, returning those chars as a String."
+        "Removes the first bytes of a String, returning those bytes as a String."
     );
 
     DEFINE_INSTRUCTION(
         "suffix", "", "String, Integer -> String, String",
-        "Removes the last chars of a String, returning those chars as a String."
+        "Removes the last bytes of a String, returning those bytes as a String."
     );
 
     DEFINE_INSTRUCTION(
