@@ -383,10 +383,13 @@ local function main(storeComments)
         print("Parsing", t:GetURL())
         t:Parse(doStoreComments)
 
+        print("Verifying Range Order (after Parse)")
+        t:AssertRanges()
+
         print("Optimizing")
         t:Optimize()
 
-        print("Verifying Order Range")
+        print("Verifying Range Order (after Optimize)")
         t:AssertRanges()
 
         print("Saving Table")
