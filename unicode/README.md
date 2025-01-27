@@ -16,4 +16,6 @@ And generate C++ structures which can be copy-pasted into
 `src/pulsar/unicode.cpp` to keep it up-to-date with the Unicode spec.
 Moreover, those generated structures must support a binary search.
 
-**TODO: Find the 0-width Unicode characters table if any and support it.**
+Some minor adjustments need to be done to the translated `DerivedGeneralCategory.txt`
+file because it contains both Full Width and 0-width codepoints. Read the `tables.lua`
+file to know what is what, there's a comment near the end of it.
