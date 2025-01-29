@@ -46,10 +46,10 @@ on VSCode for the Pulsar Language, you can download and package the official ext
 
 This project uses `premake5` as its build system.
 
-Run `premake5 --arch=amd64 vs2022` to create solution files for VS.
+Run `premake5 --arch=x86_64 vs2022` to create solution files for VS.
 
 **NOTE:** Run `premake5 --help` to get a list of available architectures.
-I sometimes test Pulsar on ARM64 so it should also compile to that just fine.
+I sometimes test Pulsar on *arm64* so it should also compile to that just fine.
 
 Alternatively `premake5 gmake2` will create Makefiles.
 
@@ -102,4 +102,5 @@ If an example requires external arguments, just append them to the command.
 ### Including Pulsar in your Project
 
 There's a fully working demo within the `pulsar-demo` project.
-You can check out the `premake5.lua` script and the source code within `src/pulsar-demo`
+You can check out the `projects/pulsar-demo.lua` and `projects/common/cflags.lua`
+scripts and the source code within `src/pulsar-demo`
