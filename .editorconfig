@@ -1,3 +1,8 @@
 [*.{pls,plsr,md}]
 indent_size = 2
 indent_style = space
+
+# At some point this will be applied to all lua files
+[{premake5,projects/**}.lua]
+indent_size = 2
+indent_style = space
