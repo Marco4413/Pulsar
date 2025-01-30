@@ -10,24 +10,27 @@
 
 // Derefs an opaque pointer, this is mainly useful to search where opaques are dereferenced.
 #define CPULSAR_DEREF(upType, opaque) (*(upType*)opaque)
-
 #define CPULSAR_REF(downType, value) ((downType*)&value)
+
+#ifdef CPULSAR_WINDOWS
+
+  #define CPULSAR_EXPORT __declspec(dllexport)
+  #define CPULSAR_IMPORT __declspec(dllimport)
+
+#else // defined(CPULSAR_UNIX)
+
+  #define CPULSAR_EXPORT
+  #define CPULSAR_IMPORT
+
+#endif
 
 #ifdef CPULSAR_SHAREDLIB
 
-  #ifdef CPULSAR_WINDOWS
-
-    #ifdef _CPULSAR_IMPLEMENTATION
-      #define CPULSAR_API __declspec(dllexport)
-    #else // _CPULSAR_IMPLEMENTATION
-      #define CPULSAR_API __declspec(dllimport)
-    #endif // _CPULSAR_IMPLEMENTATION
-
-  #else // defined(CPULSAR_UNIX)
-
-    #define CPULSAR_API
-
-  #endif
+  #ifdef _CPULSAR_IMPLEMENTATION
+    #define CPULSAR_API CPULSAR_EXPORT
+  #else // _CPULSAR_IMPLEMENTATION
+    #define CPULSAR_API CPULSAR_IMPORT
+  #endif // _CPULSAR_IMPLEMENTATION
 
 #else // CPULSAR_SHAREDLIB
 

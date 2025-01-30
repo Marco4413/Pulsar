@@ -17,7 +17,7 @@ CPulsar_RuntimeState NativePrintln(CPulsar_ExecutionContext context, void* args)
     return CPulsar_RuntimeState_OK;
 }
 
-void BindFunctions(CPulsar_Module module, int declareAndBind)
+CPULSAR_EXPORT void BindFunctions(CPulsar_Module module, int declareAndBind)
 {
     CPulsar_Module_BindNativeFunctionEx(
         module,
