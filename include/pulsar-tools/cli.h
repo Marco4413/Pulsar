@@ -6,6 +6,7 @@
 #include "pulsar/parser.h"
 #include "pulsar/runtime.h"
 
+#include "pulsar-tools/extbinding.h"
 #include "pulsar-tools/logger.h"
 #include "pulsar-tools/utils.h"
 
@@ -68,6 +69,7 @@ namespace PulsarTools::CLI
                 "Sets the max depth of the printed stack-trace on error. (default: 10)",
                 10),
             EntryPoint(cmd, "entry-point", "E", "FUNC", "Set entry point. (default: main)", "main"),
+            ExtBindings(cmd, "ext-binding", "L", "PATH", "Imports bindings from the specified dll/so."),
             BindDebug(cmd, "bind-debug", "", "Bind debugging utilities."),
             BindError(cmd, "bind-error", "", "Bind error handling natives."),
             BindFileSystem(cmd, "bind-filesystem", "", "Bind file system natives."),
@@ -87,6 +89,7 @@ namespace PulsarTools::CLI
         Argue::IntOption  StackTraceDepth;
 
         Argue::StrOption EntryPoint;
+        Argue::CollectionOption ExtBindings;
 
         Argue::FlagOption BindDebug;
         Argue::FlagOption BindError;
@@ -131,12 +134,15 @@ namespace PulsarTools::CLI
         Argue::StrVarArgument Args;
     };
 
+    using ExternalBindings = std::vector<ExtBinding>;
     namespace Action
     {
+        int LoadExternalBindings(const RuntimeOptions& runtimeOptions, ExternalBindings& out);
+
         int Check(const ParserOptions& parserOptions, const InputFileArgs& input);
-        int Read(Pulsar::Module& module, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input);
+        int Read(Pulsar::Module& module, const ExternalBindings& extBindings, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input);
         int Write(const Pulsar::Module& module, const CompilerOptions& compilerOptions, const InputFileArgs& input);
-        int Parse(Pulsar::Module& module, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input);
+        int Parse(Pulsar::Module& module, const ExternalBindings& extBindings, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input);
         int Run(const Pulsar::Module& module, const RuntimeOptions& runtimeOptions, const InputProgramArgs& input);
     }
 
@@ -175,12 +181,17 @@ namespace PulsarTools::CLI
         operator bool() const { return m_Command; }
         int operator()() const
         {
-            Pulsar::Module module;
-            int exitCode = IsNeutronFile(*m_Input.FilePath)
-                ? Action::Read(module, m_ParserOptions, m_RuntimeOptions, m_Input)
-                : Action::Parse(module, m_ParserOptions, m_RuntimeOptions, m_Input);
-            if (exitCode) return exitCode;
-            return Action::Write(module, m_CompilerOptions, m_Input);
+            ExternalBindings extBindings;
+            { // Make sure extBindings is deleted after module
+                int exitCode = Action::LoadExternalBindings(m_RuntimeOptions, extBindings);
+                if (exitCode) return exitCode;
+                Pulsar::Module module;
+                exitCode = IsNeutronFile(*m_Input.FilePath)
+                    ? Action::Read(module, extBindings, m_ParserOptions, m_RuntimeOptions, m_Input)
+                    : Action::Parse(module, extBindings, m_ParserOptions, m_RuntimeOptions, m_Input);
+                if (exitCode) return exitCode;
+                return Action::Write(module, m_CompilerOptions, m_Input);
+            }
         }
 
     private:
@@ -204,12 +215,17 @@ namespace PulsarTools::CLI
         operator bool() const { return m_Command; }
         int operator()() const
         {
-            Pulsar::Module module;
-            int exitCode = IsNeutronFile(*m_Input.FilePath)
-                ? Action::Read(module, m_ParserOptions, m_RuntimeOptions, m_Input)
-                : Action::Parse(module, m_ParserOptions, m_RuntimeOptions, m_Input);
-            if (exitCode) return exitCode;
-            return Action::Run(module, m_RuntimeOptions, m_Input);
+            ExternalBindings extBindings;
+            { // Make sure extBindings is deleted after module
+                int exitCode = Action::LoadExternalBindings(m_RuntimeOptions, extBindings);
+                if (exitCode) return exitCode;
+                Pulsar::Module module;
+                exitCode = IsNeutronFile(*m_Input.FilePath)
+                    ? Action::Read(module, extBindings, m_ParserOptions, m_RuntimeOptions, m_Input)
+                    : Action::Parse(module, extBindings, m_ParserOptions, m_RuntimeOptions, m_Input);
+                if (exitCode) return exitCode;
+                return Action::Run(module, m_RuntimeOptions, m_Input);
+            }
         }
 
     private:

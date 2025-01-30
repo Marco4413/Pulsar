@@ -61,6 +61,24 @@ Pulsar::ParseSettings ToParseSettings(const PulsarTools::CLI::ParserOptions& par
     return settings;
 }
 
+int PulsarTools::CLI::Action::LoadExternalBindings(const RuntimeOptions& runtimeOptions, ExternalBindings& out)
+{
+    Logger& logger = GetLogger();
+
+    bool hasError = false;
+    for (const std::string& path : *runtimeOptions.ExtBindings) {
+        ExtBinding binding(path.c_str());
+        if (binding) {
+            out.emplace_back(std::move(binding));
+        } else {
+            logger.Error("Could not load external library '{}':\n{}", path, binding.GetErrorMessage());
+            hasError = true;
+        }
+    }
+
+    return hasError;
+}
+
 int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const InputFileArgs& input)
 {
     Logger& logger = GetLogger();
@@ -92,7 +110,7 @@ int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const In
     return 0;
 }
 
-int PulsarTools::CLI::Action::Read(Pulsar::Module& module, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input)
+int PulsarTools::CLI::Action::Read(Pulsar::Module& module, const ExternalBindings& extBindings, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input)
 {
     Logger& logger = GetLogger();
 
@@ -115,6 +133,8 @@ int PulsarTools::CLI::Action::Read(Pulsar::Module& module, const ParserOptions& 
     logger.Info("Reading took: {}us", readTime.count());
 
     BindNatives(module, runtimeOptions, false);
+    for (const ExtBinding& binding : extBindings)
+        binding.BindAll(module, false);
     return 0;
 }
 
@@ -145,12 +165,14 @@ int PulsarTools::CLI::Action::Write(const Pulsar::Module& module, const Compiler
     return 0;
 }
 
-int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input)
+int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ExternalBindings& extBindings, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input)
 {
     Logger& logger = GetLogger();
 
     if (*parserOptions.DeclareBoundNatives) {
         BindNatives(module, runtimeOptions, true);
+        for (const ExtBinding& binding : extBindings)
+            binding.BindAll(module, true);
     } else if (*parserOptions.Debug) {
         Bindings::Debug debug;
         debug.BindAll(module, true);
@@ -182,6 +204,8 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
 
     if (!*parserOptions.DeclareBoundNatives) {
         BindNatives(module, runtimeOptions, false);
+        for (const ExtBinding& binding : extBindings)
+            binding.BindAll(module, false);
     }
 
     return 0;
