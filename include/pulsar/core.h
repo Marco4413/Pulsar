@@ -3,9 +3,9 @@
 
 // All std includes from header files are here.
 #include <cinttypes>
-#include <cmath> // std::floor, std::ceil
-#include <cstdlib> // std::malloc, ::free, ...
-#include <cstring>
+#include <cmath> // std::floor, ::ceil
+#include <cstdlib> // std::malloc, ::realloc, ::free, ...
+#include <cstring> // std::memset, ::memcpy, ::strlen, ...
 #include <functional>
 #include <type_traits>
 #include <utility>
@@ -44,17 +44,17 @@
 
 #ifndef PULSAR_MALLOC
 #define PULSAR_MALLOC(size) \
-    std::malloc(size)
+    Pulsar::Core::Malloc(size)
 #endif // PULSAR_MALLOC
 
 #ifndef PULSAR_REALLOC
 #define PULSAR_REALLOC(ptr, size) \
-    std::realloc(ptr, size)
+    Pulsar::Core::Realloc(ptr, size)
 #endif // PULSAR_REALLOC
 
 #ifndef PULSAR_FREE
 #define PULSAR_FREE(ptr) \
-    std::free(ptr)
+    Pulsar::Core::Free(ptr)
 #endif // PULSAR_FREE
 
 #ifndef PULSAR_MEMSET
@@ -84,6 +84,10 @@
 
 namespace Pulsar::Core
 {
+    void* Malloc(size_t size);
+    void* Realloc(void* block, size_t newSize);
+    void Free(void* block);
+
     // New and Delete that strictly use PULSAR_ macros to allocate memory
     template<typename T, typename ...Args>
     inline T* PlacementNew(T* ptr, Args&& ...args)

@@ -5,6 +5,7 @@
       "type": "static_library",
       "include_dirs": [ "include" ],
       "sources": [
+        "src/pulsar/core.cpp",
         "src/pulsar/bytecode.cpp",
         "src/pulsar/binary/reader.cpp",
         "src/pulsar/binary/writer.cpp",
