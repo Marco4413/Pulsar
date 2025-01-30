@@ -2,8 +2,10 @@
 
 #include <stdio.h>
 
-CPulsar_RuntimeState NativePrintln(CPulsar_ExecutionContext context)
+CPulsar_RuntimeState NativePrintln(CPulsar_ExecutionContext context, void* args)
 {
+    (void)args;
+
     CPulsar_Frame  frame  = CPulsar_ExecutionContext_CurrentFrame(context);
     CPulsar_Locals locals = CPulsar_Frame_GetLocals(frame);
     CPulsar_Value  msg    = CPulsar_Locals_Get(locals, 0);
@@ -25,6 +27,7 @@ void BindFunctions(CPulsar_Module module, int declareAndBind)
             .Returns = 0,
         },
         NativePrintln,
+        CPULSAR_CBUFFER_NULL,
         declareAndBind
     );
 }

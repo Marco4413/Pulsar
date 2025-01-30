@@ -3,6 +3,7 @@
 
 #include "cpulsar/core.h"
 
+#include "cpulsar/cbuffer.h"
 #include "cpulsar/runtime/locals.h"
 #include "cpulsar/runtime/stack.h"
 
@@ -23,7 +24,7 @@ typedef struct {
     size_t Returns;
 } CPulsar_FunctionSignature;
 
-typedef CPulsar_RuntimeState(*CPulsar_NativeFunction)(CPulsar_ExecutionContext);
+typedef CPulsar_RuntimeState(*CPulsar_NativeFunction)(CPulsar_ExecutionContext, void*);
 
 #ifdef CPULSAR_CPP
 extern "C" {
@@ -34,12 +35,24 @@ CPULSAR_API const char* CPulsar_RuntimeState_ToString(CPulsar_RuntimeState runti
 CPULSAR_API CPulsar_Module CPulsar_Module_Create();
 CPULSAR_API void CPulsar_Module_Delete(CPulsar_Module self);
 
-// Returns how many functions were bound
-CPULSAR_API size_t CPulsar_Module_BindNativeFunction(CPulsar_Module self, CPulsar_FunctionSignature fnSig, CPulsar_NativeFunction nativeFn);
+// `nativeFnArgs.Data` will be passed to `nativeFn` on each call.
+// The lifecycle of `nativeFnArgs` will be managed by Pulsar.
+// Returns how many functions were bound.
+CPULSAR_API size_t CPulsar_Module_BindNativeFunction(
+        CPulsar_Module self, CPulsar_FunctionSignature fnSig,
+        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer nativeFnArgs);
+// `nativeFnArgs.Data` will be passed to `nativeFn` on each call.
+// The lifecycle of `nativeFnArgs` will be managed by Pulsar.
 // Returns the index at which the function was declared
-CPULSAR_API int64_t CPulsar_Module_DeclareAndBindNativeFunction(CPulsar_Module self, CPulsar_FunctionSignature fnSig, CPulsar_NativeFunction nativeFn);
+CPULSAR_API int64_t CPulsar_Module_DeclareAndBindNativeFunction(
+        CPulsar_Module self, CPulsar_FunctionSignature fnSig,
+        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer nativeFnArgs);
+
 // Calls the above functions depending on declareAndBind
-CPULSAR_API void CPulsar_Module_BindNativeFunctionEx(CPulsar_Module self, CPulsar_FunctionSignature fnSig, CPulsar_NativeFunction nativeFn, int declareAndBind);
+CPULSAR_API void CPulsar_Module_BindNativeFunctionEx(
+        CPulsar_Module self, CPulsar_FunctionSignature fnSig,
+        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer nativeFnArgs,
+        int declareAndBind);
 
 CPULSAR_API CPulsar_Locals CPulsar_Frame_GetLocals(CPulsar_Frame self);
 CPULSAR_API CPulsar_Stack CPulsar_Frame_GetStack(CPulsar_Frame self);

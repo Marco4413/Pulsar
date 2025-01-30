@@ -10,6 +10,26 @@ using Module           = Pulsar::Module;
 using Frame            = Pulsar::Frame;
 using ExecutionContext = Pulsar::ExecutionContext;
 
+class CBufferWrapper
+{
+public:
+    CBufferWrapper(CPulsar_CBuffer buf) :
+        m_Buffer(buf)
+    {}
+
+    ~CBufferWrapper()
+    {
+        if (m_Buffer.Free) {
+            m_Buffer.Free(m_Buffer.Data);
+        }
+    }
+
+    CPulsar_CBuffer& GetBuffer() { return m_Buffer; }
+
+private:
+    CPulsar_CBuffer m_Buffer;
+};
+
 extern "C"
 {
 
@@ -28,38 +48,53 @@ CPULSAR_API void CPulsar_Module_Delete(CPulsar_Module _self)
     PULSAR_DELETE(Module, &CPULSAR_DEREF(Module, _self));
 }
 
-CPULSAR_API size_t CPulsar_Module_BindNativeFunction(CPulsar_Module _self, CPulsar_FunctionSignature fnSig, CPulsar_NativeFunction nativeFn)
+CPULSAR_API size_t CPulsar_Module_BindNativeFunction(
+        CPulsar_Module _self, CPulsar_FunctionSignature fnSig,
+        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer _nativeFnArgs)
 {
+    auto nativeFnArgs = Pulsar::SharedRef<CBufferWrapper>::New(_nativeFnArgs);
     return CPULSAR_DEREF(Module, _self)
         .BindNativeFunction({
             .Name = fnSig.Name,
             .Arity = fnSig.Arity,
             .Returns = fnSig.Returns,
             .StackArity = fnSig.StackArity,
-        }, [nativeFn](Pulsar::ExecutionContext& context) {
-            return (Pulsar::RuntimeState)nativeFn(CPULSAR_REF(CPulsar_ExecutionContext_S, context));
+        }, [nativeFn, nativeFnArgs](Pulsar::ExecutionContext& context) {
+            return (Pulsar::RuntimeState)nativeFn(
+                CPULSAR_REF(CPulsar_ExecutionContext_S, context),
+                nativeFnArgs->GetBuffer().Data
+            );
         });
 }
 
-CPULSAR_API int64_t CPulsar_Module_DeclareAndBindNativeFunction(CPulsar_Module _self, CPulsar_FunctionSignature fnSig, CPulsar_NativeFunction nativeFn)
+CPULSAR_API int64_t CPulsar_Module_DeclareAndBindNativeFunction(
+        CPulsar_Module _self, CPulsar_FunctionSignature fnSig,
+        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer _nativeFnArgs)
 {
+    auto nativeFnArgs = Pulsar::SharedRef<CBufferWrapper>::New(_nativeFnArgs);
     return CPULSAR_DEREF(Module, _self)
         .DeclareAndBindNativeFunction({
             .Name = fnSig.Name,
             .Arity = fnSig.Arity,
             .Returns = fnSig.Returns,
             .StackArity = fnSig.StackArity,
-        }, [nativeFn](Pulsar::ExecutionContext& context) {
-            return (Pulsar::RuntimeState)nativeFn(CPULSAR_REF(CPulsar_ExecutionContext_S, context));
+        }, [nativeFn, nativeFnArgs](Pulsar::ExecutionContext& context) {
+            return (Pulsar::RuntimeState)nativeFn(
+                CPULSAR_REF(CPulsar_ExecutionContext_S, context),
+                nativeFnArgs->GetBuffer().Data
+            );
         });
 }
 
-CPULSAR_API void CPulsar_Module_BindNativeFunctionEx(CPulsar_Module self, CPulsar_FunctionSignature fnSig, CPulsar_NativeFunction nativeFn, int declareAndBind)
+CPULSAR_API void CPulsar_Module_BindNativeFunctionEx(
+        CPulsar_Module self, CPulsar_FunctionSignature fnSig,
+        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer nativeFnArgs,
+        int declareAndBind)
 {
     if (declareAndBind) {
-        CPulsar_Module_DeclareAndBindNativeFunction(self, fnSig, nativeFn);
+        CPulsar_Module_DeclareAndBindNativeFunction(self, fnSig, nativeFn, nativeFnArgs);
     } else {
-        CPulsar_Module_BindNativeFunction(self, fnSig, nativeFn);
+        CPulsar_Module_BindNativeFunction(self, fnSig, nativeFn, nativeFnArgs);
     }
 }
 
