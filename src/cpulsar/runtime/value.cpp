@@ -1,0 +1,80 @@
+#define _CPULSAR_IMPLEMENTATION
+#include "cpulsar/runtime/value.h"
+
+#include "pulsar/runtime.h"
+
+using Value = Pulsar::Value;
+using ValueList = Pulsar::ValueList;
+
+extern "C"
+{
+
+CPULSAR_API CPulsar_Value CPulsar_Value_Create()
+{
+    return (CPulsar_Value)PULSAR_NEW(Value);
+}
+
+CPULSAR_API void CPulsar_Value_Delete(CPulsar_Value _self)
+{
+    PULSAR_DELETE(Value, &CPULSAR_DEREF(Value, _self));
+}
+
+CPULSAR_API int CPulsar_Value_IsString(const CPulsar_Value _self)
+{
+    return CPULSAR_DEREF(const Value, _self).Type() == Pulsar::ValueType::String;
+}
+
+CPULSAR_API const char* CPulsar_Value_AsString(const CPulsar_Value _self)
+{
+    return CPULSAR_DEREF(const Value, _self).AsString().CString();
+}
+
+CPULSAR_API void CPulsar_Value_SetString(CPulsar_Value _self, const char* value)
+{
+    CPULSAR_DEREF(Value, _self).SetString(value);
+}
+
+CPULSAR_API int CPulsar_Value_IsList(const CPulsar_Value _self)
+{
+    return CPULSAR_DEREF(const Value, _self).Type() == Pulsar::ValueType::List;
+}
+
+CPULSAR_API CPulsar_ValueList CPulsar_Value_AsList(CPulsar_Value _self)
+{
+    return CPULSAR_REF(CPulsar_ValueList, CPULSAR_DEREF(Value, _self).AsList());
+}
+
+CPULSAR_API CPulsar_ValueList CPulsar_Value_SetEmptyList(CPulsar_Value _self)
+{
+    return CPULSAR_REF(CPulsar_ValueList, CPULSAR_DEREF(Value, _self).SetList(ValueList()));
+}
+
+CPULSAR_API CPulsar_ValueList CPulsar_ValueList_Create()
+{
+    return PULSAR_NEW(ValueList);
+}
+
+CPULSAR_API void CPulsar_ValueList_Delete(CPulsar_ValueList _self)
+{
+    PULSAR_DELETE(ValueList, &CPULSAR_DEREF(ValueList, _self));
+}
+
+CPULSAR_API CPulsar_Value CPulsar_ValueList_Pop(CPulsar_ValueList _self)
+{
+    ValueList& self = CPULSAR_DEREF(ValueList, _self);
+    CPulsar_Value value = PULSAR_NEW(Value, std::move(self.Back()->Value()));
+    self.RemoveBack(1);
+    return value;
+}
+
+CPULSAR_API void CPulsar_ValueList_Push(CPulsar_ValueList _self, CPulsar_Value _value)
+{
+    CPULSAR_DEREF(ValueList, _self).Append(std::move(CPULSAR_DEREF(Value, _value)));
+}
+
+CPULSAR_API void CPulsar_ValueList_PushCopy(CPulsar_ValueList _self, CPulsar_Value _value)
+{
+    CPULSAR_DEREF(ValueList, _self).Append(CPULSAR_DEREF(Value, _value));
+}
+
+}
