@@ -194,6 +194,35 @@ namespace Pulsar
             return *this;
         }
 
+        Self& RemoveBack(size_t n)
+        {
+            if (n == 0)
+                return *this;
+            // This is the node before the new starting one
+            Node* newEnd = m_End;
+            for (size_t i = 0; i < n && newEnd; i++)
+                newEnd = newEnd->m_Prev;
+
+            if (!newEnd) {
+                PULSAR_DELETE(Node, m_Start);
+                m_Start = nullptr;
+                m_End = nullptr;
+                return *this;
+            }
+
+            // Unlink
+            PULSAR_ASSERT(newEnd->m_Next, "New LinkedList back has no next element linked.");
+            Node* chainToDelete = newEnd->m_Next;
+            newEnd->m_Next->m_Prev = nullptr;
+            newEnd->m_Next = nullptr;
+
+            // Delete previous nodes
+            PULSAR_DELETE(Node, chainToDelete);
+            m_End = newEnd;
+
+            return *this;
+        }
+
         Node* Front()             { return m_Start; }
         const Node* Front() const { return m_Start; }
         Node* Back()              { return m_End; }
