@@ -46,7 +46,8 @@ CPULSAR_API CPulsar_ValueList CPulsar_Value_AsList(CPulsar_Value _self)
 
 CPULSAR_API CPulsar_ValueList CPulsar_Value_SetEmptyList(CPulsar_Value _self)
 {
-    return CPULSAR_REF(CPulsar_ValueList, CPULSAR_DEREF(Value, _self).SetList(ValueList()));
+    CPULSAR_DEREF(Value, _self).SetList(ValueList());
+    return CPulsar_Value_AsList(_self);
 }
 
 CPULSAR_API CPulsar_ValueList CPulsar_ValueList_Create()
