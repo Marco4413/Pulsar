@@ -29,12 +29,9 @@ project "pulsar-tools"
 
   buildpath.setup("pulsar-tools")
 
-  buildinputs {
-    get_slib_path("cpulsar"),
-    get_slib_path("pulsar-core")
-  }
+  dependson { "cpulsar", "pulsar-core" }
 
-  postbuildcommands {
+  prebuildcommands {
     copy_slib("cpulsar", "pulsar-tools"),
     copy_slib("pulsar-core", "pulsar-tools")
   }
