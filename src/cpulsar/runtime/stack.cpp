@@ -12,7 +12,9 @@ extern "C"
 CPULSAR_API CPulsar_Value CPulsar_Stack_Pop(CPulsar_Stack _self)
 {
     Stack& self = CPULSAR_DEREF(Stack, _self);
-    CPulsar_Value value = PULSAR_NEW(Value, std::move(self.Back()));
+    CPulsar_Value value = CPULSAR_REF(CPulsar_Value_S, *PULSAR_NEW(
+        Value, std::move(self.Back())
+    ));
     self.PopBack();
     return value;
 }

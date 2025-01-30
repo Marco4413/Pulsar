@@ -20,7 +20,7 @@ CPULSAR_API const char* CPulsar_RuntimeState_ToString(CPulsar_RuntimeState runti
 
 CPULSAR_API CPulsar_Module CPulsar_Module_Create()
 {
-    return PULSAR_NEW(Module);
+    return CPULSAR_REF(CPulsar_Module_S, *PULSAR_NEW(Module));
 }
 
 CPULSAR_API void CPulsar_Module_Delete(CPulsar_Module _self)
@@ -37,7 +37,7 @@ CPULSAR_API size_t CPulsar_Module_BindNativeFunction(CPulsar_Module _self, CPuls
             .Returns = fnSig.Returns,
             .StackArity = fnSig.StackArity,
         }, [nativeFn](Pulsar::ExecutionContext& context) {
-            return (Pulsar::RuntimeState)nativeFn(CPULSAR_REF(CPulsar_ExecutionContext, context));
+            return (Pulsar::RuntimeState)nativeFn(CPULSAR_REF(CPulsar_ExecutionContext_S, context));
         });
 }
 
@@ -50,7 +50,7 @@ CPULSAR_API int64_t CPulsar_Module_DeclareAndBindNativeFunction(CPulsar_Module _
             .Returns = fnSig.Returns,
             .StackArity = fnSig.StackArity,
         }, [nativeFn](Pulsar::ExecutionContext& context) {
-            return (Pulsar::RuntimeState)nativeFn(CPULSAR_REF(CPulsar_ExecutionContext, context));
+            return (Pulsar::RuntimeState)nativeFn(CPULSAR_REF(CPulsar_ExecutionContext_S, context));
         });
 }
 
@@ -65,17 +65,17 @@ CPULSAR_API void CPulsar_Module_BindNativeFunctionEx(CPulsar_Module self, CPulsa
 
 CPULSAR_API CPulsar_Locals CPulsar_Frame_GetLocals(CPulsar_Frame _self)
 {
-    return CPULSAR_REF(CPulsar_Locals, CPULSAR_DEREF(Frame, _self).Locals);
+    return CPULSAR_REF(CPulsar_Locals_S, CPULSAR_DEREF(Frame, _self).Locals);
 }
 
 CPULSAR_API CPulsar_Stack CPulsar_Frame_GetStack(CPulsar_Frame _self)
 {
-    return CPULSAR_REF(CPulsar_Stack, CPULSAR_DEREF(Frame, _self).Stack);
+    return CPULSAR_REF(CPulsar_Stack_S, CPULSAR_DEREF(Frame, _self).Stack);
 }
 
 CPULSAR_API CPulsar_ExecutionContext CPulsar_ExecutionContext_Create(const CPulsar_Module _module)
 {
-    return PULSAR_NEW(ExecutionContext, CPULSAR_DEREF(const Module, _module));
+    return CPULSAR_REF(CPulsar_ExecutionContext_S, *PULSAR_NEW(ExecutionContext, CPULSAR_DEREF(const Module, _module)));
 }
 
 CPULSAR_API void CPulsar_ExecutionContext_Delete(CPulsar_ExecutionContext _self)
@@ -85,12 +85,12 @@ CPULSAR_API void CPulsar_ExecutionContext_Delete(CPulsar_ExecutionContext _self)
 
 CPULSAR_API CPulsar_Stack CPulsar_ExecutionContext_GetStack(CPulsar_ExecutionContext _self)
 {
-    return CPULSAR_REF(CPulsar_Stack, CPULSAR_DEREF(ExecutionContext, _self).GetStack());
+    return CPULSAR_REF(CPulsar_Stack_S, CPULSAR_DEREF(ExecutionContext, _self).GetStack());
 }
 
 CPULSAR_API CPulsar_Frame CPulsar_ExecutionContext_CurrentFrame(CPulsar_ExecutionContext _self)
 {
-    return CPULSAR_REF(CPulsar_Frame, CPULSAR_DEREF(ExecutionContext, _self).CurrentFrame());
+    return CPULSAR_REF(CPulsar_Frame_S, CPULSAR_DEREF(ExecutionContext, _self).CurrentFrame());
 }
 
 CPULSAR_API CPulsar_RuntimeState CPulsar_ExecutionContext_CallFunctionByName(CPulsar_ExecutionContext _self, const char* fnName)

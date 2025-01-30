@@ -18,7 +18,7 @@ CPULSAR_API const char* CPulsar_ParseResult_ToString(CPulsar_ParseResult parseRe
 
 CPULSAR_API CPulsar_Parser CPulsar_Parser_Create()
 {
-    return PULSAR_NEW(Parser);
+    return CPULSAR_REF(CPulsar_Parser_S, *PULSAR_NEW(Parser));
 }
 
 CPULSAR_API void CPulsar_Parser_Delete(CPulsar_Parser _self)

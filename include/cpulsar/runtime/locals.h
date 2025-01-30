@@ -5,7 +5,7 @@
 
 #include "cpulsar/runtime/value.h"
 
-typedef void* CPulsar_Locals;
+typedef struct CPulsar_Locals_S* CPulsar_Locals;
 
 #ifdef CPULSAR_CPP
 extern "C" {

@@ -11,10 +11,10 @@ typedef enum {
     CPulsar_RuntimeState_Error = 1,
 } CPulsar_RuntimeState;
 
-typedef void* CPulsar_Module;
+typedef struct CPulsar_Module_S* CPulsar_Module;
 
-typedef void* CPulsar_Frame;
-typedef void* CPulsar_ExecutionContext;
+typedef struct CPulsar_Frame_S* CPulsar_Frame;
+typedef struct CPulsar_ExecutionContext_S* CPulsar_ExecutionContext;
 
 typedef struct {
     const char* Name;

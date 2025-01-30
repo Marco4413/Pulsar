@@ -6,7 +6,7 @@
 
 // If != 0 an error occurred
 typedef int CPulsar_ParseResult;
-typedef void* CPulsar_Parser;
+typedef struct CPulsar_Parser_S* CPulsar_Parser;
 
 #ifdef CPULSAR_CPP
 extern "C" {

@@ -3,8 +3,8 @@
 
 #include "cpulsar/core.h"
 
-typedef void* CPulsar_Value;
-typedef void* CPulsar_ValueList;
+typedef struct CPulsar_Value_S* CPulsar_Value;
+typedef struct CPulsar_ValueList_S* CPulsar_ValueList;
 
 #ifdef CPULSAR_CPP
 extern "C" {

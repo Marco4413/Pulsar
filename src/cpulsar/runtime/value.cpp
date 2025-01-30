@@ -11,7 +11,7 @@ extern "C"
 
 CPULSAR_API CPulsar_Value CPulsar_Value_Create()
 {
-    return (CPulsar_Value)PULSAR_NEW(Value);
+    return CPULSAR_REF(CPulsar_Value_S, *PULSAR_NEW(Value));
 }
 
 CPULSAR_API void CPulsar_Value_Delete(CPulsar_Value _self)
@@ -41,7 +41,7 @@ CPULSAR_API int CPulsar_Value_IsList(const CPulsar_Value _self)
 
 CPULSAR_API CPulsar_ValueList CPulsar_Value_AsList(CPulsar_Value _self)
 {
-    return CPULSAR_REF(CPulsar_ValueList, CPULSAR_DEREF(Value, _self).AsList());
+    return CPULSAR_REF(CPulsar_ValueList_S, CPULSAR_DEREF(Value, _self).AsList());
 }
 
 CPULSAR_API CPulsar_ValueList CPulsar_Value_SetEmptyList(CPulsar_Value _self)
@@ -52,7 +52,7 @@ CPULSAR_API CPulsar_ValueList CPulsar_Value_SetEmptyList(CPulsar_Value _self)
 
 CPULSAR_API CPulsar_ValueList CPulsar_ValueList_Create()
 {
-    return PULSAR_NEW(ValueList);
+    return CPULSAR_REF(CPulsar_ValueList_S, *PULSAR_NEW(ValueList));
 }
 
 CPULSAR_API void CPulsar_ValueList_Delete(CPulsar_ValueList _self)
@@ -63,7 +63,9 @@ CPULSAR_API void CPulsar_ValueList_Delete(CPulsar_ValueList _self)
 CPULSAR_API CPulsar_Value CPulsar_ValueList_Pop(CPulsar_ValueList _self)
 {
     ValueList& self = CPULSAR_DEREF(ValueList, _self);
-    CPulsar_Value value = PULSAR_NEW(Value, std::move(self.Back()->Value()));
+    CPulsar_Value value = CPULSAR_REF(CPulsar_Value_S, *PULSAR_NEW(
+        Value, std::move(self.Back()->Value())
+    ));
     self.RemoveBack(1);
     return value;
 }
