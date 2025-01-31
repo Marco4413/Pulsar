@@ -22,4 +22,6 @@ return function()
 
   filter "configurations:Release*"
     optimize "Speed"
+
+  filter ""
 end
