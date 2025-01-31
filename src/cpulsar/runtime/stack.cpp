@@ -19,6 +19,11 @@ CPULSAR_API CPulsar_Value CPulsar_Stack_Pop(CPulsar_Stack _self)
     return value;
 }
 
+CPULSAR_API CPulsar_Value CPulsar_Stack_PushEmpty(CPulsar_Stack _self)
+{
+    return CPULSAR_REF(CPulsar_Value_S, CPULSAR_DEREF(Stack, _self).EmplaceBack());
+}
+
 CPULSAR_API void CPulsar_Stack_Push(CPulsar_Stack _self, CPulsar_Value _value)
 {
     CPULSAR_DEREF(Stack, _self).EmplaceBack(std::move(CPULSAR_DEREF(Value, _value)));

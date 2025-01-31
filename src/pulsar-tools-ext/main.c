@@ -142,12 +142,8 @@ CPulsar_RuntimeState NativeExtIntegerCreate(CPulsar_ExecutionContext context, vo
     CPulsar_Frame frame = CPulsar_ExecutionContext_CurrentFrame(context);
     CPulsar_Stack stack = CPulsar_Frame_GetStack(frame);
     
-    CPulsar_Value extIntegerVal = CPulsar_Value_Create();
-
+    CPulsar_Value extIntegerVal = CPulsar_Stack_PushEmpty(stack);
     CPulsar_Value_SetCustomBuffer(extIntegerVal, typeIds->ExtIntegerId, ExtInteger_Create());
-    CPulsar_Stack_Push(stack, extIntegerVal);
-
-    CPulsar_Value_Delete(extIntegerVal);
 
     return CPulsar_RuntimeState_OK;
 }
