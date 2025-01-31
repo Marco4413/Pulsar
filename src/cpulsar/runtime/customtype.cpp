@@ -18,6 +18,17 @@ public:
         }
     }
 
+    Ref Copy() const override
+    {
+        if (!m_Buffer.Copy)
+            return nullptr;
+        return Pulsar::SharedRef<CustomTypeDataBuffer>::New(CPulsar_CBuffer{
+            .Data = m_Buffer.Copy(m_Buffer.Data),
+            .Free = m_Buffer.Free,
+            .Copy = m_Buffer.Copy,
+        });
+    }
+
     CPulsar_CBuffer& GetBuffer() { return m_Buffer; }
 
 private:

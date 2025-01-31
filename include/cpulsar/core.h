@@ -12,6 +12,14 @@
 #define CPULSAR_DEREF(upType, opaque) (*(upType*)opaque)
 #define CPULSAR_REF(downType, value) ((downType*)&value)
 
+#ifdef CPULSAR_CPP
+  #define CPULSAR_LITERAL_S(structType, init) \
+      (structType init)
+#else // CPULSAR_CPP
+  #define CPULSAR_LITERAL_S(structType, init) \
+      ((structType)init)
+#endif // CPULSAR_CPP
+
 #ifdef CPULSAR_WINDOWS
 
   #define CPULSAR_EXPORT __declspec(dllexport)
