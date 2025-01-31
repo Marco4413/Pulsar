@@ -75,10 +75,31 @@ CPULSAR_API CPulsar_CustomData CPulsar_Value_AsCustom(CPulsar_Value _self)
     return CPULSAR_REF(CPulsar_CustomData_S, CPULSAR_DEREF(Value, _self).AsCustom());
 }
 
+CPULSAR_API CPulsar_CBuffer* CPulsar_Value_AsCustomBuffer(CPulsar_Value self, uint64_t typeId)
+{
+    CPulsar_CustomData data = CPulsar_Value_AsCustom(self);
+    if (CPulsar_CustomData_GetType(data) != typeId) return NULL;
+    CPulsar_CustomDataHolder_Ref dataHolder = CPulsar_CustomData_GetData(data);
+    return CPulsar_CustomDataHolder_Ref_GetBuffer(dataHolder);
+}
+
 CPULSAR_API CPulsar_CustomData CPulsar_Value_SetCustom(CPulsar_Value _self, CPulsar_CustomData _data)
 {
     CPULSAR_DEREF(Value, _self).SetCustom(CPULSAR_DEREF(Pulsar::CustomData, _data));
     return _data;
+}
+
+CPULSAR_API CPulsar_CBuffer* CPulsar_Value_SetCustomBuffer(CPulsar_Value self, uint64_t typeId, CPulsar_CBuffer buffer)
+{
+    CPulsar_CustomDataHolder_Ref dataHolder = CPulsar_CustomDataHolder_Ref_FromBuffer(buffer);
+    CPulsar_CustomData data = CPulsar_CustomData_Create(typeId, dataHolder);
+
+    CPulsar_Value_SetCustom(self, data);
+
+    CPulsar_CustomData_Delete(data);
+    CPulsar_CustomDataHolder_Ref_Delete(dataHolder);
+
+    return CPulsar_Value_AsCustomBuffer(self, typeId);
 }
 
 CPULSAR_API CPulsar_ValueList CPulsar_ValueList_Create(void)

@@ -143,14 +143,10 @@ CPulsar_RuntimeState NativeExtIntegerCreate(CPulsar_ExecutionContext context, vo
     CPulsar_Stack stack = CPulsar_Frame_GetStack(frame);
     
     CPulsar_Value extIntegerVal = CPulsar_Value_Create();
-    CPulsar_CustomDataHolder_Ref extIntegerData = CPulsar_CustomDataHolder_Ref_FromBuffer(ExtInteger_Create());
-    CPulsar_CustomData extInteger = CPulsar_CustomData_Create(typeIds->ExtIntegerId, extIntegerData);
 
-    CPulsar_Value_SetCustom(extIntegerVal, extInteger);
+    CPulsar_Value_SetCustomBuffer(extIntegerVal, typeIds->ExtIntegerId, ExtInteger_Create());
     CPulsar_Stack_Push(stack, extIntegerVal);
 
-    CPulsar_CustomData_Delete(extInteger);
-    CPulsar_CustomDataHolder_Ref_Delete(extIntegerData);
     CPulsar_Value_Delete(extIntegerVal);
 
     return CPulsar_RuntimeState_OK;
@@ -171,19 +167,10 @@ CPulsar_RuntimeState NativeExtIntegerSet(CPulsar_ExecutionContext context, void*
         !CPulsar_Value_IsInteger(newVal))
         return CPulsar_RuntimeState_Error;
 
-    CPulsar_CustomData extInteger = CPulsar_Value_AsCustom(extIntegerVal);
-    if (CPulsar_CustomData_GetType(extInteger) != typeIds->ExtIntegerId)
-        return CPulsar_RuntimeState_Error;
+    CPulsar_CBuffer* extInteger = CPulsar_Value_AsCustomBuffer(extIntegerVal, typeIds->ExtIntegerId);
+    if (!extInteger) return CPulsar_RuntimeState_Error;
 
-    *(int64_t*)(CPulsar_CustomDataHolder_Ref_GetBuffer(
-        CPulsar_CustomData_GetData(extInteger)
-    )->Data) = CPulsar_Value_AsInteger(newVal);
-
-    /*
-    CPulsar_CustomDataHolder_Ref extIntegerData = CPulsar_CustomData_GetData(extInteger);
-    CPulsar_CBuffer* extIntegerBuffer = CPulsar_CustomDataHolder_Ref_GetBuffer(extIntegerData);
-    *(int64_t*)extIntegerBuffer->Data = CPulsar_Value_AsInteger(newVal);
-    */
+    *(int64_t*)extInteger->Data = CPulsar_Value_AsInteger(newVal);
 
     CPulsar_Stack_Push(stack, extIntegerVal);
     return CPulsar_RuntimeState_OK;
@@ -202,24 +189,11 @@ CPulsar_RuntimeState NativeExtIntegerGet(CPulsar_ExecutionContext context, void*
     if (!CPulsar_Value_IsCustom(extIntegerVal))
         return CPulsar_RuntimeState_Error;
 
-    CPulsar_CustomData extInteger = CPulsar_Value_AsCustom(extIntegerVal);
-    if (CPulsar_CustomData_GetType(extInteger) != typeIds->ExtIntegerId)
-        return CPulsar_RuntimeState_Error;
-
-    /*
-    CPulsar_CustomDataHolder_Ref extIntegerData = CPulsar_CustomData_GetData(extInteger);
-    CPulsar_CBuffer* extIntegerBuffer = CPulsar_CustomDataHolder_Ref_GetBuffer(extIntegerData);
+    CPulsar_CBuffer* extInteger = CPulsar_Value_AsCustomBuffer(extIntegerVal, typeIds->ExtIntegerId);
+    if (!extInteger) return CPulsar_RuntimeState_Error;
 
     CPulsar_Value val = CPulsar_Value_Create();
-    CPulsar_Value_SetInteger(val, *(int64_t*)extIntegerBuffer->Data);
-    */
-
-    CPulsar_Value val = CPulsar_Value_Create();
-    CPulsar_Value_SetInteger(val, *(int64_t*)(
-        CPulsar_CustomDataHolder_Ref_GetBuffer(
-            CPulsar_CustomData_GetData(extInteger)
-        )->Data
-    ));
+    CPulsar_Value_SetInteger(val, *(int64_t*)extInteger->Data);
 
     CPulsar_Stack_Push(stack, extIntegerVal);
     CPulsar_Stack_Push(stack, val);
