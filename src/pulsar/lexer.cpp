@@ -1,37 +1,72 @@
 #include "pulsar/lexer.h"
 
+void Pulsar::PutHexString(String& out, uint64_t n, size_t maxHexDigits)
+{
+    constexpr size_t MAX_DIGITS = sizeof(n) * 2;
+    size_t digitsCount = 0;
+    // digits is null terminated
+    char digits[MAX_DIGITS+1] = {0};
+
+    do {
+        size_t digitIdx = MAX_DIGITS - ++digitsCount;
+        uint8_t digit = n & 0xF;
+        n = n >> 4;
+
+        if (digit >= 0xA) {
+            digits[digitIdx] = (char)('A'+digit-10);
+        } else {
+            digits[digitIdx] = (char)('0'+digit);
+        }
+    } while (n > 0 && digitsCount < maxHexDigits);
+
+    out += &digits[MAX_DIGITS-digitsCount];
+}
+
 Pulsar::String Pulsar::ToStringLiteral(const String& str)
 {
     String lit(1, '"');
-    for (size_t i = 0; i < str.Length(); i++) {
-        switch (str[i]) {
-        case '"':
-            lit += "\\\"";
-            break;
-        case '\n':
-            lit += "\\n";
-            break;
-        case '\r':
-            lit += "\\r";
-            break;
-        case '\t':
-            lit += "\\t";
-            break;
+    size_t decoderOffset = 0;
+    UTF8::Decoder decoder(str);
+    while (decoder.HasData()) {
+        UTF8::Codepoint code = decoder.Next();
+        if (decoder.IsInvalidEncoding()) {
+            size_t byteIdx = decoderOffset + decoder.GetDecodedBytes();
+            uint8_t byte = (uint8_t)(str[byteIdx]);
+
+            lit += "\\x";
+            PutHexString(lit, byte, 2);
+            lit += ';';
+
+            decoderOffset = byteIdx+1;
+            // Create new decoder which points at the byte after the bad one.
+            // Maybe put this into a method of the Decoder.
+            decoder = UTF8::Decoder(StringView(
+                str.Data()   + decoderOffset,
+                str.Length() - decoderOffset
+            ));
+            continue;
+        }
+
+        switch (code) {
+        case '"':  lit += "\\\""; break;
+        case '\n': lit += "\\n";  break;
+        case '\r': lit += "\\r";  break;
+        case '\t': lit += "\\t";  break;
         default:
-            if (IsControlCharacter(str[i])) {
-                lit += "\\x";
-                uint8_t digit2 = (str[i] >> 8) & 0x0F;
-                if (digit2 < 0xA)
-                    lit += (char)('0'+digit2);
-                else lit += (char)('A'+digit2-0xA);
-                uint8_t digit1 = str[i] & 0x0F;
-                if (digit1 < 0xA)
-                    lit += (char)('0'+digit1);
-                else lit += (char)('A'+digit1-0xA);
+            if (Unicode::IsAscii(code)) {
+                if (Unicode::IsControl(code)) {
+                    lit += "\\x";
+                    PutHexString(lit, code, 2);
+                    lit += ';';
+                } else {
+                    lit += (char)(code);
+                }
+            } else {
+                lit += "\\u";
+                // See UTF8::MAX_CODEPOINT for digits
+                PutHexString(lit, code, 6);
                 lit += ';';
-                break;
             }
-            lit += str[i];
         }
     }
     lit += '"';
@@ -42,432 +77,462 @@ bool Pulsar::IsIdentifier(const String& s)
 {
     if (s.Length() == 0)
         return false;
-    else if (!IsIdentifierStart(s[0]))
+
+    Lexer::Decoder decoder(s);
+    if (!IsIdentifierStart(decoder.Peek()))
         return false;
-    for (size_t i = 1; i < s.Length(); i++) {
-        if (!IsIdentifierContinuation(s[i]))
-            return false;
-    }
-    return true;
+
+    while (decoder && IsIdentifierContinuation(decoder.Next()));
+    return !decoder.HasData() && !decoder.IsInvalidEncoding();
 }
 
 bool Pulsar::Lexer::SkipShaBang()
 {
-    if (m_SourceView.Length() < 2)
-        return false;
+    Decoder decoder = m_Decoder;
     
-    if (m_SourceView[0] != '#' || m_SourceView[1] != '!')
+    if (decoder.Next() != '#' || decoder.Next() != '!')
         return false;
 
-    while (m_SourceView.Length() > 0 && m_SourceView[0] != '\n')
-        m_SourceView.RemovePrefix(1);
-    if (!m_SourceView.Empty())
-        m_SourceView.RemovePrefix(1); // Remove new line char
-
-    m_Line++;
-    m_LineStartIdx = m_SourceView.GetStart();
-
+    SkipUntilNewline();
     return true;
 }
 
-Pulsar::Token Pulsar::Lexer::ParseNextToken()
+Pulsar::Token Pulsar::Lexer::NextToken()
 {
-    while (m_SourceView.Length() > 0) {
-        if (SkipWhitespaces() > 0)
-            continue;
-        else if (SkipComments() > 0)
-            continue;
-        
-        // Parse non-symbols
-        // Try to predict what's next to prevent unnecessary function calls
-        // This is better than what we had before, but needs to be kept up to date
-        if (IsDigit(m_SourceView[0]) || m_SourceView[0] == '+' || m_SourceView[0] == '-') {
-            Pulsar::Token token = ParseIntegerLiteral();
+    while (SkipWhiteSpaces() || SkipComments());
+
+    if (IsEndOfFile())
+        return PullToken(m_Decoder, TokenType::EndOfFile);
+
+    Decoder decoder = m_Decoder;
+    Codepoint codepoint = decoder.Next();
+
+    // Parse non-symbols
+    // Try to predict what's next to prevent unnecessary function calls
+    // This is better than what we had before, but needs to be kept up to date
+    if (Unicode::IsDecimalDigit(codepoint) || codepoint == '+' || codepoint == '-') {
+        Pulsar::Token token = ParseIntegerLiteral();
+        if (token.Type != TokenType::None)
+            return token;
+        token = ParseHexIntegerLiteral();
+        if (token.Type != TokenType::None)
+            return token;
+        token = ParseOctIntegerLiteral();
+        if (token.Type != TokenType::None)
+            return token;
+        token = ParseBinIntegerLiteral();
+        if (token.Type != TokenType::None)
+            return token;
+        token = ParseDoubleLiteral();
+        if (token.Type != TokenType::None)
+            return token;
+    } else {
+        switch (codepoint) {
+        case '"': {
+            Pulsar::Token token = ParseStringLiteral();
             if (token.Type != TokenType::None)
                 return token;
-            token = ParseHexIntegerLiteral();
+        } break;
+        case '\'': {
+            Pulsar::Token token = ParseCharacterLiteral();
             if (token.Type != TokenType::None)
                 return token;
-            token = ParseOctIntegerLiteral();
+        } break;
+        case '#': {
+            Pulsar::Token token = ParseCompilerDirective();
             if (token.Type != TokenType::None)
                 return token;
-            token = ParseBinIntegerLiteral();
+        } break;
+        case '@': {
+            Pulsar::Token token = ParseLabel();
             if (token.Type != TokenType::None)
                 return token;
-            token = ParseDoubleLiteral();
-            if (token.Type != TokenType::None)
+        } break;
+        default: {
+            Pulsar::Token token = ParseIdentifier();
+            if (token.Type != TokenType::None) {
+                auto kwNameTypePair = Keywords.Find(token.StringVal);
+                if (!kwNameTypePair)
+                    return token;
+                token.Type = kwNameTypePair->Value();
                 return token;
-        } else {
-            switch (m_SourceView[0]) {
-            case '"': {
-                Pulsar::Token token = ParseStringLiteral();
-                if (token.Type != TokenType::None)
-                    return token;
-            } break;
-            case '\'': {
-                Pulsar::Token token = ParseCharacterLiteral();
-                if (token.Type != TokenType::None)
-                    return token;
-            } break;
-            case '#': {
-                Pulsar::Token token = ParseCompilerDirective();
-                if (token.Type != TokenType::None)
-                    return token;
-            } break;
-            case '@': {
-                Pulsar::Token token = ParseLabel();
-                if (token.Type != TokenType::None)
-                    return token;
-            } break;
-            default: {
-                Pulsar::Token token = ParseIdentifier();
-                if (token.Type != TokenType::None) {
-                    auto kwNameTypePair = Keywords.Find(token.StringVal);
-                    if (!kwNameTypePair)
-                        return token;
-                    token.Type = kwNameTypePair->Value();
-                    return token;
-                }
-            }
             }
         }
-        
-        char symbol = m_SourceView[0];
-        switch (symbol) {
-        case '*':
-            return TrimToToken(1, TokenType::Star);
-        case '(':
-            return TrimToToken(1, TokenType::OpenParenth);
-        case ')':
-            return TrimToToken(1, TokenType::CloseParenth);
-        case '[':
-            return TrimToToken(1, TokenType::OpenBracket);
-        case ']':
-            return TrimToToken(1, TokenType::CloseBracket);
-        case ',':
-            return TrimToToken(1, TokenType::Comma);
-        case ':':
-            return TrimToToken(1, TokenType::Colon);
-        case '!':
-            if (m_SourceView.Length() > 1 && m_SourceView[1] == '=')
-                return TrimToToken(2, TokenType::NotEquals);
-            return TrimToToken(1, TokenType::Negate);
-        case '.':
-            return TrimToToken(1, TokenType::FullStop);
-        case '+':
-            return TrimToToken(1, TokenType::Plus);
-        case '-':
-            if (m_SourceView.Length() > 1 && m_SourceView[1] == '>')
-                return TrimToToken(2, TokenType::RightArrow);
-            return TrimToToken(1, TokenType::Minus);
-        case '/':
-            return TrimToToken(1, TokenType::Slash);
-        case '%':
-            return TrimToToken(1, TokenType::Modulus);
-        case '&':
-            return TrimToToken(1, TokenType::BitAnd);
-        case '|':
-            return TrimToToken(1, TokenType::BitOr);
-        case '~':
-            return TrimToToken(1, TokenType::BitNot);
-        case '^':
-            return TrimToToken(1, TokenType::BitXor);
-        case '=':
-            return TrimToToken(1, TokenType::Equals);
-        case '<':
-            if (m_SourceView.Length() > 1) {
-                if (m_SourceView[1] == '=')
-                    return TrimToToken(2, TokenType::LessOrEqual);
-                else if (m_SourceView[1] == '&')
-                    return TrimToToken(2, TokenType::PushReference);
-                else if (m_SourceView[1] == '<')
-                    return TrimToToken(2, TokenType::BitShiftLeft);
-                else if (m_SourceView[1] == '-') {
-                    if (m_SourceView.Length() > 2
-                        && m_SourceView[2] == '>')
-                        return TrimToToken(3, TokenType::BothArrows);
-                    return TrimToToken(2, TokenType::LeftArrow);
-                }
-            }
-            return TrimToToken(1, TokenType::Less);
-        case '>':
-            if (m_SourceView.Length() > 1) {
-                if (m_SourceView[1] == '=')
-                    return TrimToToken(2, TokenType::MoreOrEqual);
-                else if (m_SourceView[1] == '>')
-                    return TrimToToken(2, TokenType::BitShiftRight);
-            }
-            return TrimToToken(1, TokenType::More);
-        default:
-            return TrimToToken(1, TokenType::None);
         }
     }
-    return TrimToToken(0, TokenType::EndOfFile);
+
+    switch (codepoint) {
+    case '*': return PullToken(decoder, TokenType::Star);
+    case '(': return PullToken(decoder, TokenType::OpenParenth);
+    case ')': return PullToken(decoder, TokenType::CloseParenth);
+    case '[': return PullToken(decoder, TokenType::OpenBracket);
+    case ']': return PullToken(decoder, TokenType::CloseBracket);
+    case ',': return PullToken(decoder, TokenType::Comma);
+    case ':': return PullToken(decoder, TokenType::Colon);
+    case '!':
+        if (decoder.Peek() == '=') {
+            decoder.Skip();
+            return PullToken(decoder, TokenType::NotEquals);
+        }
+        return PullToken(decoder, TokenType::Negate);
+    case '.': return PullToken(decoder, TokenType::FullStop);
+    case '+': return PullToken(decoder, TokenType::Plus);
+    case '-':
+        if (decoder.Peek() == '>') {
+            decoder.Skip();
+            return PullToken(decoder, TokenType::RightArrow);
+        }
+        return PullToken(decoder, TokenType::Minus);
+    case '/': return PullToken(decoder, TokenType::Slash);
+    case '%': return PullToken(decoder, TokenType::Modulus);
+    case '&': return PullToken(decoder, TokenType::BitAnd);
+    case '|': return PullToken(decoder, TokenType::BitOr);
+    case '~': return PullToken(decoder, TokenType::BitNot);
+    case '^': return PullToken(decoder, TokenType::BitXor);
+    case '=': return PullToken(decoder, TokenType::Equals);
+    case '<':
+        if (decoder.HasData()) {
+            switch (decoder.Peek()) {
+            case '=': decoder.Skip(); return PullToken(decoder, TokenType::LessOrEqual);
+            case '&': decoder.Skip(); return PullToken(decoder, TokenType::PushReference);
+            case '<': decoder.Skip(); return PullToken(decoder, TokenType::BitShiftLeft);
+            case '-':
+                decoder.Skip();
+                if (decoder.Peek() == '>') {
+                    decoder.Skip();
+                    return PullToken(decoder, TokenType::BothArrows);
+                }
+                return PullToken(decoder, TokenType::LeftArrow);
+            default: break;
+            }
+        }
+        return PullToken(decoder, TokenType::Less);
+    case '>':
+        if (decoder.HasData()) {
+            switch (decoder.Peek()) {
+            case '=': decoder.Skip(); return PullToken(decoder, TokenType::MoreOrEqual);
+            case '>': decoder.Skip(); return PullToken(decoder, TokenType::BitShiftRight);
+            default: break;
+            }
+        }
+        return PullToken(decoder, TokenType::More);
+    default:
+        return PullToken(decoder, TokenType::None);
+    }
 }
 
 Pulsar::Token Pulsar::Lexer::ParseIdentifier()
 {
-    if (!IsIdentifierStart(m_SourceView[0]))
-        return TrimToToken(0, TokenType::None);
-    size_t count = 0;
-    for (; count < m_SourceView.Length() && IsIdentifierContinuation(m_SourceView[count]); count++);
-    return TrimToToken(count, TokenType::Identifier, m_SourceView.GetPrefix(count));
+    Decoder decoder = m_Decoder;
+    if (!IsIdentifierStart(decoder.Next()))
+        return CreateNoneToken();
+
+    while (decoder && IsIdentifierContinuation(decoder.Peek()))
+        decoder.Skip();
+
+    if (decoder.IsInvalidEncoding())
+        return CreateNoneToken();
+
+    size_t idBytes = decoder.GetDecodedBytes() - m_Decoder.GetDecodedBytes();
+    String id = m_Decoder.Data().GetPrefix(idBytes);
+
+    return PullToken(decoder, TokenType::Identifier, std::move(id));
 }
 
 Pulsar::Token Pulsar::Lexer::ParseLabel()
 {
-    if (m_SourceView.Length() < 2)
-        return TrimToToken(0, TokenType::None);
-    if (m_SourceView[0] != '@' || !IsIdentifierStart(m_SourceView[1]))
-        return TrimToToken(0, TokenType::None);
+    Decoder decoder = m_Decoder;
+    if (decoder.Next() != '@' || !IsIdentifierStart(decoder.Next()))
+        return CreateNoneToken();
 
-    size_t count = 1;
-    for (; count < m_SourceView.Length() && IsIdentifierContinuation(m_SourceView[count]); count++);
+    while (decoder && IsIdentifierContinuation(decoder.Peek()))
+        decoder.Skip();
 
-    StringView idView = m_SourceView;
-    idView.RemovePrefix(1);
-    return TrimToToken(count, TokenType::Label, idView.GetPrefix(count-1));
+    if (decoder.IsInvalidEncoding())
+        return CreateNoneToken();
+
+    size_t idBytes = decoder.GetDecodedBytes() - m_Decoder.GetDecodedBytes() - 1;
+    StringView idView = m_Decoder.Data();
+    idView.RemovePrefix(1); // '@'
+    idView.RemoveSuffix(idView.Length()-idBytes);
+
+    return PullToken(decoder, TokenType::Label, idView.GetPrefix(idView.Length()));
 }
 
 Pulsar::Token Pulsar::Lexer::ParseCompilerDirective()
 {
-    if (m_SourceView.Length() < 2)
-        return TrimToToken(0, TokenType::None);
-    if (m_SourceView[0] != '#' || !IsIdentifierStart(m_SourceView[1]))
-        return TrimToToken(0, TokenType::None);
-    size_t count = 1;
-    for (; count < m_SourceView.Length() && IsIdentifierContinuation(m_SourceView[count]); count++);
-    
-    StringView idView = m_SourceView;
-    idView.RemovePrefix(1);
-    Token token = TrimToToken(count, TokenType::CompilerDirective, idView.GetPrefix(count-1));
+    Decoder decoder = m_Decoder;
+    if (decoder.Next() != '#' || !IsIdentifierStart(decoder.Next()))
+        return CreateNoneToken();
+
+    while (decoder && IsIdentifierContinuation(decoder.Peek()))
+        decoder.Skip();
+
+    if (decoder.IsInvalidEncoding())
+        return CreateNoneToken();
+
+    size_t idBytes = decoder.GetDecodedBytes() - m_Decoder.GetDecodedBytes() - 1;
+    StringView idView = m_Decoder.Data();
+    idView.RemovePrefix(1); // '#'
+    idView.RemoveSuffix(idView.Length()-idBytes);
+
+    Token token = PullToken(decoder, TokenType::CompilerDirective, idView.GetPrefix(idView.Length()));
     token.IntegerVal = TOKEN_CD_GENERIC;
 
     auto cdNameValPair = CompilerDirectives.Find(token.StringVal);
-    if (cdNameValPair)
+    if (cdNameValPair) {
         token.IntegerVal = cdNameValPair->Value();
+    }
+
     return token;
 }
 
 Pulsar::Token Pulsar::Lexer::ParseIntegerLiteral()
 {
-    StringView view(m_SourceView);
-    bool negative = view[0] == '-';
-    if (negative || view[0] == '+')
-        view.RemovePrefix(1);
-    if (view.Empty() || !IsDigit(view[0]))
+    Decoder decoder = m_Decoder;
+
+    Codepoint signCode = decoder.Peek();
+    bool isNegative = signCode == '-';
+    if (isNegative || signCode == '+')
+        decoder.Skip();
+
+    if (!Unicode::IsDecimalDigit(decoder.Peek()))
         return CreateNoneToken();
+
     int64_t val = 0;
-    while (!view.Empty()) {
-        if (IsIdentifierStart(view[0])) {
+    while (decoder) {
+        Codepoint digit = decoder.Peek();
+        if (IsIdentifierStart(digit)) {
             return CreateNoneToken();
-        } else if (view[0] == '.') {
-            if (view.Length() < 2 || !IsDigit(view[1]))
+        } else if (digit == '.') {
+            if (!Unicode::IsDecimalDigit(decoder.Peek(2)))
                 break;
             return CreateNoneToken();
-        } else if (!IsDigit(view[0]))
+        } else if (!Unicode::IsDecimalDigit(digit))
             break;
+
         val *= 10;
-        val += view[0] - '0';
-        view.RemovePrefix(1);
+        val += digit - '0';
+        decoder.Skip();
     }
-    if (negative)
+
+    if (isNegative)
         val *= -1;
-    return TrimToToken(view.GetStart()-m_SourceView.GetStart(),
-        TokenType::IntegerLiteral, val);
+
+    return PullToken(decoder, TokenType::IntegerLiteral, val);
 }
 
 Pulsar::Token Pulsar::Lexer::ParseHexIntegerLiteral()
 {
-    StringView view(m_SourceView);
-    if (view.Length() < 3) // 0xX
+    Decoder decoder = m_Decoder;
+
+    if (decoder.Next() != '0' || decoder.Next() != 'x' || !Unicode::IsHexDigit(decoder.Peek()))
         return CreateNoneToken();
-    else if (view[0] != '0' || view[1] != 'x' || !IsHexDigit(view[2]))
-        return CreateNoneToken();
-    view.RemovePrefix(2);
+
     int64_t val = 0;
-    while (!view.Empty()) {
-        char digit = ToLowerCase(view[0]);
-        if (!IsHexDigit(digit)) {
-            if (IsIdentifierStart(digit))
-                return CreateNoneToken();
+    while (decoder) {
+        Codepoint digit = Unicode::ToLowerCase(decoder.Peek());
+        if (IsIdentifierStart(digit) && !Unicode::IsHexDigit(digit))
+            return CreateNoneToken();
+        else if (!Unicode::IsHexDigit(digit))
             break;
-        }
+
         val *= 16;
         if (digit >= 'a')
             val += digit - 'a' + 10;
         else val += digit - '0';
-        view.RemovePrefix(1);
+        decoder.Skip();
     }
-    return TrimToToken(view.GetStart()-m_SourceView.GetStart(),
-        TokenType::IntegerLiteral, val);
+
+    return PullToken(decoder, TokenType::IntegerLiteral, val);
 }
 
 Pulsar::Token Pulsar::Lexer::ParseOctIntegerLiteral()
 {
-    StringView view(m_SourceView);
-    if (view.Length() < 3) // 0oX
+    Decoder decoder = m_Decoder;
+
+    if (decoder.Next() != '0' || decoder.Next() != 'o' || !Unicode::IsOctalDigit(decoder.Peek()))
         return CreateNoneToken();
-    else if (view[0] != '0' || view[1] != 'o' || !IsOctDigit(view[2]))
-        return CreateNoneToken();
-    view.RemovePrefix(2);
+
     int64_t val = 0;
-    while (!view.Empty()) {
-        char digit = view[0];
+    while (decoder) {
+        Codepoint digit = decoder.Peek();
         if (IsIdentifierStart(digit))
             return CreateNoneToken();
-        else if (!IsOctDigit(digit))
+        else if (!Unicode::IsOctalDigit(digit))
             break;
+
         val *= 8;
         val += digit - '0';
-        view.RemovePrefix(1);
+        decoder.Skip();
     }
-    return TrimToToken(view.GetStart()-m_SourceView.GetStart(),
-        TokenType::IntegerLiteral, val);
+
+    return PullToken(decoder, TokenType::IntegerLiteral, val);
 }
 
 Pulsar::Token Pulsar::Lexer::ParseBinIntegerLiteral()
 {
-    StringView view(m_SourceView);
-    if (view.Length() < 3) // 0bX
+    Decoder decoder = m_Decoder;
+
+    if (decoder.Next() != '0' || decoder.Next() != 'b' || !Unicode::IsBinaryDigit(decoder.Peek()))
         return CreateNoneToken();
-    else if (view[0] != '0' || view[1] != 'b' || !IsBinDigit(view[2]))
-        return CreateNoneToken();
-    view.RemovePrefix(2);
+
     int64_t val = 0;
-    while (!view.Empty()) {
-        char digit = view[0];
+    while (decoder) {
+        Codepoint digit = decoder.Peek();
         if (IsIdentifierStart(digit))
             return CreateNoneToken();
-        else if (!IsBinDigit(digit))
+        else if (!Unicode::IsBinaryDigit(digit))
             break;
+
         val *= 2;
         val += digit - '0';
-        view.RemovePrefix(1);
+        decoder.Skip();
     }
-    return TrimToToken(view.GetStart()-m_SourceView.GetStart(),
-        TokenType::IntegerLiteral, val);
+
+    return PullToken(decoder, TokenType::IntegerLiteral, val);
 }
 
 Pulsar::Token Pulsar::Lexer::ParseDoubleLiteral()
 {
-    StringView view(m_SourceView);
-    double exp = view[0] == '-' ? -1 : 1;
-    if (exp < 0 || view[0] == '+')
-        view.RemovePrefix(1);
-    if (view.Empty() || !IsDigit(view[0]))
+    Decoder decoder = m_Decoder;
+
+    Codepoint signCode = decoder.Peek();
+    double exp = signCode == '-' ? -1 : 1;
+    if (exp < 0 || signCode == '+')
+        decoder.Skip();
+
+    if (!Unicode::IsDecimalDigit(decoder.Peek()))
         return CreateNoneToken();
-    bool decimal = false;
+
+    bool isFloating = false;
     double val = 0.0;
-    while (!view.Empty()) {
-        if (IsIdentifierStart(view[0])) {
+    while (decoder) {
+        Codepoint digit = decoder.Peek();
+        if (IsIdentifierStart(digit)) {
             return CreateNoneToken();
-        } else if (view[0] == '.') {
-            if (decimal)
+        } else if (digit == '.') {
+            if (isFloating)
                 return CreateNoneToken();
-            decimal = true;
-            view.RemovePrefix(1);
-            if (view.Empty() || !IsDigit(view[0]))
+            isFloating = true;
+            decoder.Skip();
+            digit = decoder.Peek();
+            if (!Unicode::IsDecimalDigit(digit))
                 return CreateNoneToken();
-        } else if (!IsDigit(view[0]))
+        } else if (!Unicode::IsDecimalDigit(digit))
             break;
-        
-        if (decimal)
+
+        if (isFloating)
             exp /= 10;
+
         val *= 10;
-        val += view[0] - '0';
-        view.RemovePrefix(1);
+        val += digit - '0';
+        decoder.Skip();
     }
 
     val *= exp;
-    return TrimToToken(view.GetStart()-m_SourceView.GetStart(),
-        TokenType::DoubleLiteral, std::move(val));
+    return PullToken(decoder, TokenType::DoubleLiteral, val);
 }
 
 Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
 {
-    StringView view(m_SourceView);
-    if (view.Empty() || view[0] != '"')
+    Decoder decoder = m_Decoder;
+    if (decoder.Next() != '"')
         return CreateNoneToken();
-    view.RemovePrefix(1);
 
     String val = "";
-    while (!view.Empty()) {
-        if (IsControlCharacter(view[0]))
+    while (decoder) {
+        Codepoint ch = decoder.Peek();
+        if (Unicode::IsControl(ch))
             return CreateNoneToken();
-        else if (view[0] == '"')
+        else if (ch == '"')
             break;
-        else if (view[0] == '\\') {
-            view.RemovePrefix(1);
-            if (view.Empty())
+        else if (ch == '\\') {
+            decoder.Skip();
+            ch = decoder.Next();
+            if (Unicode::IsControl(ch))
                 return CreateNoneToken();
-            char ch = view[0];
-            if (IsControlCharacter(ch))
-                return CreateNoneToken();
-            view.RemovePrefix(1);
             switch (ch) {
-            case 't':
-                val += '\t';
-                break;
-            case 'r':
-                val += '\r';
-                break;
-            case 'n':
-                val += '\n';
-                break;
+            case 't': val += '\t'; break;
+            case 'r': val += '\r'; break;
+            case 'n': val += '\n'; break;
             case 'x': {
                 size_t digits = 2;
-                if (view.Length() < digits)
-                    digits = view.Length();
                 uint8_t code = 0;
                 for (size_t i = 0; i < digits; i++) {
-                    char digit = ToLowerCase(view[i]);
+                    Codepoint digit = Unicode::ToLowerCase(decoder.Peek());
                     if (digit >= 'a' && digit <= 'f') {
-                        code = (code << 4) + digit-'a'+10;
+                        code = (code << 4) + (uint8_t)(digit-'a'+10);
+                        decoder.Skip();
                     } else if (digit >= '0' && digit <= '9') {
-                        code = (code << 4) + digit-'0';
+                        code = (code << 4) + (uint8_t)(digit-'0');
+                        decoder.Skip();
                     } else {
                         digits = i;
                         break;
                     }
                 }
                 if (digits == 0) {
-                    val += ch;
-                    break;
+                    val += 'x';
+                } else {
+                    val += (char)(code);
+                    if (decoder.Peek() == ';')
+                        decoder.Skip();
                 }
-                val += (char)(code);
-                view.RemovePrefix(digits);
-                if (!view.Empty() && view[0] == ';')
-                    view.RemovePrefix(1);
             } break;
-            default:
-                val += ch;
+            case 'u': {
+                // See UTF8::MAX_CODEPOINT for digits
+                size_t digits = 6;
+                Codepoint code = 0;
+                for (size_t i = 0; i < digits; i++) {
+                    Codepoint digit = Unicode::ToLowerCase(decoder.Peek());
+                    if (digit >= 'a' && digit <= 'f') {
+                        code = (code << 4) + (uint8_t)(digit-'a'+10);
+                        decoder.Skip();
+                    } else if (digit >= '0' && digit <= '9') {
+                        code = (code << 4) + (uint8_t)(digit-'0');
+                        decoder.Skip();
+                    } else {
+                        digits = i;
+                        break;
+                    }
+                }
+                if (digits == 0) {
+                    val += 'u';
+                } else {
+                    val += UTF8::Encode(code);
+                    if (decoder.Peek() == ';')
+                        decoder.Skip();
+                }
+            } break;
+            default: {
+                StringView data = decoder.Data();
+                size_t codepointBytes = decoder.Skip();
+                val += data.GetPrefix(codepointBytes);
+            } break;
             }
         } else {
-            val += view[0];
-            view.RemovePrefix(1);
+            StringView data = decoder.Data();
+            size_t codepointBytes = decoder.Skip();
+            val += data.GetPrefix(codepointBytes);
         }
     }
-    if (view.Empty() || view[0] != '"')
+    if (decoder.Next() != '"')
         return CreateNoneToken();
-    view.RemovePrefix(1);
     
-    Token strToken = TrimToToken(view.GetStart()-m_SourceView.GetStart(),
-        TokenType::StringLiteral, std::move(val));
+    Token strToken = PullToken(decoder, TokenType::StringLiteral, std::move(val));
 
     // Multi-line String Literals (\ and \n)
     bool isValidMultiLine = false;
-    StringView oldView = m_SourceView;
+    Decoder oldDecoder = m_Decoder;
     size_t oldLine = m_Line;
-    size_t oldLineStartIdx = m_LineStartIdx;
+    size_t oldLineStartCodepoint = m_LineStartCodepoint;
 
-    SkipWhitespaces();
-    if (!m_SourceView.Empty() && m_SourceView[0] == '\\') {
-        m_SourceView.RemovePrefix(1);
-        bool appendNewLine = !m_SourceView.Empty() && m_SourceView[0] == 'n';
-        if (appendNewLine)
-            m_SourceView.RemovePrefix(1);
-        SkipWhitespaces();
+    SkipWhiteSpaces();
+    if (m_Decoder.Next() == '\\') {
+        bool appendNewLine = m_Decoder.Peek() == 'n';
+        if (appendNewLine) m_Decoder.Skip();
+        SkipWhiteSpaces();
         Token nextStrToken = ParseStringLiteral();
         if (nextStrToken.Type != TokenType::None) {
             isValidMultiLine = true;
@@ -499,9 +564,9 @@ Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
     //   Lexer::RestoreContext
     //   Lexer::DropContext
     if (!isValidMultiLine) {
-        m_SourceView = oldView;
+        m_Decoder = oldDecoder;
         m_Line = oldLine;
-        m_LineStartIdx = oldLineStartIdx;
+        m_LineStartCodepoint = oldLineStartCodepoint;
     }
 
     return strToken;
@@ -509,21 +574,20 @@ Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
 
 Pulsar::Token Pulsar::Lexer::ParseCharacterLiteral()
 {
-    if (m_SourceView.Length() < 3
-        || m_SourceView[0] != '\'')
+    Decoder decoder = m_Decoder;
+    if (decoder.Next() != '\'')
         return CreateNoneToken();
-    StringView view = m_SourceView;
-    view.RemovePrefix(1);
-    char ch = view[0];
-    view.RemovePrefix(1);
+
+    Codepoint ch = decoder.Next();
     // There must be either another ' or an escaped character
-    if (view.Empty())
+    if (!decoder)
         return CreateNoneToken();
-    else if (ch == '\\') {
-        ch = view[0];
-        view.RemovePrefix(1);
-        if (IsControlCharacter(ch))
+
+    if (ch == '\\') {
+        ch = decoder.Next();
+        if (Unicode::IsControl(ch))
             return CreateNoneToken();
+
         switch (ch) {
         case 'n':
             ch = '\n';
@@ -536,17 +600,15 @@ Pulsar::Token Pulsar::Lexer::ParseCharacterLiteral()
             break;
         case 'x': {
             size_t digits = 2;
-            if (view.Length() < digits)
-                digits = view.Length();
             uint8_t code = 0;
             for (size_t i = 0; i < digits; i++) {
-                char digit = ToLowerCase(view[0]);
+                Codepoint digit = Unicode::ToLowerCase(decoder.Peek());
                 if (digit >= 'a' && digit <= 'f') {
-                    code = (code << 4) + digit-'a'+10;
-                    view.RemovePrefix(1);
+                    code = (code << 4) + (uint8_t)(digit-'a'+10);
+                    decoder.Skip();
                 } else if (digit >= '0' && digit <= '9') {
-                    code = (code << 4) + digit-'0';
-                    view.RemovePrefix(1);
+                    code = (code << 4) + (uint8_t)(digit-'0');
+                    decoder.Skip();
                 } else {
                     digits = i;
                     break;
@@ -554,71 +616,97 @@ Pulsar::Token Pulsar::Lexer::ParseCharacterLiteral()
             }
             if (digits == 0)
                 break;
-            ch = (char)(code);
-            if (!view.Empty() && view[0] == ';')
-                view.RemovePrefix(1);
+            ch = (unsigned char)(code);
+            if (decoder.Peek() == ';')
+                decoder.Skip();
         } break;
         default:
             break;
         }
-    } else if (IsControlCharacter(ch) || ch == '\'')
+    } else if (Unicode::IsControl(ch) || ch == '\'')
         return CreateNoneToken();
 
-    if (view.Empty() || view[0] != '\'')
+    if (decoder.Next() != '\'')
         return CreateNoneToken();
-    view.RemovePrefix(1);
-    return TrimToToken(view.GetStart()-m_SourceView.GetStart(), TokenType::IntegerLiteral, (int64_t)ch);
+
+    return PullToken(decoder, TokenType::IntegerLiteral, (int64_t)ch);
 }
 
-size_t Pulsar::Lexer::SkipWhitespaces()
+void Pulsar::Lexer::SkipUntilNewline()
 {
-    size_t count = 0;
-    for (; count < m_SourceView.Length() && IsSpace(m_SourceView[count]); count++) {
-        if (m_SourceView[count] == '\n') {
-            m_Line++;
-            m_LineStartIdx = m_SourceView.GetStart() + count+1 /* skip new line char */;
+    while (m_Decoder) {
+        Codepoint ch = m_Decoder.Next();
+        if (ch == '\n') {
+            break;
+        } else if (ch == '\r') {
+            if (m_Decoder.Peek() == '\n')
+                m_Decoder.Skip();
+            break;
         }
     }
-    m_SourceView.RemovePrefix(count);
-    return count;
+
+    ++m_Line;
+    m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
 }
 
-size_t Pulsar::Lexer::SkipComments()
+bool Pulsar::Lexer::SkipWhiteSpaces()
 {
-    if (m_SourceView[0] == ';') {
-        m_SourceView.RemovePrefix(1);
-        return 1;
-    } else if (m_SourceView.Length() < 2 || !(
-        m_SourceView[0] == '/' && (m_SourceView[1] == '/' || m_SourceView[1] == '*')
-    )) return 0;
-    
-    StringView commentView = m_SourceView;
-    commentView.RemovePrefix(1); // The '/' char
-
-    if (commentView[0] == '/') {
-        while (commentView.Length() > 0 && commentView[0] != '\n')
-            commentView.RemovePrefix(1);
-        if (!commentView.Empty())
-            commentView.RemovePrefix(1); // Remove new line char
-        m_Line++;
-        m_LineStartIdx = commentView.GetStart();
-    } else if (commentView[0] == '*') {
-        while (commentView.Length() > 0) {
-            if (commentView[0] == '\n') {
-                m_Line++;
-                m_LineStartIdx = commentView.GetStart()+1;
-            } else if (commentView.Length() >= 2 &&
-                commentView[0] == '*' && commentView[1] == '/') {
-                commentView.RemovePrefix(2);
-                break;
-            }
-            commentView.RemovePrefix(1);
+    bool hasSkipped = false;
+    for (Codepoint ch = m_Decoder.Peek(); m_Decoder && Unicode::IsWhiteSpace(ch); ch = m_Decoder.Peek()) {
+        hasSkipped = true;
+        m_Decoder.Skip();
+        if (ch == '\n') {
+            ++m_Line;
+            m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
+        } else if (ch == '\r') {
+            if (m_Decoder.Peek() == '\n')
+                m_Decoder.Skip();
+            ++m_Line;
+            m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
         }
     }
-    
-    size_t count = commentView.GetStart() - m_SourceView.GetStart();
-    m_SourceView = commentView;
-    return count;
+    return hasSkipped;
+}
+
+bool Pulsar::Lexer::SkipComments()
+{
+    if (m_Decoder.Peek() == ';') {
+        m_Decoder.Skip();
+        return true;
+    }
+
+    if (m_Decoder.Peek() != '/')
+        return false;
+
+    if (m_Decoder.Peek(2) == '/') {
+        SkipUntilNewline();
+        return true;
+    }
+
+    if (m_Decoder.Peek(2) != '*')
+        return false;
+
+    // We must skip "/*", otherwise "/*/" would be valid.
+    m_Decoder.Skip();
+    m_Decoder.Skip();
+
+    while (m_Decoder) {
+        Codepoint ch = m_Decoder.Next();
+        if (ch == '\n') {
+            ++m_Line;
+            m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
+        } else if (ch == '\r') {
+            if (m_Decoder.Peek() == '\n')
+                m_Decoder.Skip();
+            ++m_Line;
+            m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
+        } else if (ch == '*' && m_Decoder.Peek() == '/') {
+            m_Decoder.Skip();
+            break;
+        }
+    }
+
+    return true;
 }
 
 const char* Pulsar::TokenTypeToString(TokenType ttype)

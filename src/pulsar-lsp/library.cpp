@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <fstream>
 
+#include "pulsar/utf8.h"
+
 Pulsar::String PulsarLSP::URIToNormalizedPath(const lsp::FileURI& uri)
 {
     auto fsPath = std::filesystem::path(uri.path());
@@ -51,6 +53,53 @@ bool PulsarLSP::ReadFile(const lsp::FileURI& uri, Pulsar::String& buffer)
     return (bool)file.read(buffer.Data(), fileSize);
 }
 
+
+size_t PulsarLSP::Unicode::GetEncodedSize(Codepoint code, PositionEncodingKind encodingKind)
+{
+    switch (encodingKind) {
+    case PositionEncodingKind::UTF8:
+        return Pulsar::UTF8::GetEncodedSize(code);
+    case PositionEncodingKind::UTF16:
+        if (code <= 0xFFFF) return 1;
+        return 2;
+    case PositionEncodingKind::UTF32:
+    default:
+        return 1;
+    }
+}
+
+void PulsarLSP::UTF8::DecoderExt::AdvanceToLine(Decoder& decoder, size_t startLine, size_t line)
+{
+    size_t currentLine = startLine;
+    while (decoder && currentLine != line) {
+        Codepoint ch = decoder.Next();
+        // CRLF
+        if (ch == '\r' && decoder.Peek() == '\n') {
+            ++currentLine;
+            decoder.Skip();
+        // CR or LF
+        } else if (ch == '\r' || ch == '\n') {
+            ++currentLine;
+        }
+    }
+}
+
+void PulsarLSP::UTF8::DecoderExt::AdvanceToChar(Decoder& decoder, size_t startChar, size_t character, PositionEncodingKind encodingKind)
+{
+    size_t currCharacter = startChar;
+    while (decoder && currCharacter < character) {
+        Codepoint ch = decoder.Next();
+        currCharacter += Unicode::GetEncodedSize(ch, encodingKind);
+
+        if (ch == '\r' && decoder.Peek() == '\n') {
+            decoder.Skip();
+            break;
+        } else if (ch == '\r' || ch == '\n') {
+            break;
+        }
+    }
+}
+
 PulsarLSP::ConstSharedText PulsarLSP::Library::FindDocument(const lsp::FileURI& uri) const
 {
     Pulsar::String path = URIToNormalizedPath(uri);
@@ -89,80 +138,6 @@ PulsarLSP::ConstSharedText PulsarLSP::Library::StoreDocument(const lsp::FileURI&
     }
 }
 
-size_t FindLineStartIndex(const Pulsar::String& text, size_t line)
-{
-    size_t currentLine = 0;
-
-    size_t p;
-    for (p = 0; p < text.Length() && currentLine != line; ++p) {
-        // CRLF
-        if (text.Length()-p >= 2 && text[p] == '\r' && text[p+1] == '\n') {
-            ++currentLine;
-            ++p; // +1 because CRLF is a sequence of 2 bytes
-        // CR or LF
-        } else if (text[p] == '\r' || text[p] == '\n') {
-            ++currentLine;
-        }
-    }
-
-    return p;
-}
-
-size_t FindCharacterIndex(const Pulsar::String& text, size_t p, size_t character)
-{
-    for (size_t currCharacter = 0; currCharacter < character; ++currCharacter) {
-        if (p >= text.Length()) break;
-        // TODO: Support UTF-8 encoding
-        //       Some fixes should also be made to Pulsar::Lexer
-        // CRLF
-        if (text.Length()-p >= 2 && text[p] == '\r' && text[p+1] == '\n') {
-            p += 2;
-            break;
-        // CR or LF
-        } else if (text[p] == '\r' || text[p] == '\n') {
-            p += 1;
-            break;
-        }
-
-        ++p;
-    }
-
-    return p;
-}
-
-std::pair<size_t, size_t> GetRangeIndices(const Pulsar::String& text, lsp::Range range)
-{
-    size_t p = FindLineStartIndex(text, (size_t)range.start.line);
-    size_t q = FindLineStartIndex(text, (size_t)range.end.line);
-
-    p = FindCharacterIndex(text, p, (size_t)range.start.character);
-    q = FindCharacterIndex(text, q, (size_t)range.end.character);
-
-    // They're probably already sorted
-    if (p <= q) {
-        return {p, q};
-    } else {
-        return {q, p};
-    }
-}
-
-void PutRangePatch(Pulsar::String& text, const lsp::TextDocumentContentChangeEvent_Range_Text& change)
-{
-    if (text.Length() == 0) {
-        text = change.text.c_str();
-        return;
-    }
-
-    auto indices = GetRangeIndices(text, change.range);
-    size_t p = indices.first;
-    size_t q = indices.second;
-
-    Pulsar::String back = text.SubString(q, text.Length());
-    text.Resize(p);
-    text += change.text.c_str();
-    text += back;
-}
-
 PulsarLSP::ConstSharedText PulsarLSP::Library::PatchDocument(const lsp::FileURI& uri, const DocumentPatches& patches, int newVersion)
 {
     Pulsar::String docPath = URIToNormalizedPath(uri);
@@ -195,4 +170,35 @@ void PulsarLSP::Library::DeleteDocument(const lsp::FileURI& uri)
 void PulsarLSP::Library::DeleteAllDocuments()
 {
     m_Documents.Clear();
+}
+
+std::pair<size_t, size_t> PulsarLSP::Library::GetRangeIndices(const Pulsar::String& text, lsp::Range range) const
+{
+    UTF8::Decoder start(text);
+    UTF8::DecoderExt::AdvanceToLine(start, 0, (size_t)range.start.line);
+
+    UTF8::Decoder end = start;
+    UTF8::DecoderExt::AdvanceToLine(end, (size_t)range.start.line, (size_t)range.end.line);
+
+    UTF8::DecoderExt::AdvanceToChar(start, 0, (size_t)range.start.character, GetPositionEncoding());
+    UTF8::DecoderExt::AdvanceToChar(end, 0, (size_t)range.end.character, GetPositionEncoding());
+
+    return { start.GetDecodedBytes(), end.GetDecodedBytes() };
+}
+
+void PulsarLSP::Library::PutRangePatch(Pulsar::String& text, const lsp::TextDocumentContentChangeEvent_Range_Text& change)
+{
+    if (text.Length() == 0) {
+        text = change.text.c_str();
+        return;
+    }
+
+    auto indices = GetRangeIndices(text, change.range);
+    size_t p = indices.first;
+    size_t q = indices.second;
+
+    Pulsar::String back = text.SubString(q, text.Length());
+    text.Resize(p);
+    text += change.text.c_str();
+    text += back;
 }

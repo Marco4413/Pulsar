@@ -294,6 +294,9 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
     auto doc = GetOrParseDocument(uri);
     if (!doc || !doc->Module.HasSourceDebugSymbols()) return {};
 
+    ConstSharedText docText = m_Library.FindDocument(uri);
+    pos = EditorPositionToDocumentPosition(docText, pos);
+
     Pulsar::String path = URIToNormalizedPath(uri);
     for (size_t i = 0; i < doc->FunctionScopes.Size(); ++i) {
         const FunctionScope& fnScope = doc->FunctionScopes[i];
@@ -314,7 +317,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                     lsp::FileURI locUri = NormalizedPathToURI(sourceSymbol.Path);
                     return lsp::Location{
                         .uri = locUri,
-                        .range = SourcePositionToRange(global.DebugSymbol.Token.SourcePos)
+                        .range = DocumentRangeToEditorRange(docText, SourcePositionToRange(global.DebugSymbol.Token.SourcePos))
                     };
                 }
                 case Pulsar::LSPIdentifierUsageType::Function: {
@@ -329,7 +332,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                     lsp::FileURI locUri = NormalizedPathToURI(sourceSymbol.Path);
                     return lsp::Location{
                         .uri = locUri,
-                        .range = SourcePositionToRange(func.DebugSymbol.Token.SourcePos)
+                        .range = DocumentRangeToEditorRange(docText, SourcePositionToRange(func.DebugSymbol.Token.SourcePos))
                     };
                 }
                 case Pulsar::LSPIdentifierUsageType::NativeFunction: {
@@ -344,14 +347,14 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                     lsp::FileURI locUri = NormalizedPathToURI(sourceSymbol.Path);
                     return lsp::Location{
                         .uri = locUri,
-                        .range = SourcePositionToRange(func.DebugSymbol.Token.SourcePos)
+                        .range = DocumentRangeToEditorRange(docText, SourcePositionToRange(func.DebugSymbol.Token.SourcePos))
                     };
                 }
                 case Pulsar::LSPIdentifierUsageType::Local: {
                     lsp::FileURI locUri = NormalizedPathToURI(fnScope.FilePath);
                     return lsp::Location{
                         .uri = locUri,
-                        .range = SourcePositionToRange(identUsage.LocalDeclaredAt)
+                        .range = DocumentRangeToEditorRange(docText, SourcePositionToRange(identUsage.LocalDeclaredAt))
                     };
                 }
                 default: break;
@@ -363,22 +366,24 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
     return {};
 }
 
-std::optional<lsp::Location> PulsarLSP::Server::FindDefinition(const lsp::FileURI& uri, lsp::Position pos)
+std::optional<lsp::Location> PulsarLSP::Server::FindDefinition(const lsp::FileURI& uri, lsp::Position editorPos)
 {
     auto doc = GetOrParseDocument(uri);
     if (!doc) return {};
+    
+    lsp::Position pos = EditorPositionToDocumentPosition(uri, editorPos);
 
     for (size_t i = 0; i < doc->IncludedFiles.Size(); ++i) {
         const auto& includedFile = doc->IncludedFiles[i];
         if (IsPositionInBetween(pos, includedFile.IncludedAt)) {
             return lsp::Location{
                 .uri = NormalizedPathToURI(includedFile.FilePath),
-                .range = lsp::Range{.start{.line=0,.character=0},.end{.line=0,.character=0}}
+                .range = NULL_RANGE
             };
         }
     }
 
-    return FindDeclaration(uri, pos);
+    return FindDeclaration(uri, editorPos);
 }
 
 std::vector<lsp::DocumentSymbol> PulsarLSP::Server::GetSymbols(const lsp::FileURI& uri)
@@ -386,42 +391,46 @@ std::vector<lsp::DocumentSymbol> PulsarLSP::Server::GetSymbols(const lsp::FileUR
     auto doc = GetOrParseDocument(uri);
     if (!doc) return {};
 
+    ConstSharedText docText = m_Library.FindDocument(uri);
+
     std::vector<lsp::DocumentSymbol> result;
     for (size_t i = 0; i < doc->Module.Globals.Size(); ++i) {
         const auto& glblDef = doc->Module.Globals[i];
         // TODO: Use this method EVERYWHERE. I don't know why I didn't think about this sooner.
         // Index 0 is the root document of the module.
         if (glblDef.DebugSymbol.SourceIdx != 0) continue;
+        lsp::Range symbolRange = DocumentRangeToEditorRange(docText, SourcePositionToRange(glblDef.DebugSymbol.Token.SourcePos));
         result.emplace_back(lsp::DocumentSymbol{
             .name = CreateGlobalDefinitionDetails(glblDef, doc),
             .kind = lsp::SymbolKind::Variable,
-            .range = SourcePositionToRange(glblDef.DebugSymbol.Token.SourcePos),
-            .selectionRange = SourcePositionToRange(glblDef.DebugSymbol.Token.SourcePos),
+            .range = symbolRange,
+            .selectionRange = symbolRange,
         });
     }
     for (size_t i = 0; i < doc->FunctionDefinitions.Size(); ++i) {
         const auto& funcDef = doc->FunctionDefinitions[i];
         if (funcDef.Definition.DebugSymbol.SourceIdx != 0) continue;
+        lsp::Range symbolRange = DocumentRangeToEditorRange(docText, SourcePositionToRange(funcDef.Definition.DebugSymbol.Token.SourcePos));
         result.emplace_back(lsp::DocumentSymbol{
             .name = CreateFunctionDefinitionDetails(funcDef),
             .kind = lsp::SymbolKind::Function,
-            .range = SourcePositionToRange(funcDef.Definition.DebugSymbol.Token.SourcePos),
-            .selectionRange = SourcePositionToRange(funcDef.Definition.DebugSymbol.Token.SourcePos),
+            .range = symbolRange,
+            .selectionRange = symbolRange,
         });
     }
     return result;
 }
 
-lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global, Pulsar::SourcePosition replaceWithName)
+lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global, lsp::Range replaceWithName)
 {
     lsp::CompletionItem item{};
     item.label = global.Name.CString();
     item.kind  = lsp::CompletionItemKind::Variable;
-    if (replaceWithName == NULL_SOURCE_POSITION) {
+    if (IsNullRange(replaceWithName)) {
         item.insertText = item.label;
     } else {
         lsp::TextEdit edit{
-            .range   = SourcePositionToRange(replaceWithName),
+            .range   = replaceWithName,
             .newText = item.label,
         };
         item.filterText = edit.newText;
@@ -481,18 +490,18 @@ std::string PulsarLSP::CreateFunctionDefinitionDetails(const FunctionDefinition&
     return detail;
 }
 
-lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundFunction& fn, Pulsar::SourcePosition replaceWithName)
+lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundFunction& fn, lsp::Range replaceWithName)
 {
     lsp::CompletionItem item{};
     item.label  = "(";
     item.label += fn.Name.CString();
     item.label += ")";
     item.kind   = lsp::CompletionItemKind::Function;
-    if (replaceWithName == NULL_SOURCE_POSITION) {
+    if (IsNullRange(replaceWithName)) {
         item.insertText = item.label;
     } else {
         lsp::TextEdit edit{
-            .range   = SourcePositionToRange(replaceWithName),
+            .range   = replaceWithName,
             .newText = fn.Name.CString(),
         };
         item.filterText = edit.newText;
@@ -510,18 +519,18 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
     return item;
 }
 
-lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundNativeFunction& nativeFn, Pulsar::SourcePosition replaceWithName)
+lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundNativeFunction& nativeFn, lsp::Range replaceWithName)
 {
     lsp::CompletionItem item{};
     item.label  = "(*";
     item.label += nativeFn.Name.CString();
     item.label += ")";
     item.kind   = lsp::CompletionItemKind::Function;
-    if (replaceWithName == NULL_SOURCE_POSITION) {
+    if (IsNullRange(replaceWithName)) {
         item.insertText = item.label;
     } else {
         lsp::TextEdit edit{
-            .range   = SourcePositionToRange(replaceWithName),
+            .range   = replaceWithName,
             .newText = nativeFn.Name.CString(),
         };
         item.filterText = edit.newText;
@@ -539,16 +548,16 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument
     return item;
 }
 
-lsp::CompletionItem PulsarLSP::CreateCompletionItemForLocal(const LocalScope::Local& local, Pulsar::SourcePosition replaceWithName)
+lsp::CompletionItem PulsarLSP::CreateCompletionItemForLocal(const LocalScope::Local& local, lsp::Range replaceWithName)
 {
     lsp::CompletionItem item{};
     item.label = local.Name.CString();
     item.kind  = lsp::CompletionItemKind::Variable;
-    if (replaceWithName == NULL_SOURCE_POSITION) {
+    if (IsNullRange(replaceWithName)) {
         item.insertText = item.label;
     } else {
         lsp::TextEdit edit{
-            .range   = SourcePositionToRange(replaceWithName),
+            .range   = replaceWithName,
             .newText = item.label,
         };
         item.filterText = edit.newText;
@@ -601,6 +610,9 @@ std::optional<lsp::Hover> PulsarLSP::Server::GetHover(const lsp::FileURI& uri, l
     auto doc = GetOrParseDocument(uri);
     if (!doc || !doc->Module.HasSourceDebugSymbols()) return std::nullopt;
 
+    ConstSharedText docText = m_Library.FindDocument(uri);
+    pos = EditorPositionToDocumentPosition(docText, pos);
+
     // FIXME: Maybe refactor into a separate method, it's a copy of FindDeclaration
     Pulsar::String path = URIToNormalizedPath(uri);
     for (size_t i = 0; i < doc->FunctionScopes.Size(); ++i) {
@@ -609,6 +621,7 @@ std::optional<lsp::Hover> PulsarLSP::Server::GetHover(const lsp::FileURI& uri, l
         for (size_t j = 0; j < fnScope.UsedIdentifiers.Size(); ++j) {
             const IdentifierUsage& identUsage = fnScope.UsedIdentifiers[j];
             if (IsPositionInBetween(pos, identUsage.Identifier.SourcePos)) {
+                lsp::Range usageRange = DocumentRangeToEditorRange(docText, SourcePositionToRange(identUsage.Identifier.SourcePos));
                 switch (identUsage.Type) {
                 case Pulsar::LSPIdentifierUsageType::Global: {
                     if (identUsage.BoundIndex >= doc->Module.Globals.Size()) break;
@@ -621,7 +634,7 @@ std::optional<lsp::Hover> PulsarLSP::Server::GetHover(const lsp::FileURI& uri, l
                             // So we don't care if custom type names have weird names
                             .value = PULSAR_CODEBLOCK(CreateGlobalDefinitionDetails(global, doc)),
                         },
-                        .range = SourcePositionToRange(identUsage.Identifier.SourcePos),
+                        .range = usageRange,
                     };
                 }
                 case Pulsar::LSPIdentifierUsageType::Function: {
@@ -635,7 +648,7 @@ std::optional<lsp::Hover> PulsarLSP::Server::GetHover(const lsp::FileURI& uri, l
                                     .kind = lsp::MarkupKind::Markdown,
                                     .value = PULSAR_CODEBLOCK(CreateFunctionDefinitionDetails(fnDef)),
                                 },
-                                .range = SourcePositionToRange(identUsage.Identifier.SourcePos),
+                                .range = usageRange,
                             };
                         }
                     }
@@ -651,7 +664,7 @@ std::optional<lsp::Hover> PulsarLSP::Server::GetHover(const lsp::FileURI& uri, l
                                     .kind = lsp::MarkupKind::Markdown,
                                     .value = PULSAR_CODEBLOCK(CreateFunctionDefinitionDetails(fnDef)),
                                 },
-                                .range = SourcePositionToRange(identUsage.Identifier.SourcePos),
+                                .range = usageRange,
                             };
                         }
                     }
@@ -662,7 +675,7 @@ std::optional<lsp::Hover> PulsarLSP::Server::GetHover(const lsp::FileURI& uri, l
                             .kind = lsp::MarkupKind::Markdown,
                             .value = PULSAR_CODEBLOCK(identUsage.Identifier.StringVal).CString(),
                         },
-                        .range = SourcePositionToRange(identUsage.Identifier.SourcePos),
+                        .range = usageRange,
                     };
                 }
                 default: break;
@@ -678,13 +691,17 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetErrorCompletionItems(Pars
 {
     std::vector<lsp::CompletionItem> result;
 
+    lsp::Range errorRange = DocumentRangeToEditorRange(
+        NormalizedPathToURI(doc->ErrorFilePath),
+        SourcePositionToRange(doc->ErrorPosition));
+
     switch (doc->ParseResult) {
     case Pulsar::ParseResult::UsageOfUndeclaredLocal: {
         for (size_t i = 0; i < funcScope.Globals.Size(); ++i) {
-            result.emplace_back(CreateCompletionItemForBoundEntity(doc, funcScope.Globals[i], doc->ErrorPosition));
+            result.emplace_back(CreateCompletionItemForBoundEntity(doc, funcScope.Globals[i], errorRange));
         }
         for (size_t i = 0; i < localScope.Locals.Size(); ++i) {
-            result.emplace_back(CreateCompletionItemForLocal(localScope.Locals[i], doc->ErrorPosition));
+            result.emplace_back(CreateCompletionItemForLocal(localScope.Locals[i], errorRange));
         }
         // Since the Server listens to TextDocument/DidChange,
         //  and may send a Diagnostic if the user writes 'i',
@@ -693,7 +710,7 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetErrorCompletionItems(Pars
         for (size_t i = 0; i < kws.Size(); ++i) {
             lsp::CompletionItem item = kws[i];
             lsp::TextEdit edit{
-                .range   = SourcePositionToRange(doc->ErrorPosition),
+                .range   = errorRange,
                 .newText = item.label,
             };
             item.filterText = edit.newText;
@@ -702,10 +719,10 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetErrorCompletionItems(Pars
         }
     } break;
     case Pulsar::ParseResult::UsageOfUnknownInstruction: {
-        PulsarLSP::Completion::GetInstructions().ForEach([&result, pos = doc->ErrorPosition](const auto& bucket) {
+        PulsarLSP::Completion::GetInstructions().ForEach([&result, errorRange](const auto& bucket) {
             lsp::CompletionItem item = bucket.Value();
             lsp::TextEdit edit{
-                .range   = SourcePositionToRange(pos),
+                .range   = errorRange,
                 .newText = bucket.Key(),
             };
             item.filterText = edit.newText;
@@ -715,12 +732,12 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetErrorCompletionItems(Pars
     } break;
     case Pulsar::ParseResult::UsageOfUndeclaredFunction: {
         for (size_t i = 0; i < funcScope.Functions.Size(); ++i) {
-            result.emplace_back(CreateCompletionItemForBoundEntity(doc, funcScope.Functions[i], doc->ErrorPosition));
+            result.emplace_back(CreateCompletionItemForBoundEntity(doc, funcScope.Functions[i], errorRange));
         }
     } break;
     case Pulsar::ParseResult::UsageOfUndeclaredNativeFunction: {
         for (size_t i = 0; i < funcScope.NativeFunctions.Size(); ++i) {
-            result.emplace_back(CreateCompletionItemForBoundEntity(doc, funcScope.NativeFunctions[i], doc->ErrorPosition));
+            result.emplace_back(CreateCompletionItemForBoundEntity(doc, funcScope.NativeFunctions[i], errorRange));
         }
     } break;
     case Pulsar::ParseResult::UnexpectedToken: {
@@ -732,7 +749,7 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetErrorCompletionItems(Pars
         for (size_t i = 0; i < kws.Size(); ++i) {
             lsp::CompletionItem item = kws[i];
             lsp::TextEdit edit{
-                .range   = SourcePositionToRange(doc->ErrorPosition),
+                .range   = errorRange,
                 .newText = item.label,
             };
             item.filterText = edit.newText;
@@ -808,8 +825,12 @@ std::vector<PulsarLSP::DiagnosticsForDocument> PulsarLSP::Server::GetDiagnosticR
 
     // Make sure the file was retrieved correctly
     if (badDoc) {
+        lsp::Range errorRange = DocumentRangeToEditorRange(
+            NormalizedPathToURI(doc->ErrorFilePath),
+            SourcePositionToRange(badDoc->ErrorPosition));
+
         lsp::Diagnostic error;
-        error.range    = SourcePositionToRange(badDoc->ErrorPosition);
+        error.range    = errorRange;
         error.message  = Pulsar::ParseResultToString(badDoc->ParseResult);
         error.message += ": ";
         error.message += badDoc->ErrorMessage.CString();
@@ -854,6 +875,130 @@ void PulsarLSP::Server::ResetDiagnosticReport(const Pulsar::String& normalizedPa
             .version = std::nullopt
         }
     );
+}
+
+lsp::Position PulsarLSP::Server::DocumentPositionToEditorPosition(ConstSharedText doc, lsp::Position pos) const
+{
+    if (!doc) return pos;
+
+    UTF8::Decoder start(*doc);
+    UTF8::DecoderExt::AdvanceToLine(start, 0, (size_t)pos.line);
+
+    lsp::uint editorStartChar = 0;
+    for (lsp::uint i = 0; i < pos.character && start; ++i) {
+        editorStartChar += (lsp::uint)Unicode::GetEncodedSize(start.Next(), GetPositionEncoding());
+    }
+
+    return lsp::Position{
+        .line = pos.line,
+        .character = editorStartChar
+    };
+}
+
+lsp::Position PulsarLSP::Server::EditorPositionToDocumentPosition(ConstSharedText doc, lsp::Position pos) const
+{
+    if (!doc) return pos;
+
+    UTF8::Decoder start(*doc);
+    UTF8::DecoderExt::AdvanceToLine(start, 0, (size_t)pos.line);
+
+    lsp::uint startChar = 0;
+    for (lsp::uint i = 0; i < pos.character && start; ++startChar) {
+        i += (lsp::uint)Unicode::GetEncodedSize(start.Next(), GetPositionEncoding());
+    }
+
+    return lsp::Position{
+        .line = pos.line,
+        .character = startChar
+    };
+}
+
+lsp::Position PulsarLSP::Server::DocumentPositionToEditorPosition(const lsp::FileURI& uri, lsp::Position pos) const
+{
+    ConstSharedText doc = m_Library.FindDocument(uri);
+    return DocumentPositionToEditorPosition(doc, pos);
+}
+
+lsp::Position PulsarLSP::Server::EditorPositionToDocumentPosition(const lsp::FileURI& uri, lsp::Position pos) const
+{
+    ConstSharedText doc = m_Library.FindDocument(uri);
+    return EditorPositionToDocumentPosition(doc, pos);
+}
+
+lsp::Range PulsarLSP::Server::DocumentRangeToEditorRange(ConstSharedText doc, lsp::Range range) const
+{
+    if (!doc) return range;
+
+    UTF8::Decoder start(*doc);
+    UTF8::DecoderExt::AdvanceToLine(start, 0, (size_t)range.start.line);
+
+    UTF8::Decoder end = start;
+    UTF8::DecoderExt::AdvanceToLine(end, (size_t)range.start.line, (size_t)range.end.line);
+
+    lsp::uint editorStartChar = 0;
+    for (lsp::uint i = 0; i < range.start.character && start; ++i) {
+        editorStartChar += (lsp::uint)Unicode::GetEncodedSize(start.Next(), GetPositionEncoding());
+    }
+
+    lsp::uint editorEndChar = 0;
+    for (lsp::uint i = 0; i < range.end.character && end; ++i) {
+        editorEndChar += (lsp::uint)Unicode::GetEncodedSize(end.Next(), GetPositionEncoding());
+    }
+
+    return lsp::Range{
+        .start = {
+            .line = range.start.line,
+            .character = editorStartChar
+        },
+        .end = {
+            .line = range.end.line,
+            .character = editorEndChar
+        }
+    };
+}
+
+lsp::Range PulsarLSP::Server::EditorRangeToDocumentRange(ConstSharedText doc, lsp::Range range) const
+{
+    if (!doc) return range;
+
+    UTF8::Decoder start(*doc);
+    UTF8::DecoderExt::AdvanceToLine(start, 0, (size_t)range.start.line);
+
+    UTF8::Decoder end = start;
+    UTF8::DecoderExt::AdvanceToLine(end, (size_t)range.start.line, (size_t)range.end.line);
+
+    lsp::uint startChar = 0;
+    for (lsp::uint i = 0; i < range.start.character && start; ++startChar) {
+        i += (lsp::uint)Unicode::GetEncodedSize(start.Next(), GetPositionEncoding());
+    }
+
+    lsp::uint endChar = 0;
+    for (lsp::uint i = 0; i < range.end.character && end; ++endChar) {
+        i += (lsp::uint)Unicode::GetEncodedSize(end.Next(), GetPositionEncoding());
+    }
+
+    return lsp::Range{
+        .start = {
+            .line = range.start.line,
+            .character = startChar
+        },
+        .end = {
+            .line = range.end.line,
+            .character = endChar
+        }
+    };
+}
+
+lsp::Range PulsarLSP::Server::DocumentRangeToEditorRange(const lsp::FileURI& uri, lsp::Range range) const
+{
+    ConstSharedText doc = m_Library.FindDocument(uri);
+    return DocumentRangeToEditorRange(doc, range);
+}
+
+lsp::Range PulsarLSP::Server::EditorRangeToDocumentRange(const lsp::FileURI& uri, lsp::Range range) const
+{
+    ConstSharedText doc = m_Library.FindDocument(uri);
+    return EditorRangeToDocumentRange(doc, range);
 }
 
 void PulsarLSP::Server::StripModule(Pulsar::Module& mod) const
@@ -917,8 +1062,35 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
                 GET_INIT_BOOLEAN_OPTION(mapGlobalProducersToVoid, MapGlobalProducersToVoid);
             }
 
+            // You can see the standard was developed by Microsoft
+            //  because UTF16 is the default encoding.
+            PositionEncodingKind positionEncoding = PositionEncodingKind::UTF16;
+
+            bool supportsUTF8  = false;
+            bool supportsUTF32 = false;
+            if (params.capabilities.general && params.capabilities.general->positionEncodings) {
+                for (auto encoding : *params.capabilities.general->positionEncodings) {
+                    // TODO: Add some optimizations to UTF8 and UTF32 if needed
+                    if (encoding == PositionEncodingKind::UTF8) {
+                        supportsUTF8 = true;
+                    } else if (encoding == PositionEncodingKind::UTF32) {
+                        supportsUTF32 = true;
+                    }
+                }
+            }
+
+            // Because this project is *based* we'll prefer any encoding other than ::UTF16
+            // Windows devs be in shambles fr rn 😎👍
+            if (supportsUTF8) {
+                positionEncoding = PositionEncodingKind::UTF8;
+            } else if (supportsUTF32) {
+                positionEncoding = PositionEncodingKind::UTF32;
+            }
+
+            this->m_Library.SetPositionEncoding(positionEncoding);
             return lsp::requests::Initialize::Result{
                 .capabilities = {
+                    .positionEncoding       = positionEncoding,
                     .textDocumentSync       = lsp::TextDocumentSyncOptions{
                         .openClose = true,
                         .change    = lsp::TextDocumentSyncKind::Incremental,
