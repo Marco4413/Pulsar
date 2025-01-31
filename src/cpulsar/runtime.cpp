@@ -145,6 +145,22 @@ CPULSAR_API void CPulsar_ExecutionContext_Delete(CPulsar_ExecutionContext _self)
     PULSAR_DELETE(ExecutionContext, &CPULSAR_DEREF(ExecutionContext, _self));
 }
 
+CPULSAR_API CPulsar_CustomTypeData_Ref CPulsar_ExecutionContext_GetCustomTypeData(CPulsar_ExecutionContext _self, uint64_t typeId)
+{
+    ExecutionContext& self = CPULSAR_DEREF(ExecutionContext, _self);
+    auto typeData = self.GetCustomTypeData<Pulsar::CustomTypeData>(typeId);
+    if (!typeData) return NULL;
+    return CPULSAR_REF(CPulsar_CustomTypeData_Ref_S, *PULSAR_NEW(Pulsar::CustomTypeData::Ref, typeData));
+}
+
+CPULSAR_API CPulsar_CBuffer* CPulsar_ExecutionContext_GetCustomTypeDataBuffer(CPulsar_ExecutionContext self, uint64_t typeId)
+{
+    CPulsar_CustomTypeData_Ref ref = CPulsar_ExecutionContext_GetCustomTypeData(self, typeId);
+    CPulsar_CBuffer* buf = CPulsar_CustomTypeData_Ref_GetBuffer(ref);
+    CPulsar_CustomTypeData_Ref_Delete(ref);
+    return buf;
+}
+
 CPULSAR_API CPulsar_Stack CPulsar_ExecutionContext_GetStack(CPulsar_ExecutionContext _self)
 {
     return CPULSAR_REF(CPulsar_Stack_S, CPULSAR_DEREF(ExecutionContext, _self).GetStack());

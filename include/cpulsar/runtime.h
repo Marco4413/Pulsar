@@ -65,6 +65,11 @@ CPULSAR_API CPulsar_Stack CPulsar_Frame_GetStack(CPulsar_Frame self);
 CPULSAR_API CPulsar_ExecutionContext CPulsar_ExecutionContext_Create(const CPulsar_Module module);
 CPULSAR_API void CPulsar_ExecutionContext_Delete(CPulsar_ExecutionContext self);
 
+// If the returned reference is not NULL, ownership of the reference is given to the caller.
+CPULSAR_API CPulsar_CustomTypeData_Ref CPulsar_ExecutionContext_GetCustomTypeData(CPulsar_ExecutionContext self, uint64_t typeId);
+// Helper method to directly get a CBuffer from type data. Prefer the above method if you're worried about its lifecycle.
+CPULSAR_API CPulsar_CBuffer* CPulsar_ExecutionContext_GetCustomTypeDataBuffer(CPulsar_ExecutionContext self, uint64_t typeId);
+
 CPULSAR_API CPulsar_Stack CPulsar_ExecutionContext_GetStack(CPulsar_ExecutionContext self);
 CPULSAR_API CPulsar_Frame CPulsar_ExecutionContext_CurrentFrame(CPulsar_ExecutionContext self);
 CPULSAR_API CPulsar_RuntimeState CPulsar_ExecutionContext_CallFunctionByName(CPulsar_ExecutionContext self, const char* fnName);
