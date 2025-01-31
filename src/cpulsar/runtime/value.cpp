@@ -9,7 +9,7 @@ using ValueList = Pulsar::ValueList;
 extern "C"
 {
 
-CPULSAR_API CPulsar_Value CPulsar_Value_Create()
+CPULSAR_API CPulsar_Value CPulsar_Value_Create(void)
 {
     return CPULSAR_REF(CPulsar_Value_S, *PULSAR_NEW(Value));
 }
@@ -81,7 +81,7 @@ CPULSAR_API CPulsar_CustomData CPulsar_Value_SetCustom(CPulsar_Value _self, CPul
     return _data;
 }
 
-CPULSAR_API CPulsar_ValueList CPulsar_ValueList_Create()
+CPULSAR_API CPulsar_ValueList CPulsar_ValueList_Create(void)
 {
     return CPULSAR_REF(CPulsar_ValueList_S, *PULSAR_NEW(ValueList));
 }

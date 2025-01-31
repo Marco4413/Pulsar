@@ -11,7 +11,7 @@ typedef struct CPulsar_ValueList_S* CPulsar_ValueList;
 extern "C" {
 #endif
 
-CPULSAR_API CPulsar_Value CPulsar_Value_Create();
+CPULSAR_API CPulsar_Value CPulsar_Value_Create(void);
 CPULSAR_API void CPulsar_Value_Delete(CPulsar_Value self);
 
 CPULSAR_API int CPulsar_Value_IsInteger(const CPulsar_Value self);
@@ -32,7 +32,7 @@ CPULSAR_API CPulsar_CustomData CPulsar_Value_AsCustom(CPulsar_Value self);
 // Copies the reference from `data` so make sure to delete the instance that was passed.
 CPULSAR_API CPulsar_CustomData CPulsar_Value_SetCustom(CPulsar_Value self, CPulsar_CustomData data);
 
-CPULSAR_API CPulsar_ValueList CPulsar_ValueList_Create();
+CPULSAR_API CPulsar_ValueList CPulsar_ValueList_Create(void);
 CPULSAR_API void CPulsar_ValueList_Delete(CPulsar_ValueList self);
 
 CPULSAR_API CPulsar_Value CPulsar_ValueList_Pop(CPulsar_ValueList self);

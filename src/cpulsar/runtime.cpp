@@ -38,7 +38,7 @@ CPULSAR_API const char* CPulsar_RuntimeState_ToString(CPulsar_RuntimeState runti
     return RuntimeStateToString((Pulsar::RuntimeState)runtimeState);
 }
 
-CPULSAR_API CPulsar_Module CPulsar_Module_Create()
+CPULSAR_API CPulsar_Module CPulsar_Module_Create(void)
 {
     return CPULSAR_REF(CPulsar_Module_S, *PULSAR_NEW(Module));
 }

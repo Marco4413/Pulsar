@@ -33,7 +33,7 @@ extern "C" {
 
 CPULSAR_API const char* CPulsar_RuntimeState_ToString(CPulsar_RuntimeState runtimeState);
 
-CPULSAR_API CPulsar_Module CPulsar_Module_Create();
+CPULSAR_API CPulsar_Module CPulsar_Module_Create(void);
 CPULSAR_API void CPulsar_Module_Delete(CPulsar_Module self);
 
 // `nativeFnArgs.Data` will be passed to `nativeFn` on each call.
