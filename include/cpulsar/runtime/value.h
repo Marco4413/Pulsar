@@ -41,6 +41,8 @@ CPULSAR_API CPulsar_ValueList CPulsar_ValueList_Create(void);
 CPULSAR_API void CPulsar_ValueList_Delete(CPulsar_ValueList self);
 
 CPULSAR_API CPulsar_Value CPulsar_ValueList_Pop(CPulsar_ValueList self);
+// Pushes a new empty value owned by `self` and returns its reference.
+CPULSAR_API CPulsar_Value CPulsar_ValueList_PushEmpty(CPulsar_ValueList self);
 // Moves `value` into the list. `value` must be deleted by its owner
 CPULSAR_API void CPulsar_ValueList_Push(CPulsar_ValueList self, CPulsar_Value value);
 // Copies `value` into the list. `value` must be deleted by its owner

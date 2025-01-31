@@ -122,6 +122,12 @@ CPULSAR_API CPulsar_Value CPulsar_ValueList_Pop(CPulsar_ValueList _self)
     return value;
 }
 
+CPULSAR_API CPulsar_Value CPulsar_ValueList_PushEmpty(CPulsar_ValueList _self)
+{
+    ValueList::Node* node = CPULSAR_DEREF(ValueList, _self).Append();
+    return CPULSAR_REF(CPulsar_Value_S, node->Value());
+}
+
 CPULSAR_API void CPulsar_ValueList_Push(CPulsar_ValueList _self, CPulsar_Value _value)
 {
     CPULSAR_DEREF(ValueList, _self).Append(std::move(CPULSAR_DEREF(Value, _value)));
