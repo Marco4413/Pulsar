@@ -8,6 +8,8 @@ int main(int argc, const char** argv)
     std::string_view logLevel = *program.Options.LogLevel;
     PulsarTools::Logger& logger = PulsarTools::CLI::GetLogger();
 
+    logger.SetPrefix(*program.Options.Prefix);
+    logger.SetColor(*program.Options.Color);
     if (logLevel == "all") {
         logger.SetLogLevel(PulsarTools::LogLevel::All);
     } else if (logLevel == "error") {

@@ -17,11 +17,19 @@ namespace PulsarTools::CLI
     {
     public:
         GeneralOptions(Argue::IArgParser& cmd) :
+            Prefix(cmd, "prefix", "",
+                "Enables prefixes in logs (e.g. log level). (default: true)",
+                true),
+            Color(cmd, "color", "",
+                "Enables colored logging. (default: true)",
+                true),
             LogLevel(cmd, "log-level", "L", "LOGLEVEL",
                 "Sets the log level for the CLI. (default: all)",
                 {"all", "error"}, 0)
         {}
 
+        Argue::FlagOption Prefix;
+        Argue::FlagOption Color;
         Argue::ChoiceOption LogLevel;
     };
 

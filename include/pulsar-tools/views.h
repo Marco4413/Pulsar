@@ -23,10 +23,19 @@ namespace PulsarTools
     std::string CreateSourceErrorMessage(
             const Pulsar::String* source, const Pulsar::String* filepath,
             const Pulsar::Token& token, const Pulsar::String& message,
+            bool enableColors=true,
             TokenViewRange viewRange = TokenViewRange_Default);
 
-    std::string CreateParserErrorMessage(const Pulsar::Parser& parser, TokenViewRange viewRange = TokenViewRange_Default);
-    std::string CreateRuntimeErrorMessage(const Pulsar::ExecutionContext& context, size_t stackTraceDepth=10, TokenViewRange viewRange = TokenViewRange_Default);
+    std::string CreateParserErrorMessage(
+            const Pulsar::Parser& parser,
+            bool enableColors=true,
+            TokenViewRange viewRange = TokenViewRange_Default);
+
+    std::string CreateRuntimeErrorMessage(
+            const Pulsar::ExecutionContext& context,
+            size_t stackTraceDepth=10,
+            bool enableColors=true,
+            TokenViewRange viewRange = TokenViewRange_Default);
 }
 
 #endif // _PULSARTOOLS_VIEWS_H
