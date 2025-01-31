@@ -98,6 +98,33 @@ CPULSAR_API void CPulsar_Module_BindNativeFunctionEx(
     }
 }
 
+CPULSAR_API uint64_t CPulsar_Module_BindCustomType(CPulsar_Module _self, const char* typeName, CPulsar_CustomType_DataFactoryFn dataFactory)
+{
+    return CPULSAR_DEREF(Module, _self)
+        .BindCustomType(
+            typeName,
+            [dataFactory]() {
+                CPulsar_CustomTypeData_Ref cref = dataFactory();
+                Pulsar::CustomTypeData::Ref ref = CPULSAR_DEREF(Pulsar::CustomTypeData::Ref, cref);
+                CPulsar_CustomTypeData_Ref_Delete(cref);
+                return ref;
+            }
+        );
+}
+
+CPULSAR_API uint64_t CPulsar_Module_FindCustomType(const CPulsar_Module _self, const char* typeName)
+{
+    Module& self = CPULSAR_DEREF(Module, _self);
+    uint64_t typeId = 0;
+    // HACK: There should be a method to do this. It's being done enough times to warrant it.
+    self.CustomTypes.ForEach([typeName, &typeId](const auto& bucket) {
+        if (!typeId && bucket.Value().Name == typeName) {
+            typeId = bucket.Key();
+        }
+    });
+    return typeId;
+}
+
 CPULSAR_API CPulsar_Locals CPulsar_Frame_GetLocals(CPulsar_Frame _self)
 {
     return CPULSAR_REF(CPulsar_Locals_S, CPULSAR_DEREF(Frame, _self).Locals);

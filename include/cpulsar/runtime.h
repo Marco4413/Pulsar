@@ -3,6 +3,7 @@
 
 #include "cpulsar/core.h"
 
+#include "cpulsar/runtime/customtype.h"
 #include "cpulsar/cbuffer.h"
 #include "cpulsar/runtime/locals.h"
 #include "cpulsar/runtime/stack.h"
@@ -53,6 +54,10 @@ CPULSAR_API void CPulsar_Module_BindNativeFunctionEx(
         CPulsar_Module self, CPulsar_FunctionSignature fnSig,
         CPulsar_NativeFunction nativeFn, CPulsar_CBuffer nativeFnArgs,
         int declareAndBind);
+
+CPULSAR_API uint64_t CPulsar_Module_BindCustomType(CPulsar_Module self, const char* typeName, CPulsar_CustomType_DataFactoryFn dataFactory);
+// HACK: Returns 0 if the type could not be found. It's safe but not documented within Pulsar.
+CPULSAR_API uint64_t CPulsar_Module_FindCustomType(const CPulsar_Module self, const char* typeName);
 
 CPULSAR_API CPulsar_Locals CPulsar_Frame_GetLocals(CPulsar_Frame self);
 CPULSAR_API CPulsar_Stack CPulsar_Frame_GetStack(CPulsar_Frame self);

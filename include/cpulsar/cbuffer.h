@@ -15,6 +15,10 @@ typedef struct {
     CPulsar_CBuffer_Free Free;
 } CPulsar_CBuffer;
 
-#define CPULSAR_CBUFFER_NULL ((CPulsar_CBuffer){0})
+#ifdef CPULSAR_CPP
+  #define CPULSAR_CBUFFER_NULL (CPulsar_CBuffer{0})
+#else // CPULSAR_CPP
+  #define CPULSAR_CBUFFER_NULL ((CPulsar_CBuffer){0})
+#endif // CPULSAR_CPP
 
 #endif // _CPULSAR_CBUFFER_H

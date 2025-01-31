@@ -2,6 +2,7 @@
 #define _CPULSAR_RUNTIME_VALUE_H
 
 #include "cpulsar/core.h"
+#include "cpulsar/runtime/customdata.h"
 
 typedef struct CPulsar_Value_S* CPulsar_Value;
 typedef struct CPulsar_ValueList_S* CPulsar_ValueList;
@@ -13,6 +14,10 @@ extern "C" {
 CPULSAR_API CPulsar_Value CPulsar_Value_Create();
 CPULSAR_API void CPulsar_Value_Delete(CPulsar_Value self);
 
+CPULSAR_API int CPulsar_Value_IsInteger(const CPulsar_Value self);
+CPULSAR_API int64_t CPulsar_Value_AsInteger(const CPulsar_Value self);
+CPULSAR_API void CPulsar_Value_SetInteger(CPulsar_Value self, int64_t value);
+
 // TODO: Maybe add a CPulsar_String type
 CPULSAR_API int CPulsar_Value_IsString(const CPulsar_Value self);
 CPULSAR_API const char* CPulsar_Value_AsString(const CPulsar_Value self);
@@ -21,6 +26,11 @@ CPULSAR_API void CPulsar_Value_SetString(CPulsar_Value self, const char* value);
 CPULSAR_API int CPulsar_Value_IsList(const CPulsar_Value self);
 CPULSAR_API CPulsar_ValueList CPulsar_Value_AsList(CPulsar_Value self);
 CPULSAR_API CPulsar_ValueList CPulsar_Value_SetEmptyList(CPulsar_Value self);
+
+CPULSAR_API int CPulsar_Value_IsCustom(const CPulsar_Value self);
+CPULSAR_API CPulsar_CustomData CPulsar_Value_AsCustom(CPulsar_Value self);
+// Copies the reference from `data` so make sure to delete the instance that was passed.
+CPULSAR_API CPulsar_CustomData CPulsar_Value_SetCustom(CPulsar_Value self, CPulsar_CustomData data);
 
 CPULSAR_API CPulsar_ValueList CPulsar_ValueList_Create();
 CPULSAR_API void CPulsar_ValueList_Delete(CPulsar_ValueList self);
