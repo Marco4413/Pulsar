@@ -29,16 +29,11 @@ project "pulsar-tools"
 
   buildpath.setup("pulsar-tools")
 
-  dependson { "cpulsar", "pulsar-core" }
+  dependson "cpulsar"
 
-  prebuildcommands {
-    copy_slib("cpulsar", "pulsar-tools"),
-    copy_slib("pulsar-core", "pulsar-tools")
-  }
-
+  prebuildcommands { copy_slib("cpulsar", "pulsar-tools") }
   buildoutputs {
-    buildpath.of("pulsar-tools") .. "/" .. get_slib_filename("cpulsar"),
-    buildpath.of("pulsar-tools") .. "/" .. get_slib_filename("pulsar-core")
+    buildpath.of("pulsar-tools") .. "/" .. get_slib_filename("cpulsar")
   }
 
   includedirs { "../include", "../libs/fmt/include", "../libs/argue" }

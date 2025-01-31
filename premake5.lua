@@ -25,5 +25,4 @@ include "projects/pulsar-lsp"
 include "projects/pulsar-tools"
 
 include "projects/cpulsar"
-include "projects/pulsar-core"
 include "projects/pulsar-tools-ext"
