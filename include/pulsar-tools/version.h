@@ -14,7 +14,7 @@ namespace PulsarTools
     {
         using namespace Pulsar::Version;
 
-        std::string ToString(SemVer v)
+        inline std::string ToString(SemVer v)
         {
             std::string vstr = fmt::format("{}.{}.{}", v.Major, v.Minor, v.Patch);
             if (v.Pre.Kind != PreReleaseKind::None) {
@@ -24,6 +24,20 @@ namespace PulsarTools
                 vstr += fmt::format("+{}", BuildKindToString(v.Build));
             }
             return vstr;
+        }
+
+        constexpr SemVer FromNumber(uint64_t versionNumber)
+        {
+            return {
+                .Major = (uint16_t)((versionNumber >> 48) & 0xFFFF),
+                .Minor = (uint16_t)((versionNumber >> 32) & 0xFFFF),
+                .Patch = (uint16_t)((versionNumber >> 16) & 0xFFFF),
+                .Pre   = {
+                    .Kind     = (PreReleaseKind)((versionNumber >> 8) & 0xFF),
+                    .Revision = (uint8_t)(versionNumber & 0xFF),
+                },
+                .Build = (BuildKind)0xFF,
+            };
         }
     }
 

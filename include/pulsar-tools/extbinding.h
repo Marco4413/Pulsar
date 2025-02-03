@@ -12,6 +12,7 @@ namespace PulsarTools
     public:
         using ExtLib = void*;
 
+        using GetPulsarVersionFn = uint64_t(*)(void);
         using BindTypesFn = void(*)(Pulsar::Module*);
         using BindFunctionsFn = void(*)(Pulsar::Module*, int);
 
@@ -38,6 +39,9 @@ namespace PulsarTools
         const Pulsar::String& GetErrorMessage() const { return m_ErrorMessage; }
 
         operator bool() const { return (bool)m_Lib; }
+
+    private:
+        static bool IsPulsarVersionSupported(uint64_t versionNumber);
 
     private:
         ExtLib m_Lib = nullptr;

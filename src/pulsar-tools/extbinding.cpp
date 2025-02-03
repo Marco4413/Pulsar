@@ -1,5 +1,7 @@
 #include "pulsar-tools/extbinding.h"
 
+#include "pulsar-tools/version.h"
+
 PulsarTools::ExtBinding::ExtBinding(ExtBinding&& other)
 {
     m_Lib = other.m_Lib;
@@ -26,6 +28,17 @@ void PulsarTools::ExtBinding::BindFunctions(Pulsar::Module& module, bool declare
     }
 }
 
+bool PulsarTools::ExtBinding::IsPulsarVersionSupported(uint64_t versionNumber)
+{
+    auto vPls = GetPulsarVersion();
+    // Require perfect match for in-dev builds
+    if (vPls.Major == 0 || vPls.Pre.Kind != Version::PreReleaseKind::None)
+        return vPls.ToNumber() == versionNumber;
+
+    auto vLib = Version::FromNumber(versionNumber);
+    return vLib.Major == vPls.Major;
+}
+
 #ifdef PULSARTOOLS_UNIX
 
 #include <dlfcn.h>
@@ -39,6 +52,22 @@ PulsarTools::ExtBinding::ExtBinding(const char* path)
 {
     void* handle = dlopen(path, RTLD_NOW);
     if (handle) {
+        GetPulsarVersionFn getPulsarVersion = (GetPulsarVersionFn)dlsym(handle, "GetPulsarVersion");
+        if (!getPulsarVersion) {
+            m_ErrorMessage = "Function GetPulsarVersion not found.";
+            dlclose(handle);
+            return;
+        }
+
+        uint64_t pulsarVersion = getPulsarVersion();
+        if (!IsPulsarVersionSupported(pulsarVersion)) {
+            m_ErrorMessage  = "Binding was made for an unsupported Pulsar version (";
+            m_ErrorMessage += Version::ToString(Version::FromNumber(pulsarVersion)).c_str();
+            m_ErrorMessage += ").";
+            dlclose(handle);
+            return;
+        }
+
         m_BindTypes = (BindTypesFn)dlsym(handle, "BindTypes");
         m_BindFunctions = (BindFunctionsFn)dlsym(handle, "BindFunctions");
 
@@ -76,6 +105,22 @@ PulsarTools::ExtBinding::ExtBinding(const char* path)
 {
     HMODULE handle = LoadLibraryA(path);
     if (handle) {
+        GetPulsarVersionFn getPulsarVersion = (GetPulsarVersionFn)(void*)GetProcAddress(handle, "GetPulsarVersion");
+        if (!getPulsarVersion) {
+            m_ErrorMessage = "Function GetPulsarVersion not found.";
+            FreeLibrary(handle);
+            return;
+        }
+
+        uint64_t pulsarVersion = getPulsarVersion();
+        if (!IsPulsarVersionSupported(pulsarVersion)) {
+            m_ErrorMessage  = "Binding was made for an unsupported Pulsar version (";
+            m_ErrorMessage += Version::ToString(Version::FromNumber(pulsarVersion)).c_str();
+            m_ErrorMessage += ").";
+            FreeLibrary(handle);
+            return;
+        }
+
         m_BindTypes = (BindTypesFn)(void*)GetProcAddress(handle, "BindTypes");
         m_BindFunctions = (BindFunctionsFn)(void*)GetProcAddress(handle, "BindFunctions");
 
