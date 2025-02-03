@@ -1,4 +1,5 @@
 #include "cpulsar/runtime.h"
+#include "cpulsar/version.h"
 
 #include <stdio.h>
 #include <string.h> // memcpy
@@ -33,6 +34,21 @@ CPulsar_CBuffer CustomTypeIdsToBuffer(CustomTypeIds data);
 CPulsar_RuntimeState NativeExtIntegerCreate(CPulsar_ExecutionContext context, void* args);
 CPulsar_RuntimeState NativeExtIntegerSet(CPulsar_ExecutionContext context, void* args);
 CPulsar_RuntimeState NativeExtIntegerGet(CPulsar_ExecutionContext context, void* args);
+
+// Returns the version of Pulsar this binding was made for
+CPULSAR_EXPORT uint64_t GetPulsarVersion(void)
+{
+    // SemVer::Build can be ignored
+    return CPulsar_SemVer_ToNumber((CPulsar_SemVer){
+        .Major = 0,
+        .Minor = 7,
+        .Patch = 0,
+        .Pre   = {
+            .Kind     = CPulsar_PreReleaseKind_Beta,
+            .Revision = 0,
+        },
+    });
+}
 
 CPULSAR_EXPORT void BindTypes(CPulsar_Module module)
 {
