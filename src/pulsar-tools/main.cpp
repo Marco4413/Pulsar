@@ -1,5 +1,7 @@
 #include "pulsar-tools/cli.h"
 
+#include "pulsar-tools/version.h"
+
 int main(int argc, const char** argv)
 {
     PulsarTools::CLI::Program program(argv[0]);
@@ -21,7 +23,12 @@ int main(int argc, const char** argv)
         return 1;
     }
 
-    if (program.CmdCheck) {
+    if (*program.Options.Version) {
+        logger.Info("Pulsar-Tools v{}", PulsarTools::Version::ToString(PulsarTools::GetToolsVersion()));
+        logger.Info("Pulsar v{}", PulsarTools::Version::ToString(PulsarTools::GetPulsarVersion()));
+        logger.Info("Neutron v{}", PulsarTools::GetNeutronVersion());
+        return 0;
+    } else if (program.CmdCheck) {
         return program.CmdCheck();
     } else if (program.CmdCompile) {
         return program.CmdCompile();
