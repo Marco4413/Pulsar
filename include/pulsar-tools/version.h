@@ -14,7 +14,7 @@ namespace PulsarTools
     {
         using namespace Pulsar::Version;
 
-        std::string ToString(SemVer v)
+        inline std::string ToString(SemVer v)
         {
             std::string vstr = fmt::format("{}.{}.{}", v.Major, v.Minor, v.Patch);
             if (v.Pre.Kind != PreReleaseKind::None) {
