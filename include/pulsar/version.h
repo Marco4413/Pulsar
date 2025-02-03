@@ -13,21 +13,23 @@ namespace Pulsar
             Release = 1,
         };
 
-        enum class PreReleaseKind : uint16_t
+        enum class PreReleaseKind : uint8_t
         {
             Alpha = 0,
             Beta  = 1,
             RC    = 2,
-            None  = 0xFFFF,
+            None  = 0xFF,
         };
 
         struct PreRelease
         {
             PreReleaseKind Kind;
-            // If .Kind == ::None, this field must be ignored
-            uint16_t Version;
+            // If .Kind == ::None, this field must be 0
+            uint8_t Revision;
         };
 
+        // This struct (except for ::Build) must fit within a 64 bit integer.
+        // See ::ToNumber()
         struct SemVer
         {
             uint16_t Major;
@@ -40,19 +42,14 @@ namespace Pulsar
             BuildKind Build = BuildKind::Release;
 #endif // PULSAR_DEBUG
 
-            constexpr uint64_t GetCore() const
+            constexpr uint64_t ToNumber() const
             {
-                uint64_t versionCore = Major;
-                versionCore = (versionCore << (8*sizeof(Minor))) | Minor;
-                versionCore = (versionCore << (8*sizeof(Patch))) | Patch;
-                return versionCore;
-            }
-
-            constexpr uint64_t GetPre() const
-            {
-                uint64_t pre = (uint16_t)Pre.Kind;
-                pre = (pre << (8*sizeof(Pre.Version))) | Pre.Version;
-                return pre;
+                uint64_t versionNumber = Major;
+                versionNumber = (versionNumber << 16) | Minor;
+                versionNumber = (versionNumber << 16) | Patch;
+                versionNumber = (versionNumber <<  8) | (uint8_t)Pre.Kind;
+                versionNumber = (versionNumber <<  8) | Pre.Revision;
+                return versionNumber;
             }
 
             /**
@@ -63,17 +60,9 @@ namespace Pulsar
              */
             constexpr int64_t Compare(SemVer b) const
             {
-                uint64_t coreA = GetCore();
-                uint64_t coreB = b.GetCore();
-                int64_t coreDelta = coreA - coreB;
-                if (coreDelta != 0) return coreDelta;
-                if (Pre.Kind == PreReleaseKind::None && Pre.Kind == b.Pre.Kind)
-                    return 0;
-
-                uint64_t preA = GetPre();
-                uint64_t preB = b.GetPre();
-                int64_t preDelta = preA - preB;
-                return preDelta;
+                uint64_t va = ToNumber();
+                uint64_t vb = b.ToNumber();
+                return va - vb;
             }
         };
 
@@ -103,8 +92,8 @@ namespace Pulsar
         .Minor = 7,
         .Patch = 0,
         .Pre   = {
-            .Kind    = Version::PreReleaseKind::Beta,
-            .Version = 0,
+            .Kind     = Version::PreReleaseKind::Beta,
+            .Revision = 0,
         },
     };
 }

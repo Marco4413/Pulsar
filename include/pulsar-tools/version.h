@@ -18,7 +18,7 @@ namespace PulsarTools
         {
             std::string vstr = fmt::format("{}.{}.{}", v.Major, v.Minor, v.Patch);
             if (v.Pre.Kind != PreReleaseKind::None) {
-                vstr += fmt::format("-{}.{}", PreReleaseKindToString(v.Pre.Kind), v.Pre.Version);
+                vstr += fmt::format("-{}.{}", PreReleaseKindToString(v.Pre.Kind), v.Pre.Revision);
             }
             if (v.Build != BuildKind::Release) {
                 vstr += fmt::format("+{}", BuildKindToString(v.Build));
@@ -37,8 +37,8 @@ namespace PulsarTools
             .Minor = 6,
             .Patch = 0,
             .Pre   = {
-                .Kind    = Version::PreReleaseKind::Beta,
-                .Version = 0,
+                .Kind     = Version::PreReleaseKind::Beta,
+                .Revision = 0,
             },
         };
     }
