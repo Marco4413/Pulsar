@@ -22,6 +22,18 @@ namespace PulsarTools
 
         ~Logger() = default;
 
+        bool GetPrefix() const { return m_Prefix; }
+        void SetPrefix(bool prefix)
+        {
+            m_Prefix = prefix;
+        }
+
+        bool GetColor() const { return m_Color; }
+        void SetColor(bool color)
+        {
+            m_Color = color;
+        }
+
         LogLevel GetLogLevel() const { return m_LogLevel; }
         void SetLogLevel(LogLevel newLevel)
         {
@@ -56,6 +68,8 @@ namespace PulsarTools
         bool DoLogError() const { return true; }
 
     private:
+        bool m_Prefix;
+        bool m_Color;
         LogLevel m_LogLevel;
         std::FILE* m_Out;
         std::FILE* m_Err;

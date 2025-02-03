@@ -75,7 +75,7 @@ PulsarTools::TokenViewLine PulsarTools::CreateTokenView(const Pulsar::String& so
 std::string PulsarTools::CreateSourceErrorMessage(
         const Pulsar::String* source, const Pulsar::String* filepath,
         const Pulsar::Token& token, const Pulsar::String& message,
-        TokenViewRange viewRange)
+        bool enableColors, TokenViewRange viewRange)
 {
     std::string result;
     if (filepath) {
@@ -86,10 +86,19 @@ std::string PulsarTools::CreateSourceErrorMessage(
     if (source) {
         TokenViewLine tokenView = CreateTokenView(*source, token, viewRange);
         result += tokenView.Contents;
+        result += '\n';
+
+        std::string tokenCursor;
         if (token.SourcePos.CharSpan > 0) {
-            result += fmt::format(fmt::fg(fmt::color::red), "\n{0: ^{1}}^{0:~^{2}}", "", tokenView.TokenStart, token.SourcePos.CharSpan-1);
+            tokenCursor = fmt::format("{0: ^{1}}^{0:~^{2}}", "", tokenView.TokenStart, token.SourcePos.CharSpan-1);
         } else {
-            result += fmt::format(fmt::fg(fmt::color::red), "\n{0: ^{1}}^", "", tokenView.TokenStart);
+            tokenCursor = fmt::format("{0: ^{1}}^", "", tokenView.TokenStart);
+        }
+
+        if (enableColors) {
+            result += fmt::format(fmt::fg(fmt::color::red), "{}", tokenCursor);
+        } else {
+            result += tokenCursor;
         }
     } else {
         result += "No source to show.";
@@ -97,16 +106,16 @@ std::string PulsarTools::CreateSourceErrorMessage(
     return result;
 }
 
-std::string PulsarTools::CreateParserErrorMessage(const Pulsar::Parser& parser, TokenViewRange viewRange)
+std::string PulsarTools::CreateParserErrorMessage(const Pulsar::Parser& parser, bool enableColors, TokenViewRange viewRange)
 {
     return CreateSourceErrorMessage(
         parser.GetErrorSource(), parser.GetErrorPath(),
         parser.GetErrorToken(), parser.GetErrorMessage(),
-        viewRange
+        enableColors, viewRange
     );
 }
 
-std::string PulsarTools::CreateRuntimeErrorMessage(const Pulsar::ExecutionContext& context, size_t stackTraceDepth, TokenViewRange viewRange)
+std::string PulsarTools::CreateRuntimeErrorMessage(const Pulsar::ExecutionContext& context, size_t stackTraceDepth, bool enableColors, TokenViewRange viewRange)
 {
     const Pulsar::Module& module = context.GetModule();
     const Pulsar::CallStack& callStack = context.GetCallStack();
@@ -133,7 +142,7 @@ std::string PulsarTools::CreateRuntimeErrorMessage(const Pulsar::ExecutionContex
             &srcSymbol.Source, &srcSymbol.Path,
             frame.Function->DebugSymbol.Token,
             "Within function " + frame.Function->Name,
-            viewRange);
+            enableColors, viewRange);
         if (stackTrace.Length() > 0)
             result += fmt::format("\n{}", stackTrace);
         return result;
@@ -146,7 +155,7 @@ std::string PulsarTools::CreateRuntimeErrorMessage(const Pulsar::ExecutionContex
             &srcSymbol.Source, &srcSymbol.Path,
             frame.Function->CodeDebugSymbols[codeSymbolIdx].Token,
             "In function " + frame.Function->Name,
-            viewRange);
+            enableColors, viewRange);
         if (stackTrace.Length() > 0)
             result += fmt::format("\n{}", stackTrace);
         return result;
@@ -156,5 +165,5 @@ std::string PulsarTools::CreateRuntimeErrorMessage(const Pulsar::ExecutionContex
         &srcSymbol.Source, &srcSymbol.Path,
         frame.Function->DebugSymbol.Token,
         "In function call " + frame.Function->Name,
-        viewRange);
+        enableColors, viewRange);
 }

@@ -103,7 +103,7 @@ int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const In
 
     if (parseResult != Pulsar::ParseResult::OK) {
         logger.Error("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
-        logger.Error(CreateParserErrorMessage(parser));
+        logger.Error(CreateParserErrorMessage(parser, logger.GetColor()));
         return 1;
     }
 
@@ -198,7 +198,7 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ExternalBindin
 
     if (parseResult != Pulsar::ParseResult::OK) {
         logger.Error("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
-        logger.Error(CreateParserErrorMessage(parser));
+        logger.Error(CreateParserErrorMessage(parser, logger.GetColor()));
         return 1;
     }
 
@@ -247,7 +247,7 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
         return 1;
     } else if (runtimeState != Pulsar::RuntimeState::OK) {
         logger.Error("Runtime Error: {}", Pulsar::RuntimeStateToString(runtimeState));
-        logger.Error(CreateRuntimeErrorMessage(context, stackTraceDepth));
+        logger.Error(CreateRuntimeErrorMessage(context, stackTraceDepth, logger.GetColor()));
         return 1;
     }
 

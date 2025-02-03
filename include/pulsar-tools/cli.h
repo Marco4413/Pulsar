@@ -18,11 +18,24 @@ namespace PulsarTools::CLI
     {
     public:
         GeneralOptions(Argue::IArgParser& cmd) :
+            Version(cmd, "version", "v",
+                "Prevents any execution and prints the version of Pulsar-Tools, Pulsar and the Neutron format."
+                " (recommended flags: --no-prefix)",
+                false),
+            Prefix(cmd, "prefix", "",
+                "Enables prefixes in logs (e.g. log level). (default: true)",
+                true),
+            Color(cmd, "color", "",
+                "Enables colored logging. (default: true)",
+                true),
             LogLevel(cmd, "log-level", "L", "LOGLEVEL",
                 "Sets the log level for the CLI. (default: all)",
                 {"all", "error"}, 0)
         {}
 
+        Argue::FlagOption Version;
+        Argue::FlagOption Prefix;
+        Argue::FlagOption Color;
         Argue::ChoiceOption LogLevel;
     };
 
