@@ -29,6 +29,7 @@ namespace Pulsar::Binary
         UnsupportedChunkType,
         UnsupportedCustomDataType,
         UnsupportedValueType,
+        InvalidUTF8Encoding,
     };
 
     const char* ReadResultToString(ReadResult rr);
@@ -59,7 +60,7 @@ namespace Pulsar::Binary
         ReadResult ReadList(IReader& reader, List<FunctionDefinition>& out, const ReadSettings& settings);
         ReadResult ReadList(IReader& reader, List<GlobalDefinition>& out, const ReadSettings& settings);
         ReadResult ReadList(IReader& reader, List<SourceDebugSymbol>& out, const ReadSettings& settings);
-        ReadResult ReadString(IReader& reader, String& out, const ReadSettings& settings);
+        ReadResult ReadString(IReader& reader, String& out, bool requireValidUTF8, const ReadSettings& settings);
         ReadResult ReadSized(IReader& reader, std::function<ReadResult(ByteReader&, const ReadSettings&)> func, const ReadSettings& settings);
 
         ReadResult ReadSourcePosition(IReader& reader, SourcePosition& out, const ReadSettings& settings);

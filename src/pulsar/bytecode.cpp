@@ -3,6 +3,8 @@
 #include "pulsar/binary/bytereader.h"
 #include "pulsar/binary/bytewriter.h"
 
+#include "pulsar/utf8.h"
+
 #define RETURN_IF_NOT_OK(expr)     \
     do {                           \
         auto res = (expr);         \
@@ -75,7 +77,7 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadList(IReader& reader, L
     return ReadResult::OK;
 }
 
-Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadString(IReader& reader, String& out, const ReadSettings& settings)
+Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadString(IReader& reader, String& out, bool requireValidUTF8, const ReadSettings& settings)
 {
     (void)settings;
     uint64_t length = 0;
@@ -84,6 +86,14 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadString(IReader& reader,
     String str((size_t)length, '\0');
     if (!reader.ReadData((uint64_t)str.Length(), (uint8_t*)str.Data()))
         return ReadResult::UnexpectedEOF;
+
+    if (requireValidUTF8) {
+        UTF8::Decoder decoder(str);
+        while (decoder) decoder.Next();
+        if (decoder.IsInvalidEncoding())
+            return ReadResult::InvalidUTF8Encoding;
+    }
+
     out = std::move(str);
     return ReadResult::OK;
 }
@@ -169,7 +179,7 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadInstruction(IReader& re
 
 Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadFunctionDefinition(IReader& reader, FunctionDefinition& out, const ReadSettings& settings)
 {
-    RETURN_IF_NOT_OK(ReadString(reader, out.Name, settings));
+    RETURN_IF_NOT_OK(ReadString(reader, out.Name, true, settings));
     uint64_t arity = 0;
     if (!reader.ReadU64(arity))
         return ReadResult::UnexpectedEOF;
@@ -215,7 +225,7 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadGlobalDebugSymbol(IRead
 
 Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadGlobalDefinition(IReader& reader, GlobalDefinition& out, const ReadSettings& settings)
 {
-    RETURN_IF_NOT_OK(ReadString(reader, out.Name, settings));
+    RETURN_IF_NOT_OK(ReadString(reader, out.Name, true, settings));
     uint8_t flags = 0;
     if (!reader.ReadU8(flags))
         return ReadResult::UnexpectedEOF;
@@ -234,8 +244,8 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadGlobalDefinition(IReade
 
 Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadSourceDebugSymbol(IReader& reader, SourceDebugSymbol& out, const ReadSettings& settings)
 {
-    RETURN_IF_NOT_OK(ReadString(reader, out.Path, settings));
-    return ReadString(reader, out.Source, settings);
+    RETURN_IF_NOT_OK(ReadString(reader, out.Path, true, settings));
+    return ReadString(reader, out.Source, true, settings);
 }
 
 Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadHeader(IReader& reader, const ReadSettings& settings)
@@ -339,7 +349,7 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadValue(IReader& reader, 
         } break;
         case ValueType::String: {
             String str;
-            RETURN_IF_NOT_OK(ReadString(reader, str, settings));
+            RETURN_IF_NOT_OK(ReadString(reader, str, false, settings));
             out.SetString(std::move(str));
         } break;
         case ValueType::Custom:
@@ -612,6 +622,8 @@ const char* Pulsar::Binary::ReadResultToString(ReadResult rr)
         return "UnsupportedCustomDataType";
     case ReadResult::UnsupportedValueType:
         return "UnsupportedValueType";
+    case ReadResult::InvalidUTF8Encoding:
+        return "InvalidUTF8Encoding";
     }
     return "Unknown";
 }
