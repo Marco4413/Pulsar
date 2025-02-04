@@ -14,8 +14,8 @@ namespace Unicode
     constexpr Codepoint REPLACEMENT_CHARACTER = 0xFFFD;
     constexpr bool IsValidCodepoint(Codepoint code)
     {
-        // TODO: There are some codepoints in between (0,MAX_CODEPOINT] which should be removed.
-        return code > 0 && code <= MAX_CODEPOINT;
+        // TODO: There are some codepoints in between [0,MAX_CODEPOINT] which should be removed.
+        return code <= MAX_CODEPOINT;
     }
 
     /**
