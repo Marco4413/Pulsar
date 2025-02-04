@@ -104,7 +104,7 @@ int main(int argc, const char** argv)
         const Pulsar::Token& errorToken = parser.GetErrorToken();
         fmt::println("[PARSE ERROR]: {}:{}:{}: {}: {}",
             // The path of the file which caused the error.
-            parser.GetErrorPath()->Data(),
+            parser.GetErrorPath()->CString(),
             // Line and Char within the line were the error occurred.
             errorToken.SourcePos.Line+1,
             errorToken.SourcePos.Char,

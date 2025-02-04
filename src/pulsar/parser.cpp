@@ -196,7 +196,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseModuleStatement(Module& module, GlobalS
             const String* cwf = CurrentPath();
             PULSAR_ASSERT(cwf != nullptr, "CWF should not be nullptr.");
             std::filesystem::path targetPath(curToken.StringVal.CString());
-            std::filesystem::path workingPath(cwf->Data());
+            std::filesystem::path workingPath(cwf->CString());
             std::filesystem::path filePath = workingPath.parent_path() / targetPath;
             auto result = AddSourceFile(filePath.generic_string().data());
             if (result != ParseResult::OK)
