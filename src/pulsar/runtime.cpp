@@ -550,9 +550,17 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
         Value& a = frame.Stack.Back();
         if (a.Type() != ValueType::Integer || b.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
-        if (b.AsInteger() < 0)
+        constexpr int64_t BITS_OF_INT = 8*sizeof(b.AsInteger());
+        if (b.AsInteger() <= -BITS_OF_INT || b.AsInteger() >= BITS_OF_INT) {
+            // Handle C++ undefined behaviour.
+            // See "Built-in bitwise shift operators":
+            //   https://en.cppreference.com/w/cpp/language/operator_arithmetic
+            a.SetInteger(0);
+        } else if (b.AsInteger() < 0) {
             a.SetInteger((int64_t)((uint64_t)a.AsInteger() >> -b.AsInteger()));
-        else a.SetInteger((int64_t)((uint64_t)a.AsInteger() << b.AsInteger()));
+        } else {
+            a.SetInteger((int64_t)((uint64_t)a.AsInteger() << b.AsInteger()));
+        }
     } break;
     case InstructionCode::BitShiftRight: {
         if (frame.Stack.Size() < 2)
@@ -562,9 +570,17 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
         Value& a = frame.Stack.Back();
         if (a.Type() != ValueType::Integer || b.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
-        if (b.AsInteger() < 0)
+        constexpr int64_t BITS_OF_INT = 8*sizeof(b.AsInteger());
+        if (b.AsInteger() <= -BITS_OF_INT || b.AsInteger() >= BITS_OF_INT) {
+            // Handle C++ undefined behaviour.
+            // See "Built-in bitwise shift operators":
+            //   https://en.cppreference.com/w/cpp/language/operator_arithmetic
+            a.SetInteger(0);
+        } else if (b.AsInteger() < 0) {
             a.SetInteger((int64_t)((uint64_t)a.AsInteger() << -b.AsInteger()));
-        else a.SetInteger((int64_t)((uint64_t)a.AsInteger() >> b.AsInteger()));
+        } else {
+            a.SetInteger((int64_t)((uint64_t)a.AsInteger() >> b.AsInteger()));
+        }
     } break;
     // TODO: Add floor/double, ceil/double and truncate instructions.
     case InstructionCode::Floor: {
