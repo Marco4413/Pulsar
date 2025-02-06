@@ -636,8 +636,17 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
 
             PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, curToken);
             Token identToken = curToken;
-            if (identToken.Type != TokenType::Identifier)
-                return SetError(ParseResult::UnexpectedToken, identToken, "Expected function name for function call.");
+            if (identToken.Type != TokenType::Identifier) {
+                if (isInstruction) {
+                    return SetError(
+                        ParseResult::UnexpectedToken, identToken,
+                        "Expected instruction name for instruction mapping.");
+                } else {
+                    return SetError(
+                        ParseResult::UnexpectedToken, identToken,
+                        "Expected function name for function call.");
+                }
+            }
             NextToken();
 
             Token argToken(TokenType::None);
@@ -1211,7 +1220,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
             int64_t funcIdx = (int64_t)funcNameIdxPair->Value();
             LSP_IDENTIFIER_USAGE(LSPIdentifierUsageType::Function, funcIdx, func, identToken, localScope, settings);
             func.Code.EmplaceBack(InstructionCode::PushFunctionReference, funcIdx);
-        } else return SetError(ParseResult::UnexpectedToken, curToken, "Expected (function) or local to reference.");
+        } else return SetError(ParseResult::UnexpectedToken, curToken, "Expected (function) to reference.");
     } break;
     case TokenType::LeftArrow: {
         PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, lvalue);
