@@ -112,6 +112,7 @@ namespace PulsarLSP
         // Resync full document on save
         bool FullSyncOnSave      = true;
         bool MapGlobalProducersToVoid = true;
+        std::vector<std::string> IncludePaths = {};
     };
 
     inline const UserProvidedOptions UserProvidedOptions_Default{};
