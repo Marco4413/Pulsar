@@ -7,7 +7,7 @@ namespace Pulsar::Binary
 {
     // The Neutron Format
     constexpr uint64_t SIGNATURE_LENGTH = 4;
-    constexpr const char* SIGNATURE     = "\0NTR";
+    constexpr const char* SIGNATURE     = "\0NTX";
     constexpr uint32_t FORMAT_VERSION   = 0;
 
     constexpr uint8_t CHUNK_END_OF_MODULE   = 0x00;

@@ -38,7 +38,7 @@ int main(int argc, const char** argv)
     // Creating a FileReader (which is derived from Pulsar::Binary::IReader).
     // Note: FileReader does not check for the existance of the file.
     //       If the file does not exist, ReadByteCode will return UnexpectedEOF.
-    Pulsar::Binary::FileReader fileReader("examples/neutron/00-smallest-neutron.ntr");
+    Pulsar::Binary::FileReader fileReader("examples/neutron/00-smallest-neutron.ntx");
     Pulsar::Module module;
     Pulsar::Binary::ReadSettings readSettings{
         // Tell the reader to ignore any debug symbol.

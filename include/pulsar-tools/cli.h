@@ -117,7 +117,7 @@ namespace PulsarTools::CLI
     {
         CompilerOptions(Argue::IArgParser& cmd) :
             OutputFile(cmd, "out", "o", "OUTPUT",
-                "Tells the compiler where to save the compiled Neutron file. (default: <FILEPATH>.ntr)",
+                "Tells the compiler where to save the compiled Neutron file. (default: <FILEPATH>.ntx)",
                 "")
         {}
 

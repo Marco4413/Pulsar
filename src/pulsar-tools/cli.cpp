@@ -125,7 +125,7 @@ int PulsarTools::CLI::Action::Write(const Pulsar::Module& module, const Compiler
     std::string outputPath = *compilerOptions.OutputFile;
     if (outputPath.empty()) {
         std::filesystem::path path(*input.FilePath);
-        path.replace_extension(".ntr");
+        path.replace_extension(".ntx");
         outputPath = path.generic_string();
     }
 
