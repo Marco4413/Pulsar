@@ -36,7 +36,7 @@ namespace PulsarTools
                     .Kind     = (PreReleaseKind)((versionNumber >> 8) & 0xFF),
                     .Revision = (uint8_t)(versionNumber & 0xFF),
                 },
-                .Build = (BuildKind)0xFF,
+                .Build = BuildKind::Unknown,
             };
         }
     }

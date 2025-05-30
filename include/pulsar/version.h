@@ -7,10 +7,11 @@ namespace Pulsar
 {
     namespace Version
     {
-        enum class BuildKind
+        enum class BuildKind : uint8_t
         {
             Debug   = 0,
             Release = 1,
+            Unknown = 0xFF,
         };
 
         enum class PreReleaseKind : uint8_t
@@ -71,6 +72,7 @@ namespace Pulsar
             switch (kind) {
             case BuildKind::Debug:   return "debug";
             case BuildKind::Release: return "release";
+            case BuildKind::Unknown:
             default: return "unknown";
             }
         }
