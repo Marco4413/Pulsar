@@ -120,7 +120,7 @@ namespace PulsarTools::CLI
     {
         CompilerOptions(Argue::IArgParser& cmd) :
             OutputFile(cmd, "out", "o", "OUTPUT",
-                "Tells the compiler where to save the compiled Neutron file. (default: <FILEPATH>.ntr)",
+                "Tells the compiler where to save the compiled Neutron file. (default: <FILEPATH>.ntx)",
                 "")
         {}
 
@@ -252,7 +252,7 @@ namespace PulsarTools::CLI
     {
         Program(const char* path) :
             Parser(path,
-                "*(*pulsar-tools file) -> 1.\n\n"
+                "*(*pulsar-tools args) -> 1.\n\n"
                 "     111=\n"
                 "    0 ?   !3a\n"
                 "   1   ! :::\n"

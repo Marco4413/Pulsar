@@ -38,7 +38,7 @@ int main(int argc, const char** argv)
     // Creating a FileReader (which is derived from Pulsar::Binary::IReader).
     // Note: FileReader does not check for the existance of the file.
     //       If the file does not exist, ReadByteCode will return UnexpectedEOF.
-    Pulsar::Binary::FileReader fileReader("examples/neutron/00-smallest-neutron.ntr");
+    Pulsar::Binary::FileReader fileReader("examples/neutron/00-smallest-neutron.ntx");
     Pulsar::Module module;
     Pulsar::Binary::ReadSettings readSettings{
         // Tell the reader to ignore any debug symbol.
@@ -104,7 +104,7 @@ int main(int argc, const char** argv)
         const Pulsar::Token& errorToken = parser.GetErrorToken();
         fmt::println("[PARSE ERROR]: {}:{}:{}: {}: {}",
             // The path of the file which caused the error.
-            parser.GetErrorPath()->Data(),
+            parser.GetErrorPath()->CString(),
             // Line and Char within the line were the error occurred.
             errorToken.SourcePos.Line+1,
             errorToken.SourcePos.Char,

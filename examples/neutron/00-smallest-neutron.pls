@@ -1,8 +1,8 @@
 // This Pulsar Source file will generate
 //  the smallest Neutron file that produces a value.
 // Compile & Run with:
-// $ pulsar-tools compile -p/no-debug -c/out ./00-smallest-neutron.ntr ./00-smallest-neutron.pls
-// $ pulsar-tools ./00-smallest-neutron.ntr
+// $ pulsar-tools compile --no-debug ./00-smallest-neutron.pls
+// $ pulsar-tools run ./00-smallest-neutron.ntx
 *(main args) -> 1: 0 .
 
 // NOTE: The Pulsar parser puts an explicit

@@ -92,13 +92,53 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
     settings.MapGlobalProducersToVoid = m_Options.MapGlobalProducersToVoid;
     settings.IncludeResolver = [this, &parsedDocument, &path](Pulsar::Parser& parser, const Pulsar::String& cwf, const Pulsar::Token& token) {
         std::filesystem::path targetPath(token.StringVal.CString());
-        std::filesystem::path workingPath(cwf.CString());
-        std::filesystem::path filePath = workingPath.parent_path() / targetPath;
-        lsp::FileURI filePathURI = filePath.generic_string().c_str();
+        Pulsar::List<Pulsar::String> triedPaths;
 
-        Pulsar::String internalPath = URIToNormalizedPath(filePathURI);
-        auto text = this->m_Library.FindOrLoadDocument(filePathURI);
-        if (!text) return parser.SetError(Pulsar::ParseResult::FileNotRead, token, "Could not read file '" + internalPath + "'.");
+        Pulsar::String internalPath;
+        ConstSharedText text = nullptr;
+        { // Try relative path first
+            std::filesystem::path workingPath(cwf.CString());
+            std::filesystem::path filePath = workingPath.parent_path() / targetPath;
+            lsp::FileURI filePathURI = filePath.generic_string().c_str();
+
+            internalPath = URIToNormalizedPath(filePathURI);
+            text = this->m_Library.FindOrLoadDocument(filePathURI);
+            triedPaths.EmplaceBack(internalPath);
+        }
+
+        if (!text) {
+            // Try paths from include paths
+            for (size_t i = m_Options.IncludePaths.size(); i > 0; --i) {
+                std::filesystem::path workingPath(m_Options.IncludePaths[i-1]);
+                std::filesystem::path filePath = workingPath / targetPath;
+                lsp::FileURI filePathURI = filePath.generic_string().c_str();
+
+                internalPath = URIToNormalizedPath(filePathURI);
+                text = this->m_Library.FindOrLoadDocument(filePathURI);
+                if (text) break;
+
+                triedPaths.EmplaceBack(internalPath);
+            }
+
+            if (!text) {
+                // Relative and include paths failed
+                Pulsar::String errorMsg = "Could not read file ";
+
+                // I'll be damned if triedPaths hasn't got at least one path.
+                errorMsg += '\'';
+                errorMsg += triedPaths[0];
+                errorMsg += '\'';
+
+                for (size_t i = 1; i < triedPaths.Size(); ++i) {
+                    errorMsg += ", '";
+                    errorMsg += triedPaths[i];
+                    errorMsg += '\'';
+                }
+
+                errorMsg += '.';
+                return parser.SetError(Pulsar::ParseResult::FileNotRead, token, errorMsg);
+            }
+        }
 
         if (parser.AddSource(internalPath, *text) && path == cwf) {
             parsedDocument.IncludedFiles.EmplaceBack(internalPath, token.SourcePos);
@@ -1060,6 +1100,17 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
                 GET_INIT_BOOLEAN_OPTION(diagnosticsOnChange,      DiagnosticsOnChange);
                 GET_INIT_BOOLEAN_OPTION(fullSyncOnSave,           FullSyncOnSave);
                 GET_INIT_BOOLEAN_OPTION(mapGlobalProducersToVoid, MapGlobalProducersToVoid);
+
+                if (auto includePaths = userOptions.find("includePaths");
+                    includePaths != userOptions.end() &&
+                    includePaths->second.isArray()
+                ) {
+                    for (const auto& includePath : includePaths->second.array()) {
+                        if (!includePath.isString())
+                            continue;
+                        this->m_Options.IncludePaths.emplace_back(includePath.string());
+                    }
+                }
             }
 
             // You can see the standard was developed by Microsoft
@@ -1189,6 +1240,7 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
             (void)id;
             this->DropAllParsedDocuments();
             this->m_Library.DeleteAllDocuments();
+            this->m_Options.IncludePaths.clear();
             return nullptr;
         })
         .add<lsp::notifications::Exit>([this]()
