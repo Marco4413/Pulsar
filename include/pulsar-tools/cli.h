@@ -236,7 +236,7 @@ namespace PulsarTools::CLI
     {
         Program(const char* path) :
             Parser(path,
-                "*(*pulsar-tools file) -> 1.\n\n"
+                "*(*pulsar-tools args) -> 1.\n\n"
                 "     111=\n"
                 "    0 ?   !3a\n"
                 "   1   ! :::\n"
