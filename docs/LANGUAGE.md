@@ -110,7 +110,7 @@ source files even if you're only planning to use the script on
 Windows.
 
 ```sh
-#!/usr/bin/env pulsar-tools
+#!/usr/bin/env -S pulsar-tools run
 ```
 
 The above example of a sha-bang expects the `pulsar-tools` executable
