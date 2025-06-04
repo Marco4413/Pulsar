@@ -12,7 +12,7 @@
   .
 
 /**
- * Destroys a previously created Decoder returning the String it was build with.
+ * Destroys a previously created Decoder returning the String it was built with.
  * Decoder -> String
  */
 *(utf8/decoder/destroy 1) -> 1:
