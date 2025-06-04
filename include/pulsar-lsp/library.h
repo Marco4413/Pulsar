@@ -14,12 +14,12 @@
 
 namespace PulsarLSP
 {
-    Pulsar::String URIToNormalizedPath(const lsp::FileURI& uri);
-    lsp::FileURI NormalizedPathToURI(const Pulsar::String& path);
-    inline lsp::FileURI RecomputeURI(const lsp::FileURI& uri) { return NormalizedPathToURI(URIToNormalizedPath(uri)); }
+    Pulsar::String URIToNormalizedPath(const lsp::FileUri& uri);
+    lsp::FileUri NormalizedPathToURI(const Pulsar::String& path);
+    inline lsp::FileUri RecomputeURI(const lsp::FileUri& uri) { return NormalizedPathToURI(URIToNormalizedPath(uri)); }
 
-    bool ReadFile(const lsp::FileURI& uri, std::string& buffer);
-    bool ReadFile(const lsp::FileURI& uri, Pulsar::String& buffer);
+    bool ReadFile(const lsp::FileUri& uri, std::string& buffer);
+    bool ReadFile(const lsp::FileUri& uri, Pulsar::String& buffer);
 
     using SharedText = Pulsar::SharedRef<Pulsar::String>;
     using ConstSharedText = Pulsar::SharedRef<const Pulsar::String>;
@@ -28,13 +28,13 @@ namespace PulsarLSP
     {
         using SharedRef = Pulsar::SharedRef<CachedDocument>;
 
-        lsp::FileURI URI;
+        lsp::FileUri URI;
         SharedText Text;
         int Version;
     };
 
     using DocumentPatches = std::vector<lsp::TextDocumentContentChangeEvent>;
-    using PositionEncodingKind = lsp::PositionEncodingKind::ValueIndex;
+    using PositionEncodingKind = lsp::PositionEncodingKind;
 
     namespace Unicode
     {
@@ -61,15 +61,15 @@ namespace PulsarLSP
         Library() = default;
         ~Library() = default;
 
-        ConstSharedText FindDocument(const lsp::FileURI& uri) const;
-        bool HasDocument(const lsp::FileURI& uri) const { return (bool)FindDocument(uri); }
+        ConstSharedText FindDocument(const lsp::FileUri& uri) const;
+        bool HasDocument(const lsp::FileUri& uri) const { return (bool)FindDocument(uri); }
 
-        ConstSharedText FindOrLoadDocument(const lsp::FileURI& uri, int version=-1);
+        ConstSharedText FindOrLoadDocument(const lsp::FileUri& uri, int version=-1);
 
-        ConstSharedText LoadDocument(const lsp::FileURI& uri, int version=-1);
-        ConstSharedText StoreDocument(const lsp::FileURI& uri, const Pulsar::String& text, int version=-1);
-        ConstSharedText PatchDocument(const lsp::FileURI& uri, const DocumentPatches& patches, int newVersion=-1);
-        void DeleteDocument(const lsp::FileURI& uri);
+        ConstSharedText LoadDocument(const lsp::FileUri& uri, int version=-1);
+        ConstSharedText StoreDocument(const lsp::FileUri& uri, const Pulsar::String& text, int version=-1);
+        ConstSharedText PatchDocument(const lsp::FileUri& uri, const DocumentPatches& patches, int newVersion=-1);
+        void DeleteDocument(const lsp::FileUri& uri);
         void DeleteAllDocuments();
 
         PositionEncodingKind GetPositionEncoding() const    { return m_PositionEncoding; }

@@ -5,7 +5,7 @@
 
 #include "pulsar/utf8.h"
 
-Pulsar::String PulsarLSP::URIToNormalizedPath(const lsp::FileURI& uri)
+Pulsar::String PulsarLSP::URIToNormalizedPath(const lsp::FileUri& uri)
 {
     auto fsPath = std::filesystem::path(uri.path());
     std::error_code error;
@@ -16,18 +16,18 @@ Pulsar::String PulsarLSP::URIToNormalizedPath(const lsp::FileURI& uri)
     return path;
 }
 
-lsp::FileURI PulsarLSP::NormalizedPathToURI(const Pulsar::String& path)
+lsp::FileUri PulsarLSP::NormalizedPathToURI(const Pulsar::String& path)
 {
     std::filesystem::path relPath(path.CString());
     std::error_code error;
     std::filesystem::path absPath = std::filesystem::absolute(relPath, error);
-    lsp::FileURI uri = !(error || absPath.empty())
+    lsp::FileUri uri = !(error || absPath.empty())
         ? absPath.string()
         : relPath.string();
     return uri;
 }
 
-bool PulsarLSP::ReadFile(const lsp::FileURI& uri, std::string& buffer)
+bool PulsarLSP::ReadFile(const lsp::FileUri& uri, std::string& buffer)
 {
     Pulsar::String path  = URIToNormalizedPath(uri);
     std::filesystem::path fsPath = path.CString();
@@ -40,7 +40,7 @@ bool PulsarLSP::ReadFile(const lsp::FileURI& uri, std::string& buffer)
     return (bool)file.read(buffer.data(), fileSize);
 }
 
-bool PulsarLSP::ReadFile(const lsp::FileURI& uri, Pulsar::String& buffer)
+bool PulsarLSP::ReadFile(const lsp::FileUri& uri, Pulsar::String& buffer)
 {
     Pulsar::String path  = URIToNormalizedPath(uri);
     std::filesystem::path fsPath = path.CString();
@@ -100,27 +100,27 @@ void PulsarLSP::UTF8::DecoderExt::AdvanceToChar(Decoder& decoder, size_t startCh
     }
 }
 
-PulsarLSP::ConstSharedText PulsarLSP::Library::FindDocument(const lsp::FileURI& uri) const
+PulsarLSP::ConstSharedText PulsarLSP::Library::FindDocument(const lsp::FileUri& uri) const
 {
     Pulsar::String path = URIToNormalizedPath(uri);
     auto doc = m_Documents.Find(path);
     return doc ? doc->Value()->Text : nullptr;
 }
 
-PulsarLSP::ConstSharedText PulsarLSP::Library::FindOrLoadDocument(const lsp::FileURI& uri, int version)
+PulsarLSP::ConstSharedText PulsarLSP::Library::FindOrLoadDocument(const lsp::FileUri& uri, int version)
 {
     auto doc = FindDocument(uri);
     return doc ? doc : LoadDocument(uri, version);
 }
 
-PulsarLSP::ConstSharedText PulsarLSP::Library::LoadDocument(const lsp::FileURI& uri, int version)
+PulsarLSP::ConstSharedText PulsarLSP::Library::LoadDocument(const lsp::FileUri& uri, int version)
 {
     Pulsar::String buffer;
     if (!ReadFile(uri, buffer)) return nullptr;
     return StoreDocument(uri, buffer, version);
 }
 
-PulsarLSP::ConstSharedText PulsarLSP::Library::StoreDocument(const lsp::FileURI& uri, const Pulsar::String& text, int version)
+PulsarLSP::ConstSharedText PulsarLSP::Library::StoreDocument(const lsp::FileUri& uri, const Pulsar::String& text, int version)
 {
     Pulsar::String path = URIToNormalizedPath(uri);
     auto cachedDoc = m_Documents.Find(path);
@@ -138,7 +138,7 @@ PulsarLSP::ConstSharedText PulsarLSP::Library::StoreDocument(const lsp::FileURI&
     }
 }
 
-PulsarLSP::ConstSharedText PulsarLSP::Library::PatchDocument(const lsp::FileURI& uri, const DocumentPatches& patches, int newVersion)
+PulsarLSP::ConstSharedText PulsarLSP::Library::PatchDocument(const lsp::FileUri& uri, const DocumentPatches& patches, int newVersion)
 {
     Pulsar::String docPath = URIToNormalizedPath(uri);
     auto docPair = m_Documents.Find(docPath);
@@ -162,7 +162,7 @@ PulsarLSP::ConstSharedText PulsarLSP::Library::PatchDocument(const lsp::FileURI&
 }
 
 
-void PulsarLSP::Library::DeleteDocument(const lsp::FileURI& uri)
+void PulsarLSP::Library::DeleteDocument(const lsp::FileUri& uri)
 {
     m_Documents.Remove(URIToNormalizedPath(uri));
 }
