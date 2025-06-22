@@ -99,7 +99,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
         { // Try relative path first
             std::filesystem::path workingPath(cwf.CString());
             std::filesystem::path filePath = workingPath.parent_path() / targetPath;
-            lsp::FileUri filePathURI = filePath.generic_string().c_str();
+            lsp::FileUri filePathURI = lsp::FileUri::fromPath(filePath.string());
 
             internalPath = URIToNormalizedPath(filePathURI);
             text = this->m_Library.FindOrLoadDocument(filePathURI);
@@ -111,7 +111,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
             for (size_t i = m_Options.IncludePaths.size(); i > 0; --i) {
                 std::filesystem::path workingPath(m_Options.IncludePaths[i-1]);
                 std::filesystem::path filePath = workingPath / targetPath;
-                lsp::FileUri filePathURI = filePath.generic_string().c_str();
+                lsp::FileUri filePathURI = lsp::FileUri::fromPath(filePath.string());
 
                 internalPath = URIToNormalizedPath(filePathURI);
                 text = this->m_Library.FindOrLoadDocument(filePathURI);

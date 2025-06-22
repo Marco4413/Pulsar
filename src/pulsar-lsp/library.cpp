@@ -21,9 +21,11 @@ lsp::FileUri PulsarLSP::NormalizedPathToURI(const Pulsar::String& path)
     std::filesystem::path relPath(path.CString());
     std::error_code error;
     std::filesystem::path absPath = std::filesystem::absolute(relPath, error);
-    lsp::FileUri uri = !(error || absPath.empty())
-        ? absPath.string()
-        : relPath.string();
+    lsp::FileUri uri = lsp::FileUri::fromPath(
+        !(error || absPath.empty())
+            ? absPath.string()
+            : relPath.string()
+    );
     return uri;
 }
 
