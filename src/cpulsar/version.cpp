@@ -7,7 +7,7 @@
 extern "C"
 {
 
-CPULSAR_API uint64_t CPulsar_SemVer_ToNumber(CPulsar_SemVer self)
+CPULSAR_API uint64_t CPULSAR_CALL CPulsar_SemVer_ToNumber(CPulsar_SemVer self)
 {
     uint64_t versionNumber = self.Major;
     versionNumber = (versionNumber << 16) | self.Minor;
@@ -17,7 +17,7 @@ CPULSAR_API uint64_t CPulsar_SemVer_ToNumber(CPulsar_SemVer self)
     return versionNumber;
 }
 
-CPULSAR_API CPulsar_SemVer CPulsar_GetLanguageVersion(void)
+CPULSAR_API CPulsar_SemVer CPULSAR_CALL CPulsar_GetLanguageVersion(void)
 {
     return {
         .Major = Pulsar::LANGUAGE_VERSION.Major,
@@ -31,7 +31,7 @@ CPULSAR_API CPulsar_SemVer CPulsar_GetLanguageVersion(void)
     };
 }
 
-CPULSAR_API uint32_t CPulsar_GetNeutronVersion(void)
+CPULSAR_API uint32_t CPULSAR_CALL CPulsar_GetNeutronVersion(void)
 {
     return Pulsar::Binary::FORMAT_VERSION;
 }

@@ -11,13 +11,13 @@ typedef struct CPulsar_Stack_S* CPulsar_Stack;
 extern "C" {
 #endif
 
-CPULSAR_API CPulsar_Value CPulsar_Stack_Pop(CPulsar_Stack self);
+CPULSAR_API CPulsar_Value CPULSAR_CALL CPulsar_Stack_Pop(CPulsar_Stack self);
 // Pushes a new empty value owned by `self` and returns its reference.
-CPULSAR_API CPulsar_Value CPulsar_Stack_PushEmpty(CPulsar_Stack self);
+CPULSAR_API CPulsar_Value CPULSAR_CALL CPulsar_Stack_PushEmpty(CPulsar_Stack self);
 // Moves `value` into the list. `value` must be deleted by its owner
-CPULSAR_API void CPulsar_Stack_Push(CPulsar_Stack self, CPulsar_Value value);
+CPULSAR_API void CPULSAR_CALL CPulsar_Stack_Push(CPulsar_Stack self, CPulsar_Value value);
 // Copies `value` into the list. `value` must be deleted by its owner
-CPULSAR_API void CPulsar_Stack_PushCopy(CPulsar_Stack self, CPulsar_Value value);
+CPULSAR_API void CPULSAR_CALL CPulsar_Stack_PushCopy(CPulsar_Stack self, CPulsar_Value value);
 
 #ifdef CPULSAR_CPP
 }

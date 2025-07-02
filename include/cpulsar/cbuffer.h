@@ -3,8 +3,8 @@
 
 #include "cpulsar/core.h"
 
-typedef void(*CPulsar_CBuffer_Free)(void*);
-typedef void*(*CPulsar_CBuffer_Copy)(void*);
+typedef void(CPULSAR_CALL *CPulsar_CBuffer_Free)(void*);
+typedef void*(CPULSAR_CALL *CPulsar_CBuffer_Copy)(void*);
 
 // Represents a generic portion of memory
 typedef struct {

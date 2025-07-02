@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h> // memcpy
 
-CPulsar_RuntimeState NativePrintln(CPulsar_ExecutionContext context, void* args)
+CPulsar_RuntimeState CPULSAR_CALL NativePrintln(CPulsar_ExecutionContext context, void* args)
 {
     (void)args;
 
@@ -19,24 +19,24 @@ CPulsar_RuntimeState NativePrintln(CPulsar_ExecutionContext context, void* args)
     return CPulsar_RuntimeState_OK;
 }
 
-void ExtIntegerData_Free(void* data);
-CPulsar_CustomTypeData_Ref ExtIntegerData_Factory(void);
+void CPULSAR_CALL ExtIntegerData_Free(void* data);
+CPulsar_CustomTypeData_Ref CPULSAR_CALL ExtIntegerData_Factory(void);
 
-void ExtInteger_Free(void* data);
-CPulsar_CBuffer ExtInteger_Create(int64_t initValue);
+void CPULSAR_CALL ExtInteger_Free(void* data);
+CPulsar_CBuffer CPULSAR_CALL ExtInteger_Create(int64_t initValue);
 
 typedef struct {
     uint64_t ExtIntegerId;
 } CustomTypeIds;
 
-CPulsar_CBuffer CustomTypeIdsToBuffer(CustomTypeIds data);
+CPulsar_CBuffer CPULSAR_CALL CustomTypeIdsToBuffer(CustomTypeIds data);
 
-CPulsar_RuntimeState NativeExtIntegerCreate(CPulsar_ExecutionContext context, void* args);
-CPulsar_RuntimeState NativeExtIntegerSet(CPulsar_ExecutionContext context, void* args);
-CPulsar_RuntimeState NativeExtIntegerGet(CPulsar_ExecutionContext context, void* args);
+CPulsar_RuntimeState CPULSAR_CALL NativeExtIntegerCreate(CPulsar_ExecutionContext context, void* args);
+CPulsar_RuntimeState CPULSAR_CALL NativeExtIntegerSet(CPulsar_ExecutionContext context, void* args);
+CPulsar_RuntimeState CPULSAR_CALL NativeExtIntegerGet(CPulsar_ExecutionContext context, void* args);
 
 // Returns the version of Pulsar this binding was made for
-CPULSAR_EXPORT uint64_t GetPulsarVersion(void)
+CPULSAR_EXPORT uint64_t CPULSAR_CALL GetPulsarVersion(void)
 {
     // SemVer::Build can be ignored
     return CPulsar_SemVer_ToNumber((CPulsar_SemVer){
@@ -50,12 +50,12 @@ CPULSAR_EXPORT uint64_t GetPulsarVersion(void)
     });
 }
 
-CPULSAR_EXPORT void BindTypes(CPulsar_Module module)
+CPULSAR_EXPORT void CPULSAR_CALL BindTypes(CPulsar_Module module)
 {
     CPulsar_Module_BindCustomType(module, "Ext/Integer", ExtIntegerData_Factory);
 }
 
-CPULSAR_EXPORT void BindFunctions(CPulsar_Module module, int declareAndBind)
+CPULSAR_EXPORT void CPULSAR_CALL BindFunctions(CPulsar_Module module, int declareAndBind)
 {
     CPulsar_Module_BindNativeFunctionEx(
         module,
@@ -107,13 +107,13 @@ CPULSAR_EXPORT void BindFunctions(CPulsar_Module module, int declareAndBind)
     );
 }
 
-void ExtIntegerData_Free(void* data)
+void CPULSAR_CALL ExtIntegerData_Free(void* data)
 {
     printf("ExtIntegerData_Free\n");
     CPulsar_Free(data);
 }
 
-void* ExtIntegerData_Copy(void* data)
+void* CPULSAR_CALL ExtIntegerData_Copy(void* data)
 {
     printf("ExtIntegerData_Copy\n");
     int64_t* dataCopy = CPulsar_Malloc(sizeof(int64_t));
@@ -123,7 +123,7 @@ void* ExtIntegerData_Copy(void* data)
     return dataCopy;
 }
 
-CPulsar_CustomTypeData_Ref ExtIntegerData_Factory(void)
+CPulsar_CustomTypeData_Ref CPULSAR_CALL ExtIntegerData_Factory(void)
 {
     printf("ExtIntegerData_Factory\n");
     int64_t* data = CPulsar_Malloc(sizeof(int64_t));
@@ -137,13 +137,13 @@ CPulsar_CustomTypeData_Ref ExtIntegerData_Factory(void)
     );
 }
 
-void ExtInteger_Free(void* data)
+void CPULSAR_CALL ExtInteger_Free(void* data)
 {
     printf("ExtInteger_Free\n");
     CPulsar_Free(data);
 }
 
-CPulsar_CBuffer ExtInteger_Create(int64_t initValue)
+CPulsar_CBuffer CPULSAR_CALL ExtInteger_Create(int64_t initValue)
 {
     printf("ExtInteger_Create\n");
     int64_t* data = CPulsar_Malloc(sizeof(int64_t));
@@ -154,7 +154,7 @@ CPulsar_CBuffer ExtInteger_Create(int64_t initValue)
     };
 }
 
-CPulsar_CBuffer CustomTypeIdsToBuffer(CustomTypeIds data)
+CPulsar_CBuffer CPULSAR_CALL CustomTypeIdsToBuffer(CustomTypeIds data)
 {
     CPulsar_CBuffer buffer = {
         .Data = CPulsar_Malloc(sizeof(data)),
@@ -164,7 +164,7 @@ CPulsar_CBuffer CustomTypeIdsToBuffer(CustomTypeIds data)
     return buffer;
 }
 
-CPulsar_RuntimeState NativeExtIntegerCreate(CPulsar_ExecutionContext context, void* args)
+CPulsar_RuntimeState CPULSAR_CALL NativeExtIntegerCreate(CPulsar_ExecutionContext context, void* args)
 {
     CustomTypeIds* typeIds = args;
 
@@ -180,7 +180,7 @@ CPulsar_RuntimeState NativeExtIntegerCreate(CPulsar_ExecutionContext context, vo
     return CPulsar_RuntimeState_OK;
 }
 
-CPulsar_RuntimeState NativeExtIntegerSet(CPulsar_ExecutionContext context, void* args)
+CPulsar_RuntimeState CPULSAR_CALL NativeExtIntegerSet(CPulsar_ExecutionContext context, void* args)
 {
     CustomTypeIds* typeIds = args;
 
@@ -204,7 +204,7 @@ CPulsar_RuntimeState NativeExtIntegerSet(CPulsar_ExecutionContext context, void*
     return CPulsar_RuntimeState_OK;
 }
 
-CPulsar_RuntimeState NativeExtIntegerGet(CPulsar_ExecutionContext context, void* args)
+CPulsar_RuntimeState CPULSAR_CALL NativeExtIntegerGet(CPulsar_ExecutionContext context, void* args)
 {
     CustomTypeIds* typeIds = args;
 

@@ -9,7 +9,7 @@ using Stack = Pulsar::ValueStack;
 extern "C"
 {
 
-CPULSAR_API CPulsar_Value CPulsar_Stack_Pop(CPulsar_Stack _self)
+CPULSAR_API CPulsar_Value CPULSAR_CALL CPulsar_Stack_Pop(CPulsar_Stack _self)
 {
     Stack& self = CPULSAR_DEREF(Stack, _self);
     CPulsar_Value value = CPULSAR_REF(CPulsar_Value_S, *PULSAR_NEW(
@@ -19,17 +19,17 @@ CPULSAR_API CPulsar_Value CPulsar_Stack_Pop(CPulsar_Stack _self)
     return value;
 }
 
-CPULSAR_API CPulsar_Value CPulsar_Stack_PushEmpty(CPulsar_Stack _self)
+CPULSAR_API CPulsar_Value CPULSAR_CALL CPulsar_Stack_PushEmpty(CPulsar_Stack _self)
 {
     return CPULSAR_REF(CPulsar_Value_S, CPULSAR_DEREF(Stack, _self).EmplaceBack());
 }
 
-CPULSAR_API void CPulsar_Stack_Push(CPulsar_Stack _self, CPulsar_Value _value)
+CPULSAR_API void CPULSAR_CALL CPulsar_Stack_Push(CPulsar_Stack _self, CPulsar_Value _value)
 {
     CPULSAR_DEREF(Stack, _self).EmplaceBack(std::move(CPULSAR_DEREF(Value, _value)));
 }
 
-CPULSAR_API void CPulsar_Stack_PushCopy(CPulsar_Stack _self, CPulsar_Value _value)
+CPULSAR_API void CPULSAR_CALL CPulsar_Stack_PushCopy(CPulsar_Stack _self, CPulsar_Value _value)
 {
     CPULSAR_DEREF(Stack, _self).EmplaceBack(CPULSAR_DEREF(Value, _value));
 }

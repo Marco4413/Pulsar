@@ -32,10 +32,10 @@ typedef struct {
 extern "C" {
 #endif
 
-CPULSAR_API uint64_t CPulsar_SemVer_ToNumber(CPulsar_SemVer self);
+CPULSAR_API uint64_t CPULSAR_CALL CPulsar_SemVer_ToNumber(CPulsar_SemVer self);
 
-CPULSAR_API CPulsar_SemVer CPulsar_GetLanguageVersion(void);
-CPULSAR_API uint32_t CPulsar_GetNeutronVersion(void);
+CPULSAR_API CPulsar_SemVer CPULSAR_CALL CPulsar_GetLanguageVersion(void);
+CPULSAR_API uint32_t       CPULSAR_CALL CPulsar_GetNeutronVersion(void);
 
 #ifdef CPULSAR_CPP
 }

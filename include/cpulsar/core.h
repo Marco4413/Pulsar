@@ -19,9 +19,11 @@
 #endif // CPULSAR_CPP
 
 #if defined(PULSAR_PLATFORM_WINDOWS)
+#  define CPULSAR_CALL __cdecl
 #  define CPULSAR_EXPORT __declspec(dllexport)
 #  define CPULSAR_IMPORT __declspec(dllimport)
 #else // defined(PULSAR_PLATFORM_UNIX)
+#  define CPULSAR_CALL
 #  define CPULSAR_EXPORT
 #  define CPULSAR_IMPORT
 #endif
@@ -40,9 +42,9 @@
 extern "C" {
 #endif
 
-CPULSAR_API void* CPulsar_Malloc(size_t size);
-CPULSAR_API void* CPulsar_Realloc(void* block, size_t size);
-CPULSAR_API void CPulsar_Free(void* block);
+CPULSAR_API void* CPULSAR_CALL CPulsar_Malloc(size_t size);
+CPULSAR_API void* CPULSAR_CALL CPulsar_Realloc(void* block, size_t size);
+CPULSAR_API void  CPULSAR_CALL CPulsar_Free(void* block);
 
 #ifdef CPULSAR_CPP
 }

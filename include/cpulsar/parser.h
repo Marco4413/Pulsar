@@ -12,14 +12,14 @@ typedef struct CPulsar_Parser_S* CPulsar_Parser;
 extern "C" {
 #endif
 
-CPULSAR_API const char* CPulsar_ParseResult_ToString(CPulsar_ParseResult parseResult);
+CPULSAR_API const char* CPULSAR_CALL CPulsar_ParseResult_ToString(CPulsar_ParseResult parseResult);
 
-CPULSAR_API CPulsar_Parser CPulsar_Parser_Create();
-CPULSAR_API void CPulsar_Parser_Delete(CPulsar_Parser self);
+CPULSAR_API CPulsar_Parser CPULSAR_CALL CPulsar_Parser_Create();
+CPULSAR_API void           CPULSAR_CALL CPulsar_Parser_Delete(CPulsar_Parser self);
 
-CPULSAR_API CPulsar_ParseResult CPulsar_Parser_AddSourceFile(CPulsar_Parser self, const char* path);
-CPULSAR_API CPulsar_ParseResult CPulsar_Parser_ParseIntoModule(CPulsar_Parser self, CPulsar_Module module);
-CPULSAR_API const char* CPulsar_Parser_GetErrorMessage(const CPulsar_Parser self);
+CPULSAR_API CPulsar_ParseResult CPULSAR_CALL CPulsar_Parser_AddSourceFile(CPulsar_Parser self, const char* path);
+CPULSAR_API CPulsar_ParseResult CPULSAR_CALL CPulsar_Parser_ParseIntoModule(CPulsar_Parser self, CPulsar_Module module);
+CPULSAR_API const char*         CPULSAR_CALL CPulsar_Parser_GetErrorMessage(const CPulsar_Parser self);
 
 #ifdef CPULSAR_CPP
 }

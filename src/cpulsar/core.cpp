@@ -6,17 +6,17 @@
 extern "C"
 {
 
-CPULSAR_API void* CPulsar_Malloc(size_t size)
+CPULSAR_API void* CPULSAR_CALL CPulsar_Malloc(size_t size)
 {
     return Pulsar::Core::Malloc(size);
 }
 
-CPULSAR_API void* CPulsar_Realloc(void* block, size_t size)
+CPULSAR_API void* CPULSAR_CALL CPulsar_Realloc(void* block, size_t size)
 {
     return Pulsar::Core::Realloc(block, size);
 }
 
-CPULSAR_API void CPulsar_Free(void* block)
+CPULSAR_API void CPULSAR_CALL CPulsar_Free(void* block)
 {
     Pulsar::Core::Free(block);
 }

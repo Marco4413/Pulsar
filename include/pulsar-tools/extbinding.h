@@ -3,6 +3,12 @@
 
 #include "pulsar-tools/binding.h"
 
+#if defined(PULSAR_PLATFORM_WINDOWS)
+#  define CPULSAR_CALL __cdecl
+#else // defined(PULSAR_PLATFORM_UNIX)
+#  define CPULSAR_CALL
+#endif
+
 namespace PulsarTools
 {
     // Any instance of this class must be deleted
@@ -12,9 +18,9 @@ namespace PulsarTools
     public:
         using ExtLib = void*;
 
-        using GetPulsarVersionFn = uint64_t(*)(void);
-        using BindTypesFn = void(*)(Pulsar::Module*);
-        using BindFunctionsFn = void(*)(Pulsar::Module*, int);
+        using GetPulsarVersionFn = uint64_t(CPULSAR_CALL *)(void);
+        using BindTypesFn        = void(CPULSAR_CALL *)(Pulsar::Module*);
+        using BindFunctionsFn    = void(CPULSAR_CALL *)(Pulsar::Module*, int);
 
     public:
         ExtBinding(const char* path);

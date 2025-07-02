@@ -59,36 +59,36 @@ private:
 extern "C"
 {
 
-CPULSAR_API CPulsar_CustomTypeData_Ref CPulsar_CustomTypeData_Ref_FromBuffer(CPulsar_CBuffer buffer)
+CPULSAR_API CPulsar_CustomTypeData_Ref CPULSAR_CALL CPulsar_CustomTypeData_Ref_FromBuffer(CPulsar_CBuffer buffer)
 {
     auto ref = Pulsar::SharedRef<CustomTypeDataBuffer>::New(buffer);
     return CPULSAR_REF(CPulsar_CustomTypeData_Ref_S, *PULSAR_NEW(Pulsar::CustomTypeData::Ref, ref));
 }
 
-CPULSAR_API CPulsar_CBuffer* CPulsar_CustomTypeData_Ref_GetBuffer(CPulsar_CustomTypeData_Ref _self)
+CPULSAR_API CPulsar_CBuffer* CPULSAR_CALL CPulsar_CustomTypeData_Ref_GetBuffer(CPulsar_CustomTypeData_Ref _self)
 {
     auto bufferData = CPULSAR_DEREF(Pulsar::CustomTypeData::Ref, _self).CastTo<CustomTypeDataBuffer>();
     return bufferData ? &bufferData->GetBuffer() : NULL;
 }
 
-CPULSAR_API void CPulsar_CustomTypeData_Ref_Delete(CPulsar_CustomTypeData_Ref _self)
+CPULSAR_API void CPULSAR_CALL CPulsar_CustomTypeData_Ref_Delete(CPulsar_CustomTypeData_Ref _self)
 {
     PULSAR_DELETE(Pulsar::CustomTypeData::Ref, &CPULSAR_DEREF(Pulsar::CustomTypeData::Ref, _self));
 }
 
-CPULSAR_API CPulsar_CustomDataHolder_Ref CPulsar_CustomDataHolder_Ref_FromBuffer(CPulsar_CBuffer buffer)
+CPULSAR_API CPulsar_CustomDataHolder_Ref CPULSAR_CALL CPulsar_CustomDataHolder_Ref_FromBuffer(CPulsar_CBuffer buffer)
 {
     auto ref = Pulsar::SharedRef<CustomDataHolderBuffer>::New(buffer);
     return CPULSAR_REF(CPulsar_CustomDataHolder_Ref_S, *PULSAR_NEW(Pulsar::CustomDataHolder::Ref, ref));
 }
 
-CPULSAR_API CPulsar_CBuffer* CPulsar_CustomDataHolder_Ref_GetBuffer(CPulsar_CustomDataHolder_Ref _self)
+CPULSAR_API CPulsar_CBuffer* CPULSAR_CALL CPulsar_CustomDataHolder_Ref_GetBuffer(CPulsar_CustomDataHolder_Ref _self)
 {
     auto bufferHolder = CPULSAR_DEREF(Pulsar::CustomDataHolder::Ref, _self).CastTo<CustomDataHolderBuffer>();
     return bufferHolder ? &bufferHolder->GetBuffer() : NULL;
 }
 
-CPULSAR_API void CPulsar_CustomDataHolder_Ref_Delete(CPulsar_CustomDataHolder_Ref _self)
+CPULSAR_API void CPULSAR_CALL CPulsar_CustomDataHolder_Ref_Delete(CPulsar_CustomDataHolder_Ref _self)
 {
     PULSAR_DELETE(Pulsar::CustomDataHolder::Ref, &CPULSAR_DEREF(Pulsar::CustomDataHolder::Ref, _self));
 }

@@ -33,22 +33,22 @@ private:
 extern "C"
 {
 
-CPULSAR_API const char* CPulsar_RuntimeState_ToString(CPulsar_RuntimeState runtimeState)
+CPULSAR_API const char* CPULSAR_CALL CPulsar_RuntimeState_ToString(CPulsar_RuntimeState runtimeState)
 {
     return RuntimeStateToString((Pulsar::RuntimeState)runtimeState);
 }
 
-CPULSAR_API CPulsar_Module CPulsar_Module_Create(void)
+CPULSAR_API CPulsar_Module CPULSAR_CALL CPulsar_Module_Create(void)
 {
     return CPULSAR_REF(CPulsar_Module_S, *PULSAR_NEW(Module));
 }
 
-CPULSAR_API void CPulsar_Module_Delete(CPulsar_Module _self)
+CPULSAR_API void CPULSAR_CALL CPulsar_Module_Delete(CPulsar_Module _self)
 {
     PULSAR_DELETE(Module, &CPULSAR_DEREF(Module, _self));
 }
 
-CPULSAR_API size_t CPulsar_Module_BindNativeFunction(
+CPULSAR_API size_t CPULSAR_CALL CPulsar_Module_BindNativeFunction(
         CPulsar_Module _self, CPulsar_FunctionSignature fnSig,
         CPulsar_NativeFunction nativeFn, CPulsar_CBuffer _nativeFnArgs)
 {
@@ -67,7 +67,7 @@ CPULSAR_API size_t CPulsar_Module_BindNativeFunction(
         });
 }
 
-CPULSAR_API int64_t CPulsar_Module_DeclareAndBindNativeFunction(
+CPULSAR_API int64_t CPULSAR_CALL CPulsar_Module_DeclareAndBindNativeFunction(
         CPulsar_Module _self, CPulsar_FunctionSignature fnSig,
         CPulsar_NativeFunction nativeFn, CPulsar_CBuffer _nativeFnArgs)
 {
@@ -86,7 +86,7 @@ CPULSAR_API int64_t CPulsar_Module_DeclareAndBindNativeFunction(
         });
 }
 
-CPULSAR_API void CPulsar_Module_BindNativeFunctionEx(
+CPULSAR_API void CPULSAR_CALL CPulsar_Module_BindNativeFunctionEx(
         CPulsar_Module self, CPulsar_FunctionSignature fnSig,
         CPulsar_NativeFunction nativeFn, CPulsar_CBuffer nativeFnArgs,
         int declareAndBind)
@@ -98,7 +98,7 @@ CPULSAR_API void CPulsar_Module_BindNativeFunctionEx(
     }
 }
 
-CPULSAR_API uint64_t CPulsar_Module_BindCustomType(CPulsar_Module _self, const char* typeName, CPulsar_CustomType_DataFactoryFn dataFactory)
+CPULSAR_API uint64_t CPULSAR_CALL CPulsar_Module_BindCustomType(CPulsar_Module _self, const char* typeName, CPulsar_CustomType_DataFactoryFn dataFactory)
 {
     return CPULSAR_DEREF(Module, _self)
         .BindCustomType(
@@ -112,7 +112,7 @@ CPULSAR_API uint64_t CPulsar_Module_BindCustomType(CPulsar_Module _self, const c
         );
 }
 
-CPULSAR_API uint64_t CPulsar_Module_FindCustomType(const CPulsar_Module _self, const char* typeName)
+CPULSAR_API uint64_t CPULSAR_CALL CPulsar_Module_FindCustomType(const CPulsar_Module _self, const char* typeName)
 {
     Module& self = CPULSAR_DEREF(Module, _self);
     uint64_t typeId = 0;
@@ -125,27 +125,27 @@ CPULSAR_API uint64_t CPulsar_Module_FindCustomType(const CPulsar_Module _self, c
     return typeId;
 }
 
-CPULSAR_API CPulsar_Locals CPulsar_Frame_GetLocals(CPulsar_Frame _self)
+CPULSAR_API CPulsar_Locals CPULSAR_CALL CPulsar_Frame_GetLocals(CPulsar_Frame _self)
 {
     return CPULSAR_REF(CPulsar_Locals_S, CPULSAR_DEREF(Frame, _self).Locals);
 }
 
-CPULSAR_API CPulsar_Stack CPulsar_Frame_GetStack(CPulsar_Frame _self)
+CPULSAR_API CPulsar_Stack CPULSAR_CALL CPulsar_Frame_GetStack(CPulsar_Frame _self)
 {
     return CPULSAR_REF(CPulsar_Stack_S, CPULSAR_DEREF(Frame, _self).Stack);
 }
 
-CPULSAR_API CPulsar_ExecutionContext CPulsar_ExecutionContext_Create(const CPulsar_Module _module)
+CPULSAR_API CPulsar_ExecutionContext CPULSAR_CALL CPulsar_ExecutionContext_Create(const CPulsar_Module _module)
 {
     return CPULSAR_REF(CPulsar_ExecutionContext_S, *PULSAR_NEW(ExecutionContext, CPULSAR_DEREF(const Module, _module)));
 }
 
-CPULSAR_API void CPulsar_ExecutionContext_Delete(CPulsar_ExecutionContext _self)
+CPULSAR_API void CPULSAR_CALL CPulsar_ExecutionContext_Delete(CPulsar_ExecutionContext _self)
 {
     PULSAR_DELETE(ExecutionContext, &CPULSAR_DEREF(ExecutionContext, _self));
 }
 
-CPULSAR_API CPulsar_CustomTypeData_Ref CPulsar_ExecutionContext_GetCustomTypeData(CPulsar_ExecutionContext _self, uint64_t typeId)
+CPULSAR_API CPulsar_CustomTypeData_Ref CPULSAR_CALL CPulsar_ExecutionContext_GetCustomTypeData(CPulsar_ExecutionContext _self, uint64_t typeId)
 {
     ExecutionContext& self = CPULSAR_DEREF(ExecutionContext, _self);
     auto typeData = self.GetCustomTypeData<Pulsar::CustomTypeData>(typeId);
@@ -153,7 +153,7 @@ CPULSAR_API CPulsar_CustomTypeData_Ref CPulsar_ExecutionContext_GetCustomTypeDat
     return CPULSAR_REF(CPulsar_CustomTypeData_Ref_S, *PULSAR_NEW(Pulsar::CustomTypeData::Ref, typeData));
 }
 
-CPULSAR_API CPulsar_CBuffer* CPulsar_ExecutionContext_GetCustomTypeDataBuffer(CPulsar_ExecutionContext self, uint64_t typeId)
+CPULSAR_API CPulsar_CBuffer* CPULSAR_CALL CPulsar_ExecutionContext_GetCustomTypeDataBuffer(CPulsar_ExecutionContext self, uint64_t typeId)
 {
     CPulsar_CustomTypeData_Ref ref = CPulsar_ExecutionContext_GetCustomTypeData(self, typeId);
     CPulsar_CBuffer* buf = CPulsar_CustomTypeData_Ref_GetBuffer(ref);
@@ -161,27 +161,27 @@ CPULSAR_API CPulsar_CBuffer* CPulsar_ExecutionContext_GetCustomTypeDataBuffer(CP
     return buf;
 }
 
-CPULSAR_API CPulsar_Stack CPulsar_ExecutionContext_GetStack(CPulsar_ExecutionContext _self)
+CPULSAR_API CPulsar_Stack CPULSAR_CALL CPulsar_ExecutionContext_GetStack(CPulsar_ExecutionContext _self)
 {
     return CPULSAR_REF(CPulsar_Stack_S, CPULSAR_DEREF(ExecutionContext, _self).GetStack());
 }
 
-CPULSAR_API CPulsar_Frame CPulsar_ExecutionContext_CurrentFrame(CPulsar_ExecutionContext _self)
+CPULSAR_API CPulsar_Frame CPULSAR_CALL CPulsar_ExecutionContext_CurrentFrame(CPulsar_ExecutionContext _self)
 {
     return CPULSAR_REF(CPulsar_Frame_S, CPULSAR_DEREF(ExecutionContext, _self).CurrentFrame());
 }
 
-CPULSAR_API CPulsar_RuntimeState CPulsar_ExecutionContext_CallFunctionByName(CPulsar_ExecutionContext _self, const char* fnName)
+CPULSAR_API CPulsar_RuntimeState CPULSAR_CALL CPulsar_ExecutionContext_CallFunctionByName(CPulsar_ExecutionContext _self, const char* fnName)
 {
     return (CPulsar_RuntimeState)CPULSAR_DEREF(ExecutionContext, _self).CallFunction(fnName);
 }
 
-CPULSAR_API CPulsar_RuntimeState CPulsar_ExecutionContext_Run(CPulsar_ExecutionContext _self)
+CPULSAR_API CPulsar_RuntimeState CPULSAR_CALL CPulsar_ExecutionContext_Run(CPulsar_ExecutionContext _self)
 {
     return (CPulsar_RuntimeState)CPULSAR_DEREF(ExecutionContext, _self).Run();
 }
 
-CPULSAR_API CPulsar_RuntimeState CPulsar_ExecutionContext_GetState(const CPulsar_ExecutionContext _self)
+CPULSAR_API CPulsar_RuntimeState CPULSAR_CALL CPulsar_ExecutionContext_GetState(const CPulsar_ExecutionContext _self)
 {
     return (CPulsar_RuntimeState)CPULSAR_DEREF(const ExecutionContext, _self).GetState();
 }
