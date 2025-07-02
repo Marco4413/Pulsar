@@ -1,6 +1,8 @@
 #ifndef _PULSARTOOLS_CLI_H
 #define _PULSARTOOLS_CLI_H
 
+#include <filesystem>
+
 #include "argue.hpp"
 
 #include "pulsar/parser.h"
@@ -12,6 +14,15 @@
 namespace PulsarTools::CLI
 {
     Logger& GetLogger();
+
+    // If empty an error occurred. The path is computed once for each thread and stored in static storage.
+    const std::filesystem::path& GetThisProcessExecutable();
+    // If empty an error occurred. The path is computed once for each thread and stored in static storage.
+    const std::filesystem::path& GetInterpreterIncludeFolder();
+
+    // This function calls GetInterpreterIncludeFolder() so that if any error occurs it also returns false.
+    // If true is returned, the folder is not guaranteed to exist.
+    inline bool HasInterpreterIncludeFolder() { return !GetInterpreterIncludeFolder().empty(); }
 
     struct GeneralOptions
     {
@@ -45,6 +56,11 @@ namespace PulsarTools::CLI
                 "Adds PATH to the include paths. The last specified PATH is the one with the highest priority.\n"
                 "#include directives will search the specified PATHs if no relative file can be found.",
                 false),
+            InterpreterIncludeFolder(cmd, "interpreter-include", "",
+                HasInterpreterIncludeFolder()
+                    ? "Automatically add '" + GetInterpreterIncludeFolder().generic_string() + "' to the include paths. (default: true)"
+                    : "This option does nothing because either your platform does not support it or the path to the interpreter could not be found.",
+                true),
             DeclareBoundNatives(cmd, "declare-natives", "n",
                 "Automatically declare bound natives so that they can be used in global producers. (default: false)",
                 false),
@@ -62,7 +78,10 @@ namespace PulsarTools::CLI
                 false)
         {}
 
+        Pulsar::ParseSettings ToParseSettings() const;
+
         Argue::CollectionOption IncludeFolders;
+        Argue::FlagOption InterpreterIncludeFolder;
 
         Argue::FlagOption DeclareBoundNatives;
         Argue::FlagOption Debug;

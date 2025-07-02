@@ -1,7 +1,17 @@
 #include "pulsar-tools/cli.h"
 
 #include <chrono>
-#include <filesystem>
+#include <optional>
+
+#if defined(PULSAR_PLATFORM_MACOSX)
+#  include <mach-o/dyld.h>
+#  include <string>
+#elif defined(PULSAR_PLATFORM_UNIX)
+#  include <array>
+#elif defined(PULSAR_PLATFORM_WINDOWS)
+#  define WIN32_LEAN_AND_MEAN
+#  include <windows.h>
+#endif // PULSAR_PLATFORM_*
 
 #include "pulsar/bytecode.h"
 #include "pulsar/binary/filereader.h"
@@ -17,10 +27,76 @@ PulsarTools::Logger& PulsarTools::CLI::GetLogger()
     return g_Logger;
 }
 
+const std::filesystem::path& PulsarTools::CLI::GetThisProcessExecutable()
+{
+    static thread_local std::optional<std::filesystem::path> s_ThisProcessExecutable = std::nullopt;
+    if (s_ThisProcessExecutable) return *s_ThisProcessExecutable;
+#if defined(PULSAR_PLATFORM_MACOSX)
+    // TODO: This is not tested since I don't have a MACOS device
+    std::string pathBuffer;
+    uint32_t pathLength = pathBuffer.size();
+
+    // Get full pathLength
+    _NSGetExecutablePath(pathBuffer.data(), &pathLength);
+    pathBuffer.resize(pathLength);
+
+    std::error_code ec;
+    if (_NSGetExecutablePath(pathBuffer.data(), &pathLength) == 0) {
+        if (std::filesystem::exists(pathBuffer)) {
+            s_ThisProcessExecutable = std::filesystem::canonical(pathBuffer, ec);
+        }
+    }
+    
+    if (ec) s_ThisProcessExecutable = std::filesystem::path();
+#elif defined(PULSAR_PLATFORM_UNIX)
+    // TODO: Maybe add implementations specific to BSD and Solaris (I've read that BSD may not have the proc fs)
+    // See: https://stackoverflow.com/a/1024937
+    // Solaris may not work, see: https://serverfault.com/a/862189
+    constexpr std::array<const char*, 4> SELF_PROC_LINKS{
+        "/proc/self/exe",
+        "/proc/curproc/exe",
+        "/proc/curproc/file",
+        "/proc/self/path/a.out"
+    };
+
+    std::error_code ec;
+    for (auto selfProcLink : SELF_PROC_LINKS) {
+        if (std::filesystem::exists(selfProcLink)) {
+            s_ThisProcessExecutable = std::filesystem::canonical(selfProcLink, ec);
+            break;
+        }
+    }
+
+    if (ec) s_ThisProcessExecutable = std::filesystem::path();
+#elif defined(PULSAR_PLATFORM_WINDOWS)
+    constexpr size_t EXE_PATH_LENGTH = MAX_PATH+1;
+    TCHAR exePath[EXE_PATH_LENGTH]{0};
+    DWORD status = GetModuleFileName(NULL, exePath, EXE_PATH_LENGTH);
+    if (status < EXE_PATH_LENGTH) {
+        s_ThisProcessExecutable = std::filesystem::path(exePath);
+    }
+#else // PULSAR_PLATFORM_*
+    // Unsupported platform
+#endif // PULSAR_PLATFORM_*
+    if (!s_ThisProcessExecutable)
+        s_ThisProcessExecutable = std::filesystem::path();
+    return *s_ThisProcessExecutable;
+}
+
+const std::filesystem::path& PulsarTools::CLI::GetInterpreterIncludeFolder()
+{
+    static thread_local std::optional<std::filesystem::path> s_InterpreterIncludeFolder = std::nullopt;
+    if (s_InterpreterIncludeFolder) return *s_InterpreterIncludeFolder;
+
+    s_InterpreterIncludeFolder = GetThisProcessExecutable();
+    if (s_InterpreterIncludeFolder->empty()) return *s_InterpreterIncludeFolder;
+    return s_InterpreterIncludeFolder->replace_filename("include");
+}
+
 // TODO: Move into Pulsar so that it can be used by other projects
 using IncludePaths = std::vector<std::string>;
 
-Pulsar::ParseSettings::IncludeResolverFn CreateIncludeResolver(const IncludePaths& includePaths)
+static Pulsar::ParseSettings::IncludeResolverFn CreateIncludeResolver(const IncludePaths& includePaths)
 {
     return [includePaths](Pulsar::Parser& parser, Pulsar::String cwf, Pulsar::Token token) {
         std::filesystem::path targetPath(token.StringVal.CString());
@@ -48,15 +124,24 @@ Pulsar::ParseSettings::IncludeResolverFn CreateIncludeResolver(const IncludePath
     };
 }
 
-Pulsar::ParseSettings ToParseSettings(const PulsarTools::CLI::ParserOptions& parserOptions)
+Pulsar::ParseSettings PulsarTools::CLI::ParserOptions::ToParseSettings() const
 {
     Pulsar::ParseSettings settings = Pulsar::ParseSettings_Default;
-    settings.StoreDebugSymbols         = *parserOptions.Debug;
-    settings.AppendNotesToErrorMessage = *parserOptions.ErrorNotes;
-    settings.AllowIncludeDirective     = *parserOptions.AllowInclude;
-    settings.AllowLabels               = *parserOptions.AllowLabels;
-    if (!(*parserOptions.IncludeFolders).empty()) {
-        settings.IncludeResolver = CreateIncludeResolver(*parserOptions.IncludeFolders);
+    settings.StoreDebugSymbols         = *this->Debug;
+    settings.AppendNotesToErrorMessage = *this->ErrorNotes;
+    settings.AllowIncludeDirective     = *this->AllowInclude;
+    settings.AllowLabels               = *this->AllowLabels;
+
+    auto includeFolders = *this->IncludeFolders;
+    if (*this->InterpreterIncludeFolder) {
+        const auto& interpreterIncludeFolderPath = PulsarTools::CLI::GetInterpreterIncludeFolder();
+        if (!interpreterIncludeFolderPath.empty() && std::filesystem::exists(interpreterIncludeFolderPath)) {
+            includeFolders.push_back(interpreterIncludeFolderPath.generic_string());
+        }
+    }
+
+    if (!includeFolders.empty()) {
+        settings.IncludeResolver = CreateIncludeResolver(includeFolders);
     }
     return settings;
 }
@@ -65,7 +150,7 @@ int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const In
 {
     Logger& logger = GetLogger();
 
-    Pulsar::ParseSettings parserSettings = ToParseSettings(parserOptions);
+    Pulsar::ParseSettings parserSettings = parserOptions.ToParseSettings();
     parserSettings.MapGlobalProducersToVoid = true;
 
     logger.Info("Parsing '{}'.", *input.FilePath);
@@ -156,7 +241,7 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
         debug.BindAll(module, true);
     }
 
-    Pulsar::ParseSettings parserSettings = ToParseSettings(parserOptions);
+    Pulsar::ParseSettings parserSettings = parserOptions.ToParseSettings();
     parserSettings.AppendStackTraceToErrorMessage = *runtimeOptions.StackTrace;
     parserSettings.StackTraceMaxDepth             = static_cast<size_t>(*runtimeOptions.StackTraceDepth);
 
