@@ -15,8 +15,10 @@ PulsarTools::TokenViewLine PulsarTools::CreateTokenView(const Pulsar::String& so
     Pulsar::StringView errorView = source;
     { // Trim errorView to only contain the token's line
         size_t prevLineIndex = token.SourcePos.Index;
-        for (size_t i = prevLineIndex; i > 0 && errorView[i] != '\r' && errorView[i] != '\n'; --i)
+        for (size_t i = prevLineIndex; errorView[i] != '\r' && errorView[i] != '\n'; --i) {
             prevLineIndex = i; // Only save i for previous iteration, we don't want to stop at '\n'
+            if (i <= 0) break; // We got to the start of the source file
+        }
         errorView.RemovePrefix(prevLineIndex);
 
         size_t lineBytes = 0;

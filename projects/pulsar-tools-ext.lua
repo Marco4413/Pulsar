@@ -21,9 +21,3 @@ project "pulsar-tools-ext"
   cflags()
 
   pic "On"
-
-  filter "system:linux"
-    defines "CPULSAR_UNIX"
-
-  filter "system:windows"
-    defines "CPULSAR_WINDOWS"

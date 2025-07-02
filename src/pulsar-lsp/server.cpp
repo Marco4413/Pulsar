@@ -76,7 +76,7 @@ PulsarLSP::FunctionScope&& PulsarLSP::FunctionScopeBuilder::Build()
     return std::move(m_FunctionScope);
 }
 
-std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument(const lsp::FileURI& uri, const Pulsar::String& document, bool extractAll)
+std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument(const lsp::FileUri& uri, const Pulsar::String& document, bool extractAll)
 {
     ParsedDocument parsedDocument;
 
@@ -99,7 +99,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
         { // Try relative path first
             std::filesystem::path workingPath(cwf.CString());
             std::filesystem::path filePath = workingPath.parent_path() / targetPath;
-            lsp::FileURI filePathURI = filePath.generic_string().c_str();
+            lsp::FileUri filePathURI = lsp::FileUri::fromPath(filePath.string());
 
             internalPath = URIToNormalizedPath(filePathURI);
             text = this->m_Library.FindOrLoadDocument(filePathURI);
@@ -111,7 +111,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
             for (size_t i = m_Options.IncludePaths.size(); i > 0; --i) {
                 std::filesystem::path workingPath(m_Options.IncludePaths[i-1]);
                 std::filesystem::path filePath = workingPath / targetPath;
-                lsp::FileURI filePathURI = filePath.generic_string().c_str();
+                lsp::FileUri filePathURI = lsp::FileUri::fromPath(filePath.string());
 
                 internalPath = URIToNormalizedPath(filePathURI);
                 text = this->m_Library.FindOrLoadDocument(filePathURI);
@@ -274,7 +274,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
     return parsedDocument;
 }
 
-PulsarLSP::ParsedDocument::SharedRef PulsarLSP::Server::GetParsedDocument(const lsp::FileURI& uri) const
+PulsarLSP::ParsedDocument::SharedRef PulsarLSP::Server::GetParsedDocument(const lsp::FileUri& uri) const
 {
     Pulsar::String path = URIToNormalizedPath(uri);
     auto doc = m_ParsedCache.Find(path);
@@ -282,7 +282,7 @@ PulsarLSP::ParsedDocument::SharedRef PulsarLSP::Server::GetParsedDocument(const 
     return doc->Value();
 }
 
-PulsarLSP::ParsedDocument::SharedRef PulsarLSP::Server::GetOrParseDocument(const lsp::FileURI& uri, bool forceLoad)
+PulsarLSP::ParsedDocument::SharedRef PulsarLSP::Server::GetOrParseDocument(const lsp::FileUri& uri, bool forceLoad)
 {
     if (!forceLoad) {
         auto doc = GetParsedDocument(uri);
@@ -292,7 +292,7 @@ PulsarLSP::ParsedDocument::SharedRef PulsarLSP::Server::GetOrParseDocument(const
     return ParseDocument(uri, forceLoad);
 }
 
-void PulsarLSP::Server::DropParsedDocument(const lsp::FileURI& uri)
+void PulsarLSP::Server::DropParsedDocument(const lsp::FileUri& uri)
 {
     Pulsar::String path = URIToNormalizedPath(uri);
     ResetDiagnosticReport(path);
@@ -307,29 +307,29 @@ void PulsarLSP::Server::DropAllParsedDocuments()
     m_ParsedCache.Clear();
 }
 
-bool PulsarLSP::Server::OpenDocument(const lsp::FileURI& uri, const std::string& docText, int version)
+bool PulsarLSP::Server::OpenDocument(const lsp::FileUri& uri, const std::string& docText, int version)
 {
     return (bool)m_Library.StoreDocument(uri, docText.c_str(), version);
 }
 
-void PulsarLSP::Server::PatchDocument(const lsp::FileURI& uri, const DocumentPatches& patches, int version)
+void PulsarLSP::Server::PatchDocument(const lsp::FileUri& uri, const DocumentPatches& patches, int version)
 {
     m_Library.PatchDocument(uri, patches, version);
     DropParsedDocument(uri);
 }
 
-void PulsarLSP::Server::CloseDocument(const lsp::FileURI& uri)
+void PulsarLSP::Server::CloseDocument(const lsp::FileUri& uri)
 {
     DeleteDocument(uri);
 }
 
-void PulsarLSP::Server::DeleteDocument(const lsp::FileURI& uri)
+void PulsarLSP::Server::DeleteDocument(const lsp::FileUri& uri)
 {
     m_Library.DeleteDocument(uri);
     DropParsedDocument(uri);
 }
 
-std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileURI& uri, lsp::Position pos)
+std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileUri& uri, lsp::Position pos)
 {
     auto doc = GetOrParseDocument(uri);
     if (!doc || !doc->Module.HasSourceDebugSymbols()) return {};
@@ -354,7 +354,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                     if (global.DebugSymbol.SourceIdx >= doc->Module.SourceDebugSymbols.Size()) break;
                     const Pulsar::SourceDebugSymbol& sourceSymbol = doc->Module.SourceDebugSymbols[global.DebugSymbol.SourceIdx];
                     
-                    lsp::FileURI locUri = NormalizedPathToURI(sourceSymbol.Path);
+                    lsp::FileUri locUri = NormalizedPathToURI(sourceSymbol.Path);
                     return lsp::Location{
                         .uri = locUri,
                         .range = DocumentRangeToEditorRange(docText, SourcePositionToRange(global.DebugSymbol.Token.SourcePos))
@@ -369,7 +369,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                     if (func.DebugSymbol.SourceIdx >= doc->Module.SourceDebugSymbols.Size()) break;
                     const Pulsar::SourceDebugSymbol& sourceSymbol = doc->Module.SourceDebugSymbols[func.DebugSymbol.SourceIdx];
                     
-                    lsp::FileURI locUri = NormalizedPathToURI(sourceSymbol.Path);
+                    lsp::FileUri locUri = NormalizedPathToURI(sourceSymbol.Path);
                     return lsp::Location{
                         .uri = locUri,
                         .range = DocumentRangeToEditorRange(docText, SourcePositionToRange(func.DebugSymbol.Token.SourcePos))
@@ -384,14 +384,14 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                     if (func.DebugSymbol.SourceIdx >= doc->Module.SourceDebugSymbols.Size()) break;
                     const Pulsar::SourceDebugSymbol& sourceSymbol = doc->Module.SourceDebugSymbols[func.DebugSymbol.SourceIdx];
                     
-                    lsp::FileURI locUri = NormalizedPathToURI(sourceSymbol.Path);
+                    lsp::FileUri locUri = NormalizedPathToURI(sourceSymbol.Path);
                     return lsp::Location{
                         .uri = locUri,
                         .range = DocumentRangeToEditorRange(docText, SourcePositionToRange(func.DebugSymbol.Token.SourcePos))
                     };
                 }
                 case Pulsar::LSPIdentifierUsageType::Local: {
-                    lsp::FileURI locUri = NormalizedPathToURI(fnScope.FilePath);
+                    lsp::FileUri locUri = NormalizedPathToURI(fnScope.FilePath);
                     return lsp::Location{
                         .uri = locUri,
                         .range = DocumentRangeToEditorRange(docText, SourcePositionToRange(identUsage.LocalDeclaredAt))
@@ -406,7 +406,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
     return {};
 }
 
-std::optional<lsp::Location> PulsarLSP::Server::FindDefinition(const lsp::FileURI& uri, lsp::Position editorPos)
+std::optional<lsp::Location> PulsarLSP::Server::FindDefinition(const lsp::FileUri& uri, lsp::Position editorPos)
 {
     auto doc = GetOrParseDocument(uri);
     if (!doc) return {};
@@ -426,7 +426,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDefinition(const lsp::FileUR
     return FindDeclaration(uri, editorPos);
 }
 
-std::vector<lsp::DocumentSymbol> PulsarLSP::Server::GetSymbols(const lsp::FileURI& uri)
+std::vector<lsp::DocumentSymbol> PulsarLSP::Server::GetSymbols(const lsp::FileUri& uri)
 {
     auto doc = GetOrParseDocument(uri);
     if (!doc) return {};
@@ -606,7 +606,7 @@ lsp::CompletionItem PulsarLSP::CreateCompletionItemForLocal(const LocalScope::Lo
     return item;
 }
 
-std::vector<lsp::CompletionItem> PulsarLSP::Server::GetCompletionItems(const lsp::FileURI& uri, lsp::Position pos)
+std::vector<lsp::CompletionItem> PulsarLSP::Server::GetCompletionItems(const lsp::FileUri& uri, lsp::Position pos)
 {
     auto doc = GetOrParseDocument(uri);
     if (!doc) return {};
@@ -645,7 +645,7 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetCompletionItems(const lsp
 #define PULSAR_CODEBLOCK(code) \
     ("```pulsar\n" + (code) + "\n```")
 
-std::optional<lsp::Hover> PulsarLSP::Server::GetHover(const lsp::FileURI& uri, lsp::Position pos)
+std::optional<lsp::Hover> PulsarLSP::Server::GetHover(const lsp::FileUri& uri, lsp::Position pos)
 {
     auto doc = GetOrParseDocument(uri);
     if (!doc || !doc->Module.HasSourceDebugSymbols()) return std::nullopt;
@@ -835,7 +835,7 @@ std::vector<lsp::CompletionItem> PulsarLSP::Server::GetScopeCompletionItems(Pars
     return result;
 }
 
-std::vector<PulsarLSP::DiagnosticsForDocument> PulsarLSP::Server::GetDiagnosticReport(const lsp::FileURI& uri, bool sameDocument)
+std::vector<PulsarLSP::DiagnosticsForDocument> PulsarLSP::Server::GetDiagnosticReport(const lsp::FileUri& uri, bool sameDocument)
 {
     auto doc = GetOrParseDocument(uri);
     if (!doc || doc->ParseResult == Pulsar::ParseResult::OK) {
@@ -886,19 +886,18 @@ std::vector<PulsarLSP::DiagnosticsForDocument> PulsarLSP::Server::GetDiagnosticR
     return result;
 }
 
-void PulsarLSP::Server::SendUpdatedDiagnosticReport(const lsp::FileURI& uri)
+void PulsarLSP::Server::SendUpdatedDiagnosticReport(const lsp::FileUri& uri)
 {
     Pulsar::String docPath = URIToNormalizedPath(uri);
 
-    auto& messageDispatcher = m_MessageHandler.messageDispatcher();
     auto diagnostics = this->GetDiagnosticReport(uri, false);
     for (size_t i = 0; i < diagnostics.size(); ++i) {
-        messageDispatcher.sendNotification<lsp::notifications::TextDocument_PublishDiagnostics>(
+        m_MessageHandler.sendNotification<lsp::notifications::TextDocument_PublishDiagnostics>(
             static_cast<lsp::notifications::TextDocument_PublishDiagnostics::Params>(diagnostics[i]));
     }
 }
 
-void PulsarLSP::Server::ResetDiagnosticReport(const lsp::FileURI& uri)
+void PulsarLSP::Server::ResetDiagnosticReport(const lsp::FileUri& uri)
 {
     Pulsar::String normalizedPath = URIToNormalizedPath(uri);
     ResetDiagnosticReport(normalizedPath);
@@ -906,8 +905,7 @@ void PulsarLSP::Server::ResetDiagnosticReport(const lsp::FileURI& uri)
 
 void PulsarLSP::Server::ResetDiagnosticReport(const Pulsar::String& normalizedPath)
 {
-    auto& messageDispatcher = m_MessageHandler.messageDispatcher();
-    messageDispatcher.sendNotification<lsp::notifications::TextDocument_PublishDiagnostics>(
+    m_MessageHandler.sendNotification<lsp::notifications::TextDocument_PublishDiagnostics>(
         lsp::notifications::TextDocument_PublishDiagnostics::Params{
             // FIXME: Some editors do not seem to like relative URIs (mayber they're serialized incorrectly by lsp-framework)
             .uri = NormalizedPathToURI(normalizedPath),
@@ -953,13 +951,13 @@ lsp::Position PulsarLSP::Server::EditorPositionToDocumentPosition(ConstSharedTex
     };
 }
 
-lsp::Position PulsarLSP::Server::DocumentPositionToEditorPosition(const lsp::FileURI& uri, lsp::Position pos) const
+lsp::Position PulsarLSP::Server::DocumentPositionToEditorPosition(const lsp::FileUri& uri, lsp::Position pos) const
 {
     ConstSharedText doc = m_Library.FindDocument(uri);
     return DocumentPositionToEditorPosition(doc, pos);
 }
 
-lsp::Position PulsarLSP::Server::EditorPositionToDocumentPosition(const lsp::FileURI& uri, lsp::Position pos) const
+lsp::Position PulsarLSP::Server::EditorPositionToDocumentPosition(const lsp::FileUri& uri, lsp::Position pos) const
 {
     ConstSharedText doc = m_Library.FindDocument(uri);
     return EditorPositionToDocumentPosition(doc, pos);
@@ -1029,13 +1027,13 @@ lsp::Range PulsarLSP::Server::EditorRangeToDocumentRange(ConstSharedText doc, ls
     };
 }
 
-lsp::Range PulsarLSP::Server::DocumentRangeToEditorRange(const lsp::FileURI& uri, lsp::Range range) const
+lsp::Range PulsarLSP::Server::DocumentRangeToEditorRange(const lsp::FileUri& uri, lsp::Range range) const
 {
     ConstSharedText doc = m_Library.FindDocument(uri);
     return DocumentRangeToEditorRange(doc, range);
 }
 
-lsp::Range PulsarLSP::Server::EditorRangeToDocumentRange(const lsp::FileURI& uri, lsp::Range range) const
+lsp::Range PulsarLSP::Server::EditorRangeToDocumentRange(const lsp::FileUri& uri, lsp::Range range) const
 {
     ConstSharedText doc = m_Library.FindDocument(uri);
     return EditorRangeToDocumentRange(doc, range);
@@ -1051,7 +1049,7 @@ void PulsarLSP::Server::StripModule(Pulsar::Module& mod) const
     }
 }
 
-PulsarLSP::ParsedDocument::SharedRef PulsarLSP::Server::ParseDocument(const lsp::FileURI& uri, bool forceLoad)
+PulsarLSP::ParsedDocument::SharedRef PulsarLSP::Server::ParseDocument(const lsp::FileUri& uri, bool forceLoad)
 {
     auto text = forceLoad
         ? m_Library.LoadDocument(uri)
@@ -1088,10 +1086,9 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
       m_Library(),
       m_ParsedCache()
 {
-    m_MessageHandler.requestHandler()
-        .add<lsp::requests::Initialize>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::Initialize::Params&& params)
+    m_MessageHandler
+        .add<lsp::requests::Initialize>([this](lsp::requests::Initialize::Params&& params)
         {
-            (void)id;
             if (params.initializationOptions && params.initializationOptions->isObject()) {
                 const auto& userOptions = params.initializationOptions->object();
 
@@ -1164,46 +1161,41 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
                 }
             };
         })
-        .add<lsp::requests::TextDocument_Completion>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::TextDocument_Completion::Params&& params)
+        .add<lsp::requests::TextDocument_Completion>([this](lsp::requests::TextDocument_Completion::Params&& params)
             -> lsp::requests::TextDocument_Completion::Result
         {
-            (void)id;
             return this->GetCompletionItems(params.textDocument.uri, params.position);
         })
-        .add<lsp::requests::TextDocument_Hover>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::TextDocument_Hover::Params&& params)
+        .add<lsp::requests::TextDocument_Hover>([this](lsp::requests::TextDocument_Hover::Params&& params)
             -> lsp::requests::TextDocument_Hover::Result
         {
-            (void)id;
             auto hover = this->GetHover(params.textDocument.uri, params.position);
             if (hover) return *hover;
             return nullptr;
         })
-        .add<lsp::requests::TextDocument_Declaration>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::TextDocument_Declaration::Params&& params)
+        .add<lsp::requests::TextDocument_Declaration>([this](lsp::requests::TextDocument_Declaration::Params&& params)
             -> lsp::requests::TextDocument_Declaration::Result
         {
-            (void)id;
             auto decl = this->FindDeclaration(params.textDocument.uri, params.position);
             if (decl) return *decl;
             return nullptr;
         })
-        .add<lsp::requests::TextDocument_Definition>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::TextDocument_Definition::Params&& params)
+        .add<lsp::requests::TextDocument_Definition>([this](lsp::requests::TextDocument_Definition::Params&& params)
             -> lsp::requests::TextDocument_Definition::Result
         {
-            (void)id;
             auto def = this->FindDefinition(params.textDocument.uri, params.position);
             if (def) return *def;
             return nullptr;
         })
-        .add<lsp::requests::TextDocument_DocumentSymbol>([this](const lsp::jsonrpc::MessageId& id, lsp::requests::TextDocument_DocumentSymbol::Params&& params)
+        .add<lsp::requests::TextDocument_DocumentSymbol>([this](lsp::requests::TextDocument_DocumentSymbol::Params&& params)
             -> lsp::requests::TextDocument_DocumentSymbol::Result
         {
-            (void)id;
             return this->GetSymbols(params.textDocument.uri);
         })
-        .add<lsp::requests::TextDocument_Diagnostic>([](const lsp::jsonrpc::MessageId& id, lsp::requests::TextDocument_Diagnostic::Params&& params)
+        .add<lsp::requests::TextDocument_Diagnostic>([](lsp::requests::TextDocument_Diagnostic::Params&& params)
             -> lsp::requests::TextDocument_Diagnostic::Result
         {
-            (void)id; (void)params;
+            (void)params;
             lsp::RelatedFullDocumentDiagnosticReport result;
             return result;
         })
@@ -1234,10 +1226,9 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
                 this->SendUpdatedDiagnosticReport(params.textDocument.uri);
             }
         })
-        .add<lsp::requests::Shutdown>([this](const lsp::jsonrpc::MessageId& id)
+        .add<lsp::requests::Shutdown>([this]()
             -> lsp::requests::Shutdown::Result
         {
-            (void)id;
             this->DropAllParsedDocuments();
             this->m_Library.DeleteAllDocuments();
             this->m_Options.IncludePaths.clear();

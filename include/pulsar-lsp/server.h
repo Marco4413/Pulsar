@@ -156,29 +156,29 @@ namespace PulsarLSP
         Server(lsp::Connection& connection);
         ~Server() = default;
 
-        ParsedDocument::SharedRef GetParsedDocument(const lsp::FileURI& uri) const;
-        ParsedDocument::SharedRef GetOrParseDocument(const lsp::FileURI& uri, bool forceLoad=false);
+        ParsedDocument::SharedRef GetParsedDocument(const lsp::FileUri& uri) const;
+        ParsedDocument::SharedRef GetOrParseDocument(const lsp::FileUri& uri, bool forceLoad=false);
 
-        ParsedDocument::SharedRef ParseDocument(const lsp::FileURI& uri, bool forceLoad=false);
+        ParsedDocument::SharedRef ParseDocument(const lsp::FileUri& uri, bool forceLoad=false);
 
-        void DropParsedDocument(const lsp::FileURI& uri);
+        void DropParsedDocument(const lsp::FileUri& uri);
         void DropAllParsedDocuments();
 
-        bool OpenDocument(const lsp::FileURI& uri, const std::string& docText, int version=-1);
-        void PatchDocument(const lsp::FileURI& uri, const DocumentPatches& patches, int version=-1);
-        void CloseDocument(const lsp::FileURI& uri);
+        bool OpenDocument(const lsp::FileUri& uri, const std::string& docText, int version=-1);
+        void PatchDocument(const lsp::FileUri& uri, const DocumentPatches& patches, int version=-1);
+        void CloseDocument(const lsp::FileUri& uri);
         // Close and drop parsed document
-        void DeleteDocument(const lsp::FileURI& uri);
+        void DeleteDocument(const lsp::FileUri& uri);
 
-        std::optional<lsp::Location> FindDeclaration(const lsp::FileURI& uri, lsp::Position pos);
-        std::optional<lsp::Location> FindDefinition(const lsp::FileURI& uri, lsp::Position pos);
-        std::vector<lsp::DocumentSymbol> GetSymbols(const lsp::FileURI& uri);
-        std::vector<lsp::CompletionItem> GetCompletionItems(const lsp::FileURI& uri, lsp::Position pos);
-        std::optional<lsp::Hover> GetHover(const lsp::FileURI& uri, lsp::Position pos);
+        std::optional<lsp::Location> FindDeclaration(const lsp::FileUri& uri, lsp::Position pos);
+        std::optional<lsp::Location> FindDefinition(const lsp::FileUri& uri, lsp::Position pos);
+        std::vector<lsp::DocumentSymbol> GetSymbols(const lsp::FileUri& uri);
+        std::vector<lsp::CompletionItem> GetCompletionItems(const lsp::FileUri& uri, lsp::Position pos);
+        std::optional<lsp::Hover> GetHover(const lsp::FileUri& uri, lsp::Position pos);
         // Every element of the vector has a unique URI
-        std::vector<DiagnosticsForDocument> GetDiagnosticReport(const lsp::FileURI& uri, bool sameDocument=true);
-        void SendUpdatedDiagnosticReport(const lsp::FileURI& uri);
-        void ResetDiagnosticReport(const lsp::FileURI& uri);
+        std::vector<DiagnosticsForDocument> GetDiagnosticReport(const lsp::FileUri& uri, bool sameDocument=true);
+        void SendUpdatedDiagnosticReport(const lsp::FileUri& uri);
+        void ResetDiagnosticReport(const lsp::FileUri& uri);
 
         bool IsRunning() const { return m_IsRunning; }
         void Run();
@@ -193,19 +193,19 @@ namespace PulsarLSP
         lsp::Position DocumentPositionToEditorPosition(ConstSharedText doc, lsp::Position pos) const;
         lsp::Position EditorPositionToDocumentPosition(ConstSharedText doc, lsp::Position pos) const;
 
-        lsp::Position DocumentPositionToEditorPosition(const lsp::FileURI& uri, lsp::Position pos) const;
-        lsp::Position EditorPositionToDocumentPosition(const lsp::FileURI& uri, lsp::Position pos) const;
+        lsp::Position DocumentPositionToEditorPosition(const lsp::FileUri& uri, lsp::Position pos) const;
+        lsp::Position EditorPositionToDocumentPosition(const lsp::FileUri& uri, lsp::Position pos) const;
 
         lsp::Range DocumentRangeToEditorRange(ConstSharedText doc, lsp::Range range) const;
         lsp::Range EditorRangeToDocumentRange(ConstSharedText doc, lsp::Range range) const;
 
-        lsp::Range DocumentRangeToEditorRange(const lsp::FileURI& uri, lsp::Range range) const;
-        lsp::Range EditorRangeToDocumentRange(const lsp::FileURI& uri, lsp::Range range) const;
+        lsp::Range DocumentRangeToEditorRange(const lsp::FileUri& uri, lsp::Range range) const;
+        lsp::Range EditorRangeToDocumentRange(const lsp::FileUri& uri, lsp::Range range) const;
 
         std::vector<lsp::CompletionItem> GetErrorCompletionItems(ParsedDocument::SharedRef doc, const FunctionScope& funcScope, const LocalScope& localScope);
         std::vector<lsp::CompletionItem> GetScopeCompletionItems(ParsedDocument::SharedRef doc, const FunctionScope& funcScope, const LocalScope& localScope);
 
-        std::optional<ParsedDocument> CreateParsedDocument(const lsp::FileURI& uri, const Pulsar::String& document, bool extractAll=false);
+        std::optional<ParsedDocument> CreateParsedDocument(const lsp::FileUri& uri, const Pulsar::String& document, bool extractAll=false);
     private:
         bool m_IsRunning = false;
         lsp::MessageHandler m_MessageHandler;

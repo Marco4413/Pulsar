@@ -1,10 +1,10 @@
 #include "pulsar/unicode.h"
 
-bool IsEastAsianWideCharacter(Pulsar::Unicode::Codepoint code);
-bool IsEmojiCharacter(Pulsar::Unicode::Codepoint code);
+static bool IsEastAsianWideCharacter(Pulsar::Unicode::Codepoint code);
+static bool IsEmojiCharacter(Pulsar::Unicode::Codepoint code);
 
-bool IsGeneralZeroWidthCharacter(Pulsar::Unicode::Codepoint code);
-bool IsGeneralWideCharacter(Pulsar::Unicode::Codepoint code);
+static bool IsGeneralZeroWidthCharacter(Pulsar::Unicode::Codepoint code);
+static bool IsGeneralWideCharacter(Pulsar::Unicode::Codepoint code);
 
 size_t Pulsar::Unicode::Width(Codepoint code)
 {
@@ -190,7 +190,7 @@ constexpr Range GeneralWideCharacters[GeneralWideCharacters_Count] = {
     { 0xFFE3, 0xFFE3 }, //       FULLWIDTH MACRON
 };
 
-bool IsContainedInSet(Pulsar::Unicode::Codepoint code, const Range set[], size_t sliceStart, size_t sliceEnd) {
+static bool IsContainedInSet(Pulsar::Unicode::Codepoint code, const Range set[], size_t sliceStart, size_t sliceEnd) {
     if (sliceStart >= sliceEnd) return false;
 
     size_t sliceMid = (sliceStart+sliceEnd)/2;
@@ -205,22 +205,22 @@ bool IsContainedInSet(Pulsar::Unicode::Codepoint code, const Range set[], size_t
     }
 }
 
-bool IsEastAsianWideCharacter(Pulsar::Unicode::Codepoint code)
+static bool IsEastAsianWideCharacter(Pulsar::Unicode::Codepoint code)
 {
     return IsContainedInSet(code, EastAsianWideCharacters, 0, EastAsianWideCharacters_Count);
 }
 
-bool IsEmojiCharacter(Pulsar::Unicode::Codepoint code)
+static bool IsEmojiCharacter(Pulsar::Unicode::Codepoint code)
 {
     return IsContainedInSet(code, EmojiCharacters, 0, EmojiCharacters_Count);
 }
 
-bool IsGeneralZeroWidthCharacter(Pulsar::Unicode::Codepoint code)
+static bool IsGeneralZeroWidthCharacter(Pulsar::Unicode::Codepoint code)
 {
     return IsContainedInSet(code, GeneralZeroWidthCharacters, 0, GeneralZeroWidthCharacters_Count);
 }
 
-bool IsGeneralWideCharacter(Pulsar::Unicode::Codepoint code)
+static bool IsGeneralWideCharacter(Pulsar::Unicode::Codepoint code)
 {
     return IsContainedInSet(code, GeneralWideCharacters, 0, GeneralWideCharacters_Count);
 }

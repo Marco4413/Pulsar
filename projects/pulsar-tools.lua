@@ -44,9 +44,3 @@ project "pulsar-tools"
   links { "pulsar", "fmt" }
 
   cflags()
-
-  filter "system:linux"
-    defines "PULSARTOOLS_UNIX"
-
-  filter "system:windows"
-    defines "PULSARTOOLS_WINDOWS"

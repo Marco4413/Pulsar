@@ -5,7 +5,7 @@
 #include "inttypes.h" // int64_t
 
 #ifdef __cplusplus
-  #define CPULSAR_CPP
+#  define CPULSAR_CPP
 #endif // __cplusplus
 
 // Derefs an opaque pointer, this is mainly useful to search where opaques are dereferenced.
@@ -13,37 +13,27 @@
 #define CPULSAR_REF(downType, value) ((downType*)&value)
 
 #ifdef CPULSAR_CPP
-  #define CPULSAR_LITERAL_S(structType, init) \
-      (structType init)
+#  define CPULSAR_LITERAL_S(structType, init) (structType init)
 #else // CPULSAR_CPP
-  #define CPULSAR_LITERAL_S(structType, init) \
-      ((structType)init)
+#  define CPULSAR_LITERAL_S(structType, init) ((structType)init)
 #endif // CPULSAR_CPP
 
-#ifdef CPULSAR_WINDOWS
-
-  #define CPULSAR_EXPORT __declspec(dllexport)
-  #define CPULSAR_IMPORT __declspec(dllimport)
-
-#else // defined(CPULSAR_UNIX)
-
-  #define CPULSAR_EXPORT
-  #define CPULSAR_IMPORT
-
+#if defined(PULSAR_PLATFORM_WINDOWS)
+#  define CPULSAR_EXPORT __declspec(dllexport)
+#  define CPULSAR_IMPORT __declspec(dllimport)
+#else // defined(PULSAR_PLATFORM_UNIX)
+#  define CPULSAR_EXPORT
+#  define CPULSAR_IMPORT
 #endif
 
 #ifdef CPULSAR_SHAREDLIB
-
-  #ifdef _CPULSAR_IMPLEMENTATION
-    #define CPULSAR_API CPULSAR_EXPORT
-  #else // _CPULSAR_IMPLEMENTATION
-    #define CPULSAR_API CPULSAR_IMPORT
-  #endif // _CPULSAR_IMPLEMENTATION
-
+#  ifdef _CPULSAR_IMPLEMENTATION
+#    define CPULSAR_API CPULSAR_EXPORT
+#  else // _CPULSAR_IMPLEMENTATION
+#    define CPULSAR_API CPULSAR_IMPORT
+#  endif // _CPULSAR_IMPLEMENTATION
 #else // CPULSAR_SHAREDLIB
-
-  #define CPULSAR_API
-
+#  define CPULSAR_API
 #endif // CPULSAR_SHAREDLIB
 
 #ifdef CPULSAR_CPP
