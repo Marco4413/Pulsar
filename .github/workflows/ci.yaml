@@ -1,26 +1,26 @@
 name: CI
 
-on:
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
+on: [ push, pull_request ]
 
 defaults:
   run:
     shell: bash
 
 jobs:
-  build:
+  build_linux:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        compiler: [ clang, gcc ]
+        arch:   [ x86_64 ]
+        cc:     [ clang, gcc ]
+        config: [ debug ]
 
     env:
-      ARTIFACT_NAME: pulsar-linux_x86_64-${{ matrix.compiler }}_debug
+      PREMAKE_INSTALL_URL: https://github.com/premake/premake-core/releases/download/v5.0.0-beta7/premake-5.0.0-beta7-linux.tar.gz
+      PREMAKE_OS:     linux_${{ matrix.arch }}
+      PREMAKE_CONFIG: ${{ matrix.config == 'debug' && 'Debug' || 'Release' }}
+      ARTIFACT_NAME:   pulsar-linux_${{ matrix.arch }}-${{ matrix.cc }}_${{ matrix.config }}
+      ARTIFACT_UPLOAD: ${{ matrix.config == 'debug' && 'yes' || 'no' }}
 
     steps:
       - name: Checkout
@@ -30,25 +30,27 @@ jobs:
       - name: Install APT Dependencies
         run: |
           sudo apt-get update -q
-          sudo apt-get install -q -y ${{ matrix.compiler }} make tar wget
+          sudo apt-get install -q -y ${{ matrix.cc }} make tar wget
       - name: Install Premake and Generate Project Files
         run: |
-          wget https://github.com/premake/premake-core/releases/download/v5.0.0-beta7/premake-5.0.0-beta7-linux.tar.gz
-          tar -xf ./premake-5.0.0-beta7-linux.tar.gz
-          ./premake5 --arch=x86_64 --cc=${{ matrix.compiler }} gmake
-      - name: Build All Debug
+          wget -O premake5.tar.gz ${{ env.PREMAKE_INSTALL_URL }}
+          tar -xf ./premake5.tar.gz
+          ./premake5 --arch=${{ matrix.arch }} --cc=${{ matrix.cc }} gmake
+      - name: Build All ${{ env.PREMAKE_CONFIG }}
         run: |
-          make -j pulsar pulsar-lsp pulsar-tools
+          make -j config?=${{ matrix.config }} pulsar pulsar-lsp pulsar-tools
       - name: Prepare Artifact
+        if: env.ARTIFACT_UPLOAD == 'yes'
+        env:
+          PREMAKE_BUILD: ${{ env.PREMAKE_OS }}/${{ env.PREMAKE_CONFIG }}
         run: |
-          mkdir -p artifact/${{ env.ARTIFACT_NAME }}/src/include/
-          cp    LICENSE.md                                         artifact/${{ env.ARTIFACT_NAME }}/
-          cp -R resources/**                                       artifact/${{ env.ARTIFACT_NAME }}/
-          cp    build/pulsar/linux_x86_64/Debug/libpulsar.a        artifact/${{ env.ARTIFACT_NAME }}/src/
-          cp -R include/pulsar                                     artifact/${{ env.ARTIFACT_NAME }}/src/include/
-          cp    build/pulsar-lsp/linux_x86_64/Debug/pulsar-lsp     artifact/${{ env.ARTIFACT_NAME }}/
-          cp    build/pulsar-tools/linux_x86_64/Debug/pulsar-tools artifact/${{ env.ARTIFACT_NAME }}/
+          mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
+          cp    LICENSE.md                                               artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R resources/**                                             artifact/${{ env.ARTIFACT_NAME }}/
+          cp    build/pulsar-lsp/${{ env.PREMAKE_BUILD }}/pulsar-lsp     artifact/${{ env.ARTIFACT_NAME }}/
+          cp    build/pulsar-tools/${{ env.PREMAKE_BUILD }}/pulsar-tools artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
+        if: env.ARTIFACT_UPLOAD == 'yes'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}
