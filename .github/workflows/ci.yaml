@@ -14,7 +14,11 @@ defaults:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [ clang, gcc ]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,12 +27,12 @@ jobs:
       - name: Install APT Dependencies
         run: |
           sudo apt-get update -q
-          sudo apt-get install -q -y gcc g++ make tar wget
+          sudo apt-get install -q -y ${{ matrix.compiler }} make tar wget
       - name: Install Premake and Generate Project Files
         run: |
           wget https://github.com/premake/premake-core/releases/download/v5.0.0-beta7/premake-5.0.0-beta7-linux.tar.gz
           tar -xf ./premake-5.0.0-beta7-linux.tar.gz
-          ./premake5 --cc=gcc gmake2
-      - name: Build All Projects
+          ./premake5 --cc=${{ matrix.compiler }} gmake
+      - name: Build Debug with ${{ matrix.compiler }}
         run: |
           make -j
