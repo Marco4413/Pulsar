@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install APT Dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -q -y gcc g++ make tar wget
+      - name: Install Premake and Generate Project Files
+        run: |
+          wget https://github.com/premake/premake-core/releases/download/v5.0.0-beta7/premake-5.0.0-beta7-linux.tar.gz
+          tar -xf ./premake-5.0.0-beta7-linux.tar.gz
+          ./premake5 --cc=gcc gmake2
+      - name: Build All Projects
+        run: |
+          make -j
