@@ -41,16 +41,16 @@ jobs:
           make -j pulsar pulsar-lsp pulsar-tools
       - name: Prepare Artifact
         run: |
-          mkdir -p ${{ env.ARTIFACT_NAME }}/src/include/
-          cp    LICENSE.md                                         ${{ env.ARTIFACT_NAME }}/
-          cp -R resources/**                                       ${{ env.ARTIFACT_NAME }}/
-          cp    build/pulsar/linux_x86_64/Debug/libpulsar.a        ${{ env.ARTIFACT_NAME }}/src/
-          cp -R include/pulsar                                     ${{ env.ARTIFACT_NAME }}/src/include/
-          cp    build/pulsar-lsp/linux_x86_64/Debug/pulsar-lsp     ${{ env.ARTIFACT_NAME }}/
-          cp    build/pulsar-tools/linux_x86_64/Debug/pulsar-tools ${{ env.ARTIFACT_NAME }}/
+          mkdir -p artifact/${{ env.ARTIFACT_NAME }}/src/include/
+          cp    LICENSE.md                                         artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R resources/**                                       artifact/${{ env.ARTIFACT_NAME }}/
+          cp    build/pulsar/linux_x86_64/Debug/libpulsar.a        artifact/${{ env.ARTIFACT_NAME }}/src/
+          cp -R include/pulsar                                     artifact/${{ env.ARTIFACT_NAME }}/src/include/
+          cp    build/pulsar-lsp/linux_x86_64/Debug/pulsar-lsp     artifact/${{ env.ARTIFACT_NAME }}/
+          cp    build/pulsar-tools/linux_x86_64/Debug/pulsar-tools artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}
-          path: ${{ env.ARTIFACT_NAME }}
+          path: artifact
           if-no-files-found: error
