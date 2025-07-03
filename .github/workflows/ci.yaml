@@ -19,6 +19,9 @@ jobs:
       matrix:
         compiler: [ clang, gcc ]
 
+    env:
+      ARTIFACT_NAME: pulsar-linux_x86_64-${{ matrix.compiler }}_debug
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,6 +36,21 @@ jobs:
           wget https://github.com/premake/premake-core/releases/download/v5.0.0-beta7/premake-5.0.0-beta7-linux.tar.gz
           tar -xf ./premake-5.0.0-beta7-linux.tar.gz
           ./premake5 --cc=${{ matrix.compiler }} gmake
-      - name: Build Debug with ${{ matrix.compiler }}
+      - name: Build All Debug
         run: |
-          make -j
+          make -j pulsar pulsar-lsp pulsar-tools
+      - name: Prepare Artifact
+        run: |
+          mkdir -p ${{ env.ARTIFACT_NAME }}/src/include/
+          cp    LICENSE.md                                         ${{ env.ARTIFACT_NAME }}/
+          cp -R resources/**                                       ${{ env.ARTIFACT_NAME }}/
+          cp    build/pulsar/linux_x86_64/Debug/libpulsar.a        ${{ env.ARTIFACT_NAME }}/src/
+          cp -R include/pulsar                                     ${{ env.ARTIFACT_NAME }}/src/include/
+          cp    build/pulsar-lsp/linux_x86_64/Debug/pulsar-lsp     ${{ env.ARTIFACT_NAME }}/
+          cp    build/pulsar-tools/linux_x86_64/Debug/pulsar-tools ${{ env.ARTIFACT_NAME }}/
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.ARTIFACT_NAME }}
+          if-no-files-found: error
