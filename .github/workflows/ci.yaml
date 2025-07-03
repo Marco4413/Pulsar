@@ -35,7 +35,7 @@ jobs:
         run: |
           wget https://github.com/premake/premake-core/releases/download/v5.0.0-beta7/premake-5.0.0-beta7-linux.tar.gz
           tar -xf ./premake-5.0.0-beta7-linux.tar.gz
-          ./premake5 --cc=${{ matrix.compiler }} gmake
+          ./premake5 --arch=x86_64 --cc=${{ matrix.compiler }} gmake
       - name: Build All Debug
         run: |
           make -j pulsar pulsar-lsp pulsar-tools
