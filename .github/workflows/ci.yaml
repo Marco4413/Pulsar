@@ -27,16 +27,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Install APT Dependencies
+      - name: Install Dependencies
         run: |
           sudo apt-get update -q
           sudo apt-get install -q -y ${{ matrix.cc }} make tar wget
-      - name: Install Premake and Generate Project Files
-        run: |
           wget -O premake5.tar.gz ${{ env.PREMAKE_INSTALL_URL }}
           tar -xf ./premake5.tar.gz
+      - name: Generate Project Files
+        run: |
           ./premake5 --arch=${{ matrix.arch }} --cc=${{ matrix.cc }} gmake
-      - name: Build All ${{ env.PREMAKE_CONFIG }}
+      - name: Build
         run: |
           make -j config?=${{ matrix.config }} pulsar pulsar-lsp pulsar-tools
       - name: Prepare Artifact
