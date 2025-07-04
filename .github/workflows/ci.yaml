@@ -17,8 +17,6 @@ jobs:
 
     env:
       PREMAKE_INSTALL_URL: https://github.com/premake/premake-core/releases/download/v5.0.0-beta7/premake-5.0.0-beta7-linux.tar.gz
-      PREMAKE_OS:     linux_${{ matrix.arch }}
-      PREMAKE_CONFIG: ${{ matrix.config == 'debug' && 'Debug' || 'Release' }}
       ARTIFACT_NAME:   pulsar-linux_${{ matrix.arch }}-${{ matrix.cc }}_${{ matrix.config }}
       ARTIFACT_UPLOAD: ${{ matrix.config == 'debug' && 'yes' || 'no' }}
 
@@ -42,13 +40,68 @@ jobs:
       - name: Prepare Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         env:
-          PREMAKE_BUILD: ${{ env.PREMAKE_OS }}/${{ env.PREMAKE_CONFIG }}
+          PREMAKE_CONFIG: ${{ matrix.config == 'debug' && 'Debug' || 'Release' }}
+          PREMAKE_BUILD:  linux_${{ matrix.arch }}/${{ env.PREMAKE_CONFIG }}
         run: |
           mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
           cp    LICENSE.md                                               artifact/${{ env.ARTIFACT_NAME }}/
           cp -R resources/**                                             artifact/${{ env.ARTIFACT_NAME }}/
           cp    build/pulsar-lsp/${{ env.PREMAKE_BUILD }}/pulsar-lsp     artifact/${{ env.ARTIFACT_NAME }}/
           cp    build/pulsar-tools/${{ env.PREMAKE_BUILD }}/pulsar-tools artifact/${{ env.ARTIFACT_NAME }}/
+      - name: Upload Artifact
+        if: env.ARTIFACT_UPLOAD == 'yes'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: artifact
+          if-no-files-found: error
+  build_windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch:   [ x86_64 ]
+        cc:     [ msc-v143 ]
+        config: [ debug ]
+
+    env:
+      PREMAKE_INSTALL_URL: https://github.com/premake/premake-core/releases/download/v5.0.0-beta7/premake-5.0.0-beta7-windows.zip
+      ARTIFACT_NAME:   pulsar-windows_${{ matrix.arch }}-${{ matrix.cc }}_${{ matrix.config }}
+      ARTIFACT_UPLOAD: ${{ matrix.config == 'debug' && 'yes' || 'no' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Dependencies
+        run: |
+          curl -Lo premake5.zip ${{ env.PREMAKE_INSTALL_URL }}
+          unzip -o ./premake5.zip
+      - name: Generate Project Files
+        run: |
+          ./premake5.exe --arch=${{ matrix.arch }} --cc=${{ matrix.cc }} vs2022
+      - name: Build
+        env:
+          MSBUILD_PLATFORM: ${{ matrix.arch == 'x86_64' && 'x64' || 'x86' }}
+        run: |
+          VSPATH=$("$PROGRAMFILES (x86)/Microsoft Visual Studio/Installer/vswhere.exe" -latest -products \* -requires Microsoft.Component.MSBuild -property installationPath)
+          MSBUILD="$VSPATH/MSBuild/Current/Bin/msbuild.exe"
+          if [ ! -f "$MSBUILD" -o ! -x "$MSBUILD" ]; then
+            echo 'msbuild not found!'
+            exit 1;
+          fi
+          "$MSBUILD" pulsar.sln -m -t:pulsar,pulsar-lsp,pulsar-tools -p:Configuration=${{ matrix.config }} -p:Platform=${{ env.MSBUILD_PLATFORM }}
+      - name: Prepare Artifact
+        if: env.ARTIFACT_UPLOAD == 'yes'
+        env:
+          PREMAKE_CONFIG: ${{ matrix.config == 'debug' && 'Debug' || 'Release' }}
+          PREMAKE_BUILD:  windows_${{ matrix.arch }}/${{ env.PREMAKE_CONFIG }}
+        run: |
+          mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
+          cp    LICENSE.md                                                   artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R resources/**                                                 artifact/${{ env.ARTIFACT_NAME }}/
+          cp    build/pulsar-lsp/${{ env.PREMAKE_BUILD }}/pulsar-lsp.exe     artifact/${{ env.ARTIFACT_NAME }}/
+          cp    build/pulsar-tools/${{ env.PREMAKE_BUILD }}/pulsar-tools.exe artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         uses: actions/upload-artifact@v4
