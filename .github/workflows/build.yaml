@@ -28,8 +28,8 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update -q
-          sudo apt-get install -q -y ${{ matrix.cc }} make tar wget
-          wget -O premake5.tar.gz ${{ env.PREMAKE_INSTALL_URL }}
+          sudo apt-get install -q -y ${{ matrix.cc }} curl make tar
+          curl -Lo premake5.tar.gz ${{ env.PREMAKE_INSTALL_URL }}
           tar -xf ./premake5.tar.gz
       - name: Generate Project Files
         run: |
@@ -54,6 +54,54 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: artifact
           if-no-files-found: error
+
+  macosx:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch:   [ arm64 ]
+        cc:     [ clang ]
+        config: [ debug ]
+
+    env:
+      PREMAKE_INSTALL_URL: https://github.com/premake/premake-core/releases/download/v5.0.0-beta7/premake-5.0.0-beta7-macosx.tar.gz
+      ARTIFACT_NAME:   pulsar-macosx_${{ matrix.arch }}-${{ matrix.cc }}_${{ matrix.config }}
+      ARTIFACT_UPLOAD: ${{ matrix.config == 'debug' && 'yes' || 'no' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Dependencies
+        run: |
+          brew install make
+          curl -Lo premake5.tar.gz ${{ env.PREMAKE_INSTALL_URL }}
+          gtar -xf ./premake5.tar.gz
+      - name: Generate Project Files
+        run: |
+          ./premake5 --arch=${{ matrix.arch }} --cc=${{ matrix.cc }} gmake
+      - name: Build
+        run: |
+          make -j config?=${{ matrix.config }} pulsar pulsar-lsp pulsar-tools
+      - name: Prepare Artifact
+        if: env.ARTIFACT_UPLOAD == 'yes'
+        env:
+          PREMAKE_BUILD: macosx_${{ matrix.arch }}/${{ matrix.config == 'debug' && 'Debug' || 'Release' }}
+        run: |
+          mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
+          cp    LICENSE.md                                               artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R resources/**                                             artifact/${{ env.ARTIFACT_NAME }}/
+          cp    build/pulsar-lsp/${{ env.PREMAKE_BUILD }}/pulsar-lsp     artifact/${{ env.ARTIFACT_NAME }}/
+          cp    build/pulsar-tools/${{ env.PREMAKE_BUILD }}/pulsar-tools artifact/${{ env.ARTIFACT_NAME }}/
+      - name: Upload Artifact
+        if: env.ARTIFACT_UPLOAD == 'yes'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: artifact
+          if-no-files-found: error
+
   windows:
     runs-on: windows-latest
     strategy:
