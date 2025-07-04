@@ -60,7 +60,7 @@ jobs:
     strategy:
       matrix:
         arch:   [ arm64 ]
-        cc:     [ clang ]
+        cc:     [ gcc   ]
         config: [ debug ]
 
     env:
@@ -75,7 +75,8 @@ jobs:
           submodules: recursive
       - name: Install Dependencies
         run: |
-          brew install make
+          brew update -q
+          brew install -q make
           curl -Lo premake5.tar.gz ${{ env.PREMAKE_INSTALL_URL }}
           gtar -xf ./premake5.tar.gz
       - name: Generate Project Files
