@@ -40,8 +40,7 @@ jobs:
       - name: Prepare Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         env:
-          PREMAKE_CONFIG: ${{ matrix.config == 'debug' && 'Debug' || 'Release' }}
-          PREMAKE_BUILD:  linux_${{ matrix.arch }}/${{ env.PREMAKE_CONFIG }}
+          PREMAKE_BUILD: linux_${{ matrix.arch }}/${{ matrix.config == 'debug' && 'Debug' || 'Release' }}
         run: |
           mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
           cp    LICENSE.md                                               artifact/${{ env.ARTIFACT_NAME }}/
@@ -94,8 +93,7 @@ jobs:
       - name: Prepare Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         env:
-          PREMAKE_CONFIG: ${{ matrix.config == 'debug' && 'Debug' || 'Release' }}
-          PREMAKE_BUILD:  windows_${{ matrix.arch }}/${{ env.PREMAKE_CONFIG }}
+          PREMAKE_BUILD: windows_${{ matrix.arch }}/${{ matrix.config == 'debug' && 'Debug' || 'Release' }}
         run: |
           mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
           cp    LICENSE.md                                                   artifact/${{ env.ARTIFACT_NAME }}/
