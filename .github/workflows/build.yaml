@@ -1,4 +1,4 @@
-name: CI
+name: Build
 
 on: [ push, pull_request ]
 
@@ -7,7 +7,7 @@ defaults:
     shell: bash
 
 jobs:
-  build_linux:
+  linux:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -54,7 +54,7 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: artifact
           if-no-files-found: error
-  build_windows:
+  windows:
     runs-on: windows-latest
     strategy:
       matrix:
