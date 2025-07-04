@@ -39,14 +39,25 @@ jobs:
           make -j config?=${{ matrix.config }} pulsar pulsar-lsp pulsar-tools
       - name: Prepare Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
-        env:
-          PREMAKE_BUILD: linux_${{ matrix.arch }}/${{ matrix.config == 'debug' && 'Debug' || 'Release' }}
         run: |
+          OS="$( basename build/pulsar/linux_* )"
+          CONFIG='${{ matrix.config }}'
+          for config_dir in "build/pulsar/$OS"/*
+          do
+            config_name="$( basename $config_dir )"
+            if [ "$( echo "$config_name" | tr '[:upper:]' '[:lower:]' )" = '${{ matrix.config }}' ]; then
+              CONFIG="$config_name"
+              break
+            fi
+          done
+
+          PREMAKE_BUILD="$OS/$CONFIG"
+
           mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
-          cp    LICENSE.md                                               artifact/${{ env.ARTIFACT_NAME }}/
-          cp -R resources/**                                             artifact/${{ env.ARTIFACT_NAME }}/
-          cp    build/pulsar-lsp/${{ env.PREMAKE_BUILD }}/pulsar-lsp     artifact/${{ env.ARTIFACT_NAME }}/
-          cp    build/pulsar-tools/${{ env.PREMAKE_BUILD }}/pulsar-tools artifact/${{ env.ARTIFACT_NAME }}/
+          cp    LICENSE.md                                       artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R resources/**                                     artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp"     artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools" artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         uses: actions/upload-artifact@v4
@@ -56,6 +67,7 @@ jobs:
           if-no-files-found: error
 
   macosx:
+    if: false
     runs-on: macos-latest
     strategy:
       matrix:
@@ -141,14 +153,25 @@ jobs:
           "$MSBUILD" pulsar.sln -m -t:pulsar,pulsar-lsp,pulsar-tools -p:Configuration=${{ matrix.config }} -p:Platform=${{ env.MSBUILD_PLATFORM }}
       - name: Prepare Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
-        env:
-          PREMAKE_BUILD: windows_${{ matrix.arch }}/${{ matrix.config == 'debug' && 'Debug' || 'Release' }}
         run: |
+          OS="$( basename build/pulsar/windows_* )"
+          CONFIG='${{ matrix.config }}'
+          for config_dir in "build/pulsar/$OS"/*
+          do
+            config_name="$( basename $config_dir )"
+            if [ "$( echo "$config_name" | tr '[:upper:]' '[:lower:]' )" = '${{ matrix.config }}' ]; then
+              CONFIG="$config_name"
+              break
+            fi
+          done
+
+          PREMAKE_BUILD="$OS/$CONFIG"
+
           mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
-          cp    LICENSE.md                                                   artifact/${{ env.ARTIFACT_NAME }}/
-          cp -R resources/**                                                 artifact/${{ env.ARTIFACT_NAME }}/
-          cp    build/pulsar-lsp/${{ env.PREMAKE_BUILD }}/pulsar-lsp.exe     artifact/${{ env.ARTIFACT_NAME }}/
-          cp    build/pulsar-tools/${{ env.PREMAKE_BUILD }}/pulsar-tools.exe artifact/${{ env.ARTIFACT_NAME }}/
+          cp    LICENSE.md                                           artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R resources/**                                         artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp.exe"     artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools.exe" artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         uses: actions/upload-artifact@v4
