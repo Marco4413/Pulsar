@@ -24,10 +24,11 @@ namespace PulsarLSP
         Pulsar::List<Local> Locals;
     };
 
+    using IdentifierUsageType = Pulsar::ParserNotifications::IdentifierUsageType;
     struct IdentifierUsage
     {
         Pulsar::Token Identifier;
-        Pulsar::LSPIdentifierUsageType Type;
+        IdentifierUsageType Type;
         size_t BoundIndex;
         // This contains the position of the local this entity is bound to when Type == ::Local
         Pulsar::SourcePosition LocalDeclaredAt = {};

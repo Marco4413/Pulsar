@@ -123,36 +123,36 @@ namespace Pulsar
         IllegalUsageOfLabel,
         LabelNotAllowedInContext,
         RedeclarationOfLabel,
-        LSPHooksRequestedTermination,
+        TerminatedByNotification,
     };
 
     const char* ParseResultToString(ParseResult presult);
 
-    enum class LSPBlockNotificationType
+    struct ParserNotifications
     {
-        BlockStart,
-        BlockEnd,
-        LocalScopeChanged,
-    };
+        enum class BlockNotificationType
+        {
+            BlockStart,
+            BlockEnd,
+            LocalScopeChanged,
+        };
 
-    enum class LSPIdentifierUsageType
-    {
-        Global,
-        Function,
-        NativeFunction,
-        Local,
-        // TODO: Maybe implement label support.
-        //       It's a bit tricky since they're back-patched.
-        // Label,
-    };
+        enum class IdentifierUsageType
+        {
+            Global,
+            Function,
+            NativeFunction,
+            Local,
+            // TODO: Maybe implement label support.
+            //       It's a bit tricky since they're back-patched.
+            // Label,
+        };
 
-    struct LSPHooks
-    {
-        // If a callback returns true, parsing is blocked with ParseResult::LSPHooksRequestedTermination
+        // If a callback returns true, parsing is blocked with ParseResult::TerminatedByNotification
 
         struct OnBlockNotificationParams
         {
-            LSPBlockNotificationType Type;
+            BlockNotificationType Type;
             SourcePosition Position;
             const String& FilePath;
             /**
@@ -170,7 +170,7 @@ namespace Pulsar
 
         struct OnIdentifierUsageParams
         {
-            LSPIdentifierUsageType Type;
+            IdentifierUsageType Type;
             // The index the identifier is bound to
             // Meaning depends on .Type
             size_t BoundIdx;
@@ -241,7 +241,7 @@ namespace Pulsar
         // If this is set to `true`, you shouldn't expect the module to run correctly.
         bool MapGlobalProducersToVoid       = false;
         IncludeResolverFn IncludeResolver   = nullptr;
-        Pulsar::LSPHooks LSPHooks           = {};
+        ParserNotifications Notifications   = {};
     };
 
     inline const ParseSettings ParseSettings_Default{};
