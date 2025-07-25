@@ -669,8 +669,8 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionBody(
                     return SetError(ParseResult::UsageOfUnknownInstruction, identToken, "Instruction does not exist.");
 
                 const InstructionDescription& instrDesc = instrNameDescPair->Value();
-                if (instrDesc.MayFail)
-                    PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, identToken);
+                // if (instrDesc.MayFail)
+                PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, identToken);
 
                 int64_t arg0 = 0;
                 if (IsJump(instrDesc.Code)) {
@@ -1152,9 +1152,11 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
 {
     switch (lvalue.Type) {
     case TokenType::IntegerLiteral:
+        PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, lvalue);
         func.Code.EmplaceBack(InstructionCode::PushInt, lvalue.IntegerVal);
         break;
     case TokenType::DoubleLiteral: {
+        PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, lvalue);
         static_assert(sizeof(double) == sizeof(int64_t));
         void* val = (void*)&lvalue.DoubleVal;
         int64_t arg0 = *(int64_t*)val;
@@ -1190,6 +1192,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
         func.Code.EmplaceBack(InstructionCode::PushConst, constIdx);
     } break;
     case TokenType::PushReference: {
+        PUSH_CODE_SYMBOL(settings.StoreDebugSymbols, func, lvalue);
         const Token& curToken = NextToken();
         if (curToken.Type == TokenType::Identifier) {
             return SetError(ParseResult::UnexpectedToken, curToken, "Local reference is not supported, expected (function).");
