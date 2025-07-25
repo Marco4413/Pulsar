@@ -20,6 +20,7 @@ end
   startproject "pulsar-tools"
 
 include "projects/pulsar"
+include "projects/pulsar-debugger"
 include "projects/pulsar-demo"
 include "projects/pulsar-lsp"
 include "projects/pulsar-tools"

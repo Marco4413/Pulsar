@@ -10,3 +10,6 @@
 	path = libs/argue
 	url = https://github.com/Marco4413/Argue
 	shallow = true
+[submodule "libs/cppdap"]
+	path = libs/cppdap
+	url = https://github.com/Marco4413/cppdap

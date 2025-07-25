@@ -36,6 +36,9 @@ on VSCode for the Pulsar Language, you can download and package the official ext
   - **None!**
 - Pulsar-Demo:
   - [`{fmt}`](https://github.com/fmtlib/fmt)
+- Pulsar-Debugger:
+  - [`nlohmann/json`](https://github.com/nlohmann/json)
+  - [`cppdap`](https://github.com/google/cppdap)
 - Pulsar-LSP:
   - [`lsp-framework`](https://github.com/leon-bckl/lsp-framework)
 - Pulsar-Tools:
