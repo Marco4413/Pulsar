@@ -88,7 +88,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
         this->m_Session->send(dap::InitializedEvent());
     });
 
-    m_Session->registerHandler([this](const dap::ConfigurationDoneRequest&)
+    m_Session->registerHandler([](const dap::ConfigurationDoneRequest&)
     {
         return dap::ConfigurationDoneResponse();
     });
