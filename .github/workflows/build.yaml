@@ -36,7 +36,7 @@ jobs:
           ./premake5 --arch=${{ matrix.arch }} --cc=${{ matrix.cc }} gmake
       - name: Build
         run: |
-          make -j config?=${{ matrix.config }} pulsar pulsar-lsp pulsar-tools
+          make -j config?=${{ matrix.config }} pulsar pulsar-debugger pulsar-lsp pulsar-tools
       - name: Prepare Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         run: |
@@ -54,10 +54,11 @@ jobs:
           PREMAKE_BUILD="$OS/$CONFIG"
 
           mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
-          cp    LICENSE.md                                       artifact/${{ env.ARTIFACT_NAME }}/
-          cp -R resources/**                                     artifact/${{ env.ARTIFACT_NAME }}/
-          cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp"     artifact/${{ env.ARTIFACT_NAME }}/
-          cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools" artifact/${{ env.ARTIFACT_NAME }}/
+          cp    LICENSE.md                                             artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R resources/**                                           artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-debugger/$PREMAKE_BUILD/pulsar-debugger" artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp"           artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools"       artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         uses: actions/upload-artifact@v4
@@ -96,17 +97,18 @@ jobs:
           ./premake5 --arch=${{ matrix.arch }} --cc=${{ matrix.cc }} gmake
       - name: Build
         run: |
-          make -j config?=${{ matrix.config }} pulsar pulsar-lsp pulsar-tools
+          make -j config?=${{ matrix.config }} pulsar pulsar-debugger pulsar-lsp pulsar-tools
       - name: Prepare Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         env:
           PREMAKE_BUILD: macosx_${{ matrix.arch }}/${{ matrix.config == 'debug' && 'Debug' || 'Release' }}
         run: |
           mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
-          cp    LICENSE.md                                               artifact/${{ env.ARTIFACT_NAME }}/
-          cp -R resources/**                                             artifact/${{ env.ARTIFACT_NAME }}/
-          cp    build/pulsar-lsp/${{ env.PREMAKE_BUILD }}/pulsar-lsp     artifact/${{ env.ARTIFACT_NAME }}/
-          cp    build/pulsar-tools/${{ env.PREMAKE_BUILD }}/pulsar-tools artifact/${{ env.ARTIFACT_NAME }}/
+          cp    LICENSE.md                                                     artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R resources/**                                                   artifact/${{ env.ARTIFACT_NAME }}/
+          cp    build/pulsar-debugger/${{ env.PREMAKE_BUILD }}/pulsar-debugger artifact/${{ env.ARTIFACT_NAME }}/
+          cp    build/pulsar-lsp/${{ env.PREMAKE_BUILD }}/pulsar-lsp           artifact/${{ env.ARTIFACT_NAME }}/
+          cp    build/pulsar-tools/${{ env.PREMAKE_BUILD }}/pulsar-tools       artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         uses: actions/upload-artifact@v4
@@ -150,7 +152,7 @@ jobs:
             echo 'msbuild not found!'
             exit 1;
           fi
-          "$MSBUILD" pulsar.sln -m -t:pulsar,pulsar-lsp,pulsar-tools -p:Configuration=${{ matrix.config }} -p:Platform=${{ env.MSBUILD_PLATFORM }}
+          "$MSBUILD" pulsar.sln -m -t:pulsar,pulsar-debugger,pulsar-lsp,pulsar-tools -p:Configuration=${{ matrix.config }} -p:Platform=${{ env.MSBUILD_PLATFORM }}
       - name: Prepare Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         run: |
@@ -168,10 +170,11 @@ jobs:
           PREMAKE_BUILD="$OS/$CONFIG"
 
           mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
-          cp    LICENSE.md                                           artifact/${{ env.ARTIFACT_NAME }}/
-          cp -R resources/**                                         artifact/${{ env.ARTIFACT_NAME }}/
-          cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp.exe"     artifact/${{ env.ARTIFACT_NAME }}/
-          cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools.exe" artifact/${{ env.ARTIFACT_NAME }}/
+          cp    LICENSE.md                                                 artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R resources/**                                               artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-debugger/$PREMAKE_BUILD/pulsar-debugger.exe" artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp.exe"           artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools.exe"       artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         uses: actions/upload-artifact@v4
