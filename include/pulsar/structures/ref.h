@@ -31,11 +31,11 @@ namespace Pulsar
             : m_Ptr(nullptr), m_RefCount(nullptr) { }
 
         SharedRef(std::nullptr_t null)
-            : SharedRef<T>() { (void)null; }
+            : SharedRef() { (void)null; }
         
         SharedRef(const SharedRef<T>& o) { *this = o; };
         SharedRef(SharedRef<T>&& o) { *this = std::move(o); };
-        
+
         ~SharedRef()
         {
             DecrementRefCount();
@@ -125,8 +125,8 @@ namespace Pulsar
         }
 
     private:
-        T* m_Ptr = nullptr;
-        Ref::RefCount* m_RefCount = nullptr;
+        T* m_Ptr;
+        Ref::RefCount* m_RefCount;
     };
 }
 
