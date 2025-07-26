@@ -21,15 +21,15 @@ int main(int argc, const char** argv)
     if (argc <= 0) return 1;
     const char* program = argv[0];
 
-    std::filesystem::path      logFilePath = std::filesystem::path(program).replace_filename("pulsar-debugger.log");
-    Pulsar::DAPServer::LogFile logFile     = nullptr;
+    std::filesystem::path              logFilePath = std::filesystem::path(program).replace_filename("pulsar-debugger.log");
+    PulsarDebugger::DAPServer::LogFile logFile     = nullptr;
 
     if (std::filesystem::is_directory(logFilePath.parent_path()) && (!std::filesystem::exists(logFilePath) || std::filesystem::is_regular_file(logFilePath))) {
         logFile = dap::file(logFilePath.generic_string().c_str());
     }
 
     auto session = dap::Session::create();
-    Pulsar::DAPServer dapServer(session, logFile);
+    PulsarDebugger::DAPServer dapServer(session, logFile);
 
     std::shared_ptr<dap::Reader> in = dap::file(stdin, false);
     std::shared_ptr<dap::Writer> out = dap::file(stdout, false);

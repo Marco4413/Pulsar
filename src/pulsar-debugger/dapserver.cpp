@@ -3,7 +3,7 @@
 namespace dap
 {
     DAP_IMPLEMENT_STRUCT_TYPEINFO_EXT(
-            Pulsar::DebugLaunchRequest,
+            PulsarDebugger::DebugLaunchRequest,
             LaunchRequest,
             "launch",
             DAP_FIELD(scriptPath, "scriptPath"),
@@ -12,7 +12,7 @@ namespace dap
             DAP_FIELD(stopOnEntry, "stopOnEntry"));
 }
 
-namespace Pulsar
+namespace PulsarDebugger
 {
 
 DAPServer::DAPServer(Session& session, LogFile logFile)
@@ -60,7 +60,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
             ev.reason   = "exception";
             ev.threadId = threadId;
             auto runtimeState = debugger.GetCurrentState(threadId);
-            ev.text = runtimeState ? RuntimeStateToString(*runtimeState) : "Could not retrieve RuntimeState.";
+            ev.text = runtimeState ? Pulsar::RuntimeStateToString(*runtimeState) : "Could not retrieve RuntimeState.";
             m_Session->send(ev);
         } break;
         default: break;
@@ -242,7 +242,7 @@ std::optional<Debugger::LaunchError> DAPServer::Launch(const DebugLaunchRequest&
 
 std::optional<Debugger::LaunchError> DAPServer::Launch(const char* scriptPath, const dap::array<dap::string>& scriptArgs, const char* entryPoint)
 {
-    ValueList args;
+    Pulsar::ValueList args;
     for (const auto& arg : scriptArgs)
         args.Append()->Value().SetString(arg.c_str());
 

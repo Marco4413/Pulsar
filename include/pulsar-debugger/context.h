@@ -8,7 +8,7 @@
 #include <pulsar/structures/hashmap.h>
 #include <pulsar/structures/list.h>
 
-namespace Pulsar
+namespace PulsarDebugger
 {
     // TODO: Lazy Loading
     // - One way to do it might be making DebuggerContext depend on Debugger,
@@ -26,31 +26,31 @@ namespace Pulsar
 
         struct Thread
         {
-            String Name;
-            List<FrameId> StackFrames;
+            Pulsar::String Name;
+            Pulsar::List<FrameId> StackFrames;
         };
 
         struct StackFrame
         {
-            String Name;
-            List<ScopeId> Scopes;
+            Pulsar::String Name;
+            Pulsar::List<ScopeId> Scopes;
 
-            SourceReferenceId     SourceReference = 0;
-            std::optional<String> SourcePath;
-            SourcePosition        SourcePos;
+            SourceReferenceId             SourceReference = 0;
+            std::optional<Pulsar::String> SourcePath;
+            Pulsar::SourcePosition        SourcePos;
         };
 
         struct Scope
         {
-            String Name;
+            Pulsar::String Name;
             VariablesReferenceId Variables = 0;
         };
 
         struct Variable
         {
-            String Name;
-            String Type;
-            String Value;
+            Pulsar::String Name;
+            Pulsar::String Type;
+            Pulsar::String Value;
             // Used for Lists
             VariablesReferenceId VariablesReference = 0;
         };
@@ -58,38 +58,38 @@ namespace Pulsar
     public:
         // Thread Ids are static and can be computed outside of ::CreateThread.
         // However, they're invalidated if the ExecutionContext is moved within memory.
-        static ThreadId ComputeThreadId(const ExecutionContext& thread);
+        static ThreadId ComputeThreadId(const Pulsar::ExecutionContext& thread);
 
     public:
-        DebuggerContext(std::shared_ptr<const Module> mod);
+        DebuggerContext(std::shared_ptr<const Pulsar::Module> mod);
         ~DebuggerContext() = default;
 
         DebuggerContext(const DebuggerContext&) = default;
         DebuggerContext(DebuggerContext&&) = default;
 
-        ThreadId CreateThread(const ExecutionContext& execContext, std::optional<String> name=std::nullopt);
+        ThreadId CreateThread(const Pulsar::ExecutionContext& execContext, std::optional<Pulsar::String> name=std::nullopt);
 
         std::optional<Thread> GetThread(ThreadId threadId) const;
         std::optional<StackFrame> GetStackFrame(FrameId frameId) const;
         std::optional<Scope> GetScope(ScopeId scopeId) const;
-        std::optional<List<Variable>> GetVariables(VariablesReferenceId variablesReference) const;
+        std::optional<Pulsar::List<Variable>> GetVariables(VariablesReferenceId variablesReference) const;
 
-        std::optional<SourceDebugSymbol> GetSource(SourceReferenceId sourceReference) const;
+        std::optional<Pulsar::SourceDebugSymbol> GetSource(SourceReferenceId sourceReference) const;
 
     private:
-        FrameId CreateStackFrame(const Frame& frame, ScopeId globalScopeId, bool isCaller, bool hasError);
-        ScopeId CreateScope(const List<GlobalInstance>& globals, const char* name);
-        ScopeId CreateScope(const List<Value>& locals, const char* name);
+        FrameId CreateStackFrame(const Pulsar::Frame& frame, ScopeId globalScopeId, bool isCaller, bool hasError);
+        ScopeId CreateScope(const Pulsar::List<Pulsar::GlobalInstance>& globals, const char* name);
+        ScopeId CreateScope(const Pulsar::List<Pulsar::Value>& locals, const char* name);
         // Calling this function may invalidate any reference to data within m_Variables
-        Variable CreateVariable(const Value& value, String&& name);
+        Variable CreateVariable(const Pulsar::Value& value, Pulsar::String&& name);
 
     private:
-        std::shared_ptr<const Module> m_Module;
+        std::shared_ptr<const Pulsar::Module> m_Module;
 
-        HashMap<ThreadId, Thread> m_Threads;
-        List<StackFrame> m_StackFrames;
-        List<Scope> m_Scopes;
-        List<List<Variable>> m_Variables;
+        Pulsar::HashMap<ThreadId, Thread> m_Threads;
+        Pulsar::List<StackFrame> m_StackFrames;
+        Pulsar::List<Scope> m_Scopes;
+        Pulsar::List<Pulsar::List<Variable>> m_Variables;
     };
 }
 

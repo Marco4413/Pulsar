@@ -9,7 +9,7 @@
 
 #include "pulsar-debugger/context.h"
 
-namespace Pulsar
+namespace PulsarDebugger
 {
     class DebuggerScopeLock
     {
@@ -34,8 +34,8 @@ namespace Pulsar
     public:
         friend DebuggerScopeLock;
 
-        using LaunchError = String;
-        using BreakpointError = String;
+        using LaunchError = Pulsar::String;
+        using BreakpointError = Pulsar::String;
 
         enum class EventKind { Step, Breakpoint, Continue, Pause, Done, Error };
         using EventHandler = std::function<void(DebuggerContext::ThreadId, EventKind, Debugger&)>;
@@ -54,7 +54,7 @@ namespace Pulsar
         Debugger& operator=(const Debugger&) = delete;
         Debugger& operator=(Debugger&&)      = delete;
 
-        std::optional<LaunchError> Launch(const char* scriptPath, ValueList&& args, const char* entryPoint="main");
+        std::optional<LaunchError> Launch(const char* scriptPath, Pulsar::ValueList&& args, const char* entryPoint="main");
 
         void Continue();
         void Pause();
@@ -74,12 +74,12 @@ namespace Pulsar
 
         void SetEventHandler(EventHandler handler);
 
-        std::optional<RuntimeState> GetCurrentState(DebuggerContext::ThreadId threadId);
+        std::optional<Pulsar::RuntimeState> GetCurrentState(DebuggerContext::ThreadId threadId);
         std::optional<size_t> GetOrComputeCurrentLine(DebuggerContext::ThreadId threadId);
         std::optional<size_t> GetOrComputeCurrentSourceIndex(DebuggerContext::ThreadId threadId);
 
         std::shared_ptr<const DebuggerContext> GetOrComputeContext();
-        std::optional<SourceDebugSymbol> GetSource(DebuggerContext::SourceReferenceId sourceReference);
+        std::optional<Pulsar::SourceDebugSymbol> GetSource(DebuggerContext::SourceReferenceId sourceReference);
 
     private:
         std::optional<size_t> ComputeCurrentLine(DebuggerContext::ThreadId threadId);
@@ -94,14 +94,14 @@ namespace Pulsar
 
         std::recursive_mutex m_Mutex;
 
-        std::shared_ptr<Module> m_Module;
-        List<HashMap<size_t, Breakpoint>> m_Breakpoints;
+        std::shared_ptr<Pulsar::Module> m_Module;
+        Pulsar::List<Pulsar::HashMap<size_t, Breakpoint>> m_Breakpoints;
 
         std::optional<size_t> m_CachedCurrentLine;
         std::optional<size_t> m_CachedCurrentSource;
 
         DebuggerContext::ThreadId m_ThreadId;
-        std::unique_ptr<ExecutionContext> m_Thread;
+        std::unique_ptr<Pulsar::ExecutionContext> m_Thread;
         std::shared_ptr<const DebuggerContext> m_Context;
     };
 }

@@ -72,45 +72,45 @@ inline Pulsar::String ValueToString(Pulsar::Value val, bool recursive)
     }
 }
 
-namespace Pulsar
+namespace PulsarDebugger
 {
 
-DebuggerContext::ThreadId DebuggerContext::ComputeThreadId(const ExecutionContext& thread)
+DebuggerContext::ThreadId DebuggerContext::ComputeThreadId(const Pulsar::ExecutionContext& thread)
 {
     return reinterpret_cast<ThreadId>(&thread);
 }
 
-DebuggerContext::DebuggerContext(std::shared_ptr<const Module> mod)
+DebuggerContext::DebuggerContext(std::shared_ptr<const Pulsar::Module> mod)
     : m_Module(mod)
 {
     // Null Variables
     m_Variables.EmplaceBack();
 }
 
-DebuggerContext::ThreadId DebuggerContext::CreateThread(const ExecutionContext& execContext, std::optional<String> name)
+DebuggerContext::ThreadId DebuggerContext::CreateThread(const Pulsar::ExecutionContext& execContext, std::optional<Pulsar::String> name)
 {
     ThreadId threadId = ComputeThreadId(execContext);
     Thread& thread = m_Threads.Emplace(threadId).Value();
 
     ScopeId globalScopeId = CreateScope(execContext.GetGlobals(), "Globals");
 
-    thread.Name = name ? std::move(*name) : String(std::format("Thread {}", threadId).c_str());
+    thread.Name = name ? std::move(*name) : Pulsar::String(std::format("Thread {}", threadId).c_str());
     for (size_t i = 1; i <= execContext.GetCallStack().Size(); ++i) {
         size_t frameIdx = execContext.GetCallStack().Size() - i;
-        const Frame& callFrame = execContext.GetCallStack()[frameIdx];
+        const Pulsar::Frame& callFrame = execContext.GetCallStack()[frameIdx];
 
         FrameId frameId = CreateStackFrame(
                 callFrame,
                 globalScopeId,
                 frameIdx < execContext.GetCallStack().Size()-1,
-                execContext.GetState() != RuntimeState::OK);
+                execContext.GetState() != Pulsar::RuntimeState::OK);
         thread.StackFrames.PushBack(frameId);
     }
 
     return threadId;
 }
 
-DebuggerContext::FrameId DebuggerContext::CreateStackFrame(const Frame& frame, ScopeId globalScope, bool isCaller, bool hasError)
+DebuggerContext::FrameId DebuggerContext::CreateStackFrame(const Pulsar::Frame& frame, ScopeId globalScope, bool isCaller, bool hasError)
 {
     FrameId stackFrameId = m_StackFrames.Size();
     StackFrame& stackFrame = m_StackFrames.EmplaceBack();
@@ -149,7 +149,7 @@ DebuggerContext::FrameId DebuggerContext::CreateStackFrame(const Frame& frame, S
     return stackFrameId;
 }
 
-DebuggerContext::ScopeId DebuggerContext::CreateScope(const List<GlobalInstance>& globals, const char* name)
+DebuggerContext::ScopeId DebuggerContext::CreateScope(const Pulsar::List<Pulsar::GlobalInstance>& globals, const char* name)
 {
     ScopeId scopeId = m_Scopes.Size();
     Scope& scope = m_Scopes.EmplaceBack();
@@ -161,7 +161,7 @@ DebuggerContext::ScopeId DebuggerContext::CreateScope(const List<GlobalInstance>
     scope.Variables = variablesReference;
 
     for (size_t i = 0; i < globals.Size(); ++i) {
-        String varName;
+        Pulsar::String varName;
         if (globals[i].IsConstant)
             varName += "const ";
         varName += m_Module->Globals[i].Name;
@@ -172,7 +172,7 @@ DebuggerContext::ScopeId DebuggerContext::CreateScope(const List<GlobalInstance>
     return scopeId;
 }
 
-DebuggerContext::ScopeId DebuggerContext::CreateScope(const List<Value>& locals, const char* name)
+DebuggerContext::ScopeId DebuggerContext::CreateScope(const Pulsar::List<Pulsar::Value>& locals, const char* name)
 {
     ScopeId scopeId = m_Scopes.Size();
     Scope& scope = m_Scopes.EmplaceBack();
@@ -184,14 +184,14 @@ DebuggerContext::ScopeId DebuggerContext::CreateScope(const List<Value>& locals,
     scope.Variables = variablesReference;
 
     for (size_t i = 0; i < locals.Size(); ++i) {
-        Variable var = CreateVariable(locals[i], UIntToString(i));
+        Variable var = CreateVariable(locals[i], Pulsar::UIntToString(i));
         m_Variables[variablesReference].EmplaceBack(std::move(var));
     }
 
     return scopeId;
 }
 
-DebuggerContext::Variable DebuggerContext::CreateVariable(const Value& value, String&& name)
+DebuggerContext::Variable DebuggerContext::CreateVariable(const Pulsar::Value& value, Pulsar::String&& name)
 {
     Variable variable;
     variable.Name  = std::move(name);
@@ -200,7 +200,7 @@ DebuggerContext::Variable DebuggerContext::CreateVariable(const Value& value, St
     variable.VariablesReference = 0;
 
     switch (value.Type()) {
-    case ValueType::List: {
+    case Pulsar::ValueType::List: {
         VariablesReferenceId variablesReference = m_Variables.Size();
         m_Variables.EmplaceBack();
 
@@ -208,7 +208,7 @@ DebuggerContext::Variable DebuggerContext::CreateVariable(const Value& value, St
 
         uint64_t idx = 0;
         for (const auto* node = value.AsList().Front(); node; node = node->Next()) {
-            Variable var = CreateVariable(node->Value(), UIntToString(idx++));
+            Variable var = CreateVariable(node->Value(), Pulsar::UIntToString(idx++));
             m_Variables[variablesReference].EmplaceBack(std::move(var));
         }
     } break;
@@ -238,13 +238,13 @@ std::optional<DebuggerContext::Scope> DebuggerContext::GetScope(ScopeId scopeId)
     return m_Scopes[scopeId];
 }
 
-std::optional<List<DebuggerContext::Variable>> DebuggerContext::GetVariables(VariablesReferenceId variablesReference) const
+std::optional<Pulsar::List<DebuggerContext::Variable>> DebuggerContext::GetVariables(VariablesReferenceId variablesReference) const
 {
     if (variablesReference < 0 || static_cast<size_t>(variablesReference) >= m_Variables.Size()) return std::nullopt;
     return m_Variables[variablesReference];
 }
 
-std::optional<SourceDebugSymbol> DebuggerContext::GetSource(SourceReferenceId sourceReference) const
+std::optional<Pulsar::SourceDebugSymbol> DebuggerContext::GetSource(SourceReferenceId sourceReference) const
 {
     if (!m_Module) return std::nullopt;
     if (sourceReference < 0 || static_cast<size_t>(sourceReference) >= m_Module->SourceDebugSymbols.Size()) return std::nullopt;

@@ -10,7 +10,7 @@
 
 #include "pulsar-debugger/debugger.h"
 
-namespace Pulsar
+namespace PulsarDebugger
 {
     class DebugLaunchRequest
         : public dap::LaunchRequest
@@ -75,7 +75,7 @@ namespace Pulsar
 
 namespace dap
 {
-    DAP_DECLARE_STRUCT_TYPEINFO(Pulsar::DebugLaunchRequest);
+    DAP_DECLARE_STRUCT_TYPEINFO(PulsarDebugger::DebugLaunchRequest);
 }
 
 #endif // _PULSARDEBUGGER_DAPSERVER_H

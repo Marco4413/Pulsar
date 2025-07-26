@@ -4,7 +4,7 @@
 
 #include <pulsar/parser.h>
 
-namespace Pulsar
+namespace PulsarDebugger
 {
 
 DebuggerScopeLock::DebuggerScopeLock(Debugger &debugger)
@@ -25,7 +25,7 @@ Debugger::Debugger()
     , m_ThreadId(-1)
     , m_Thread(nullptr) {}
 
-std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, ValueList&& args, const char* entryPoint)
+std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pulsar::ValueList&& args, const char* entryPoint)
 {
     DebuggerScopeLock _lock(*this);
 
@@ -34,34 +34,34 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Va
     m_ThreadId = -1;
     m_Thread   = nullptr;
 
-    ParseResult parseResult;
-    Parser parser;
+    Pulsar::ParseResult parseResult;
+    Pulsar::Parser parser;
 
     // FIXME: AddSourceFile doesn't like when the cwd of the debugger is in a different drive on Windows
     parseResult = parser.AddSourceFile(scriptPath);
-    if (parseResult != ParseResult::OK) {
+    if (parseResult != Pulsar::ParseResult::OK) {
         return "Parser Error: " + parser.GetErrorMessage();
     }
 
-    auto pulsarModule = std::make_shared<Module>();
+    auto pulsarModule = std::make_shared<Pulsar::Module>();
     // Null Source
     pulsarModule->SourceDebugSymbols.EmplaceBack();
 
     parseResult = parser.ParseIntoModule(*pulsarModule);
-    if (parseResult != ParseResult::OK) {
+    if (parseResult != Pulsar::ParseResult::OK) {
         return "Parser Error: " + parser.GetErrorMessage();
     }
 
     m_Module   = pulsarModule;
     m_Breakpoints.Resize(m_Module->SourceDebugSymbols.Size());
-    m_Thread   = std::make_unique<ExecutionContext>(*m_Module);
+    m_Thread   = std::make_unique<Pulsar::ExecutionContext>(*m_Module);
     m_ThreadId = DebuggerContext::ComputeThreadId(*m_Thread);
 
     args.Prepend()->Value().SetString(scriptPath);
     m_Thread->GetStack().EmplaceBack().SetList(std::move(args));
-    RuntimeState runtimeState = m_Thread->CallFunction(entryPoint);
-    if (runtimeState != RuntimeState::OK) {
-        return LaunchError("Runtime Error: ") + RuntimeStateToString(runtimeState);
+    Pulsar::RuntimeState runtimeState = m_Thread->CallFunction(entryPoint);
+    if (runtimeState != Pulsar::RuntimeState::OK) {
+        return LaunchError("Runtime Error: ") + Pulsar::RuntimeStateToString(runtimeState);
     }
 
     return std::nullopt;
@@ -188,7 +188,7 @@ void Debugger::SetEventHandler(EventHandler handler)
     m_EventHandler = handler;
 }
 
-std::optional<RuntimeState> Debugger::GetCurrentState(DebuggerContext::ThreadId threadId)
+std::optional<Pulsar::RuntimeState> Debugger::GetCurrentState(DebuggerContext::ThreadId threadId)
 {
     DebuggerScopeLock _lock(*this);
     if (!m_Module || !m_Thread) return std::nullopt;
@@ -217,7 +217,7 @@ std::optional<size_t> Debugger::ComputeCurrentLine(DebuggerContext::ThreadId thr
     if (!m_Module || !m_Thread) return std::nullopt;
     if (threadId != m_ThreadId || m_Thread->IsDone()) return std::nullopt;
 
-    const Frame& frame = m_Thread->CurrentFrame();
+    const Pulsar::Frame& frame = m_Thread->CurrentFrame();
     if (!frame.Function || !frame.Function->HasDebugSymbol())
         return std::nullopt;
 
@@ -229,7 +229,7 @@ std::optional<size_t> Debugger::ComputeCurrentLine(DebuggerContext::ThreadId thr
         return std::nullopt;
 
     size_t instrIdx = frame.InstructionIndex;
-    if (m_Thread->GetState() != RuntimeState::OK) { /* Callee error */
+    if (m_Thread->GetState() != Pulsar::RuntimeState::OK) { /* Callee error */
         if (instrIdx > 0) --instrIdx;
     }
 
@@ -245,7 +245,7 @@ std::optional<size_t> Debugger::ComputeCurrentSourceIndex(DebuggerContext::Threa
     if (!m_Module || !m_Thread) return std::nullopt;
     if (threadId != m_ThreadId || m_Thread->IsDone()) return std::nullopt;
 
-    const Frame& frame = m_Thread->CurrentFrame();
+    const Pulsar::Frame& frame = m_Thread->CurrentFrame();
     if (!frame.Function || !frame.Function->HasDebugSymbol()) return std::nullopt;
 
     return frame.Function->DebugSymbol.SourceIdx;
@@ -264,7 +264,7 @@ std::shared_ptr<const DebuggerContext> Debugger::GetOrComputeContext()
     return m_Context;
 }
 
-std::optional<SourceDebugSymbol> Debugger::GetSource(DebuggerContext::SourceReferenceId sourceReference)
+std::optional<Pulsar::SourceDebugSymbol> Debugger::GetSource(DebuggerContext::SourceReferenceId sourceReference)
 {
     DebuggerScopeLock _lock(*this);
     if (!m_Module) return std::nullopt;
@@ -280,7 +280,7 @@ Debugger::EventKind Debugger::InternalStep()
     m_CachedCurrentSource = std::nullopt;
 
     auto state = m_Thread->GetState();
-    if (state != RuntimeState::OK || m_Thread->IsDone())
+    if (state != Pulsar::RuntimeState::OK || m_Thread->IsDone())
         return EventKind::Done;
 
     // These are required to not hit the same breakpoint multiple times
@@ -288,7 +288,7 @@ Debugger::EventKind Debugger::InternalStep()
     auto initSource = ComputeCurrentSourceIndex(m_ThreadId);
 
     state = m_Thread->Step();
-    if (state != RuntimeState::OK)
+    if (state != Pulsar::RuntimeState::OK)
         return EventKind::Error;
     else if (m_Thread->IsDone())
         return EventKind::Done;
