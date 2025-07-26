@@ -51,7 +51,7 @@ namespace PulsarDebugger
         };
 
     public:
-        DebuggerContext(std::shared_ptr<const Pulsar::Module> mod);
+        DebuggerContext(std::shared_ptr<const DebuggableModule> mod);
         ~DebuggerContext() = default;
 
         DebuggerContext(const DebuggerContext&) = default;
@@ -74,7 +74,7 @@ namespace PulsarDebugger
         Variable CreateVariable(const Pulsar::Value& value, Pulsar::String&& name);
 
     private:
-        std::shared_ptr<const Pulsar::Module> m_Module;
+        std::shared_ptr<const DebuggableModule> m_DebuggableModule;
 
         Pulsar::HashMap<ThreadId, Thread> m_Threads;
         Pulsar::List<StackFrame> m_StackFrames;

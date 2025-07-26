@@ -95,7 +95,7 @@ namespace PulsarDebugger
 
         std::recursive_mutex m_Mutex;
 
-        std::shared_ptr<Pulsar::Module> m_Module;
+        std::shared_ptr<DebuggableModule> m_DebuggableModule;
         Pulsar::List<Pulsar::HashMap<size_t, Breakpoint>> m_Breakpoints;
 
         std::optional<size_t> m_CachedCurrentLine;

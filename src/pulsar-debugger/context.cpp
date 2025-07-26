@@ -3,6 +3,7 @@
 #include <format>
 
 #include <pulsar/lexer.h>
+#include <pulsar/structures/stringview.h>
 
 inline const char* ValueTypeToString(Pulsar::ValueType type)
 {
@@ -75,8 +76,8 @@ inline Pulsar::String ValueToString(Pulsar::Value val, bool recursive)
 namespace PulsarDebugger
 {
 
-DebuggerContext::DebuggerContext(std::shared_ptr<const Pulsar::Module> mod)
-    : m_Module(mod)
+DebuggerContext::DebuggerContext(std::shared_ptr<const DebuggableModule> mod)
+    : m_DebuggableModule(mod)
 {
     // Null Variables
     m_Variables.EmplaceBack();
@@ -117,7 +118,8 @@ FrameId DebuggerContext::CreateStackFrame(const Pulsar::Frame& frame, ScopeId gl
     stackFrame.Name += ")";
 
     stackFrame.Scopes.PushBack(globalScope);
-    stackFrame.Scopes.PushBack(CreateScope(frame.Locals, "Locals"));
+    ScopeId localScopeId = CreateScope(frame.Locals, "Locals");
+    stackFrame.Scopes.PushBack(localScopeId);
     stackFrame.Scopes.PushBack(CreateScope(frame.Stack, "Stack"));
 
     size_t instrIdx = frame.InstructionIndex;
@@ -138,8 +140,29 @@ FrameId DebuggerContext::CreateStackFrame(const Pulsar::Frame& frame, ScopeId gl
 
     stackFrame.SourceReference = static_cast<SourceReference>(frame.Function->DebugSymbol.SourceIdx);
     stackFrame.SourcePath      = std::nullopt;
-    if (frame.Function->DebugSymbol.SourceIdx < m_Module->SourceDebugSymbols.Size())
-        stackFrame.SourcePath  = m_Module->SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx].Path;
+    if (frame.Function->DebugSymbol.SourceIdx < m_DebuggableModule->GetModule().SourceDebugSymbols.Size())
+        stackFrame.SourcePath  = m_DebuggableModule->GetModule().SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx].Path;
+
+    auto scopeInfo = m_DebuggableModule->GetLocalScopeInfo(stackFrame.SourceReference, stackFrame.SourcePos.Line);
+    if (scopeInfo) {
+        const auto& localScope = m_Scopes[localScopeId];
+        auto& variables = m_Variables[localScope.VariablesReference];
+
+        Pulsar::HashMap<Pulsar::StringView, size_t> usedLocalNames;
+
+        size_t nameableVariablesCount = scopeInfo->Locals.Size() <= variables.Size() ? scopeInfo->Locals.Size() : variables.Size();
+        for (size_t it = 1; it <= nameableVariablesCount; ++it) {
+            size_t localIdx = nameableVariablesCount - it;
+            const auto& local = scopeInfo->Locals[localIdx];
+            if (usedLocalNames.Find(local.Name)) {
+                // Shadowed
+                variables[localIdx].Name = "// " + local.Name;
+            } else {
+                usedLocalNames.Insert(local.Name, localIdx);
+                variables[localIdx].Name = local.Name;
+            }
+        }
+    }
 
     return stackFrameId;
 }
@@ -157,7 +180,7 @@ ScopeId DebuggerContext::CreateScope(const Pulsar::List<Pulsar::GlobalInstance>&
         Pulsar::String varName;
         if (globals[i].IsConstant)
             varName += "const ";
-        varName += m_Module->Globals[i].Name;
+        varName += m_DebuggableModule->GetModule().Globals[i].Name;
         Variable var = CreateVariable(globals[i].Value, std::move(varName));
         m_Variables[scope.VariablesReference].EmplaceBack(std::move(var));
     }
@@ -235,9 +258,9 @@ std::optional<Pulsar::List<DebuggerContext::Variable>> DebuggerContext::GetVaria
 
 std::optional<Pulsar::SourceDebugSymbol> DebuggerContext::GetSource(SourceReference sourceReference) const
 {
-    if (!m_Module) return std::nullopt;
-    if (sourceReference < 0 || static_cast<size_t>(sourceReference) >= m_Module->SourceDebugSymbols.Size()) return std::nullopt;
-    return m_Module->SourceDebugSymbols[sourceReference];
+    if (!m_DebuggableModule) return std::nullopt;
+    if (sourceReference < 0 || static_cast<size_t>(sourceReference) >= m_DebuggableModule->GetModule().SourceDebugSymbols.Size()) return std::nullopt;
+    return m_DebuggableModule->GetModule().SourceDebugSymbols[sourceReference];
 }
 
 }

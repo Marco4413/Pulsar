@@ -21,7 +21,7 @@ void DebuggerScopeLock::Unlock()
 }
 
 Debugger::Debugger()
-    : m_Module(nullptr)
+    : m_DebuggableModule(nullptr)
     , m_ThreadId(-1)
     , m_Thread(nullptr) {}
 
@@ -29,7 +29,7 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pu
 {
     DebuggerScopeLock _lock(*this);
 
-    m_Module   = nullptr;
+    m_DebuggableModule = nullptr;
     m_Breakpoints.Clear();
     m_ThreadId = -1;
     m_Thread   = nullptr;
@@ -43,18 +43,18 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pu
         return "Parser Error: " + parser.GetErrorMessage();
     }
 
-    auto pulsarModule = std::make_shared<Pulsar::Module>();
-    // Null Source
-    pulsarModule->SourceDebugSymbols.EmplaceBack();
+    auto debuggableModule = std::make_shared<DebuggableModule>();
+    auto parseSettings    = Pulsar::ParseSettings_Default;
+    parseSettings.Notifications = debuggableModule->GetParserNotificationsListener();
 
-    parseResult = parser.ParseIntoModule(*pulsarModule);
+    parseResult = parser.ParseIntoModule(debuggableModule->GetModule(), parseSettings);
     if (parseResult != Pulsar::ParseResult::OK) {
         return "Parser Error: " + parser.GetErrorMessage();
     }
 
-    m_Module   = pulsarModule;
-    m_Breakpoints.Resize(m_Module->SourceDebugSymbols.Size());
-    m_Thread   = std::make_unique<Pulsar::ExecutionContext>(*m_Module);
+    m_DebuggableModule = debuggableModule;
+    m_Breakpoints.Resize(m_DebuggableModule->GetModule().SourceDebugSymbols.Size());
+    m_Thread   = std::make_unique<Pulsar::ExecutionContext>(m_DebuggableModule->GetModule());
     m_ThreadId = ComputeThreadId(*m_Thread);
 
     args.Prepend()->Value().SetString(scriptPath);
@@ -191,7 +191,7 @@ void Debugger::SetEventHandler(EventHandler handler)
 std::optional<Pulsar::RuntimeState> Debugger::GetCurrentState(ThreadId threadId)
 {
     DebuggerScopeLock _lock(*this);
-    if (!m_Module || !m_Thread) return std::nullopt;
+    if (!m_DebuggableModule || !m_Thread) return std::nullopt;
     if (threadId != m_ThreadId) return std::nullopt;
     return m_Thread->GetState();
 }
@@ -214,7 +214,7 @@ std::optional<size_t> Debugger::GetOrComputeCurrentSourceIndex(ThreadId threadId
 
 std::optional<size_t> Debugger::ComputeCurrentLine(ThreadId threadId)
 {
-    if (!m_Module || !m_Thread) return std::nullopt;
+    if (!m_DebuggableModule || !m_Thread) return std::nullopt;
     if (threadId != m_ThreadId || m_Thread->IsDone()) return std::nullopt;
 
     const Pulsar::Frame& frame = m_Thread->CurrentFrame();
@@ -242,7 +242,7 @@ std::optional<size_t> Debugger::ComputeCurrentLine(ThreadId threadId)
 
 std::optional<size_t> Debugger::ComputeCurrentSourceIndex(ThreadId threadId)
 {
-    if (!m_Module || !m_Thread) return std::nullopt;
+    if (!m_DebuggableModule || !m_Thread) return std::nullopt;
     if (threadId != m_ThreadId || m_Thread->IsDone()) return std::nullopt;
 
     const Pulsar::Frame& frame = m_Thread->CurrentFrame();
@@ -254,10 +254,10 @@ std::optional<size_t> Debugger::ComputeCurrentSourceIndex(ThreadId threadId)
 std::shared_ptr<const DebuggerContext> Debugger::GetOrComputeContext()
 {
     DebuggerScopeLock _lock(*this);
-    if (!m_Module) return nullptr;
+    if (!m_DebuggableModule) return nullptr;
     if (m_Context) return m_Context;
 
-    DebuggerContext context(m_Module);
+    DebuggerContext context(m_DebuggableModule);
     context.CreateThread(*m_Thread);
 
     m_Context = std::make_shared<const DebuggerContext>(std::move(context));
@@ -267,8 +267,8 @@ std::shared_ptr<const DebuggerContext> Debugger::GetOrComputeContext()
 std::optional<Pulsar::SourceDebugSymbol> Debugger::GetSource(SourceReference sourceReference)
 {
     DebuggerScopeLock _lock(*this);
-    if (!m_Module) return std::nullopt;
-    DebuggerContext shallowContext(m_Module);
+    if (!m_DebuggableModule) return std::nullopt;
+    DebuggerContext shallowContext(m_DebuggableModule);
     return shallowContext.GetSource(sourceReference);
 }
 

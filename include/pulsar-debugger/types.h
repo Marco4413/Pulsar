@@ -1,6 +1,9 @@
 #ifndef _PULSARDEBUGGER_TYPES_H
 #define _PULSARDEBUGGER_TYPES_H
 
+#include <optional>
+
+#include <pulsar/parser.h>
 #include <pulsar/runtime.h>
 
 namespace PulsarDebugger
@@ -19,6 +22,52 @@ namespace PulsarDebugger
     // Thread Ids are based on the address of their ExecutionContext.
     // So make sure not to move it in memory to keep the ThreadId valid.
     ThreadId ComputeThreadId(const Pulsar::ExecutionContext& thread);
+
+    class DebuggableModule
+    {
+    public:
+        struct LocalScopeInfo
+        {
+            using Local = Pulsar::LocalScope::LocalVar;
+
+            Pulsar::SourcePosition StartPos;
+            Pulsar::SourcePosition EndPos;
+            Pulsar::List<Local> Locals;
+        };
+
+        struct FunctionInfo
+        {
+            bool HasData = false;
+            size_t Index;
+            Pulsar::String Name;
+            Pulsar::FunctionDebugSymbol DebugSymbol;
+            Pulsar::SourcePosition StartPos;
+            Pulsar::SourcePosition EndPos;
+            Pulsar::List<LocalScopeInfo> LocalScopes;
+            Pulsar::List<LocalScopeInfo> OpenLocalScopes;
+        };
+
+    public:
+        DebuggableModule();
+        ~DebuggableModule() = default;
+
+        DebuggableModule(const DebuggableModule&) = default;
+        DebuggableModule(DebuggableModule&&)      = default;
+
+        DebuggableModule& operator=(const DebuggableModule&) = default;
+        DebuggableModule& operator=(DebuggableModule&&)      = default;
+
+        Pulsar::ParserNotifications GetParserNotificationsListener();
+
+        Pulsar::Module& GetModule();
+        const Pulsar::Module& GetModule() const;
+
+        std::optional<DebuggableModule::LocalScopeInfo> GetLocalScopeInfo(SourceReference sourceReference, size_t line) const;
+
+    private:
+        Pulsar::Module m_Module;
+        Pulsar::List<FunctionInfo> m_FunctionInfos;
+    };
 }
 
 #endif // _PULSARDEBUGGER_TYPES_H
