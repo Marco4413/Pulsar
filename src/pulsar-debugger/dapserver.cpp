@@ -1,5 +1,7 @@
 #include "pulsar-debugger/dapserver.h"
 
+#include "pulsar-debugger/types.h"
+
 namespace dap
 {
     DAP_IMPLEMENT_STRUCT_TYPEINFO_EXT(
@@ -22,7 +24,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
     , m_Session(session)
     , m_LogFile(logFile)
 {
-    m_Debugger.SetEventHandler([this](DebuggerContext::ThreadId threadId, Debugger::EventKind debugEv, Debugger& debugger)
+    m_Debugger.SetEventHandler([this](ThreadId threadId, Debugger::EventKind debugEv, Debugger& debugger)
     {
         switch (debugEv) {
         case Debugger::EventKind::Step: {
@@ -262,7 +264,7 @@ std::optional<Debugger::LaunchError> DAPServer::Launch(const char* scriptPath, c
 
 std::optional<dap::string> DAPServer::GetSourceContent(dap::integer sourceReference)
 {
-    auto source = m_Debugger.GetSource(static_cast<DebuggerContext::SourceReferenceId>(sourceReference));
+    auto source = m_Debugger.GetSource(static_cast<SourceReference>(sourceReference));
     if (!source) return std::nullopt;
     return source->Source.CString();
 }
@@ -270,12 +272,12 @@ std::optional<dap::string> DAPServer::GetSourceContent(dap::integer sourceRefere
 std::optional<dap::array<dap::StackFrame>> DAPServer::GetStackFrames(dap::integer threadId)
 {
     auto debuggerContext = m_Debugger.GetOrComputeContext();
-    auto debuggerThread  = debuggerContext->GetThread(static_cast<DebuggerContext::ThreadId>(threadId));
+    auto debuggerThread  = debuggerContext->GetThread(static_cast<ThreadId>(threadId));
     if (!debuggerThread) return std::nullopt;
 
     dap::array<dap::StackFrame> stackFrames;
     for (size_t i = 0; i < debuggerThread->StackFrames.Size(); ++i) {
-        DebuggerContext::FrameId frameId = debuggerThread->StackFrames[i];
+        FrameId frameId = debuggerThread->StackFrames[i];
         auto debuggerStackFrame = debuggerContext->GetStackFrame(frameId);
         if (!debuggerStackFrame) return std::nullopt;
         dap::StackFrame stackFrame;
@@ -300,7 +302,7 @@ std::optional<dap::array<dap::StackFrame>> DAPServer::GetStackFrames(dap::intege
 std::optional<dap::array<dap::Scope>> DAPServer::GetScopes(dap::integer frameId)
 {
     auto debuggerContext = m_Debugger.GetOrComputeContext();
-    auto debuggerFrame   = debuggerContext->GetStackFrame(static_cast<DebuggerContext::FrameId>(frameId));
+    auto debuggerFrame   = debuggerContext->GetStackFrame(static_cast<FrameId>(frameId));
     if (!debuggerFrame) return std::nullopt;
 
     dap::array<dap::Scope> scopes;
@@ -309,7 +311,7 @@ std::optional<dap::array<dap::Scope>> DAPServer::GetScopes(dap::integer frameId)
         if (!debuggerScope) return std::nullopt;
         dap::Scope scope;
         scope.name               = debuggerScope->Name.CString();
-        scope.variablesReference = debuggerScope->Variables;
+        scope.variablesReference = debuggerScope->VariablesReference;
         scopes.emplace_back(std::move(scope));
     }
 
@@ -319,7 +321,7 @@ std::optional<dap::array<dap::Scope>> DAPServer::GetScopes(dap::integer frameId)
 std::optional<dap::array<dap::Variable>> DAPServer::GetVariables(dap::integer variablesReference)
 {
     auto debuggerContext   = m_Debugger.GetOrComputeContext();
-    auto debuggerVariables = debuggerContext->GetVariables(static_cast<DebuggerContext::VariablesReferenceId>(variablesReference));
+    auto debuggerVariables = debuggerContext->GetVariables(static_cast<VariablesReference>(variablesReference));
     if (!debuggerVariables) return std::nullopt;
 
     dap::array<dap::Variable> variables;

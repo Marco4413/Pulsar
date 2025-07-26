@@ -8,6 +8,8 @@
 #include <pulsar/structures/hashmap.h>
 #include <pulsar/structures/list.h>
 
+#include "pulsar-debugger/types.h"
+
 namespace PulsarDebugger
 {
     // TODO: Lazy Loading
@@ -17,13 +19,6 @@ namespace PulsarDebugger
     class DebuggerContext
     {
     public:
-        using Id                = int64_t;
-        using ThreadId          = Id;
-        using FrameId           = Id;
-        using ScopeId           = Id;
-        using VariablesReferenceId = Id;
-        using SourceReferenceId    = Id;
-
         struct Thread
         {
             Pulsar::String Name;
@@ -35,15 +30,15 @@ namespace PulsarDebugger
             Pulsar::String Name;
             Pulsar::List<ScopeId> Scopes;
 
-            SourceReferenceId             SourceReference = 0;
-            std::optional<Pulsar::String> SourcePath;
-            Pulsar::SourcePosition        SourcePos;
+            PulsarDebugger::SourceReference SourceReference = NULL_REFERENCE;
+            std::optional<Pulsar::String>   SourcePath;
+            Pulsar::SourcePosition          SourcePos;
         };
 
         struct Scope
         {
             Pulsar::String Name;
-            VariablesReferenceId Variables = 0;
+            PulsarDebugger::VariablesReference VariablesReference = NULL_REFERENCE;
         };
 
         struct Variable
@@ -52,13 +47,8 @@ namespace PulsarDebugger
             Pulsar::String Type;
             Pulsar::String Value;
             // Used for Lists
-            VariablesReferenceId VariablesReference = 0;
+            PulsarDebugger::VariablesReference VariablesReference = NULL_REFERENCE;
         };
-
-    public:
-        // Thread Ids are static and can be computed outside of ::CreateThread.
-        // However, they're invalidated if the ExecutionContext is moved within memory.
-        static ThreadId ComputeThreadId(const Pulsar::ExecutionContext& thread);
 
     public:
         DebuggerContext(std::shared_ptr<const Pulsar::Module> mod);
@@ -72,9 +62,9 @@ namespace PulsarDebugger
         std::optional<Thread> GetThread(ThreadId threadId) const;
         std::optional<StackFrame> GetStackFrame(FrameId frameId) const;
         std::optional<Scope> GetScope(ScopeId scopeId) const;
-        std::optional<Pulsar::List<Variable>> GetVariables(VariablesReferenceId variablesReference) const;
+        std::optional<Pulsar::List<Variable>> GetVariables(VariablesReference variablesReference) const;
 
-        std::optional<Pulsar::SourceDebugSymbol> GetSource(SourceReferenceId sourceReference) const;
+        std::optional<Pulsar::SourceDebugSymbol> GetSource(SourceReference sourceReference) const;
 
     private:
         FrameId CreateStackFrame(const Pulsar::Frame& frame, ScopeId globalScopeId, bool isCaller, bool hasError);

@@ -8,6 +8,7 @@
 #include <pulsar/runtime.h>
 
 #include "pulsar-debugger/context.h"
+#include "pulsar-debugger/types.h"
 
 namespace PulsarDebugger
 {
@@ -38,7 +39,7 @@ namespace PulsarDebugger
         using BreakpointError = Pulsar::String;
 
         enum class EventKind { Step, Breakpoint, Continue, Pause, Done, Error };
-        using EventHandler = std::function<void(DebuggerContext::ThreadId, EventKind, Debugger&)>;
+        using EventHandler = std::function<void(ThreadId, EventKind, Debugger&)>;
 
         struct Breakpoint
         {
@@ -59,8 +60,8 @@ namespace PulsarDebugger
         void Continue();
         void Pause();
 
-        std::optional<BreakpointError> SetBreakpoint(DebuggerContext::SourceReferenceId sourceReference, size_t line);
-        void ClearBreakpoints(DebuggerContext::SourceReferenceId sourceReference);
+        std::optional<BreakpointError> SetBreakpoint(SourceReference sourceReference, size_t line);
+        void ClearBreakpoints(SourceReference sourceReference);
 
         void StepInstruction();
         void StepOver();
@@ -70,23 +71,23 @@ namespace PulsarDebugger
         void WaitForEvent();
         void ProcessEvent();
 
-        DebuggerContext::ThreadId GetMainThreadId();
+        ThreadId GetMainThreadId();
 
         void SetEventHandler(EventHandler handler);
 
-        std::optional<Pulsar::RuntimeState> GetCurrentState(DebuggerContext::ThreadId threadId);
-        std::optional<size_t> GetOrComputeCurrentLine(DebuggerContext::ThreadId threadId);
-        std::optional<size_t> GetOrComputeCurrentSourceIndex(DebuggerContext::ThreadId threadId);
+        std::optional<Pulsar::RuntimeState> GetCurrentState(ThreadId threadId);
+        std::optional<size_t> GetOrComputeCurrentLine(ThreadId threadId);
+        std::optional<size_t> GetOrComputeCurrentSourceIndex(ThreadId threadId);
 
         std::shared_ptr<const DebuggerContext> GetOrComputeContext();
-        std::optional<Pulsar::SourceDebugSymbol> GetSource(DebuggerContext::SourceReferenceId sourceReference);
+        std::optional<Pulsar::SourceDebugSymbol> GetSource(SourceReference sourceReference);
 
     private:
-        std::optional<size_t> ComputeCurrentLine(DebuggerContext::ThreadId threadId);
-        std::optional<size_t> ComputeCurrentSourceIndex(DebuggerContext::ThreadId threadId);
+        std::optional<size_t> ComputeCurrentLine(ThreadId threadId);
+        std::optional<size_t> ComputeCurrentSourceIndex(ThreadId threadId);
 
         EventKind InternalStep();
-        void DispatchEvent(DebuggerContext::ThreadId threadId, EventKind kind);
+        void DispatchEvent(ThreadId threadId, EventKind kind);
 
     private:
         EventHandler m_EventHandler;
@@ -100,7 +101,7 @@ namespace PulsarDebugger
         std::optional<size_t> m_CachedCurrentLine;
         std::optional<size_t> m_CachedCurrentSource;
 
-        DebuggerContext::ThreadId m_ThreadId;
+        ThreadId m_ThreadId;
         std::unique_ptr<Pulsar::ExecutionContext> m_Thread;
         std::shared_ptr<const DebuggerContext> m_Context;
     };

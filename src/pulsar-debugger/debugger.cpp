@@ -55,7 +55,7 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pu
     m_Module   = pulsarModule;
     m_Breakpoints.Resize(m_Module->SourceDebugSymbols.Size());
     m_Thread   = std::make_unique<Pulsar::ExecutionContext>(*m_Module);
-    m_ThreadId = DebuggerContext::ComputeThreadId(*m_Thread);
+    m_ThreadId = ComputeThreadId(*m_Thread);
 
     args.Prepend()->Value().SetString(scriptPath);
     m_Thread->GetStack().EmplaceBack().SetList(std::move(args));
@@ -83,7 +83,7 @@ void Debugger::Pause()
     DispatchEvent(m_ThreadId, EventKind::Pause);
 }
 
-std::optional<Debugger::BreakpointError> Debugger::SetBreakpoint(DebuggerContext::SourceReferenceId sourceReference, size_t line)
+std::optional<Debugger::BreakpointError> Debugger::SetBreakpoint(SourceReference sourceReference, size_t line)
 {
     DebuggerScopeLock _lock(*this);
     if (sourceReference < 0 || static_cast<size_t>(sourceReference) >= m_Breakpoints.Size())
@@ -94,7 +94,7 @@ std::optional<Debugger::BreakpointError> Debugger::SetBreakpoint(DebuggerContext
     return std::nullopt;
 }
 
-void Debugger::ClearBreakpoints(DebuggerContext::SourceReferenceId sourceReference)
+void Debugger::ClearBreakpoints(SourceReference sourceReference)
 {
     DebuggerScopeLock _lock(*this);
     if (sourceReference < 0 || static_cast<size_t>(sourceReference) >= m_Breakpoints.Size()) return;
@@ -177,7 +177,7 @@ void Debugger::ProcessEvent()
     }
 }
 
-DebuggerContext::ThreadId Debugger::GetMainThreadId()
+ThreadId Debugger::GetMainThreadId()
 {
     DebuggerScopeLock _lock(*this);
     return m_ThreadId;
@@ -188,7 +188,7 @@ void Debugger::SetEventHandler(EventHandler handler)
     m_EventHandler = handler;
 }
 
-std::optional<Pulsar::RuntimeState> Debugger::GetCurrentState(DebuggerContext::ThreadId threadId)
+std::optional<Pulsar::RuntimeState> Debugger::GetCurrentState(ThreadId threadId)
 {
     DebuggerScopeLock _lock(*this);
     if (!m_Module || !m_Thread) return std::nullopt;
@@ -196,7 +196,7 @@ std::optional<Pulsar::RuntimeState> Debugger::GetCurrentState(DebuggerContext::T
     return m_Thread->GetState();
 }
 
-std::optional<size_t> Debugger::GetOrComputeCurrentLine(DebuggerContext::ThreadId threadId)
+std::optional<size_t> Debugger::GetOrComputeCurrentLine(ThreadId threadId)
 {
     DebuggerScopeLock _lock(*this);
     if (threadId != m_ThreadId) return ComputeCurrentLine(threadId);
@@ -204,7 +204,7 @@ std::optional<size_t> Debugger::GetOrComputeCurrentLine(DebuggerContext::ThreadI
     return m_CachedCurrentLine;
 }
 
-std::optional<size_t> Debugger::GetOrComputeCurrentSourceIndex(DebuggerContext::ThreadId threadId)
+std::optional<size_t> Debugger::GetOrComputeCurrentSourceIndex(ThreadId threadId)
 {
     DebuggerScopeLock _lock(*this);
     if (threadId != m_ThreadId) return ComputeCurrentSourceIndex(threadId);
@@ -212,7 +212,7 @@ std::optional<size_t> Debugger::GetOrComputeCurrentSourceIndex(DebuggerContext::
     return m_CachedCurrentSource;
 }
 
-std::optional<size_t> Debugger::ComputeCurrentLine(DebuggerContext::ThreadId threadId)
+std::optional<size_t> Debugger::ComputeCurrentLine(ThreadId threadId)
 {
     if (!m_Module || !m_Thread) return std::nullopt;
     if (threadId != m_ThreadId || m_Thread->IsDone()) return std::nullopt;
@@ -240,7 +240,7 @@ std::optional<size_t> Debugger::ComputeCurrentLine(DebuggerContext::ThreadId thr
     return frame.Function->CodeDebugSymbols[dbgSymbolIdx].Token.SourcePos.Line;
 }
 
-std::optional<size_t> Debugger::ComputeCurrentSourceIndex(DebuggerContext::ThreadId threadId)
+std::optional<size_t> Debugger::ComputeCurrentSourceIndex(ThreadId threadId)
 {
     if (!m_Module || !m_Thread) return std::nullopt;
     if (threadId != m_ThreadId || m_Thread->IsDone()) return std::nullopt;
@@ -264,7 +264,7 @@ std::shared_ptr<const DebuggerContext> Debugger::GetOrComputeContext()
     return m_Context;
 }
 
-std::optional<Pulsar::SourceDebugSymbol> Debugger::GetSource(DebuggerContext::SourceReferenceId sourceReference)
+std::optional<Pulsar::SourceDebugSymbol> Debugger::GetSource(SourceReference sourceReference)
 {
     DebuggerScopeLock _lock(*this);
     if (!m_Module) return std::nullopt;
@@ -306,7 +306,7 @@ Debugger::EventKind Debugger::InternalStep()
     return EventKind::Step;
 }
 
-void Debugger::DispatchEvent(DebuggerContext::ThreadId threadId, EventKind kind)
+void Debugger::DispatchEvent(ThreadId threadId, EventKind kind)
 {
     if (m_EventHandler)
         m_EventHandler(threadId, kind, *this);
