@@ -42,7 +42,9 @@ namespace PulsarDebugger
         DAPServer& operator=(DAPServer&&)       = delete;
 
         std::optional<Debugger::LaunchError> Launch(const DebugLaunchRequest& launchRequest);
-        std::optional<Debugger::LaunchError> Launch(const char* scriptPath, const dap::array<dap::string>& scriptArgs, const char* entryPoint="main");
+        std::optional<Debugger::LaunchError> Launch(
+                const char* scriptPath, const dap::array<dap::string>& scriptArgs,
+                const char* entryPoint="main", bool stopOnEntry=true);
 
         std::optional<dap::array<dap::StackFrame>> GetStackFrames(dap::integer threadId);
         std::optional<dap::array<dap::Scope>> GetScopes(dap::integer frameId);

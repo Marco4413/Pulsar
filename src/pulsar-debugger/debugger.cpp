@@ -29,6 +29,9 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pu
 {
     DebuggerScopeLock _lock(*this);
 
+    m_Continue = false;
+    m_Continue.notify_all();
+
     m_DebuggableModule = nullptr;
     m_Breakpoints.Clear();
     m_ThreadId = -1;

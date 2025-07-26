@@ -242,10 +242,13 @@ std::optional<Debugger::LaunchError> DAPServer::Launch(const DebugLaunchRequest&
     return Launch(
             req.scriptPath.c_str(),
             req.scriptArgs ? *req.scriptArgs : dap::array<dap::string>{},
-            req.entryPoint ? req.entryPoint->c_str() : "main");
+            req.entryPoint ? req.entryPoint->c_str() : "main",
+            !req.stopOnEntry || *req.stopOnEntry);
 }
 
-std::optional<Debugger::LaunchError> DAPServer::Launch(const char* scriptPath, const dap::array<dap::string>& scriptArgs, const char* entryPoint)
+std::optional<Debugger::LaunchError> DAPServer::Launch(
+        const char* scriptPath, const dap::array<dap::string>& scriptArgs,
+        const char* entryPoint, bool stopOnEntry)
 {
     Pulsar::ValueList args;
     for (const auto& arg : scriptArgs)
@@ -261,7 +264,11 @@ std::optional<Debugger::LaunchError> DAPServer::Launch(const char* scriptPath, c
     ev.threadId = m_Debugger.GetMainThreadId();
     m_Session->send(ev);
 
-    this->m_Debugger.Pause();
+    if (stopOnEntry) {
+        this->m_Debugger.Pause();
+    } else {
+        this->m_Debugger.Continue();
+    }
     return std::nullopt;
 }
 
