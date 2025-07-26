@@ -2,76 +2,9 @@
 
 #include <format>
 
-#include <pulsar/lexer.h>
 #include <pulsar/structures/stringview.h>
 
-inline const char* ValueTypeToString(Pulsar::ValueType type)
-{
-    switch (type) {
-    case Pulsar::ValueType::Void:
-        return "Void";
-    case Pulsar::ValueType::Integer:
-        return "Integer";
-    case Pulsar::ValueType::Double:
-        return "Double";
-    case Pulsar::ValueType::FunctionReference:
-        return "FunctionReference";
-    case Pulsar::ValueType::NativeFunctionReference:
-        return "NativeFunctionReference";
-    case Pulsar::ValueType::List:
-        return "List";
-    case Pulsar::ValueType::String:
-        return "String";
-    case Pulsar::ValueType::Custom:
-        return "Custom";
-    default:
-        return "Unknown";
-    }
-}
-
-inline Pulsar::String ValueToString(Pulsar::Value val, bool recursive)
-{
-    switch (val.Type()) {
-    case Pulsar::ValueType::Void:
-        return "Void";
-    case Pulsar::ValueType::Integer:
-        return std::format("{}", val.AsInteger()).c_str();
-    case Pulsar::ValueType::Double:
-        return std::format("{}", val.AsDouble()).c_str();
-    case Pulsar::ValueType::FunctionReference:
-        return std::format("<&(@{})", val.AsInteger()).c_str();
-    case Pulsar::ValueType::NativeFunctionReference:
-        return std::format("<&(*@{})", val.AsInteger()).c_str();
-    case Pulsar::ValueType::List: {
-        if (!val.AsList().Front())
-            return "[]";
-
-        if (!recursive)
-            return "[...]";
-
-        Pulsar::String asString;
-        asString  = "[ ";
-
-        const auto* node = val.AsList().Front();
-        asString += ValueToString(node->Value(), recursive);
-        node = node->Next();
-
-        for (; node; node = node->Next()) {
-            asString += ", ";
-            asString += ValueToString(node->Value(), recursive);
-        }
-
-        asString += " ]";
-        return asString;
-    }
-    case Pulsar::ValueType::String:
-        return Pulsar::ToStringLiteral(val.AsString());
-    case Pulsar::ValueType::Custom:
-        return std::format("Custom(.Type={},.Data={})", val.AsCustom().Type, (void*)val.AsCustom().Data.Get()).c_str();
-    default:
-        return "Unknown";
-    }
-}
+#include "pulsar-debugger/helpers.h"
 
 namespace PulsarDebugger
 {
@@ -88,7 +21,7 @@ ThreadId DebuggerContext::CreateThread(const Pulsar::ExecutionContext& execConte
     ThreadId threadId = ComputeThreadId(execContext);
     Thread& thread = m_Threads.Emplace(threadId).Value();
 
-    ScopeId globalScopeId = CreateScope(execContext.GetGlobals(), "Globals");
+    ScopeId globalScopeId = CreateScope(execContext.GetGlobals(), "Globals", Variable::EVisibility::Visible);
 
     thread.Name = name ? std::move(*name) : Pulsar::String(std::format("Thread {}", threadId).c_str());
     for (size_t i = 1; i <= execContext.GetCallStack().Size(); ++i) {
@@ -118,9 +51,9 @@ FrameId DebuggerContext::CreateStackFrame(const Pulsar::Frame& frame, ScopeId gl
     stackFrame.Name += ")";
 
     stackFrame.Scopes.PushBack(globalScope);
-    ScopeId localScopeId = CreateScope(frame.Locals, "Locals");
+    ScopeId localScopeId = CreateScope(frame.Locals, "Locals", Variable::EVisibility::Unbound);
     stackFrame.Scopes.PushBack(localScopeId);
-    stackFrame.Scopes.PushBack(CreateScope(frame.Stack, "Stack"));
+    stackFrame.Scopes.PushBack(CreateScope(frame.Stack, "Stack", Variable::EVisibility::Visible));
 
     size_t instrIdx = frame.InstructionIndex;
     if (isCaller) { /* Caller */
@@ -150,16 +83,16 @@ FrameId DebuggerContext::CreateStackFrame(const Pulsar::Frame& frame, ScopeId gl
 
         Pulsar::HashMap<Pulsar::StringView, size_t> usedLocalNames;
 
-        size_t nameableVariablesCount = scopeInfo->Locals.Size() <= variables.Size() ? scopeInfo->Locals.Size() : variables.Size();
-        for (size_t it = 1; it <= nameableVariablesCount; ++it) {
-            size_t localIdx = nameableVariablesCount - it;
+        size_t namedVariablesCount = scopeInfo->Locals.Size() <= variables.Size() ? scopeInfo->Locals.Size() : variables.Size();
+        for (size_t it = 1; it <= namedVariablesCount; ++it) {
+            size_t localIdx = namedVariablesCount - it;
             const auto& local = scopeInfo->Locals[localIdx];
+            variables[localIdx].Name = local.Name;
             if (usedLocalNames.Find(local.Name)) {
-                // Shadowed
-                variables[localIdx].Name = "// " + local.Name;
+                variables[localIdx].Visibility = Variable::EVisibility::Shadowed;
             } else {
                 usedLocalNames.Insert(local.Name, localIdx);
-                variables[localIdx].Name = local.Name;
+                variables[localIdx].Visibility = Variable::EVisibility::Visible;
             }
         }
     }
@@ -167,7 +100,7 @@ FrameId DebuggerContext::CreateStackFrame(const Pulsar::Frame& frame, ScopeId gl
     return stackFrameId;
 }
 
-ScopeId DebuggerContext::CreateScope(const Pulsar::List<Pulsar::GlobalInstance>& globals, const char* name)
+ScopeId DebuggerContext::CreateScope(const Pulsar::List<Pulsar::GlobalInstance>& globals, const char* name, Variable::EVisibility varVisibility)
 {
     ScopeId scopeId = m_Scopes.Size();
     Scope& scope = m_Scopes.EmplaceBack();
@@ -181,14 +114,14 @@ ScopeId DebuggerContext::CreateScope(const Pulsar::List<Pulsar::GlobalInstance>&
         if (globals[i].IsConstant)
             varName += "const ";
         varName += m_DebuggableModule->GetModule().Globals[i].Name;
-        Variable var = CreateVariable(globals[i].Value, std::move(varName));
+        Variable var = CreateVariable(globals[i].Value, std::move(varName), varVisibility);
         m_Variables[scope.VariablesReference].EmplaceBack(std::move(var));
     }
 
     return scopeId;
 }
 
-ScopeId DebuggerContext::CreateScope(const Pulsar::List<Pulsar::Value>& locals, const char* name)
+ScopeId DebuggerContext::CreateScope(const Pulsar::List<Pulsar::Value>& locals, const char* name, Variable::EVisibility varVisibility)
 {
     ScopeId scopeId = m_Scopes.Size();
     Scope& scope = m_Scopes.EmplaceBack();
@@ -198,19 +131,20 @@ ScopeId DebuggerContext::CreateScope(const Pulsar::List<Pulsar::Value>& locals, 
     m_Variables.EmplaceBack();
 
     for (size_t i = 0; i < locals.Size(); ++i) {
-        Variable var = CreateVariable(locals[i], Pulsar::UIntToString(i));
+        Variable var = CreateVariable(locals[i], Pulsar::UIntToString(i), varVisibility);
         m_Variables[scope.VariablesReference].EmplaceBack(std::move(var));
     }
 
     return scopeId;
 }
 
-DebuggerContext::Variable DebuggerContext::CreateVariable(const Pulsar::Value& value, Pulsar::String&& name)
+DebuggerContext::Variable DebuggerContext::CreateVariable(const Pulsar::Value& value, Pulsar::String&& name, Variable::EVisibility visibility)
 {
     Variable variable;
-    variable.Name  = std::move(name);
-    variable.Type  = ValueTypeToString(value.Type());
-    variable.Value = ValueToString(value, false);
+    variable.Visibility = visibility;
+    variable.Name       = std::move(name);
+    variable.Type       = value.Type();
+    variable.Value      = ValueToString(value, false);
     variable.VariablesReference = NULL_REFERENCE;
 
     switch (value.Type()) {
@@ -220,7 +154,7 @@ DebuggerContext::Variable DebuggerContext::CreateVariable(const Pulsar::Value& v
 
         uint64_t idx = 0;
         for (const auto* node = value.AsList().Front(); node; node = node->Next()) {
-            Variable var = CreateVariable(node->Value(), Pulsar::UIntToString(idx++));
+            Variable var = CreateVariable(node->Value(), Pulsar::UIntToString(idx++), Variable::EVisibility::Visible);
             m_Variables[variable.VariablesReference].EmplaceBack(std::move(var));
         }
     } break;

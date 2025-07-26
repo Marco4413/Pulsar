@@ -43,9 +43,13 @@ namespace PulsarDebugger
 
         struct Variable
         {
-            Pulsar::String Name;
-            Pulsar::String Type;
-            Pulsar::String Value;
+            // TODO: Prefix all enums with 'E'
+            enum class EVisibility { Visible, Shadowed, Unbound };
+
+            EVisibility Visibility;
+            Pulsar::String    Name;
+            Pulsar::ValueType Type;
+            Pulsar::String    Value;
             // Used for Lists
             PulsarDebugger::VariablesReference VariablesReference = NULL_REFERENCE;
         };
@@ -68,10 +72,10 @@ namespace PulsarDebugger
 
     private:
         FrameId CreateStackFrame(const Pulsar::Frame& frame, ScopeId globalScopeId, bool isCaller, bool hasError);
-        ScopeId CreateScope(const Pulsar::List<Pulsar::GlobalInstance>& globals, const char* name);
-        ScopeId CreateScope(const Pulsar::List<Pulsar::Value>& locals, const char* name);
+        ScopeId CreateScope(const Pulsar::List<Pulsar::GlobalInstance>& globals, const char* name, Variable::EVisibility varVisibility);
+        ScopeId CreateScope(const Pulsar::List<Pulsar::Value>& locals, const char* name, Variable::EVisibility varVisibility);
         // Calling this function may invalidate any reference to data within m_Variables
-        Variable CreateVariable(const Pulsar::Value& value, Pulsar::String&& name);
+        Variable CreateVariable(const Pulsar::Value& value, Pulsar::String&& name, Variable::EVisibility visibility);
 
     private:
         std::shared_ptr<const DebuggableModule> m_DebuggableModule;

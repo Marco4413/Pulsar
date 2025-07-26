@@ -1,6 +1,7 @@
 #include "pulsar-debugger/dapserver.h"
 
 #include "pulsar-debugger/types.h"
+#include "pulsar-debugger/helpers.h"
 
 namespace dap
 {
@@ -327,12 +328,14 @@ std::optional<dap::array<dap::Variable>> DAPServer::GetVariables(dap::integer va
     dap::array<dap::Variable> variables;
     for (size_t i = 0; i < debuggerVariables->Size(); ++i) {
         const auto& debuggerVariable = (*debuggerVariables)[i];
-        dap::Variable var;
-        var.name               = debuggerVariable.Name.CString();
-        var.type               = debuggerVariable.Type.CString();
-        var.value              = debuggerVariable.Value.CString();
-        var.variablesReference = debuggerVariable.VariablesReference;
-        variables.emplace_back(std::move(var));
+        if (debuggerVariable.Visibility == DebuggerContext::Variable::EVisibility::Visible) {
+            dap::Variable var;
+            var.name               = debuggerVariable.Name.CString();
+            var.type               = ValueTypeToString(debuggerVariable.Type);
+            var.value              = debuggerVariable.Value.CString();
+            var.variablesReference = debuggerVariable.VariablesReference;
+            variables.emplace_back(std::move(var));
+        }
     }
 
     return variables;
