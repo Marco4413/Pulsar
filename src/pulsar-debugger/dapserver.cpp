@@ -12,7 +12,8 @@ namespace dap
             DAP_FIELD(scriptPath, "scriptPath"),
             DAP_FIELD(scriptArgs, "scriptArgs"),
             DAP_FIELD(entryPoint, "entryPoint"),
-            DAP_FIELD(stopOnEntry, "stopOnEntry"));
+            DAP_FIELD(stopOnEntry, "stopOnEntry"),
+            DAP_FIELD(showAllVariables, "showAllVariables"));
 }
 
 namespace PulsarDebugger
@@ -237,6 +238,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
 
 std::optional<Debugger::LaunchError> DAPServer::Launch(const DebugLaunchRequest& req)
 {
+    m_ShowAllVariables = req.showAllVariables && *req.showAllVariables;
     return Launch(
             req.scriptPath.c_str(),
             req.scriptArgs ? *req.scriptArgs : dap::array<dap::string>{},
@@ -328,9 +330,10 @@ std::optional<dap::array<dap::Variable>> DAPServer::GetVariables(dap::integer va
     dap::array<dap::Variable> variables;
     for (size_t i = 0; i < debuggerVariables->Size(); ++i) {
         const auto& debuggerVariable = (*debuggerVariables)[i];
-        if (debuggerVariable.Visibility == DebuggerContext::Variable::EVisibility::Visible) {
+        if (m_ShowAllVariables || debuggerVariable.Visibility == DebuggerContext::Variable::EVisibility::Visible) {
             dap::Variable var;
-            var.name               = debuggerVariable.Name.CString();
+            var.name = debuggerVariable.Visibility == DebuggerContext::Variable::EVisibility::Shadowed ? "//" : "";
+            var.name              += debuggerVariable.Name.CString();
             var.type               = ValueTypeToString(debuggerVariable.Type);
             var.value              = debuggerVariable.Value.CString();
             var.variablesReference = debuggerVariable.VariablesReference;

@@ -23,6 +23,7 @@ namespace PulsarDebugger
         dap::optional<dap::array<dap::string>> scriptArgs;
         dap::optional<dap::string> entryPoint;
         dap::optional<dap::boolean> stopOnEntry;
+        dap::optional<dap::boolean> showAllVariables;
     };
 
     class DAPServer
@@ -66,6 +67,8 @@ namespace PulsarDebugger
         std::atomic_bool m_Terminate;
         std::atomic_bool m_LinesStartAt1;
         std::atomic_bool m_ColumnsStartAt1;
+
+        std::atomic_bool m_ShowAllVariables;
 
         Session &m_Session;
         LogFile m_LogFile;
