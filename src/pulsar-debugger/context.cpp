@@ -43,11 +43,11 @@ inline Pulsar::String ValueToString(Pulsar::Value val, bool recursive)
     case Pulsar::ValueType::NativeFunctionReference:
         return std::format("<&(*@{})", val.AsInteger()).c_str();
     case Pulsar::ValueType::List: {
-        if (!recursive)
-            return "[...]";
-
         if (!val.AsList().Front())
             return "[]";
+
+        if (!recursive)
+            return "[...]";
 
         Pulsar::String asString;
         asString  = "[ ";
