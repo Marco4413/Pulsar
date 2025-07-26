@@ -48,6 +48,19 @@ namespace Pulsar
             return m_Data[m_Start+idx];
         }
 
+        bool operator==(const StringView& other) const
+        {
+            if (Length() != other.Length())
+                return false;
+            for (size_t i = 0; i < other.Length(); i++) {
+                if ((*this)[i] != other[i])
+                    return false;
+            }
+            return true;
+        }
+
+        bool operator!=(const StringView& other) const { return !(*this == other); }
+
         size_t Length() const   { return Empty() ? 0 : m_End - m_Start; }
         bool Empty() const      { return m_Start >= m_End; }
         size_t GetStart() const { return m_Start; }
@@ -60,5 +73,17 @@ namespace Pulsar
         size_t m_End = 0;
     };
 }
+
+template<>
+struct std::hash<Pulsar::StringView>
+{
+    size_t operator()(const Pulsar::StringView& strView) const
+    {
+        size_t hash = 0;
+        for (size_t i = 0; i < strView.Length(); i++)
+            hash += std::hash<char>{}(strView[i]);
+        return hash;
+    }
+};
 
 #endif // _PULSAR_STRUCTURES_STRINGVIEW_H
