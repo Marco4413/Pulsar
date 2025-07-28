@@ -93,7 +93,9 @@ std::optional<Debugger::BreakpointError> Debugger::SetBreakpoint(SourceReference
         return "Got invalid sourceReference.";
     auto& localBreakpoints = m_Breakpoints[sourceReference];
     localBreakpoints.Insert(line, Breakpoint{ .Enabled = true });
-    // TODO: Check if breakpoint is in a valid line
+    // FIXME: Breakpoints won't break on Global Producers since they're evaluated at parse-time.
+    if (!m_DebuggableModule->IsLineReachable(sourceReference, line))
+        return "Breakpoint is unreachable.";
     return std::nullopt;
 }
 

@@ -103,4 +103,23 @@ std::optional<DebuggableModule::LocalScopeInfo> DebuggableModule::GetLocalScopeI
     return std::nullopt;
 }
 
+bool DebuggableModule::IsLineReachable(SourceReference sourceReference, size_t line) const
+{
+    for (size_t i = 0; i < m_FunctionInfos.Size(); ++i) {
+        const auto& functionInfo = m_FunctionInfos[i];
+        if (functionInfo.DebugSymbol.SourceIdx != static_cast<size_t>(sourceReference))
+            continue;
+        if (line < functionInfo.StartPos.Line || line > functionInfo.EndPos.Line)
+            continue;
+
+        const auto& codeDebugSymbols = m_Module.Functions[functionInfo.Index].CodeDebugSymbols;
+        for (size_t j = 0; j < codeDebugSymbols.Size(); ++j) {
+            if (line == codeDebugSymbols[j].Token.SourcePos.Line)
+                return true;
+        }
+    }
+
+    return false;
+}
+
 }

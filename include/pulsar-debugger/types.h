@@ -63,6 +63,10 @@ namespace PulsarDebugger
         const Pulsar::Module& GetModule() const;
 
         std::optional<DebuggableModule::LocalScopeInfo> GetLocalScopeInfo(SourceReference sourceReference, size_t line) const;
+        bool IsLineReachable(SourceReference sourceReference, size_t line) const;
+
+        // TODO: This may be optimized by batching
+        // void FilterReachableLines(SourceReference sourceReference, Pulsar::List<size_t>& lines) const;
 
     private:
         Pulsar::Module m_Module;
