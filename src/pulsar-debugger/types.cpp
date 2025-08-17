@@ -5,7 +5,7 @@ namespace PulsarDebugger
 
 ThreadId ComputeThreadId(const Pulsar::ExecutionContext& thread)
 {
-    return reinterpret_cast<ThreadId>(&thread);
+    return static_cast<ThreadId>(reinterpret_cast<size_t>(&thread)) % MAX_SAFE_INTEGER;
 }
 
 DebuggableModule::DebuggableModule()

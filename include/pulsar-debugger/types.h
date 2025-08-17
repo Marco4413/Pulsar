@@ -1,6 +1,7 @@
 #ifndef _PULSARDEBUGGER_TYPES_H
 #define _PULSARDEBUGGER_TYPES_H
 
+#include <memory>
 #include <optional>
 
 #include <pulsar/parser.h>
@@ -8,6 +9,8 @@
 
 namespace PulsarDebugger
 {
+    constexpr int64_t MAX_SAFE_INTEGER = 0x1FFFFFFFFFFFFF;
+
     using Id                = int64_t;
     using ThreadId          = Id;
     using FrameId           = Id;
@@ -22,6 +25,8 @@ namespace PulsarDebugger
     // Thread Ids are based on the address of their ExecutionContext.
     // So make sure not to move it in memory to keep the ThreadId valid.
     ThreadId ComputeThreadId(const Pulsar::ExecutionContext& thread);
+
+    using SharedDebuggableModule = std::shared_ptr<const class DebuggableModule>;
 
     class DebuggableModule
     {

@@ -7,23 +7,11 @@
 namespace PulsarDebugger
 {
 
-DebuggerScopeLock::DebuggerScopeLock(Debugger &debugger)
-    : m_Lock(debugger.m_Mutex) {}
-
-void DebuggerScopeLock::Lock()
-{
-    m_Lock.lock();
-}
-
-void DebuggerScopeLock::Unlock()
-{
-    m_Lock.unlock();
-}
-
 Debugger::Debugger()
-    : m_DebuggableModule(nullptr)
-    , m_ThreadId(-1)
-    , m_Thread(nullptr) {}
+    : ILockable<std::recursive_mutex>()
+    , m_DebuggableModule(nullptr)
+    , m_MainThread(nullptr)
+{}
 
 std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pulsar::ValueList&& args, const char* entryPoint)
 {
@@ -34,8 +22,7 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pu
 
     m_DebuggableModule = nullptr;
     m_Breakpoints.Clear();
-    m_ThreadId = -1;
-    m_Thread   = nullptr;
+    m_MainThread = nullptr;
 
     Pulsar::ParseResult parseResult;
     Pulsar::Parser parser;
@@ -57,12 +44,13 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pu
 
     m_DebuggableModule = debuggableModule;
     m_Breakpoints.Resize(m_DebuggableModule->GetModule().SourceDebugSymbols.Size());
-    m_Thread   = std::make_unique<Pulsar::ExecutionContext>(m_DebuggableModule->GetModule());
-    m_ThreadId = ComputeThreadId(*m_Thread);
+
+    m_MainThread = std::make_shared<Thread>(m_DebuggableModule);
+    ThreadScopeLock _threadLock(*m_MainThread);    
 
     args.Prepend()->Value().SetString(scriptPath);
-    m_Thread->GetStack().EmplaceBack().SetList(std::move(args));
-    Pulsar::RuntimeState runtimeState = m_Thread->CallFunction(entryPoint);
+    m_MainThread->GetContext().GetStack().EmplaceBack().SetList(std::move(args));
+    Pulsar::RuntimeState runtimeState = m_MainThread->GetContext().CallFunction(entryPoint);
     if (runtimeState != Pulsar::RuntimeState::OK) {
         return LaunchError("Runtime Error: ") + Pulsar::RuntimeStateToString(runtimeState);
     }
@@ -70,20 +58,26 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pu
     return std::nullopt;
 }
 
-void Debugger::Continue()
+void Debugger::Continue(ThreadId threadId)
 {
+    // TODO: Support multiple threads
+    if (threadId != GetMainThreadId()) return;
+
     DebuggerScopeLock _lock(*this);
     m_Continue = true;
     m_Continue.notify_all();
-    DispatchEvent(m_ThreadId, EventKind::Continue);
+    DispatchEvent(GetMainThreadId(), EEventKind::Continue);
 }
 
-void Debugger::Pause()
+void Debugger::Pause(ThreadId threadId)
 {
+    // TODO: Support multiple threads
+    if (threadId != GetMainThreadId()) return;
+
     DebuggerScopeLock _lock(*this);
     m_Continue = false;
     m_Continue.notify_all();
-    DispatchEvent(m_ThreadId, EventKind::Pause);
+    DispatchEvent(GetMainThreadId(), EEventKind::Pause);
 }
 
 std::optional<Debugger::BreakpointError> Debugger::SetBreakpoint(SourceReference sourceReference, size_t line)
@@ -107,61 +101,76 @@ void Debugger::ClearBreakpoints(SourceReference sourceReference)
     localBreakpoints.Clear();
 }
 
-void Debugger::StepInstruction()
+void Debugger::StepInstruction(ThreadId threadId)
 {
     DebuggerScopeLock _lock(*this);
-    DispatchEvent(m_ThreadId, InternalStep());
+    auto thread = GetThread(threadId);
+    if (!thread) return;
+
+    DispatchEvent(threadId, StepThread(*thread));
 }
 
-void Debugger::StepOver()
+void Debugger::StepOver(ThreadId threadId)
 {
     DebuggerScopeLock _lock(*this);
-    auto initLine   = GetOrComputeCurrentLine(m_ThreadId);
-    auto initSource = GetOrComputeCurrentSourceIndex(m_ThreadId);
-    if (!initLine || !initSource) return StepInstruction();
+    auto thread = GetThread(threadId);
+    if (!thread) return;
 
-    size_t initStackSize = m_Thread->GetCallStack().Size();
+    ThreadScopeLock _threadLock(*thread);
+    auto initLine   = thread->GetOrComputeCurrentLine();
+    auto initSource = thread->GetOrComputeCurrentSourceIndex();
+    if (!initLine || !initSource) return StepInstruction(threadId);
+
+    size_t initStackSize = thread->GetContext().GetCallStack().Size();
 
     do {
-        EventKind ev = InternalStep();
-        if (ev != EventKind::Step)
-            return DispatchEvent(m_ThreadId, ev);
-    } while (m_Thread->GetCallStack().Size() > initStackSize || (GetOrComputeCurrentLine(m_ThreadId) == initLine && GetOrComputeCurrentSourceIndex(m_ThreadId) == initSource));
+        EEventKind ev = StepThread(*thread);
+        if (ev != EEventKind::Step)
+            return DispatchEvent(threadId, ev);
+    } while (thread->GetContext().GetCallStack().Size() > initStackSize || (thread->GetOrComputeCurrentLine() == initLine && thread->GetOrComputeCurrentSourceIndex() == initSource));
 
     // Send a single step event once the line was completed
-    DispatchEvent(m_ThreadId, EventKind::Step);
+    DispatchEvent(threadId, EEventKind::Step);
 }
 
-void Debugger::StepInto()
+void Debugger::StepInto(ThreadId threadId)
 {
     DebuggerScopeLock _lock(*this);
-    auto initLine   = GetOrComputeCurrentLine(m_ThreadId);
-    auto initSource = GetOrComputeCurrentSourceIndex(m_ThreadId);
-    if (!initLine || !initSource) return StepInstruction();
+    auto thread = GetThread(threadId);
+    if (!thread) return;
+
+    ThreadScopeLock _threadLock(*thread);
+    auto initLine   = thread->GetOrComputeCurrentLine();
+    auto initSource = thread->GetOrComputeCurrentSourceIndex();
+    if (!initLine || !initSource) return StepInstruction(threadId);
 
     do {
-        EventKind ev = InternalStep();
-        if (ev != EventKind::Step)
-            return DispatchEvent(m_ThreadId, ev);
-    } while (GetOrComputeCurrentLine(m_ThreadId) == initLine && GetOrComputeCurrentSourceIndex(m_ThreadId) == initSource);
+        EEventKind ev = StepThread(*thread);
+        if (ev != EEventKind::Step)
+            return DispatchEvent(threadId, ev);
+    } while (thread->GetOrComputeCurrentLine() == initLine && thread->GetOrComputeCurrentSourceIndex() == initSource);
     
     // Send a single step event once the line was completed
-    DispatchEvent(m_ThreadId, EventKind::Step);
+    DispatchEvent(threadId, EEventKind::Step);
 }
 
-void Debugger::StepOut()
+void Debugger::StepOut(ThreadId threadId)
 {
     DebuggerScopeLock _lock(*this);
-    size_t initStackSize = m_Thread->GetCallStack().Size();
+    auto thread = GetThread(threadId);
+    if (!thread) return;
+
+    ThreadScopeLock _threadLock(*thread);
+    size_t initStackSize = thread->GetContext().GetCallStack().Size();
 
     do {
-        EventKind ev = InternalStep();
-        if (ev != EventKind::Step)
-            return DispatchEvent(m_ThreadId, ev);
-    } while (m_Thread->GetCallStack().Size() >= initStackSize);
+        EEventKind ev = StepThread(*thread);
+        if (ev != EEventKind::Step)
+            return DispatchEvent(threadId, ev);
+    } while (thread->GetContext().GetCallStack().Size() >= initStackSize);
     
     // Send a single step event once the line was completed
-    DispatchEvent(m_ThreadId, EventKind::Step);
+    DispatchEvent(threadId, EEventKind::Step);
 }
 
 void Debugger::WaitForEvent()
@@ -172,12 +181,14 @@ void Debugger::WaitForEvent()
 void Debugger::ProcessEvent()
 {
     DebuggerScopeLock _lock(*this);
+    if (!m_MainThread) return;
+
     if (m_Continue) {
-        EventKind ev = InternalStep();
-        if (ev != EventKind::Step) {
+        EEventKind ev = StepThread(*m_MainThread);
+        if (ev != EEventKind::Step) {
             m_Continue = false;
             m_Continue.notify_all();
-            DispatchEvent(m_ThreadId, ev);
+            DispatchEvent(m_MainThread->GetId(), ev);
         }
     }
 }
@@ -185,133 +196,57 @@ void Debugger::ProcessEvent()
 ThreadId Debugger::GetMainThreadId()
 {
     DebuggerScopeLock _lock(*this);
-    return m_ThreadId;
+    return m_MainThread->GetId();
 }
 
 void Debugger::SetEventHandler(EventHandler handler)
 {
+    DebuggerScopeLock _lock(*this);
     m_EventHandler = handler;
 }
 
-std::optional<Pulsar::RuntimeState> Debugger::GetCurrentState(ThreadId threadId)
+SharedDebuggableModule Debugger::GetModule()
 {
     DebuggerScopeLock _lock(*this);
-    if (!m_DebuggableModule || !m_Thread) return std::nullopt;
-    if (threadId != m_ThreadId) return std::nullopt;
-    return m_Thread->GetState();
+    return m_DebuggableModule;
 }
 
-std::optional<size_t> Debugger::GetOrComputeCurrentLine(ThreadId threadId)
+std::shared_ptr<Thread> Debugger::GetThread(ThreadId threadId)
 {
-    DebuggerScopeLock _lock(*this);
-    if (threadId != m_ThreadId) return ComputeCurrentLine(threadId);
-    if (!m_CachedCurrentLine) m_CachedCurrentLine = ComputeCurrentLine(threadId);
-    return m_CachedCurrentLine;
+    if (threadId != GetMainThreadId()) return nullptr;
+    return m_MainThread;
 }
 
-std::optional<size_t> Debugger::GetOrComputeCurrentSourceIndex(ThreadId threadId)
+Debugger::EEventKind Debugger::StepThread(Thread& thread)
 {
-    DebuggerScopeLock _lock(*this);
-    if (threadId != m_ThreadId) return ComputeCurrentSourceIndex(threadId);
-    if (!m_CachedCurrentSource) m_CachedCurrentSource = ComputeCurrentSourceIndex(threadId);
-    return m_CachedCurrentSource;
-}
-
-std::optional<size_t> Debugger::ComputeCurrentLine(ThreadId threadId)
-{
-    if (!m_DebuggableModule || !m_Thread) return std::nullopt;
-    if (threadId != m_ThreadId || m_Thread->IsDone()) return std::nullopt;
-
-    const Pulsar::Frame& frame = m_Thread->CurrentFrame();
-    if (!frame.Function || !frame.Function->HasDebugSymbol())
-        return std::nullopt;
-
-    if (frame.IsNative) {
-        return frame.Function->DebugSymbol.Token.SourcePos.Line;
-    }
-
-    if (!frame.Function->HasCodeDebugSymbols())
-        return std::nullopt;
-
-    size_t instrIdx = frame.InstructionIndex;
-    if (m_Thread->GetState() != Pulsar::RuntimeState::OK) { /* Callee error */
-        if (instrIdx > 0) --instrIdx;
-    }
-
-    size_t dbgSymbolIdx;
-    if (!frame.Function->FindCodeDebugSymbolFor(instrIdx, dbgSymbolIdx))
-        return std::nullopt;
-
-    return frame.Function->CodeDebugSymbols[dbgSymbolIdx].Token.SourcePos.Line;
-}
-
-std::optional<size_t> Debugger::ComputeCurrentSourceIndex(ThreadId threadId)
-{
-    if (!m_DebuggableModule || !m_Thread) return std::nullopt;
-    if (threadId != m_ThreadId || m_Thread->IsDone()) return std::nullopt;
-
-    const Pulsar::Frame& frame = m_Thread->CurrentFrame();
-    if (!frame.Function || !frame.Function->HasDebugSymbol()) return std::nullopt;
-
-    return frame.Function->DebugSymbol.SourceIdx;
-}
-
-std::shared_ptr<const DebuggerContext> Debugger::GetOrComputeContext()
-{
-    DebuggerScopeLock _lock(*this);
-    if (!m_DebuggableModule) return nullptr;
-    if (m_Context) return m_Context;
-
-    DebuggerContext context(m_DebuggableModule);
-    context.CreateThread(*m_Thread);
-
-    m_Context = std::make_shared<const DebuggerContext>(std::move(context));
-    return m_Context;
-}
-
-std::optional<Pulsar::SourceDebugSymbol> Debugger::GetSource(SourceReference sourceReference)
-{
-    DebuggerScopeLock _lock(*this);
-    if (!m_DebuggableModule) return std::nullopt;
-    DebuggerContext shallowContext(m_DebuggableModule);
-    return shallowContext.GetSource(sourceReference);
-}
-
-Debugger::EventKind Debugger::InternalStep()
-{
-    // Invalidate context
-    m_Context = nullptr;
-    m_CachedCurrentLine = std::nullopt;
-    m_CachedCurrentSource = std::nullopt;
-
-    auto state = m_Thread->GetState();
-    if (state != Pulsar::RuntimeState::OK || m_Thread->IsDone())
-        return EventKind::Done;
-
     // These are required to not hit the same breakpoint multiple times
-    auto initLine   = ComputeCurrentLine(m_ThreadId);
-    auto initSource = ComputeCurrentSourceIndex(m_ThreadId);
+    auto initLine   = thread.GetOrComputeCurrentLine();
+    auto initSource = thread.GetOrComputeCurrentSourceIndex();
 
-    state = m_Thread->Step();
-    if (state != Pulsar::RuntimeState::OK)
-        return EventKind::Error;
-    else if (m_Thread->IsDone())
-        return EventKind::Done;
+    auto stepResult = thread.Step();
+    switch (stepResult) {
+    case Thread::EStatus::Done:
+        return EEventKind::Done;
+    case Thread::EStatus::Error:
+        return EEventKind::Error;
+    case Thread::EStatus::Step:
+        break;
+    }
 
-    auto currentSource = GetOrComputeCurrentSourceIndex(m_ThreadId);
+    auto currentSource = thread.GetOrComputeCurrentSourceIndex();
     if (currentSource && *currentSource < m_Breakpoints.Size()) {
-        auto currentLine = GetOrComputeCurrentLine(m_ThreadId);
+        auto currentLine = thread.GetOrComputeCurrentLine();
         if (currentLine && (currentLine != initLine || currentSource != initSource)) {
             const auto& localBreakpoints = m_Breakpoints[*currentSource];
             const auto* breakpoint = localBreakpoints.Find(*currentLine);
-            if (breakpoint && breakpoint->Value().Enabled) return EventKind::Breakpoint;
+            if (breakpoint && breakpoint->Value().Enabled) return EEventKind::Breakpoint;
         }
     }
 
-    return EventKind::Step;
+    return EEventKind::Step;
 }
 
-void Debugger::DispatchEvent(ThreadId threadId, EventKind kind)
+void Debugger::DispatchEvent(ThreadId threadId, EEventKind kind)
 {
     if (m_EventHandler)
         m_EventHandler(threadId, kind, *this);

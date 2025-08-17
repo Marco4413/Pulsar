@@ -8,6 +8,7 @@
 #include <dap/protocol.h>
 #include <dap/session.h>
 
+#include "pulsar-debugger/context.h"
 #include "pulsar-debugger/debugger.h"
 
 namespace PulsarDebugger
@@ -65,6 +66,9 @@ namespace PulsarDebugger
             return true;
         }
 
+        // Make sure to lock the debugger before calling this
+        std::shared_ptr<DebuggerContext> GetOrCreateContext();
+
     private:
         std::atomic_bool m_Terminate;
         std::atomic_bool m_LinesStartAt1;
@@ -75,6 +79,7 @@ namespace PulsarDebugger
         Session &m_Session;
         LogFile m_LogFile;
         Debugger m_Debugger;
+        std::shared_ptr<DebuggerContext> m_DebuggerContext;
     };
 }
 
