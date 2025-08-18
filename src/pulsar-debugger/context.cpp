@@ -91,19 +91,89 @@ std::optional<DebuggerContext::Scope> DebuggerContext::GetOrLoadScope(ScopeId sc
     return std::get<Scope>(scopeOrLazy);
 }
 
+std::optional<Pulsar::List<DebuggerContext::StackFrame>> DebuggerContext::GetOrLoadStackFrames(ThreadId threadId, size_t framesStart, size_t framesCount, size_t* totalFrames)
+{
+    DebuggerContextScopeLock _lock(*this);
+
+    // TODO: Add methods which return references to internal structs (DO NOT MAKE THEM PUBLIC)
+    const auto* foundThread = m_Threads.Find(threadId);
+    if (!foundThread) return std::nullopt;
+    const Thread& thread = foundThread->Value();
+
+    if (totalFrames) *totalFrames = thread.StackFrames.Size();
+
+    if (framesStart >= thread.StackFrames.Size())
+        return Pulsar::List<StackFrame>();
+
+    if (framesCount <= 0 || framesCount > thread.StackFrames.Size() - framesStart) {
+        framesCount = thread.StackFrames.Size() - framesStart;
+    }
+
+    Pulsar::List<StackFrame> outFrames(framesCount);
+    for (size_t i = framesStart, framesEnd = framesStart + framesCount; i < framesEnd; ++i) {
+        auto maybeFrame = GetOrLoadStackFrame(thread.StackFrames[i]);
+        if (!maybeFrame) return {};
+        outFrames.EmplaceBack(*maybeFrame);
+    }
+    return outFrames;
+}
+
+std::optional<Pulsar::List<DebuggerContext::Scope>> DebuggerContext::GetOrLoadScopes(FrameId frameId, size_t scopesStart, size_t scopesCount, size_t* totalScopes)
+{
+    DebuggerContextScopeLock _lock(*this);
+    if (frameId < 0 || static_cast<size_t>(frameId) >= m_StackFrames.Size()) return std::nullopt;
+
+    // FIXME: This creates a copy, TODO within ::GetOrLoadStackFrames() solves this.
+    auto maybeFrame = GetOrLoadStackFrame(frameId);
+    if (!maybeFrame) return std::nullopt;
+
+    const StackFrame& frame = *maybeFrame;
+    if (totalScopes) *totalScopes = frame.Scopes.Size();
+
+    if (scopesStart >= frame.Scopes.Size())
+        return Pulsar::List<Scope>();
+
+    if (scopesCount <= 0 || scopesCount > frame.Scopes.Size() - scopesStart) {
+        scopesCount = frame.Scopes.Size() - scopesStart;
+    }
+
+    Pulsar::List<Scope> outScopes(scopesCount);
+    for (size_t i = scopesStart, scopesEnd = scopesStart + scopesCount; i < scopesEnd; ++i) {
+        auto maybeScope = GetOrLoadScope(frame.Scopes[i]);
+        if (!maybeScope) return {};
+        outScopes.EmplaceBack(*maybeScope);
+    }
+    return outScopes;
+}
+
+std::optional<Pulsar::List<DebuggerContext::Variable>> DebuggerContext::GetVariables(VariablesReference variablesReference, size_t variablesStart, size_t variablesCount, size_t* totalVariables)
+{
+    DebuggerContextScopeLock _lock(*this);
+    if (variablesReference < 0 || static_cast<size_t>(variablesReference) >= m_Variables.Size()) return std::nullopt;
+
+    const Pulsar::List<Variable>& variables = m_Variables[variablesReference];
+    if (totalVariables) *totalVariables = variables.Size();
+
+    if (variablesStart >= variables.Size())
+        return Pulsar::List<Variable>();
+
+    if (variablesCount <= 0 || variablesCount > variables.Size() - variablesStart) {
+        variablesCount = variables.Size() - variablesStart;
+    }
+
+    Pulsar::List<Variable> outVariables(variablesCount);
+    for (size_t i = variablesStart, variablesEnd = variablesStart + variablesCount; i < variablesEnd; ++i) {
+        outVariables.EmplaceBack(variables[i]);
+    }
+    return outVariables;
+}
+
 std::optional<DebuggerContext::Thread> DebuggerContext::GetThread(ThreadId threadId)
 {
     DebuggerContextScopeLock _lock(*this);
     const auto* thread = m_Threads.Find(threadId);
     if (!thread) return std::nullopt;
     return thread->Value();
-}
-
-std::optional<Pulsar::List<DebuggerContext::Variable>> DebuggerContext::GetVariables(VariablesReference variablesReference)
-{
-    DebuggerContextScopeLock _lock(*this);
-    if (variablesReference < 0 || static_cast<size_t>(variablesReference) >= m_Variables.Size()) return std::nullopt;
-    return m_Variables[variablesReference];
 }
 
 std::optional<Pulsar::SourceDebugSymbol> DebuggerContext::GetSource(SourceReference sourceReference) const
@@ -151,6 +221,7 @@ std::optional<DebuggerContext::StackFrame> DebuggerContext::LoadStackFrame(Frame
     stackFrame.ThreadId  = lazyFrame.ThreadId;
     stackFrame.CallIndex = lazyFrame.CallIndex;
 
+    stackFrame.Id    = frameId;
     stackFrame.Name  = "(";
     if (frame.IsNative)
         stackFrame.Name += "*";

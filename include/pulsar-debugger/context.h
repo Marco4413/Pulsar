@@ -31,6 +31,7 @@ namespace PulsarDebugger
             PulsarDebugger::ThreadId ThreadId;
             size_t CallIndex;
 
+            FrameId Id;
             Pulsar::String Name;
             Pulsar::List<ScopeId> Scopes;
 
@@ -75,8 +76,11 @@ namespace PulsarDebugger
         std::optional<StackFrame> GetOrLoadStackFrame(FrameId frameId);
         std::optional<Scope> GetOrLoadScope(ScopeId scopeId);
 
+        std::optional<Pulsar::List<StackFrame>> GetOrLoadStackFrames(ThreadId threadId, size_t framesStart=0, size_t framesCount=0, size_t* totalFrames=nullptr);
+        std::optional<Pulsar::List<Scope>> GetOrLoadScopes(FrameId frameId, size_t scopesStart=0, size_t scopesCount=0, size_t* totalScopes=nullptr);
+        std::optional<Pulsar::List<Variable>> GetVariables(VariablesReference variablesReference, size_t variablesStart=0, size_t variablesCount=0, size_t* totalVariables=nullptr);
+
         std::optional<Thread> GetThread(ThreadId threadId);
-        std::optional<Pulsar::List<Variable>> GetVariables(VariablesReference variablesReference);
         std::optional<Pulsar::SourceDebugSymbol> GetSource(SourceReference sourceReference) const;
 
     private:

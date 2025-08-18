@@ -47,9 +47,9 @@ namespace PulsarDebugger
                 const char* scriptPath, const dap::array<dap::string>& scriptArgs,
                 const char* entryPoint="main", bool stopOnEntry=true);
 
-        std::optional<dap::array<dap::StackFrame>> GetStackFrames(dap::integer threadId);
+        std::optional<dap::array<dap::StackFrame>> GetStackFrames(dap::integer threadId, dap::integer startFrame, dap::integer levels, dap::integer* totalFrames);
         std::optional<dap::array<dap::Scope>> GetScopes(dap::integer frameId);
-        std::optional<dap::array<dap::Variable>> GetVariables(dap::integer scopeId);
+        std::optional<dap::array<dap::Variable>> GetVariables(dap::integer scopeId, dap::integer start, dap::integer count);
         std::optional<dap::string> GetSourceContent(dap::integer sourceReference);
 
         void Terminate();

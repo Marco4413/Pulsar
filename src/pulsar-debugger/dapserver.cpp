@@ -140,7 +140,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
     
     m_Session->registerHandler([this](const dap::VariablesRequest& req) -> dap::ResponseOrError<dap::VariablesResponse>
     {
-        auto variables = this->GetVariables(req.variablesReference);
+        auto variables = this->GetVariables(req.variablesReference, req.start.value(0), req.count.value(0));
         if (!variables) {
             return dap::Error("Unknown variablesReference '%d'.", int(req.variablesReference));
         }
@@ -152,12 +152,14 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
 
     m_Session->registerHandler([this](const dap::StackTraceRequest& req) -> dap::ResponseOrError<dap::StackTraceResponse>
     {
-        auto stackFrames = this->GetStackFrames(req.threadId);
+        dap::StackTraceResponse res;
+        res.totalFrames = 0;
+
+        auto stackFrames = this->GetStackFrames(req.threadId, req.startFrame.value(0), req.levels.value(0), &(*res.totalFrames));
         if (!stackFrames) {
             return dap::Error("Unknown threadId '%d'.", int(req.threadId));
         }
 
-        dap::StackTraceResponse res;
         res.stackFrames = *stackFrames;
         return res;
     });
@@ -299,30 +301,35 @@ std::optional<dap::string> DAPServer::GetSourceContent(dap::integer sourceRefere
     return source->Source.CString();
 }
 
-std::optional<dap::array<dap::StackFrame>> DAPServer::GetStackFrames(dap::integer threadId)
+std::optional<dap::array<dap::StackFrame>> DAPServer::GetStackFrames(dap::integer threadId, dap::integer startFrame, dap::integer levels, dap::integer* _totalFrames)
 {
     DebuggerScopeLock _lock(m_Debugger);
     auto debuggerContext = GetOrCreateContext();
-    auto debuggerThread  = debuggerContext->GetThread(threadId);
-    if (!debuggerThread) return std::nullopt;
+    size_t totalFrames = 0;
+    auto debuggerStackFrames = debuggerContext->GetOrLoadStackFrames(
+            threadId,
+            startFrame >= 0 ? static_cast<size_t>(startFrame) : 0,
+            levels     >= 0 ? static_cast<size_t>(levels)     : 0,
+            &totalFrames);
+    if (!debuggerStackFrames) return std::nullopt;
+
+    if (_totalFrames) *_totalFrames = static_cast<dap::integer>(totalFrames);
 
     dap::array<dap::StackFrame> stackFrames;
-    for (size_t i = 0; i < debuggerThread->StackFrames.Size(); ++i) {
-        FrameId frameId = debuggerThread->StackFrames[i];
-        auto debuggerStackFrame = debuggerContext->GetOrLoadStackFrame(frameId);
-        if (!debuggerStackFrame) return std::nullopt;
+    for (size_t i = 0; i < debuggerStackFrames->Size(); ++i) {
+        const auto& debuggerStackFrame = (*debuggerStackFrames)[i];
         dap::StackFrame stackFrame;
 
         dap::Source source;
-        source.sourceReference = debuggerStackFrame->SourceReference;
-        if (debuggerStackFrame->SourcePath)
-            source.path = debuggerStackFrame->SourcePath->CString();
+        source.sourceReference = debuggerStackFrame.SourceReference;
+        if (debuggerStackFrame.SourcePath)
+            source.path = debuggerStackFrame.SourcePath->CString();
         stackFrame.source = source;
 
-        stackFrame.id   = frameId;
-        stackFrame.name = debuggerStackFrame->Name.CString();
-        stackFrame.column = debuggerStackFrame->SourcePos.Char+(m_ColumnsStartAt1 ? 1 : 0);
-        stackFrame.line   = debuggerStackFrame->SourcePos.Line+(m_LinesStartAt1   ? 1 : 0);
+        stackFrame.id   = debuggerStackFrame.Id;
+        stackFrame.name = debuggerStackFrame.Name.CString();
+        stackFrame.column = debuggerStackFrame.SourcePos.Char+(m_ColumnsStartAt1 ? 1 : 0);
+        stackFrame.line   = debuggerStackFrame.SourcePos.Line+(m_LinesStartAt1   ? 1 : 0);
 
         stackFrames.emplace_back(std::move(stackFrame));
     }
@@ -334,26 +341,29 @@ std::optional<dap::array<dap::Scope>> DAPServer::GetScopes(dap::integer frameId)
 {
     DebuggerScopeLock _lock(m_Debugger);
     auto debuggerContext = GetOrCreateContext();
-    auto debuggerFrame   = debuggerContext->GetOrLoadStackFrame(frameId);
-    if (!debuggerFrame) return std::nullopt;
+    auto debuggerScopes  = debuggerContext->GetOrLoadScopes(frameId);
+    if (!debuggerScopes) return std::nullopt;
 
     dap::array<dap::Scope> scopes;
-    for (size_t i = 0; i < debuggerFrame->Scopes.Size(); ++i) {
-        auto debuggerScope = debuggerContext->GetOrLoadScope(debuggerFrame->Scopes[i]);
-        if (!debuggerScope) return std::nullopt;
+    for (size_t i = 0; i < debuggerScopes->Size(); ++i) {
+        const auto& debuggerScope = (*debuggerScopes)[i];
         dap::Scope scope;
-        scope.name               = debuggerScope->Name.CString();
-        scope.variablesReference = debuggerScope->VariablesReference;
+        scope.name               = debuggerScope.Name.CString();
+        scope.variablesReference = debuggerScope.VariablesReference;
         scopes.emplace_back(std::move(scope));
     }
 
     return scopes;
 }
 
-std::optional<dap::array<dap::Variable>> DAPServer::GetVariables(dap::integer variablesReference)
+std::optional<dap::array<dap::Variable>> DAPServer::GetVariables(dap::integer variablesReference, dap::integer start, dap::integer count)
 {
     auto debuggerContext   = GetOrCreateContext();
-    auto debuggerVariables = debuggerContext->GetVariables(variablesReference);
+    auto debuggerVariables = debuggerContext->GetVariables(
+            variablesReference,
+            start >= 0 ? static_cast<size_t>(start) : 0,
+            count >= 0 ? static_cast<size_t>(count) : 0,
+            nullptr);
     if (!debuggerVariables) return std::nullopt;
 
     dap::array<dap::Variable> variables;
