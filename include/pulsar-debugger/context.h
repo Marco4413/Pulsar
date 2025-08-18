@@ -57,29 +57,6 @@ namespace PulsarDebugger
             PulsarDebugger::VariablesReference VariablesReference = NULL_REFERENCE;
         };
 
-        struct LazyStackFrame
-        {
-            PulsarDebugger::ThreadId ThreadId;
-            size_t CallIndex;
-            int64_t InstructionOffset;
-            ScopeId GlobalScopeId;
-        };
-
-        using StackFrameOrLazy = std::variant<StackFrame, LazyStackFrame>;
-
-        struct LazyScope
-        {
-            enum class EKind { Globals, Locals, Stack };
-
-            // If Kind == ::Globals, it's a ThreadId, otherwise it's a FrameId
-            Id ThreadOrFrameId;
-            EKind Kind;
-        };
-
-        // static_assert(sizeof(LazyScope) <= sizeof(Scope));
-
-        using ScopeOrLazy = std::variant<Scope, LazyScope>;
-
     public:
         static std::optional<Pulsar::SourceDebugSymbol> GetSourceFromModule(
                 const DebuggableModule& mod, SourceReference sourceReference);
@@ -101,6 +78,28 @@ namespace PulsarDebugger
         std::optional<Thread> GetThread(ThreadId threadId);
         std::optional<Pulsar::List<Variable>> GetVariables(VariablesReference variablesReference);
         std::optional<Pulsar::SourceDebugSymbol> GetSource(SourceReference sourceReference) const;
+
+    private:
+        struct LazyStackFrame
+        {
+            PulsarDebugger::ThreadId ThreadId;
+            size_t CallIndex;
+            int64_t InstructionOffset;
+            ScopeId GlobalScopeId;
+        };
+
+        using StackFrameOrLazy = std::variant<StackFrame, LazyStackFrame>;
+
+        struct LazyScope
+        {
+            enum class EKind { Globals, Locals, Stack };
+
+            // If Kind == ::Globals, it's a ThreadId, otherwise it's a FrameId
+            Id ThreadOrFrameId;
+            EKind Kind;
+        };
+
+        using ScopeOrLazy = std::variant<Scope, LazyScope>;
 
     private:
         FrameId CreateLazyStackFrame(ThreadId threadId, size_t callIndex, ScopeId globalScopeId, bool isCaller, bool hasError);
