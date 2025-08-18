@@ -2,6 +2,7 @@
 #define _PULSARDEBUGGER_DAPSERVER_H
 
 #include <atomic>
+#include <format>
 #include <optional>
 
 #include <dap/io.h>
@@ -57,12 +58,11 @@ namespace PulsarDebugger
 
     private:
         template<typename ...Args>
-        bool LogF(const char* msg, Args&&... args) const
+        bool LogF(const std::format_string<Args...> fmt, Args&&... args) const
         {
             if (!m_LogFile) return false;
-            dap::writef(m_LogFile, "\n");
-            dap::writef(m_LogFile, msg, std::forward<Args>(args)...);
-            dap::writef(m_LogFile, "\n");
+            auto formattedMessage = std::format(fmt, std::forward<Args>(args)...);
+            dap::writef(m_LogFile, "\n%s\n", formattedMessage.c_str());
             return true;
         }
 

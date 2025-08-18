@@ -82,7 +82,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
 
     m_Session->onError([this](const char* errorMessage)
     {
-        this->LogF("[Session Error]: %s\n", errorMessage);
+        this->LogF("[Session Error]: {}\n", errorMessage);
         // this->Terminate();
     });
 
@@ -275,11 +275,11 @@ std::optional<Debugger::LaunchError> DAPServer::Launch(
     for (const auto& arg : scriptArgs)
         args.Append()->Value().SetString(arg.c_str());
 
-    LogF("Launching (%s) in '%s'.\n", entryPoint, scriptPath);
+    LogF("Launching ({}) in '{}'.\n", entryPoint, scriptPath);
     auto launchError = m_Debugger.Launch(scriptPath, std::move(args), entryPoint);
     if (launchError) return launchError;
 
-    LogF("Launched (%s) in '%s'.\n", entryPoint, scriptPath);
+    LogF("Launched ({}) in '{}'.\n", entryPoint, scriptPath);
     dap::ThreadEvent ev;
     ev.reason   = "started";
     ev.threadId = m_Debugger.GetMainThreadId();
