@@ -11,7 +11,7 @@ Debugger::Debugger()
     : ILockable<std::recursive_mutex>()
     , m_DebuggableModule(nullptr)
     , m_ThreadsWaitingToContinue(0)
-    , m_MainThread{ .Thread = nullptr }
+    , m_MainThread{ .Continue = false, .Thread = nullptr }
 {}
 
 std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pulsar::ValueList&& args, const char* entryPoint)

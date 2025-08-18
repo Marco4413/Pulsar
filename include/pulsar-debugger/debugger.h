@@ -73,7 +73,7 @@ namespace PulsarDebugger
         struct TrackedThread
         {
             bool Continue;
-            std::shared_ptr<Thread> Thread;
+            std::shared_ptr<PulsarDebugger::Thread> Thread;
         };
 
     private:
