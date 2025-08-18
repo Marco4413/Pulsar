@@ -1,5 +1,7 @@
 #include "pulsar-debugger/types.h"
 
+#include <filesystem>
+
 namespace PulsarDebugger
 {
 
@@ -141,6 +143,19 @@ std::optional<Pulsar::String> DebuggableModule::GetSourceContent(SourceReference
     if (sourceReference < 0 || static_cast<size_t>(sourceReference) >= m_Module.SourceDebugSymbols.Size())
         return std::nullopt;
     return m_Module.SourceDebugSymbols[sourceReference].Source;
+}
+
+SourceReference DebuggableModule::FindSourceReferenceForPath(const char* path) const
+{
+    std::filesystem::path pathToSearch(path);
+    for (size_t uSourceReference = 0; uSourceReference < m_Module.SourceDebugSymbols.Size(); ++uSourceReference) {
+        std::filesystem::path candidatePath(m_Module.SourceDebugSymbols[uSourceReference].Path.CString());
+
+        std::error_code ec;
+        if (std::filesystem::equivalent(pathToSearch, candidatePath, ec) && !ec)
+            return static_cast<SourceReference>(uSourceReference);
+    }
+    return NULL_REFERENCE;
 }
 
 }

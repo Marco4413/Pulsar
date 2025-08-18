@@ -166,28 +166,54 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
 
     m_Session->registerHandler([this](const dap::SetBreakpointsRequest& req) -> dap::ResponseOrError<dap::SetBreakpointsResponse>
     {
-        if (!req.source.sourceReference) {
-            return dap::Error("Only source.sourceReference is supported for SetBreakpointsRequest.");
+        auto debuggableModule = this->m_Debugger.GetModule();
+        SourceReference sourceReference = req.source.sourceReference.value(NULL_REFERENCE);
+        if (!req.source.sourceReference && req.source.path) {
+            if (debuggableModule) {
+                sourceReference = debuggableModule->FindSourceReferenceForPath(req.source.path->c_str());
+            }
         }
 
         dap::SetBreakpointsResponse res;
-        this->m_Debugger.ClearBreakpoints(*req.source.sourceReference);
-        
-        if (req.breakpoints) {
-            res.breakpoints.resize(req.breakpoints->size());
+        if (sourceReference == NULL_REFERENCE) {
+            if (req.breakpoints) {
+                res.breakpoints.resize(req.breakpoints->size());
+    
+                for (size_t i = 0; i < req.breakpoints->size(); ++i) {
+                    auto& resBreakpoint = res.breakpoints[i];
+                    resBreakpoint.verified = false;
+                    resBreakpoint.message  = "Source not loaded.";
+                }
+            }
+        } else {
+            this->m_Debugger.ClearBreakpoints(sourceReference);
 
-            for (size_t i = 0; i < req.breakpoints->size(); ++i) {
-                const auto& reqBreakpoint = (*req.breakpoints)[i];
-                auto& resBreakpoint = res.breakpoints[i];
-                
-                auto breakpointError = this->m_Debugger.SetBreakpoint(
-                        *req.source.sourceReference,
-                        this->m_LinesStartAt1
-                            ? static_cast<size_t>(reqBreakpoint.line-1)
-                            : static_cast<size_t>(reqBreakpoint.line));
-                resBreakpoint.verified = !breakpointError;
-                if (!resBreakpoint.verified)
-                    resBreakpoint.message = breakpointError->CString();
+            if (req.breakpoints) {
+                res.breakpoints.resize(req.breakpoints->size());
+    
+                for (size_t i = 0; i < req.breakpoints->size(); ++i) {
+                    const auto& reqBreakpoint = (*req.breakpoints)[i];
+                    auto& resBreakpoint = res.breakpoints[i];
+    
+                    if (debuggableModule) {
+                        dap::Source breakpointSource;
+                        breakpointSource.path = debuggableModule->GetSourcePath(sourceReference)->CString();
+                        breakpointSource.sourceReference = sourceReference;
+                        resBreakpoint.source = std::move(breakpointSource);
+                    }
+    
+                    auto breakpointError = this->m_Debugger.SetBreakpoint(
+                            sourceReference,
+                            this->m_LinesStartAt1
+                                ? static_cast<size_t>(reqBreakpoint.line-1)
+                                : static_cast<size_t>(reqBreakpoint.line));
+    
+                    resBreakpoint.verified = !breakpointError;
+                    if (!resBreakpoint.verified) {
+                        resBreakpoint.reason  = "failed";
+                        resBreakpoint.message = breakpointError->CString();
+                    }
+                }
             }
         }
 
@@ -231,13 +257,31 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
 
     m_Session->registerHandler([this](const dap::SourceRequest& req) -> dap::ResponseOrError<dap::SourceResponse>
     {
-        auto source = this->GetSourceContent(req.sourceReference);
+        auto debuggableModule = this->m_Debugger.GetModule();
+        if (!debuggableModule) {
+            return dap::Error("No module is being debugged.");
+        }
+
+        SourceReference sourceReference = req.sourceReference;
+        if (req.source) {
+            if (req.source->sourceReference) {
+                sourceReference = *req.source->sourceReference;
+            } else if (req.source->path) {
+                sourceReference = debuggableModule->FindSourceReferenceForPath(req.source->path->c_str());
+            }
+        }
+
+        if (sourceReference == NULL_REFERENCE) {
+            return dap::Error("Could not find source.");
+        }
+
+        auto source = debuggableModule->GetSourceContent(sourceReference);
         if (!source) {
-            return dap::Error("Unknown source reference '%d'.", int(req.sourceReference));
+            return dap::Error("Unknown source reference '%d'.", int(sourceReference));
         }
 
         dap::SourceResponse res;
-        res.content = std::move(*source);
+        res.content = source->CString();
         return res;
     });
 
