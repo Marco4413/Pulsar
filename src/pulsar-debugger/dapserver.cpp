@@ -296,9 +296,10 @@ std::optional<Debugger::LaunchError> DAPServer::Launch(
 std::optional<dap::string> DAPServer::GetSourceContent(dap::integer sourceReference)
 {
     auto debuggableModule = m_Debugger.GetModule();
-    auto source = DebuggerContext::GetSourceFromModule(*debuggableModule, sourceReference);;
+    if (!debuggableModule) return std::nullopt;
+    auto source = debuggableModule->GetSourceContent(sourceReference);
     if (!source) return std::nullopt;
-    return source->Source.CString();
+    return source->CString();
 }
 
 std::optional<dap::array<dap::StackFrame>> DAPServer::GetStackFrames(dap::integer threadId, dap::integer startFrame, dap::integer levels, dap::integer* _totalFrames)

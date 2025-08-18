@@ -59,10 +59,6 @@ namespace PulsarDebugger
         };
 
     public:
-        static std::optional<Pulsar::SourceDebugSymbol> GetSourceFromModule(
-                const DebuggableModule& mod, SourceReference sourceReference);
-
-    public:
         DebuggerContext(Debugger& debugger);
         ~DebuggerContext() = default;
 

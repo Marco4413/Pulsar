@@ -9,12 +9,6 @@
 namespace PulsarDebugger
 {
 
-std::optional<Pulsar::SourceDebugSymbol> DebuggerContext::GetSourceFromModule(const DebuggableModule& mod, SourceReference sourceReference)
-{
-    if (sourceReference < 0 || static_cast<size_t>(sourceReference) >= mod.GetModule().SourceDebugSymbols.Size()) return std::nullopt;
-    return mod.GetModule().SourceDebugSymbols[sourceReference];
-}
-
 DebuggerContext::DebuggerContext(Debugger& debugger)
     : m_Debugger(debugger)
     , m_DebuggableModule(nullptr)
@@ -180,7 +174,7 @@ std::optional<Pulsar::SourceDebugSymbol> DebuggerContext::GetSource(SourceRefere
 {
     // No need to lock since module is constant
     if (!m_DebuggableModule) return std::nullopt;
-    return GetSourceFromModule(*m_DebuggableModule, sourceReference);
+    return m_DebuggableModule->GetSource(sourceReference);
 }
 
 FrameId DebuggerContext::CreateLazyStackFrame(ThreadId threadId, size_t callIndex, ScopeId globalScopeId, bool isCaller, bool hasError)

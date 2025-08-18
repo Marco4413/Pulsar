@@ -70,6 +70,10 @@ namespace PulsarDebugger
         std::optional<DebuggableModule::LocalScopeInfo> GetLocalScopeInfo(SourceReference sourceReference, size_t line) const;
         bool IsLineReachable(SourceReference sourceReference, size_t line) const;
 
+        std::optional<Pulsar::SourceDebugSymbol> GetSource(SourceReference sourceReference) const;
+        std::optional<Pulsar::String> GetSourcePath(SourceReference sourceReference) const;
+        std::optional<Pulsar::String> GetSourceContent(SourceReference sourceReference) const;
+
         // TODO: This may be optimized by batching
         // void FilterReachableLines(SourceReference sourceReference, Pulsar::List<size_t>& lines) const;
 

@@ -122,4 +122,25 @@ bool DebuggableModule::IsLineReachable(SourceReference sourceReference, size_t l
     return false;
 }
 
+std::optional<Pulsar::SourceDebugSymbol> DebuggableModule::GetSource(SourceReference sourceReference) const
+{
+    if (sourceReference < 0 || static_cast<size_t>(sourceReference) >= m_Module.SourceDebugSymbols.Size())
+        return std::nullopt;
+    return m_Module.SourceDebugSymbols[sourceReference];
+}
+
+std::optional<Pulsar::String> DebuggableModule::GetSourcePath(SourceReference sourceReference) const
+{
+    if (sourceReference < 0 || static_cast<size_t>(sourceReference) >= m_Module.SourceDebugSymbols.Size())
+        return std::nullopt;
+    return m_Module.SourceDebugSymbols[sourceReference].Path;
+}
+
+std::optional<Pulsar::String> DebuggableModule::GetSourceContent(SourceReference sourceReference) const
+{
+    if (sourceReference < 0 || static_cast<size_t>(sourceReference) >= m_Module.SourceDebugSymbols.Size())
+        return std::nullopt;
+    return m_Module.SourceDebugSymbols[sourceReference].Source;
+}
+
 }
