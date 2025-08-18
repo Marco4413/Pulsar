@@ -3,6 +3,8 @@
 #include "pulsar-debugger/types.h"
 #include "pulsar-debugger/helpers.h"
 
+#include <format>
+
 namespace dap
 {
     DAP_IMPLEMENT_STRUCT_TYPEINFO_EXT(
@@ -107,10 +109,20 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
     m_Session->registerHandler([this](const dap::ThreadsRequest&)
     {
         dap::ThreadsResponse res;
-        dap::Thread thread;
-        thread.id   = this->m_Debugger.GetMainThreadId();
-        thread.name = "MainThread";
-        res.threads.push_back(thread);
+        ThreadId mainThreadId = m_Debugger.GetMainThreadId();
+        this->m_Debugger.ForEachThread([&res, mainThreadId](std::shared_ptr<Thread> thread)
+        {
+            ThreadId threadId = thread->GetId();
+
+            dap::Thread dapThread;
+            dapThread.id = threadId;
+            if (threadId != mainThreadId) {
+                dapThread.name = std::format("Thread-{}", thread->GetId());
+            } else {
+                dapThread.name = std::format("MainThread ({})", thread->GetId());
+            }
+            res.threads.push_back(dapThread);
+        });
         return res;
     });
 

@@ -24,7 +24,17 @@ DebuggerContext::DebuggerContext(Debugger& debugger)
 
     DebuggerScopeLock _lock(m_Debugger);
     m_DebuggableModule = debugger.GetModule();
-    RegisterThread(m_Debugger.GetMainThreadId(), "MainThread");
+
+    ThreadId mainThreadId = m_Debugger.GetMainThreadId();
+    m_Debugger.ForEachThread([this, mainThreadId](std::shared_ptr<PulsarDebugger::Thread> thread)
+    {
+        ThreadId threadId = thread->GetId();
+        if (threadId != mainThreadId) {
+            RegisterThread(threadId, std::format("Thread-{}", thread->GetId()).c_str());
+        } else {
+            RegisterThread(threadId, std::format("MainThread ({})", thread->GetId()).c_str());
+        }
+    });
 }
 
 bool DebuggerContext::RegisterThread(ThreadId threadId, std::optional<Pulsar::String> name)

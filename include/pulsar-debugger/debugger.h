@@ -63,20 +63,35 @@ namespace PulsarDebugger
         SharedDebuggableModule GetModule();
         // If the returned pointer is nullptr the Thread does not exist
         std::shared_ptr<Thread> GetThread(ThreadId threadId);
+        void ForEachThread(std::function<void(std::shared_ptr<Thread>)> fn);
 
     private:
+        // A TrackedThread wraps a Thread with additional
+        //  information required by the debugger (like execution flags).
+        // Anything that attempts to read/write data stored in this struct
+        //  MUST lock the Debugger that owns it first.
+        struct TrackedThread
+        {
+            bool Continue;
+            std::shared_ptr<Thread> Thread;
+        };
+
+    private:
+        TrackedThread* GetTrackedThread(ThreadId threadId);
+        void ForEachTrackedThread(std::function<void(TrackedThread&)> fn);
+
         EEventKind StepThread(Thread& thread);
         void DispatchEvent(ThreadId threadId, EEventKind kind);
 
     private:
         EventHandler m_EventHandler;
-        std::atomic_bool m_Continue;
 
         SharedDebuggableModule m_DebuggableModule;
         // TODO: Support multiple reads at the same time. Will be required when multiple threads are supported.
         Pulsar::List<Pulsar::HashMap<size_t, Breakpoint>> m_Breakpoints;
 
-        std::shared_ptr<Thread> m_MainThread;
+        std::atomic_size_t m_ThreadsWaitingToContinue;
+        TrackedThread m_MainThread;
     };
 }
 

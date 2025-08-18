@@ -10,19 +10,20 @@ namespace PulsarDebugger
 Debugger::Debugger()
     : ILockable<std::recursive_mutex>()
     , m_DebuggableModule(nullptr)
-    , m_MainThread(nullptr)
+    , m_ThreadsWaitingToContinue(0)
+    , m_MainThread{ .Thread = nullptr }
 {}
 
 std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pulsar::ValueList&& args, const char* entryPoint)
 {
     DebuggerScopeLock _lock(*this);
 
-    m_Continue = false;
-    m_Continue.notify_all();
+    m_ThreadsWaitingToContinue = 0;
+    m_ThreadsWaitingToContinue.notify_all();
 
     m_DebuggableModule = nullptr;
     m_Breakpoints.Clear();
-    m_MainThread = nullptr;
+    m_MainThread = { .Continue = false, .Thread = nullptr };
 
     Pulsar::ParseResult parseResult;
     Pulsar::Parser parser;
@@ -45,12 +46,12 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pu
     m_DebuggableModule = debuggableModule;
     m_Breakpoints.Resize(m_DebuggableModule->GetModule().SourceDebugSymbols.Size());
 
-    m_MainThread = std::make_shared<Thread>(m_DebuggableModule);
-    ThreadScopeLock _threadLock(*m_MainThread);    
+    m_MainThread.Thread = std::make_shared<Thread>(m_DebuggableModule);
+    ThreadScopeLock _threadLock(*m_MainThread.Thread);    
 
     args.Prepend()->Value().SetString(scriptPath);
-    m_MainThread->GetContext().GetStack().EmplaceBack().SetList(std::move(args));
-    Pulsar::RuntimeState runtimeState = m_MainThread->GetContext().CallFunction(entryPoint);
+    m_MainThread.Thread->GetContext().GetStack().EmplaceBack().SetList(std::move(args));
+    Pulsar::RuntimeState runtimeState = m_MainThread.Thread->GetContext().CallFunction(entryPoint);
     if (runtimeState != Pulsar::RuntimeState::OK) {
         return LaunchError("Runtime Error: ") + Pulsar::RuntimeStateToString(runtimeState);
     }
@@ -60,24 +61,32 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pu
 
 void Debugger::Continue(ThreadId threadId)
 {
-    // TODO: Support multiple threads
-    if (threadId != GetMainThreadId()) return;
-
     DebuggerScopeLock _lock(*this);
-    m_Continue = true;
-    m_Continue.notify_all();
-    DispatchEvent(GetMainThreadId(), EEventKind::Continue);
+    TrackedThread* trackedThread = GetTrackedThread(threadId);
+    if (!trackedThread) return;
+
+    if (!trackedThread->Continue) {
+        trackedThread->Continue = true;
+        m_ThreadsWaitingToContinue.fetch_add(1);
+        m_ThreadsWaitingToContinue.notify_all();
+    }
+
+    DispatchEvent(threadId, EEventKind::Continue);
 }
 
 void Debugger::Pause(ThreadId threadId)
 {
-    // TODO: Support multiple threads
-    if (threadId != GetMainThreadId()) return;
-
     DebuggerScopeLock _lock(*this);
-    m_Continue = false;
-    m_Continue.notify_all();
-    DispatchEvent(GetMainThreadId(), EEventKind::Pause);
+    TrackedThread* trackedThread = GetTrackedThread(threadId);
+    if (!trackedThread) return;
+
+    if (trackedThread->Continue) {
+        trackedThread->Continue = false;
+        m_ThreadsWaitingToContinue.fetch_sub(1);
+        m_ThreadsWaitingToContinue.notify_all();
+    }
+
+    DispatchEvent(threadId, EEventKind::Pause);
 }
 
 std::optional<Debugger::BreakpointError> Debugger::SetBreakpoint(SourceReference sourceReference, size_t line)
@@ -175,28 +184,31 @@ void Debugger::StepOut(ThreadId threadId)
 
 void Debugger::WaitForEvent()
 {
-    while (!m_Continue) m_Continue.wait(false);
+    while (m_ThreadsWaitingToContinue.load() <= 0)
+        m_ThreadsWaitingToContinue.wait(0);
 }
 
 void Debugger::ProcessEvent()
 {
     DebuggerScopeLock _lock(*this);
-    if (!m_MainThread) return;
-
-    if (m_Continue) {
-        EEventKind ev = StepThread(*m_MainThread);
+    ForEachTrackedThread([this](TrackedThread& trackedThread)
+    {
+        if (!trackedThread.Continue) return;
+        EEventKind ev = StepThread(*trackedThread.Thread);
         if (ev != EEventKind::Step) {
-            m_Continue = false;
-            m_Continue.notify_all();
-            DispatchEvent(m_MainThread->GetId(), ev);
+            trackedThread.Continue = false;
+            m_ThreadsWaitingToContinue.fetch_sub(1);
+            m_ThreadsWaitingToContinue.notify_all();
+            DispatchEvent(trackedThread.Thread->GetId(), ev);
         }
-    }
+    });
 }
 
 ThreadId Debugger::GetMainThreadId()
 {
     DebuggerScopeLock _lock(*this);
-    return m_MainThread->GetId();
+    if (!m_MainThread.Thread) return 0;
+    return m_MainThread.Thread->GetId();
 }
 
 void Debugger::SetEventHandler(EventHandler handler)
@@ -213,8 +225,30 @@ SharedDebuggableModule Debugger::GetModule()
 
 std::shared_ptr<Thread> Debugger::GetThread(ThreadId threadId)
 {
-    if (threadId != GetMainThreadId()) return nullptr;
-    return m_MainThread;
+    DebuggerScopeLock _lock(*this);
+    TrackedThread* trackedThread = GetTrackedThread(threadId);
+    return trackedThread ? trackedThread->Thread : nullptr;
+}
+
+void Debugger::ForEachThread(std::function<void(std::shared_ptr<Thread>)> fn)
+{
+    DebuggerScopeLock _lock(*this);
+    ForEachTrackedThread([fn = std::move(fn)](TrackedThread& trackedThread)
+    {
+        fn(trackedThread.Thread);
+    });
+}
+
+Debugger::TrackedThread* Debugger::GetTrackedThread(ThreadId threadId)
+{
+    return threadId ==  GetMainThreadId() && m_MainThread.Thread
+        ? &m_MainThread : nullptr;
+}
+
+void Debugger::ForEachTrackedThread(std::function<void(TrackedThread&)> fn)
+{
+    if (m_MainThread.Thread)
+        fn(m_MainThread);
 }
 
 Debugger::EEventKind Debugger::StepThread(Thread& thread)
