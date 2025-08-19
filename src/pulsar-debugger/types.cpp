@@ -84,7 +84,7 @@ const Pulsar::Module& DebuggableModule::GetModule() const
     return m_Module;
 }
 
-std::optional<DebuggableModule::LocalScopeInfo> DebuggableModule::GetLocalScopeInfo(SourceReference sourceReference, size_t line) const
+const DebuggableModule::LocalScopeInfo* DebuggableModule::GetLocalScopeInfo(SourceReference sourceReference, size_t line) const
 {
     for (size_t i = 0; i < m_FunctionInfos.Size(); ++i) {
         const auto& functionInfo = m_FunctionInfos[i];
@@ -96,13 +96,13 @@ std::optional<DebuggableModule::LocalScopeInfo> DebuggableModule::GetLocalScopeI
                 const auto& localScope = functionInfo.LocalScopes[j];
                 if (   line >= localScope.StartPos.Line
                     && line <= localScope.EndPos.Line
-                ) return localScope;
+                ) return &localScope;
             }
 
             break; // fail, didn't find a local scope
         }
     }
-    return std::nullopt;
+    return nullptr;
 }
 
 bool DebuggableModule::IsLineReachable(SourceReference sourceReference, size_t line) const
@@ -124,25 +124,25 @@ bool DebuggableModule::IsLineReachable(SourceReference sourceReference, size_t l
     return false;
 }
 
-std::optional<Pulsar::SourceDebugSymbol> DebuggableModule::GetSource(SourceReference sourceReference) const
+const Pulsar::SourceDebugSymbol* DebuggableModule::GetSource(SourceReference sourceReference) const
 {
     if (sourceReference < 0 || static_cast<size_t>(sourceReference) >= m_Module.SourceDebugSymbols.Size())
-        return std::nullopt;
-    return m_Module.SourceDebugSymbols[sourceReference];
+        return nullptr;
+    return &m_Module.SourceDebugSymbols[sourceReference];
 }
 
-std::optional<Pulsar::String> DebuggableModule::GetSourcePath(SourceReference sourceReference) const
+const Pulsar::String* DebuggableModule::GetSourcePath(SourceReference sourceReference) const
 {
     if (sourceReference < 0 || static_cast<size_t>(sourceReference) >= m_Module.SourceDebugSymbols.Size())
-        return std::nullopt;
-    return m_Module.SourceDebugSymbols[sourceReference].Path;
+        return nullptr;
+    return &m_Module.SourceDebugSymbols[sourceReference].Path;
 }
 
-std::optional<Pulsar::String> DebuggableModule::GetSourceContent(SourceReference sourceReference) const
+const Pulsar::String* DebuggableModule::GetSourceContent(SourceReference sourceReference) const
 {
     if (sourceReference < 0 || static_cast<size_t>(sourceReference) >= m_Module.SourceDebugSymbols.Size())
-        return std::nullopt;
-    return m_Module.SourceDebugSymbols[sourceReference].Source;
+        return nullptr;
+    return &m_Module.SourceDebugSymbols[sourceReference].Source;
 }
 
 SourceReference DebuggableModule::FindSourceReferenceForPath(const char* path) const

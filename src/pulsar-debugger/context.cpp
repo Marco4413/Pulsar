@@ -170,10 +170,10 @@ std::optional<DebuggerContext::Thread> DebuggerContext::GetThread(ThreadId threa
     return thread->Value();
 }
 
-std::optional<Pulsar::SourceDebugSymbol> DebuggerContext::GetSource(SourceReference sourceReference) const
+const Pulsar::SourceDebugSymbol* DebuggerContext::GetSource(SourceReference sourceReference) const
 {
     // No need to lock since module is constant
-    if (!m_DebuggableModule) return std::nullopt;
+    if (!m_DebuggableModule) return nullptr;
     return m_DebuggableModule->GetSource(sourceReference);
 }
 

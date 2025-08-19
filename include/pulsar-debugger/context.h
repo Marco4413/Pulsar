@@ -77,7 +77,8 @@ namespace PulsarDebugger
         std::optional<Pulsar::List<Variable>> GetVariables(VariablesReference variablesReference, size_t variablesStart=0, size_t variablesCount=0, size_t* totalVariables=nullptr);
 
         std::optional<Thread> GetThread(ThreadId threadId);
-        std::optional<Pulsar::SourceDebugSymbol> GetSource(SourceReference sourceReference) const;
+        // The returned value, if not nullptr, is valid while this instance exists.
+        const Pulsar::SourceDebugSymbol* GetSource(SourceReference sourceReference) const;
 
     private:
         struct LazyStackFrame

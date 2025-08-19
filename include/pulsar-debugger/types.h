@@ -67,12 +67,13 @@ namespace PulsarDebugger
         Pulsar::Module& GetModule();
         const Pulsar::Module& GetModule() const;
 
-        std::optional<DebuggableModule::LocalScopeInfo> GetLocalScopeInfo(SourceReference sourceReference, size_t line) const;
+        // Any function which returns a pointer, the returned pointer, if not nullptr, is valid while this instance exists.
+        const DebuggableModule::LocalScopeInfo* GetLocalScopeInfo(SourceReference sourceReference, size_t line) const;
         bool IsLineReachable(SourceReference sourceReference, size_t line) const;
 
-        std::optional<Pulsar::SourceDebugSymbol> GetSource(SourceReference sourceReference) const;
-        std::optional<Pulsar::String> GetSourcePath(SourceReference sourceReference) const;
-        std::optional<Pulsar::String> GetSourceContent(SourceReference sourceReference) const;
+        const Pulsar::SourceDebugSymbol* GetSource(SourceReference sourceReference) const;
+        const Pulsar::String* GetSourcePath(SourceReference sourceReference) const;
+        const Pulsar::String* GetSourceContent(SourceReference sourceReference) const;
 
         SourceReference FindSourceReferenceForPath(const char* path) const;
 
