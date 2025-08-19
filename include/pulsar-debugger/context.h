@@ -69,6 +69,7 @@ namespace PulsarDebugger
 
         bool RegisterThread(ThreadId id, std::optional<Pulsar::String> name=std::nullopt);
 
+        std::optional<Thread> GetThread(ThreadId threadId);
         std::optional<StackFrame> GetOrLoadStackFrame(FrameId frameId);
         std::optional<Scope> GetOrLoadScope(ScopeId scopeId);
 
@@ -76,7 +77,6 @@ namespace PulsarDebugger
         std::optional<Pulsar::List<Scope>> GetOrLoadScopes(FrameId frameId, size_t scopesStart=0, size_t scopesCount=0, size_t* totalScopes=nullptr);
         std::optional<Pulsar::List<Variable>> GetVariables(VariablesReference variablesReference, size_t variablesStart=0, size_t variablesCount=0, size_t* totalVariables=nullptr);
 
-        std::optional<Thread> GetThread(ThreadId threadId);
         // The returned value, if not nullptr, is valid while this instance exists.
         const Pulsar::SourceDebugSymbol* GetSource(SourceReference sourceReference) const;
 
@@ -103,6 +103,11 @@ namespace PulsarDebugger
         using ScopeOrLazy = std::variant<Scope, LazyScope>;
 
     private:
+        Thread* GetThreadPtr(ThreadId threadId);
+        StackFrame* GetOrLoadStackFramePtr(FrameId frameId);
+        Scope* GetOrLoadScopePtr(ScopeId scopeId);
+        Pulsar::List<Variable>* GetVariablesPtr(VariablesReference variablesReference);
+
         FrameId CreateLazyStackFrame(ThreadId threadId, size_t callIndex, ScopeId globalScopeId, bool isCaller, bool hasError);
         std::optional<StackFrame> LoadStackFrame(FrameId frameId, const LazyStackFrame& lazyFrame);
 
