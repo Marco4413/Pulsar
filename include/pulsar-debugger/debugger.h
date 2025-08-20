@@ -66,13 +66,31 @@ namespace PulsarDebugger
         void ForEachThread(std::function<void(std::shared_ptr<Thread>)> fn);
 
     private:
+        struct ContinuePolicy
+        {
+            enum class EKind { Paused, Continue, StepOver, StepInto, StepOut };
+
+            EKind Kind = EKind::Paused;
+            // Required by StepOver, StepInto
+            size_t InitSource = 0;
+            // Required by StepOver, StepInto
+            size_t InitLine = 0;
+            // Required by StepOver, StepOut
+            size_t InitCallStackSize = 0;
+        };
+
         // A TrackedThread wraps a Thread with additional
         //  information required by the debugger (like execution flags).
         // Anything that attempts to read/write data stored in this struct
         //  MUST lock the Debugger that owns it first.
         struct TrackedThread
         {
-            bool Continue;
+            bool IsPaused() const
+            {
+                return Continue.Kind == ContinuePolicy::EKind::Paused;
+            }
+
+            ContinuePolicy Continue;
             std::shared_ptr<PulsarDebugger::Thread> Thread;
         };
 
@@ -81,6 +99,9 @@ namespace PulsarDebugger
         void ForEachTrackedThread(std::function<void(TrackedThread&)> fn);
 
         EEventKind StepThread(Thread& thread);
+        // Does not call m_ThreadsWaitingToContinue.notify_all(); because
+        //  it should only be called after all threads have been processed.
+        void ProcessTrackedThread(TrackedThread& trackedThread);
         void DispatchEvent(ThreadId threadId, EEventKind kind);
 
     private:

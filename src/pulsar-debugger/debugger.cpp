@@ -11,7 +11,7 @@ Debugger::Debugger()
     : ILockable<std::recursive_mutex>()
     , m_DebuggableModule(nullptr)
     , m_ThreadsWaitingToContinue(0)
-    , m_MainThread{ .Continue = false, .Thread = nullptr }
+    , m_MainThread{ .Continue = ContinuePolicy{}, .Thread = nullptr }
 {}
 
 std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pulsar::ValueList&& args, const char* entryPoint)
@@ -23,7 +23,7 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pu
 
     m_DebuggableModule = nullptr;
     m_Breakpoints.Clear();
-    m_MainThread = { .Continue = false, .Thread = nullptr };
+    m_MainThread = { .Continue = ContinuePolicy{}, .Thread = nullptr };
 
     Pulsar::ParseResult parseResult;
     Pulsar::Parser parser;
@@ -65,8 +65,9 @@ void Debugger::Continue(ThreadId threadId)
     TrackedThread* trackedThread = GetTrackedThread(threadId);
     if (!trackedThread) return;
 
-    if (!trackedThread->Continue) {
-        trackedThread->Continue = true;
+    if (trackedThread->IsPaused()) {
+        trackedThread->Continue.Kind = ContinuePolicy::EKind::Continue;
+
         m_ThreadsWaitingToContinue.fetch_add(1);
         m_ThreadsWaitingToContinue.notify_all();
     }
@@ -80,8 +81,8 @@ void Debugger::Pause(ThreadId threadId)
     TrackedThread* trackedThread = GetTrackedThread(threadId);
     if (!trackedThread) return;
 
-    if (trackedThread->Continue) {
-        trackedThread->Continue = false;
+    if (!trackedThread->IsPaused()) {
+        trackedThread->Continue.Kind = ContinuePolicy::EKind::Paused;
         m_ThreadsWaitingToContinue.fetch_sub(1);
         m_ThreadsWaitingToContinue.notify_all();
     }
@@ -122,64 +123,61 @@ void Debugger::StepInstruction(ThreadId threadId)
 void Debugger::StepOver(ThreadId threadId)
 {
     DebuggerScopeLock _lock(*this);
-    auto thread = GetThread(threadId);
-    if (!thread) return;
+    TrackedThread* trackedThread = GetTrackedThread(threadId);
+    if (!trackedThread) return;
 
-    ThreadScopeLock _threadLock(*thread);
-    auto initLine   = thread->GetOrComputeCurrentLine();
-    auto initSource = thread->GetOrComputeCurrentSourceIndex();
-    if (!initLine || !initSource) return StepInstruction(threadId);
+    if (trackedThread->IsPaused()) {
+        ThreadScopeLock _threadLock(*trackedThread->Thread);
+        auto initLine   = trackedThread->Thread->GetOrComputeCurrentLine();
+        auto initSource = trackedThread->Thread->GetOrComputeCurrentSourceIndex();
+        if (!initLine || !initSource) return StepInstruction(threadId);
 
-    size_t initStackSize = thread->GetContext().GetCallStack().Size();
+        trackedThread->Continue.Kind = ContinuePolicy::EKind::StepOver;
+        trackedThread->Continue.InitLine          = *initLine;
+        trackedThread->Continue.InitSource        = *initSource;
+        trackedThread->Continue.InitCallStackSize = trackedThread->Thread->GetContext().GetCallStack().Size();
 
-    do {
-        EEventKind ev = StepThread(*thread);
-        if (ev != EEventKind::Step)
-            return DispatchEvent(threadId, ev);
-    } while (thread->GetContext().GetCallStack().Size() > initStackSize || (thread->GetOrComputeCurrentLine() == initLine && thread->GetOrComputeCurrentSourceIndex() == initSource));
-
-    // Send a single step event once the line was completed
-    DispatchEvent(threadId, EEventKind::Step);
+        m_ThreadsWaitingToContinue.fetch_add(1);
+        m_ThreadsWaitingToContinue.notify_all();
+    }
 }
 
 void Debugger::StepInto(ThreadId threadId)
 {
     DebuggerScopeLock _lock(*this);
-    auto thread = GetThread(threadId);
-    if (!thread) return;
+    TrackedThread* trackedThread = GetTrackedThread(threadId);
+    if (!trackedThread) return;
 
-    ThreadScopeLock _threadLock(*thread);
-    auto initLine   = thread->GetOrComputeCurrentLine();
-    auto initSource = thread->GetOrComputeCurrentSourceIndex();
-    if (!initLine || !initSource) return StepInstruction(threadId);
+    if (trackedThread->IsPaused()) {
+        ThreadScopeLock _threadLock(*trackedThread->Thread);
+        auto initLine   = trackedThread->Thread->GetOrComputeCurrentLine();
+        auto initSource = trackedThread->Thread->GetOrComputeCurrentSourceIndex();
+        if (!initLine || !initSource) return StepInstruction(threadId);
 
-    do {
-        EEventKind ev = StepThread(*thread);
-        if (ev != EEventKind::Step)
-            return DispatchEvent(threadId, ev);
-    } while (thread->GetOrComputeCurrentLine() == initLine && thread->GetOrComputeCurrentSourceIndex() == initSource);
-    
-    // Send a single step event once the line was completed
-    DispatchEvent(threadId, EEventKind::Step);
+        trackedThread->Continue.Kind = ContinuePolicy::EKind::StepInto;
+        trackedThread->Continue.InitLine   = *initLine;
+        trackedThread->Continue.InitSource = *initSource;
+
+        m_ThreadsWaitingToContinue.fetch_add(1);
+        m_ThreadsWaitingToContinue.notify_all();
+    }
 }
 
 void Debugger::StepOut(ThreadId threadId)
 {
     DebuggerScopeLock _lock(*this);
-    auto thread = GetThread(threadId);
-    if (!thread) return;
+    TrackedThread* trackedThread = GetTrackedThread(threadId);
+    if (!trackedThread) return;
 
-    ThreadScopeLock _threadLock(*thread);
-    size_t initStackSize = thread->GetContext().GetCallStack().Size();
+    if (trackedThread->IsPaused()) {
+        ThreadScopeLock _threadLock(*trackedThread->Thread);
 
-    do {
-        EEventKind ev = StepThread(*thread);
-        if (ev != EEventKind::Step)
-            return DispatchEvent(threadId, ev);
-    } while (thread->GetContext().GetCallStack().Size() >= initStackSize);
-    
-    // Send a single step event once the line was completed
-    DispatchEvent(threadId, EEventKind::Step);
+        trackedThread->Continue.Kind = ContinuePolicy::EKind::StepOut;
+        trackedThread->Continue.InitCallStackSize = trackedThread->Thread->GetContext().GetCallStack().Size();
+
+        m_ThreadsWaitingToContinue.fetch_add(1);
+        m_ThreadsWaitingToContinue.notify_all();
+    }
 }
 
 void Debugger::WaitForEvent()
@@ -193,15 +191,10 @@ void Debugger::ProcessEvent()
     DebuggerScopeLock _lock(*this);
     ForEachTrackedThread([this](TrackedThread& trackedThread)
     {
-        if (!trackedThread.Continue) return;
-        EEventKind ev = StepThread(*trackedThread.Thread);
-        if (ev != EEventKind::Step) {
-            trackedThread.Continue = false;
-            m_ThreadsWaitingToContinue.fetch_sub(1);
-            m_ThreadsWaitingToContinue.notify_all();
-            DispatchEvent(trackedThread.Thread->GetId(), ev);
-        }
+        ThreadScopeLock _threadLock(*trackedThread.Thread);
+        ProcessTrackedThread(trackedThread);
     });
+    m_ThreadsWaitingToContinue.notify_all();
 }
 
 ThreadId Debugger::GetMainThreadId()
@@ -278,6 +271,89 @@ Debugger::EEventKind Debugger::StepThread(Thread& thread)
     }
 
     return EEventKind::Step;
+}
+
+void Debugger::ProcessTrackedThread(TrackedThread& trackedThread)
+{
+    if (trackedThread.IsPaused() || !trackedThread.Thread) return;
+
+    switch (trackedThread.Continue.Kind) {
+    case ContinuePolicy::EKind::Continue: {
+        EEventKind ev = StepThread(*trackedThread.Thread);
+        if (ev != EEventKind::Step) {
+            trackedThread.Continue.Kind = ContinuePolicy::EKind::Paused;
+            m_ThreadsWaitingToContinue.fetch_sub(1);
+            DispatchEvent(trackedThread.Thread->GetId(), ev);
+        }
+    } break;
+    case ContinuePolicy::EKind::StepOver: {
+        EEventKind ev = StepThread(*trackedThread.Thread);
+        if (ev != EEventKind::Step) {
+            trackedThread.Continue.Kind = ContinuePolicy::EKind::Paused;
+            m_ThreadsWaitingToContinue.fetch_sub(1);
+            DispatchEvent(trackedThread.Thread->GetId(), ev);
+            break;
+        }
+
+        auto currentLine = trackedThread.Thread->GetOrComputeCurrentLine();
+        auto currentSourceIndex = trackedThread.Thread->GetOrComputeCurrentSourceIndex();
+
+        bool shouldContinue = trackedThread.Thread->GetContext().GetCallStack().Size() > trackedThread.Continue.InitCallStackSize || (
+            currentLine && currentSourceIndex &&
+            *currentLine == trackedThread.Continue.InitLine &&
+            *currentSourceIndex == trackedThread.Continue.InitSource
+        );
+
+        if (!shouldContinue) {
+            trackedThread.Continue.Kind = ContinuePolicy::EKind::Paused;
+            m_ThreadsWaitingToContinue.fetch_sub(1);
+            DispatchEvent(trackedThread.Thread->GetId(), EEventKind::Step);
+        }
+    } break;
+    case ContinuePolicy::EKind::StepInto: {
+        EEventKind ev = StepThread(*trackedThread.Thread);
+        if (ev != EEventKind::Step) {
+            trackedThread.Continue.Kind = ContinuePolicy::EKind::Paused;
+            m_ThreadsWaitingToContinue.fetch_sub(1);
+            DispatchEvent(trackedThread.Thread->GetId(), ev);
+            break;
+        }
+
+        auto currentLine = trackedThread.Thread->GetOrComputeCurrentLine();
+        auto currentSourceIndex = trackedThread.Thread->GetOrComputeCurrentSourceIndex();
+
+        bool shouldContinue = (
+            currentLine && currentSourceIndex &&
+            *currentLine == trackedThread.Continue.InitLine &&
+            *currentSourceIndex == trackedThread.Continue.InitSource
+        );
+
+        if (!shouldContinue) {
+            trackedThread.Continue.Kind = ContinuePolicy::EKind::Paused;
+            m_ThreadsWaitingToContinue.fetch_sub(1);
+            DispatchEvent(trackedThread.Thread->GetId(), EEventKind::Step);
+        }
+    } break;
+    case ContinuePolicy::EKind::StepOut: {
+        EEventKind ev = StepThread(*trackedThread.Thread);
+        if (ev != EEventKind::Step) {
+            trackedThread.Continue.Kind = ContinuePolicy::EKind::Paused;
+            m_ThreadsWaitingToContinue.fetch_sub(1);
+            DispatchEvent(trackedThread.Thread->GetId(), ev);
+            break;
+        }
+
+        bool shouldContinue = trackedThread.Thread->GetContext().GetCallStack().Size() >= trackedThread.Continue.InitCallStackSize;
+
+        if (!shouldContinue) {
+            trackedThread.Continue.Kind = ContinuePolicy::EKind::Paused;
+            m_ThreadsWaitingToContinue.fetch_sub(1);
+            DispatchEvent(trackedThread.Thread->GetId(), EEventKind::Step);
+        }
+    } break;
+    default:
+        PULSAR_ASSERT(false, "Unhandled trackedThread.Continue.Kind");
+    }
 }
 
 void Debugger::DispatchEvent(ThreadId threadId, EEventKind kind)
