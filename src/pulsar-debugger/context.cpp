@@ -274,10 +274,6 @@ std::optional<DebuggerContext::StackFrame> DebuggerContext::LoadStackFrame(Frame
     }
 
     stackFrame.SourceReference = frame.Function->DebugSymbol.SourceIdx;
-    stackFrame.SourcePath      = std::nullopt;
-    if (frame.Function->DebugSymbol.SourceIdx < m_DebuggableModule->GetModule().SourceDebugSymbols.Size())
-        stackFrame.SourcePath  = m_DebuggableModule->GetModule().SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx].Path;
-
     return stackFrame;
 }
 

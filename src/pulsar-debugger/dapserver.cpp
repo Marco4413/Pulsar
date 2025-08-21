@@ -367,8 +367,8 @@ std::optional<dap::array<dap::StackFrame>> DAPServer::GetStackFrames(dap::intege
 
         dap::Source source;
         source.sourceReference = debuggerStackFrame.SourceReference;
-        if (debuggerStackFrame.SourcePath)
-            source.path = debuggerStackFrame.SourcePath->CString();
+        auto pulsarSource = debuggerContext->GetSource(debuggerStackFrame.SourceReference);
+        if (pulsarSource) source.path = pulsarSource->Path.CString();
         stackFrame.source = source;
 
         stackFrame.id   = debuggerStackFrame.Id;

@@ -36,7 +36,6 @@ namespace PulsarDebugger
             Pulsar::List<ScopeId> Scopes;
 
             PulsarDebugger::SourceReference SourceReference = INVALID_SOURCE_REFERENCE;
-            std::optional<Pulsar::String>   SourcePath;
             Pulsar::SourcePosition          SourcePos;
         };
 
