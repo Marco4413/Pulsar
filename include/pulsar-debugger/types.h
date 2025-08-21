@@ -20,7 +20,10 @@ namespace PulsarDebugger
     using VariablesReference = Reference;
     using SourceReference    = Reference;
 
-    constexpr Reference NULL_REFERENCE = 0;
+    // This value is not DAP-compliant, it's just used
+    //  internally to represent an invalid source reference.
+    constexpr SourceReference INVALID_SOURCE_REFERENCE = -1;
+    constexpr VariablesReference NULL_VARIABLES_REFERENCE = 0;
 
     // Thread Ids are based on the address of their ExecutionContext.
     // So make sure not to move it in memory to keep the ThreadId valid.
@@ -53,7 +56,7 @@ namespace PulsarDebugger
         };
 
     public:
-        DebuggableModule();
+        DebuggableModule() = default;
         ~DebuggableModule() = default;
 
         DebuggableModule(const DebuggableModule&) = default;

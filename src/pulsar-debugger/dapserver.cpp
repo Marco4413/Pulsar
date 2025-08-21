@@ -167,7 +167,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
     m_Session->registerHandler([this](const dap::SetBreakpointsRequest& req) -> dap::ResponseOrError<dap::SetBreakpointsResponse>
     {
         auto debuggableModule = this->m_Debugger.GetModule();
-        SourceReference sourceReference = req.source.sourceReference.value(NULL_REFERENCE);
+        SourceReference sourceReference = req.source.sourceReference.value(INVALID_SOURCE_REFERENCE);
         if (!req.source.sourceReference && req.source.path) {
             if (debuggableModule) {
                 sourceReference = debuggableModule->FindSourceReferenceForPath(req.source.path->c_str());
@@ -175,7 +175,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
         }
 
         dap::SetBreakpointsResponse res;
-        if (sourceReference == NULL_REFERENCE) {
+        if (sourceReference == INVALID_SOURCE_REFERENCE) {
             if (req.breakpoints) {
                 res.breakpoints.resize(req.breakpoints->size());
     
@@ -271,7 +271,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
             }
         }
 
-        if (sourceReference == NULL_REFERENCE) {
+        if (sourceReference == INVALID_SOURCE_REFERENCE) {
             return dap::Error("Could not find source.");
         }
 

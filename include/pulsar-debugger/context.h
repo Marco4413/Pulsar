@@ -35,7 +35,7 @@ namespace PulsarDebugger
             Pulsar::String Name;
             Pulsar::List<ScopeId> Scopes;
 
-            PulsarDebugger::SourceReference SourceReference = NULL_REFERENCE;
+            PulsarDebugger::SourceReference SourceReference = INVALID_SOURCE_REFERENCE;
             std::optional<Pulsar::String>   SourcePath;
             Pulsar::SourcePosition          SourcePos;
         };
@@ -43,7 +43,7 @@ namespace PulsarDebugger
         struct Scope
         {
             Pulsar::String Name;
-            PulsarDebugger::VariablesReference VariablesReference = NULL_REFERENCE;
+            PulsarDebugger::VariablesReference VariablesReference = NULL_VARIABLES_REFERENCE;
         };
 
         struct Variable
@@ -55,7 +55,7 @@ namespace PulsarDebugger
             Pulsar::ValueType Type;
             Pulsar::String    Value;
             // Used for Lists
-            PulsarDebugger::VariablesReference VariablesReference = NULL_REFERENCE;
+            PulsarDebugger::VariablesReference VariablesReference = NULL_VARIABLES_REFERENCE;
         };
 
     public:

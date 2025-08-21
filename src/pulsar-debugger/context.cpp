@@ -379,7 +379,7 @@ DebuggerContext::Variable DebuggerContext::CreateVariable(const Pulsar::Value& v
     variable.Name       = std::move(name);
     variable.Type       = value.Type();
     variable.Value      = ValueToString(value, false);
-    variable.VariablesReference = NULL_REFERENCE;
+    variable.VariablesReference = NULL_VARIABLES_REFERENCE;
 
     switch (value.Type()) {
     case Pulsar::ValueType::List: {

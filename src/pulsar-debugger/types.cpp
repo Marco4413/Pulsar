@@ -10,12 +10,6 @@ ThreadId ComputeThreadId(const Pulsar::ExecutionContext& thread)
     return static_cast<ThreadId>(reinterpret_cast<size_t>(&thread)) % MAX_SAFE_INTEGER;
 }
 
-DebuggableModule::DebuggableModule()
-{
-    // Null Source
-    m_Module.SourceDebugSymbols.EmplaceBack();
-}
-
 Pulsar::ParserNotifications DebuggableModule::GetParserNotificationsListener()
 {
     Pulsar::ParserNotifications notifications;
@@ -155,7 +149,7 @@ SourceReference DebuggableModule::FindSourceReferenceForPath(const char* path) c
         if (std::filesystem::equivalent(pathToSearch, candidatePath, ec) && !ec)
             return static_cast<SourceReference>(uSourceReference);
     }
-    return NULL_REFERENCE;
+    return INVALID_SOURCE_REFERENCE;
 }
 
 }
