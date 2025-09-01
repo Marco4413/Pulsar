@@ -78,7 +78,7 @@ namespace PulsarTools::Bindings
 
     public:
         static Pulsar::RuntimeState FThisSleep(Pulsar::ExecutionContext& eContext);
-        static Pulsar::RuntimeState FRun(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId, uint64_t channelTypeId);
+        static Pulsar::RuntimeState FRun(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
         static Pulsar::RuntimeState FJoin(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
         static Pulsar::RuntimeState FJoinAll(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
         static Pulsar::RuntimeState FIsAlive(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);

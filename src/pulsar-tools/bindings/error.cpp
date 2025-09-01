@@ -35,16 +35,8 @@ Pulsar::RuntimeState PulsarTools::Bindings::Error::FSafeCall(Pulsar::ExecutionCo
 
     int64_t functionIdx = functionReference.AsInteger();
 
-    Pulsar::ExecutionContext safeContext(eContext.GetModule(), false);
-    safeContext.InitCustomTypeData();
-    eContext.GetAllCustomTypeData().ForEach([&safeContext](const auto& b) {
-        PULSAR_ASSERT(b.Value(), "Reference to CustomTypeData is nullptr.");
-        uint64_t typeId = b.Key();
-        Pulsar::CustomTypeData::Ref typeDataCopy = b.Value()->Copy();
-        if (typeDataCopy) safeContext.SetCustomTypeData(typeId, typeDataCopy);
-    });
+    Pulsar::ExecutionContext safeContext = eContext.Fork();
 
-    safeContext.GetGlobals() = eContext.GetGlobals();
     safeContext.GetStack() = Pulsar::ValueStack(std::move(functionArguments.AsList()));
     safeContext.CallFunction(functionIdx);
     Pulsar::RuntimeState callState = safeContext.Run();
