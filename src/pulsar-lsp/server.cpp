@@ -146,7 +146,9 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
 
         return Pulsar::ParseResult::OK;
     };
-    settings.LSPHooks.OnBlockNotification = [&path, extractAll, &functionScopes](Pulsar::LSPHooks::OnBlockNotificationParams&& params) {
+    settings.Notifications.OnBlockNotification = [&path, extractAll, &functionScopes](Pulsar::ParserNotifications::OnBlockNotificationParams&& params) {
+        using BlockNotificationType = Pulsar::ParserNotifications::BlockNotificationType;
+
         if (!extractAll && params.FilePath != path) return false;
 
         Pulsar::String selfIdx = ":";
@@ -156,7 +158,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
         Pulsar::String fnId = params.FilePath + selfIdx + ":" + params.FnDefinition.Name;
 
         switch (params.Type) {
-        case Pulsar::LSPBlockNotificationType::BlockStart: {
+        case BlockNotificationType::BlockStart: {
             auto fnPair = functionScopes.Find(fnId);
             if (fnPair) {
                 fnPair->Value()
@@ -178,14 +180,14 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
                 });
             }
         } break;
-        case Pulsar::LSPBlockNotificationType::BlockEnd: {
+        case BlockNotificationType::BlockEnd: {
             auto fnPair = functionScopes.Find(fnId);
             if (fnPair) {
                 fnPair->Value()
                     .EndBlock(params.Position);
             }
         } break;
-        case Pulsar::LSPBlockNotificationType::LocalScopeChanged: {
+        case BlockNotificationType::LocalScopeChanged: {
             auto fnPair = functionScopes.Find(fnId);
             if (fnPair) {
                 fnPair->Value()
@@ -198,7 +200,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
 
         return false;
     };
-    settings.LSPHooks.OnIdentifierUsage = [&path, extractAll, &functionScopes](Pulsar::LSPHooks::OnIdentifierUsageParams&& params) {
+    settings.Notifications.OnIdentifierUsage = [&path, extractAll, &functionScopes](Pulsar::ParserNotifications::OnIdentifierUsageParams&& params) {
         if (!extractAll && params.FilePath != path) return false;
 
         Pulsar::String selfIdx = ":";
@@ -217,7 +219,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
         }
 
         Pulsar::SourcePosition localDeclaredAt = NULL_SOURCE_POSITION;
-        if (params.Type == Pulsar::LSPIdentifierUsageType::Local && params.BoundIdx < params.LocalScope.Locals.Size())
+        if (params.Type == IdentifierUsageType::Local && params.BoundIdx < params.LocalScope.Locals.Size())
             localDeclaredAt = params.LocalScope.Locals[params.BoundIdx].DeclaredAt;
 
         fnPair->Value()
@@ -230,7 +232,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
 
         return false;
     };
-    settings.LSPHooks.OnFunctionDefinition = [&parsedDocument](Pulsar::LSPHooks::OnFunctionDefinitionParams&& params) {
+    settings.Notifications.OnFunctionDefinition = [&parsedDocument](Pulsar::ParserNotifications::OnFunctionDefinitionParams&& params) {
         if (!params.IsNative && params.IsRedeclaration) return false;
 
         if (params.IsRedeclaration) {
@@ -345,7 +347,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
             const IdentifierUsage& identUsage = fnScope.UsedIdentifiers[j];
             if (IsPositionInBetween(pos, identUsage.Identifier.SourcePos)) {
                 switch (identUsage.Type) {
-                case Pulsar::LSPIdentifierUsageType::Global: {
+                case IdentifierUsageType::Global: {
                     if (identUsage.BoundIndex >= doc->Module.Globals.Size()) break;
                     
                     const Pulsar::GlobalDefinition& global = doc->Module.Globals[identUsage.BoundIndex];
@@ -360,7 +362,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                         .range = DocumentRangeToEditorRange(docText, SourcePositionToRange(global.DebugSymbol.Token.SourcePos))
                     };
                 }
-                case Pulsar::LSPIdentifierUsageType::Function: {
+                case IdentifierUsageType::Function: {
                     if (identUsage.BoundIndex >= doc->Module.Functions.Size()) break;
                     
                     const Pulsar::FunctionDefinition& func = doc->Module.Functions[identUsage.BoundIndex];
@@ -375,7 +377,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                         .range = DocumentRangeToEditorRange(docText, SourcePositionToRange(func.DebugSymbol.Token.SourcePos))
                     };
                 }
-                case Pulsar::LSPIdentifierUsageType::NativeFunction: {
+                case IdentifierUsageType::NativeFunction: {
                     if (identUsage.BoundIndex >= doc->Module.NativeBindings.Size()) break;
                     
                     const Pulsar::FunctionDefinition& func = doc->Module.NativeBindings[identUsage.BoundIndex];
@@ -390,7 +392,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                         .range = DocumentRangeToEditorRange(docText, SourcePositionToRange(func.DebugSymbol.Token.SourcePos))
                     };
                 }
-                case Pulsar::LSPIdentifierUsageType::Local: {
+                case IdentifierUsageType::Local: {
                     lsp::FileUri locUri = NormalizedPathToURI(fnScope.FilePath);
                     return lsp::Location{
                         .uri = locUri,
@@ -663,7 +665,7 @@ std::optional<lsp::Hover> PulsarLSP::Server::GetHover(const lsp::FileUri& uri, l
             if (IsPositionInBetween(pos, identUsage.Identifier.SourcePos)) {
                 lsp::Range usageRange = DocumentRangeToEditorRange(docText, SourcePositionToRange(identUsage.Identifier.SourcePos));
                 switch (identUsage.Type) {
-                case Pulsar::LSPIdentifierUsageType::Global: {
+                case IdentifierUsageType::Global: {
                     if (identUsage.BoundIndex >= doc->Module.Globals.Size()) break;
 
                     const Pulsar::GlobalDefinition& global = doc->Module.Globals[identUsage.BoundIndex];
@@ -677,7 +679,7 @@ std::optional<lsp::Hover> PulsarLSP::Server::GetHover(const lsp::FileUri& uri, l
                         .range = usageRange,
                     };
                 }
-                case Pulsar::LSPIdentifierUsageType::Function: {
+                case IdentifierUsageType::Function: {
                     if (identUsage.BoundIndex >= doc->Module.Functions.Size()) break;
 
                     for (size_t k = 0; k < doc->FunctionDefinitions.Size(); ++k) {
@@ -693,7 +695,7 @@ std::optional<lsp::Hover> PulsarLSP::Server::GetHover(const lsp::FileUri& uri, l
                         }
                     }
                 } break;
-                case Pulsar::LSPIdentifierUsageType::NativeFunction: {
+                case IdentifierUsageType::NativeFunction: {
                     if (identUsage.BoundIndex >= doc->Module.NativeBindings.Size()) break;
 
                     for (size_t k = 0; k < doc->FunctionDefinitions.Size(); ++k) {
@@ -709,7 +711,7 @@ std::optional<lsp::Hover> PulsarLSP::Server::GetHover(const lsp::FileUri& uri, l
                         }
                     }
                 } break;
-                case Pulsar::LSPIdentifierUsageType::Local: {
+                case IdentifierUsageType::Local: {
                     return lsp::Hover{
                         .contents = lsp::MarkupContent{
                             .kind = lsp::MarkupKind::Markdown,

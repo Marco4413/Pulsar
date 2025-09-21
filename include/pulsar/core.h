@@ -11,8 +11,8 @@
 #include <utility>
 
 #ifdef PULSAR_DEBUG
-  #include <cstdio>
   #ifndef PULSAR_ASSERT
+    #include <cstdio> // std::fprintf
     #define PULSAR_ASSERT(cond, msg)                      \
         do {                                              \
             if (!(cond)) {                                \
@@ -25,8 +25,16 @@
   #endif // PULSAR_ASSERT
 #else // PULSAR_DEBUG
   #ifndef PULSAR_ASSERT
-    #define PULSAR_ASSERT(cond, msg) \
-        do { (void)(cond); (void)(msg); } while (0)
+    #include <cstdio> // std::fprintf
+    #define PULSAR_ASSERT(cond, msg)               \
+        do {                                       \
+            if (!(cond)) {                         \
+                std::fprintf(stderr,               \
+                    "ASSERTION (%s) FAILED: %s\n", \
+                    #cond, (msg));                 \
+                std::abort();                      \
+            }                                      \
+        } while (0)
   #endif // PULSAR_ASSERT
 #endif // PULSAR_DEBUG
 

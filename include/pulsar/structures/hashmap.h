@@ -127,7 +127,7 @@ namespace Pulsar
             V Value;
         };
 
-        HashMap() { m_Buckets.Resize(1); }
+        HashMap() { Clear(); }
         HashMap(std::initializer_list<Pair> init)
             : HashMap()
         {
@@ -278,7 +278,11 @@ namespace Pulsar
             }
         }
 
-        void Clear() { m_Buckets.Clear(); }
+        void Clear()
+        {
+            m_Buckets.Clear();
+            m_Buckets.Resize(1);
+        }
 
         size_t Count() const
         {

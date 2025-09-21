@@ -12,7 +12,7 @@ PulsarTools::Bindings::Thread::Thread() :
 
     BindNativeFunction({ "this-thread/sleep!", 1, 0 }, FThisSleep);
 
-    BindNativeFunction({ "thread/run",      2, 1 }, CreateTypeBoundFactory(FRun,     "Pulsar-Tools/Thread", "Pulsar-Tools/Channel"));
+    BindNativeFunction({ "thread/run",      2, 1 }, CreateTypeBoundFactory(FRun,     "Pulsar-Tools/Thread"));
     BindNativeFunction({ "thread/join",     1, 2 }, CreateTypeBoundFactory(FJoin,    "Pulsar-Tools/Thread"));
     BindNativeFunction({ "thread/join-all", 1, 1 }, CreateTypeBoundFactory(FJoinAll, "Pulsar-Tools/Thread"));
     BindNativeFunction({ "thread/alive?",   1, 1 }, CreateTypeBoundFactory(FIsAlive, "Pulsar-Tools/Thread"));
@@ -32,7 +32,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Thread::FThisSleep(Pulsar::Execution
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Thread::FRun(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId, uint64_t channelTypeId)
+Pulsar::RuntimeState PulsarTools::Bindings::Thread::FRun(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId)
 {
     const Pulsar::Module& module = eContext.GetModule();
     Pulsar::Frame& frame = eContext.CurrentFrame();
@@ -48,20 +48,8 @@ Pulsar::RuntimeState PulsarTools::Bindings::Thread::FRun(Pulsar::ExecutionContex
         return Pulsar::RuntimeState::TypeError;
     
     const Pulsar::FunctionDefinition& threadFn = module.Functions[(size_t)threadFnIdx];
-    Pulsar::SharedRef<ThreadContext> threadContext = Pulsar::SharedRef<ThreadContext>::New(
-        Pulsar::ExecutionContext(module, false)
-    );
+    Pulsar::SharedRef<ThreadContext> threadContext = Pulsar::SharedRef<ThreadContext>::New(eContext.Fork());
 
-    threadContext->Context.InitCustomTypeData();
-    eContext.GetAllCustomTypeData().ForEach([&threadContext](const Pulsar::ExecutionContext::CustomTypeDataMap::Bucket& b) mutable {
-        PULSAR_ASSERT(b.Value(), "Reference to CustomTypeData is nullptr.");
-        uint64_t typeId = b.Key();
-        Pulsar::CustomTypeData::Ref typeData = b.Value()->Copy();
-        if (typeData) threadContext->Context.SetCustomTypeData(typeId, typeData);
-    });
-
-    threadContext->Context.SetCustomTypeData(channelTypeId, eContext.GetCustomTypeData<Pulsar::CustomTypeData>(channelTypeId));
-    threadContext->Context.GetGlobals() = eContext.GetGlobals();
     threadContext->Context.GetStack() = Pulsar::ValueStack(std::move(threadFnArgs.AsList()));
 
     threadContext->IsRunning.store(true);

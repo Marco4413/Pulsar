@@ -18,7 +18,7 @@ public:
         }
     }
 
-    Ref Copy() const override
+    Ref Fork() const override
     {
         if (!m_Buffer.Copy)
             return nullptr;

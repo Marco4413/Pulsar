@@ -63,6 +63,8 @@ Supported compilers are `gcc` and `msvc`.
 *`clang` should also work but it's not my go-to compiler,
 so it may break between commits.*
 
+[![Build](https://github.com/Marco4413/Pulsar/actions/workflows/build.yaml/badge.svg)](https://github.com/Marco4413/Pulsar/actions/workflows/build.yaml)
+
 ### Building Pulsar-LSP
 
 `pulsar-lsp` should have no issues building. However, if you're using a

@@ -27,6 +27,21 @@ void Pulsar::ExecutionContext::InitCustomTypeData()
     });
 }
 
+Pulsar::ExecutionContext Pulsar::ExecutionContext::Fork() const
+{
+    ExecutionContext fork(this->GetModule(), false);
+
+    fork.GetGlobals() = this->GetGlobals();
+    this->GetAllCustomTypeData().ForEach([&fork](const auto& b) {
+        PULSAR_ASSERT(b.Value(), "Reference to CustomTypeData is nullptr.");
+        uint64_t typeId = b.Key();
+        CustomTypeData::Ref typeDataFork = b.Value()->Fork();
+        fork.SetCustomTypeData(typeId, typeDataFork ? typeDataFork : b.Value());
+    });
+
+    return fork;
+}
+
 Pulsar::String Pulsar::ExecutionContext::GetCallTrace(size_t callIdx) const
 {
     const Frame& frame = m_CallStack[callIdx];

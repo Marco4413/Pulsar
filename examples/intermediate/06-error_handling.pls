@@ -10,19 +10,21 @@
   .
 
 *(main args):
-  // scall makes a copy of globals:
+  // scall forks globals:
   // - Changes to globals don't affect the main context
   // - CustomTypeData is NOT shared with the main context.
-  //   If supported, it is copied from its current state.
-  //   Otherwise, it's re-initialized to its default.
+  //   If supported, it is forked from its current state.
+  //   Otherwise, the data is meant to be shared between contexts.
   random/seed -> seed
   [] <& (my-func) (*scall) if not: (*error!) end
+  // random/seed MUST not have changed
   if random/seed != seed: (*error!) end
 
-  // tcall inherits the whole context:
+  // tcall shares the context:
   // - Changes to globals affect the main context
   // - CustomTypeData is shared with the main context.
   random/seed -> seed
   [] <& (my-func) (*tcall) if not: (*error!) end
+  // random/seed MUST have changed
   if random/seed = seed: (*error!) end
   .

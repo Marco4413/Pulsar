@@ -16,9 +16,20 @@ namespace Pulsar
     public:
         using Self = List<T>;
 
-        List() = default;
-        List(size_t initCapacity) { Reserve(initCapacity); }
+        List()
+            : m_Data(nullptr)
+            , m_Size(0)
+            , m_Capacity(0)
+        {}
+
+        List(size_t initCapacity)
+            : List()
+        {
+            Reserve(initCapacity);
+        }
+
         List(std::initializer_list<T> init)
+            : List(init.size())
         {
             for (auto it = init.begin(); it != init.end(); it++)
                 PushBack(*it);
@@ -53,7 +64,18 @@ namespace Pulsar
             ll.Clear();
         }
 
-        List(const Self& other) { *this = other; }
+        List(const Self& other)
+            : List()
+        {
+            *this = other;
+        }
+
+        List(Self&& other)
+            : List()
+        {
+            *this = std::move(other);
+        }
+
         Self& operator=(const Self& other)
         {
             size_t oldSize = m_Size;
@@ -66,7 +88,6 @@ namespace Pulsar
             return *this;
         }
 
-        List(Self&& other) { *this = std::move(other); }
         Self& operator=(Self&& other)
         {
             size_t oldSize = m_Size;
@@ -175,9 +196,9 @@ namespace Pulsar
         }
 
     private:
-        T* m_Data = nullptr;
-        size_t m_Size = 0;
-        size_t m_Capacity = 0;
+        T* m_Data;
+        size_t m_Size;
+        size_t m_Capacity;
     };
 }
 

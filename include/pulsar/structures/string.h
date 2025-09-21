@@ -8,13 +8,28 @@ namespace Pulsar
     class String
     {
     public:
-        String() : String(0, '\0') { }
+        String()
+            : m_Data(nullptr)
+            , m_Length(0)
+            , m_Capacity(0)
+        {}
+
         ~String() { PULSAR_FREE(m_Data); }
 
-        String(const String& other) { *this = other; }
-        String(String&& other) { *this = other; }
+        String(const String& other)
+            : String()
+        {
+            *this = other;
+        }
+
+        String(String&& other)
+            : String()
+        {
+            *this = std::move(other);
+        }
 
         String(size_t count, char ch)
+            : String()
         {
             Resize(count);
             PULSAR_MEMSET((void*)m_Data, ch, count*sizeof(char));
@@ -24,6 +39,7 @@ namespace Pulsar
             : String(data, std::strlen(data)) { }
 
         String(const char* data, size_t length)
+            : String()
         {
             Resize(length);
             PULSAR_MEMCPY((void*)m_Data, (void*)data, length*sizeof(char));
@@ -178,14 +194,14 @@ namespace Pulsar
         char* Data()             { return m_Data; }
         const char* Data() const { return m_Data; }
 
-        const char* CString() const { return m_Data; }
+        const char* CString() const { return m_Data ? m_Data : ""; }
 
         size_t Length() const { return m_Length; }
         size_t Capacity() const { return m_Capacity; }
     private:
-        char* m_Data = nullptr;
-        size_t m_Length = 0;
-        size_t m_Capacity = 0;
+        char* m_Data;
+        size_t m_Length;
+        size_t m_Capacity;
     };
 
     inline Pulsar::String UIntToString(uint64_t n)

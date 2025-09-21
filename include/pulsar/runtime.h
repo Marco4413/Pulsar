@@ -87,17 +87,24 @@ namespace Pulsar
         List<Frame> m_Frames;
     };
 
-    // Extend this class to store your custom type's data
+    // Extend this class to store your custom type's global data
+    // TODO: Maybe rename to CustomTypeGlobalData
     class CustomTypeData
     {
     public:
         using Ref = SharedRef<Pulsar::CustomTypeData>;
 
         virtual ~CustomTypeData() = default;
-        // This method should create a copy of the data.
-        // It may return nullptr meaning that it is not implemented (or not needed).
-        // It should be used when creating a snapshot of the ExecutionContext to create a sandbox.
-        virtual Ref Copy() const { return nullptr; }
+        /**
+         * When a new sandboxed ExecutionContext is created from an already existing one
+         *  this function is called.
+         * This function must return a "copy" of the data which won't affect the original
+         *  context.
+         * If this function returns nullptr, it means that the data held doesn't require
+         *  to be sandboxed, this may be useful for stats tracking.
+         * It's advised to make the data thread-safe if it's meant to be shared.
+         */
+        virtual Ref Fork() const = 0;
     };
 
     struct CustomType
@@ -196,6 +203,13 @@ if (state != RuntimeState::OK) // ERROR
 
         void InitGlobals();
         void InitCustomTypeData();
+
+        /**
+         * Creates a new "child" ExecutionContext which inherits global data from this one.
+         * Global data is CustomTypeData and Globals. Any change to the forked context
+         *  won't affect the original one (except for CustomTypeData that explicitly wants that).
+         */
+        ExecutionContext Fork() const;
 
         /**
          * Retrieves and casts to the correct type an instance of CustomTypeData.
