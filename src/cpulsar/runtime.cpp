@@ -30,12 +30,14 @@ private:
     CPulsar_CBuffer m_Buffer;
 };
 
+static Pulsar::RuntimeState CRuntimeStateToCppRuntimeState(CPulsar_RuntimeState cstate);
+
 extern "C"
 {
 
 CPULSAR_API const char* CPULSAR_CALL CPulsar_RuntimeState_ToString(CPulsar_RuntimeState runtimeState)
 {
-    return RuntimeStateToString((Pulsar::RuntimeState)runtimeState);
+    return RuntimeStateToString(CRuntimeStateToCppRuntimeState(runtimeState));
 }
 
 CPULSAR_API CPulsar_Module CPULSAR_CALL CPulsar_Module_Create(void)
@@ -60,10 +62,10 @@ CPULSAR_API size_t CPULSAR_CALL CPulsar_Module_BindNativeFunction(
             .Returns = fnSig.Returns,
             .StackArity = fnSig.StackArity,
         }, [nativeFn, nativeFnArgs](Pulsar::ExecutionContext& context) {
-            return (Pulsar::RuntimeState)nativeFn(
+            return CRuntimeStateToCppRuntimeState(nativeFn(
                 CPULSAR_REF(CPulsar_ExecutionContext_S, context),
                 nativeFnArgs->GetBuffer().Data
-            );
+            ));
         });
 }
 
@@ -79,10 +81,10 @@ CPULSAR_API int64_t CPULSAR_CALL CPulsar_Module_DeclareAndBindNativeFunction(
             .Returns = fnSig.Returns,
             .StackArity = fnSig.StackArity,
         }, [nativeFn, nativeFnArgs](Pulsar::ExecutionContext& context) {
-            return (Pulsar::RuntimeState)nativeFn(
+            return CRuntimeStateToCppRuntimeState(nativeFn(
                 CPULSAR_REF(CPulsar_ExecutionContext_S, context),
                 nativeFnArgs->GetBuffer().Data
-            );
+            ));
         });
 }
 
@@ -186,4 +188,50 @@ CPULSAR_API CPulsar_RuntimeState CPULSAR_CALL CPulsar_ExecutionContext_GetState(
     return (CPulsar_RuntimeState)CPULSAR_DEREF(const ExecutionContext, _self).GetState();
 }
 
+}
+
+static Pulsar::RuntimeState CRuntimeStateToCppRuntimeState(CPulsar_RuntimeState cstate)
+{
+    switch (cstate) {
+    case CPulsar_RuntimeState_OK:
+        return Pulsar::RuntimeState::OK;
+    case CPulsar_RuntimeState_Error:
+        return Pulsar::RuntimeState::Error;
+    case CPulsar_RuntimeState_TypeError:
+        return Pulsar::RuntimeState::TypeError;
+    case CPulsar_RuntimeState_StackOverflow:
+        return Pulsar::RuntimeState::StackOverflow;
+    case CPulsar_RuntimeState_StackUnderflow:
+        return Pulsar::RuntimeState::StackUnderflow;
+    case CPulsar_RuntimeState_OutOfBoundsConstantIndex:
+        return Pulsar::RuntimeState::OutOfBoundsConstantIndex;
+    case CPulsar_RuntimeState_OutOfBoundsLocalIndex:
+        return Pulsar::RuntimeState::OutOfBoundsLocalIndex;
+    case CPulsar_RuntimeState_OutOfBoundsGlobalIndex:
+        return Pulsar::RuntimeState::OutOfBoundsGlobalIndex;
+    case CPulsar_RuntimeState_WritingOnConstantGlobal:
+        return Pulsar::RuntimeState::WritingOnConstantGlobal;
+    case CPulsar_RuntimeState_OutOfBoundsFunctionIndex:
+        return Pulsar::RuntimeState::OutOfBoundsFunctionIndex;
+    case CPulsar_RuntimeState_CallStackUnderflow:
+        return Pulsar::RuntimeState::CallStackUnderflow;
+    case CPulsar_RuntimeState_NativeFunctionBindingsMismatch:
+        return Pulsar::RuntimeState::NativeFunctionBindingsMismatch;
+    case CPulsar_RuntimeState_UnboundNativeFunction:
+        return Pulsar::RuntimeState::UnboundNativeFunction;
+    case CPulsar_RuntimeState_FunctionNotFound:
+        return Pulsar::RuntimeState::FunctionNotFound;
+    case CPulsar_RuntimeState_ListIndexOutOfBounds:
+        return Pulsar::RuntimeState::ListIndexOutOfBounds;
+    case CPulsar_RuntimeState_StringIndexOutOfBounds:
+        return Pulsar::RuntimeState::StringIndexOutOfBounds;
+    case CPulsar_RuntimeState_NoCustomTypeData:
+        return Pulsar::RuntimeState::NoCustomTypeData;
+    case CPulsar_RuntimeState_InvalidCustomTypeHandle:
+        return Pulsar::RuntimeState::InvalidCustomTypeHandle;
+    case CPulsar_RuntimeState_InvalidCustomTypeReference:
+        return Pulsar::RuntimeState::InvalidCustomTypeReference;
+    default:
+        return Pulsar::RuntimeState::Error;
+    }
 }

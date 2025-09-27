@@ -11,6 +11,23 @@
 typedef enum {
     CPulsar_RuntimeState_OK    = 0,
     CPulsar_RuntimeState_Error = 1,
+    CPulsar_RuntimeState_TypeError,
+    CPulsar_RuntimeState_StackOverflow,
+    CPulsar_RuntimeState_StackUnderflow,
+    CPulsar_RuntimeState_OutOfBoundsConstantIndex,
+    CPulsar_RuntimeState_OutOfBoundsLocalIndex,
+    CPulsar_RuntimeState_OutOfBoundsGlobalIndex,
+    CPulsar_RuntimeState_WritingOnConstantGlobal,
+    CPulsar_RuntimeState_OutOfBoundsFunctionIndex,
+    CPulsar_RuntimeState_CallStackUnderflow,
+    CPulsar_RuntimeState_NativeFunctionBindingsMismatch,
+    CPulsar_RuntimeState_UnboundNativeFunction,
+    CPulsar_RuntimeState_FunctionNotFound,
+    CPulsar_RuntimeState_ListIndexOutOfBounds,
+    CPulsar_RuntimeState_StringIndexOutOfBounds,
+    CPulsar_RuntimeState_NoCustomTypeData,
+    CPulsar_RuntimeState_InvalidCustomTypeHandle,
+    CPulsar_RuntimeState_InvalidCustomTypeReference,
 } CPulsar_RuntimeState;
 
 typedef struct CPulsar_Module_S* CPulsar_Module;
