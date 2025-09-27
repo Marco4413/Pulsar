@@ -34,6 +34,40 @@ CPULSAR_API void CPULSAR_CALL CPulsar_Value_SetInteger(CPulsar_Value _self, int6
     CPULSAR_DEREF(Value, _self).SetInteger(value);
 }
 
+CPULSAR_API int CPULSAR_CALL CPulsar_Value_IsDouble(const CPulsar_Value _self)
+{
+    return CPULSAR_DEREF(const Value, _self).Type() == Pulsar::ValueType::Double;
+}
+
+CPULSAR_API double CPULSAR_CALL CPulsar_Value_AsDouble(const CPulsar_Value _self)
+{
+    return CPULSAR_DEREF(const Value, _self).AsDouble();
+}
+
+CPULSAR_API void CPULSAR_CALL CPulsar_Value_SetDouble(CPulsar_Value _self, double value)
+{
+    CPULSAR_DEREF(Value, _self).SetDouble(value);
+}
+
+CPULSAR_API int CPULSAR_CALL CPulsar_Value_IsNumber(const CPulsar_Value self)
+{
+    return CPulsar_Value_IsInteger(self) || CPulsar_Value_IsDouble(self);
+}
+
+CPULSAR_API int64_t CPULSAR_CALL CPulsar_Value_AsIntegerNumber(const CPulsar_Value self)
+{
+    return CPulsar_Value_IsInteger(self)
+        ? CPulsar_Value_AsInteger(self)
+        : (int64_t)CPulsar_Value_AsDouble(self);
+}
+
+CPULSAR_API double CPULSAR_CALL CPulsar_Value_AsDoubleNumber(const CPulsar_Value self)
+{
+    return CPulsar_Value_IsDouble(self)
+        ? CPulsar_Value_AsDouble(self)
+        : (double)CPulsar_Value_AsInteger(self);
+}
+
 CPULSAR_API int CPULSAR_CALL CPulsar_Value_IsString(const CPulsar_Value _self)
 {
     return CPULSAR_DEREF(const Value, _self).Type() == Pulsar::ValueType::String;

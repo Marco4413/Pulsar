@@ -18,6 +18,15 @@ CPULSAR_API int     CPULSAR_CALL CPulsar_Value_IsInteger(const CPulsar_Value sel
 CPULSAR_API int64_t CPULSAR_CALL CPulsar_Value_AsInteger(const CPulsar_Value self);
 CPULSAR_API void    CPULSAR_CALL CPulsar_Value_SetInteger(CPulsar_Value self, int64_t value);
 
+CPULSAR_API int    CPULSAR_CALL CPulsar_Value_IsDouble(const CPulsar_Value self);
+CPULSAR_API double CPULSAR_CALL CPulsar_Value_AsDouble(const CPulsar_Value self);
+CPULSAR_API void   CPULSAR_CALL CPulsar_Value_SetDouble(CPulsar_Value self, double value);
+
+// Methods that check if Value is a numeric and auto-casts to either integer or double
+CPULSAR_API int     CPULSAR_CALL CPulsar_Value_IsNumber(const CPulsar_Value self);
+CPULSAR_API int64_t CPULSAR_CALL CPulsar_Value_AsIntegerNumber(const CPulsar_Value self);
+CPULSAR_API double  CPULSAR_CALL CPulsar_Value_AsDoubleNumber(const CPulsar_Value self);
+
 // TODO: Maybe add a CPulsar_String type
 CPULSAR_API int         CPULSAR_CALL CPulsar_Value_IsString(const CPulsar_Value self);
 CPULSAR_API const char* CPULSAR_CALL CPulsar_Value_AsString(const CPulsar_Value self);
