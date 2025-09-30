@@ -3,6 +3,8 @@
 #include <chrono>
 #include <optional>
 
+#include <pulsar/platform.h>
+
 #if defined(PULSAR_PLATFORM_MACOSX)
 #  include <mach-o/dyld.h>
 #  include <string>
