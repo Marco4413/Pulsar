@@ -1,11 +1,14 @@
 #ifndef _PULSARTOOLS_EXTBINDING_H
 #define _PULSARTOOLS_EXTBINDING_H
 
+// We need to specifically check for CPulsar's platform
+#include <cpulsar/platform.h>
+
 #include "pulsar-tools/binding.h"
 
-#if defined(PULSAR_PLATFORM_WINDOWS)
+#if defined(CPULSAR_PLATFORM_WINDOWS)
 #  define CPULSAR_CALL __cdecl
-#else // defined(PULSAR_PLATFORM_UNIX)
+#else // CPULSAR_PLATFORM_*
 #  define CPULSAR_CALL
 #endif
 

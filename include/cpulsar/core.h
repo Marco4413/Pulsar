@@ -1,8 +1,10 @@
 #ifndef _CPULSAR_CORE_H
 #define _CPULSAR_CORE_H
 
-#include "stddef.h" // size_t
-#include "inttypes.h" // int64_t
+#include <stddef.h> // size_t
+#include <inttypes.h> // int64_t
+
+#include <cpulsar/platform.h>
 
 #ifdef __cplusplus
 #  define CPULSAR_CPP
@@ -18,11 +20,11 @@
 #  define CPULSAR_LITERAL_S(structType, init) ((structType)init)
 #endif // CPULSAR_CPP
 
-#if defined(PULSAR_PLATFORM_WINDOWS)
+#if defined(CPULSAR_PLATFORM_WINDOWS)
 #  define CPULSAR_CALL __cdecl
 #  define CPULSAR_EXPORT __declspec(dllexport)
 #  define CPULSAR_IMPORT __declspec(dllimport)
-#else // defined(PULSAR_PLATFORM_UNIX)
+#else // CPULSAR_PLATFORM_*
 #  define CPULSAR_CALL
 #  define CPULSAR_EXPORT
 #  define CPULSAR_IMPORT

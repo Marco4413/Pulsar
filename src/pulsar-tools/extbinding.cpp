@@ -39,7 +39,7 @@ bool PulsarTools::ExtBinding::IsPulsarVersionSupported(uint64_t versionNumber)
     return vLib.Major == vPls.Major;
 }
 
-#if defined(PULSAR_PLATFORM_UNIX)
+#if defined(CPULSAR_PLATFORM_UNIX)
 
 #include <dlfcn.h>
 
@@ -91,7 +91,7 @@ PulsarTools::ExtBinding::~ExtBinding()
     }
 }
 
-#elif defined(PULSAR_PLATFORM_WINDOWS)
+#elif defined(CPULSAR_PLATFORM_WINDOWS)
 
 #define WIN32_LEAN_AND_MEAN
 #include "windows.h"
