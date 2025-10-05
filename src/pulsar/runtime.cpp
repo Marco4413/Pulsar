@@ -73,12 +73,18 @@ Pulsar::String Pulsar::ExecutionContext::GetCallTrace(size_t callIdx) const
 
 Pulsar::String Pulsar::ExecutionContext::GetStackTrace(size_t maxDepth) const
 {
-    if (m_CallStack.Size() == 0 || maxDepth == 0)
+    // TODO: I think that in this case we should return the number of calls.
+    // NOTE: Be careful when implementing the TODO above!!
+    //       There are places where we assume that 0 returns an empty string.
+    if (maxDepth == 0)
         return "";
+
+    if (m_CallStack.Size() == 0)
+        return "    <empty>";
 
     String trace("    ");
     trace += GetCallTrace(m_CallStack.Size()-1);
-    if (m_CallStack.Size() == 1 || maxDepth == 1)
+    if (m_CallStack.Size() == 1)
         return trace;
 
     if (maxDepth > m_CallStack.Size())
@@ -86,9 +92,11 @@ Pulsar::String Pulsar::ExecutionContext::GetStackTrace(size_t maxDepth) const
 
     // Show half of the top-most calls and half of the bottom ones.
     // (maxDepth+1) is to give "priority" to the top-most calls in case of odd numbers.
-    for (size_t i = 1; i < (maxDepth+1)/2; i++) {
+    size_t halfMaxDepth = (maxDepth+1)/2;
+    // Starting from 1 since the top-most call was already serialized.
+    for (size_t i = 1; i < halfMaxDepth; i++) {
         trace += "\n    ";
-        trace += GetCallTrace(i);
+        trace += GetCallTrace(m_CallStack.Size()-i-1);
     }
 
     if (maxDepth < m_CallStack.Size()) {
@@ -97,7 +105,9 @@ Pulsar::String Pulsar::ExecutionContext::GetStackTrace(size_t maxDepth) const
         trace += " calls";
     }
 
-    for (size_t i = (maxDepth+1)/2; i < maxDepth; i++) {
+    // This piece of code is not much readable.
+    // Iterating from halfMaxDepth to 0 with unsigned numbers.
+    for (size_t i = halfMaxDepth; i < maxDepth; i++) {
         trace += "\n    ";
         trace += GetCallTrace(maxDepth-i-1);
     }
