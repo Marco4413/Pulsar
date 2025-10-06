@@ -1,29 +1,102 @@
 #include "pulsar-tools/extbinding.h"
 
+// TODO: PulsarTools::CLI::GetThisProcessExecutable() should probably be moved elsewhere
+#include "pulsar-tools/cli.h" // PulsarTools::CLI::GetThisProcessExecutable()
 #include "pulsar-tools/version.h"
 
-PulsarTools::ExtBinding::ExtBinding(ExtBinding&& other)
+// Load cpulsar relative to this version of pulsar-tools
+//  so that another version won't be loaded by external bindings.
+// Moreover, while it seems that Windows loads DLL dependencies
+//  of loaded DLLs relative to the executable, Linux does not,
+//  so we're required to make the symbols available Globally.
+// Even though this is kind of useless on Windows, it's still
+//  good checking if the DLL exists before loading External
+//  Bindings so that we get a meaningful error message.
+static PulsarTools::DynamicLibrary s_CPulsarDL(
+        PulsarTools::CLI::GetThisProcessExecutable()
+            .parent_path()
+#if defined(CPULSAR_PLATFORM_UNIX)
+            .append("libcpulsar.so")
+#elif defined(CPULSAR_PLATFORM_WINDOWS)
+            .append("cpulsar.dll")
+#else // CPULSAR_PLATFORM_*
+            .append("dummy-name-for-cpulsar-dynamic-library-on-unsupported-platform")
+#endif // CPULSAR_PLATFORM_*
+            .string()
+            .c_str(),
+        {
+            .LoadOnConstruction = true,
+            .GlobalSymbols = true,
+        });
+
+PulsarTools::ExtBinding::ExtBinding(const char* path)
+    : m_Lib(path)
 {
-    m_Lib = other.m_Lib;
+    if (!s_CPulsarDL.IsLoaded()) {
+        m_ErrorMessage  = "Could not load CPulsar: ";
+        m_ErrorMessage += s_CPulsarDL.HasError()
+            ? s_CPulsarDL.GetErrorMessage()
+            : "unknown reason.";
+        return;
+    }
+
+    m_Lib.Load();
+    if (!m_Lib.IsLoaded()) {
+        m_ErrorMessage = m_Lib.HasError()
+            ? m_Lib.GetErrorMessage()
+            : "Could not load dynamic library.";
+        return;
+    }
+
+    GetPulsarVersionFn getPulsarVersion = (GetPulsarVersionFn)m_Lib.GetSymbol("GetPulsarVersion");
+    if (!getPulsarVersion) {
+        m_ErrorMessage = "Function GetPulsarVersion not found.";
+        m_Lib.Unload();
+        return;
+    }
+
+    uint64_t pulsarVersion = getPulsarVersion();
+    if (!IsPulsarVersionSupported(pulsarVersion)) {
+        m_ErrorMessage  = "Binding was made for an unsupported Pulsar version (";
+        m_ErrorMessage += Version::ToString(Version::FromNumber(pulsarVersion)).c_str();
+        m_ErrorMessage += ").";
+        m_Lib.Unload();
+        return;
+    }
+
+    m_BindTypes = (BindTypesFn)m_Lib.GetSymbol("BindTypes");
+    m_BindFunctions = (BindFunctionsFn)m_Lib.GetSymbol("BindFunctions");
+}
+
+PulsarTools::ExtBinding::ExtBinding(ExtBinding&& other)
+    : m_Lib(std::move(other.m_Lib))
+{
     m_ErrorMessage = std::move(other.m_ErrorMessage);
     m_BindTypes = other.m_BindTypes;
     m_BindFunctions = other.m_BindFunctions;
 
-    other.m_Lib = nullptr;
     other.m_BindTypes = nullptr;
     other.m_BindFunctions = nullptr;
 }
 
+PulsarTools::ExtBinding::~ExtBinding()
+{
+    if (m_Lib.IsLoaded())
+        m_Lib.Unload();
+    m_BindTypes = nullptr;
+    m_BindFunctions = nullptr;
+}
+
 void PulsarTools::ExtBinding::BindTypes(Pulsar::Module& module) const
 {
-    if (m_Lib && m_BindTypes) {
+    if (m_Lib.IsLoaded() && m_BindTypes) {
         m_BindTypes(&module);
     }
 }
 
 void PulsarTools::ExtBinding::BindFunctions(Pulsar::Module& module, bool declareAndBind) const
 {
-    if (m_Lib && m_BindFunctions) {
+    if (m_Lib.IsLoaded() && m_BindFunctions) {
         m_BindFunctions(&module, declareAndBind);
     }
 }
@@ -43,52 +116,12 @@ bool PulsarTools::ExtBinding::IsPulsarVersionSupported(uint64_t versionNumber)
 
 #include <dlfcn.h>
 
-struct ExtLibImpl
+namespace PulsarTools
 {
-    void* Handle;
-};
-
-PulsarTools::ExtBinding::ExtBinding(const char* path)
-{
-    void* handle = dlopen(path, RTLD_NOW);
-    if (handle) {
-        GetPulsarVersionFn getPulsarVersion = (GetPulsarVersionFn)dlsym(handle, "GetPulsarVersion");
-        if (!getPulsarVersion) {
-            m_ErrorMessage = "Function GetPulsarVersion not found.";
-            dlclose(handle);
-            return;
-        }
-
-        uint64_t pulsarVersion = getPulsarVersion();
-        if (!IsPulsarVersionSupported(pulsarVersion)) {
-            m_ErrorMessage  = "Binding was made for an unsupported Pulsar version (";
-            m_ErrorMessage += Version::ToString(Version::FromNumber(pulsarVersion)).c_str();
-            m_ErrorMessage += ").";
-            dlclose(handle);
-            return;
-        }
-
-        m_BindTypes = (BindTypesFn)dlsym(handle, "BindTypes");
-        m_BindFunctions = (BindFunctionsFn)dlsym(handle, "BindFunctions");
-
-        ExtLibImpl* lib = (ExtLibImpl*)(m_Lib = PULSAR_MALLOC(sizeof(ExtLibImpl)));
-        lib->Handle = handle;
-    } else {
-        m_ErrorMessage = dlerror();
-    }
-}
-
-PulsarTools::ExtBinding::~ExtBinding()
-{
-    if (m_Lib) {
-        ExtLibImpl* lib = (ExtLibImpl*)m_Lib;
-        dlclose(lib->Handle);
-        PULSAR_FREE(lib);
-
-        m_Lib = nullptr;
-        m_BindTypes = nullptr;
-        m_BindFunctions = nullptr;
-    }
+    struct DynamicLibraryData
+    {
+        void* Handle = nullptr;
+    };
 }
 
 #elif defined(CPULSAR_PLATFORM_WINDOWS)
@@ -96,37 +129,112 @@ PulsarTools::ExtBinding::~ExtBinding()
 #define WIN32_LEAN_AND_MEAN
 #include "windows.h"
 
-struct ExtLibImpl
+namespace PulsarTools
 {
-    HMODULE Handle;
-};
+    struct DynamicLibraryData
+    {
+        HMODULE Handle = NULL;
+    };
+}
 
-PulsarTools::ExtBinding::ExtBinding(const char* path)
+#else // Unsupported Platform
+
+namespace PulsarTools
 {
-    HMODULE handle = LoadLibraryA(path);
-    if (handle) {
-        GetPulsarVersionFn getPulsarVersion = (GetPulsarVersionFn)(void*)GetProcAddress(handle, "GetPulsarVersion");
-        if (!getPulsarVersion) {
-            m_ErrorMessage = "Function GetPulsarVersion not found.";
-            FreeLibrary(handle);
-            return;
-        }
+    struct DynamicLibraryData
+    {
+        void* Handle = nullptr;
+    };
+}
 
-        uint64_t pulsarVersion = getPulsarVersion();
-        if (!IsPulsarVersionSupported(pulsarVersion)) {
-            m_ErrorMessage  = "Binding was made for an unsupported Pulsar version (";
-            m_ErrorMessage += Version::ToString(Version::FromNumber(pulsarVersion)).c_str();
-            m_ErrorMessage += ").";
-            FreeLibrary(handle);
-            return;
-        }
+#endif
 
-        m_BindTypes = (BindTypesFn)(void*)GetProcAddress(handle, "BindTypes");
-        m_BindFunctions = (BindFunctionsFn)(void*)GetProcAddress(handle, "BindFunctions");
+PulsarTools::DynamicLibrary::DynamicLibrary(const char* path, DynamicLibraryFlags flags)
+    : m_LibraryPath(path)
+    , m_Flags(flags)
+    , m_Data(std::make_unique<DynamicLibraryData>())
+    , m_ErrorMessage("None")
+{
+    if (m_Flags.LoadOnConstruction)
+        Load();
+}
 
-        ExtLibImpl* lib = (ExtLibImpl*)(m_Lib = PULSAR_MALLOC(sizeof(ExtLibImpl)));
-        lib->Handle = handle;
-    } else {
+PulsarTools::DynamicLibrary::DynamicLibrary(DynamicLibrary&& other)
+{
+    m_LibraryPath = std::move(other.m_LibraryPath);
+    m_Flags       = other.m_Flags;
+
+    m_Data = std::move(other.m_Data);
+    other.m_Data = std::make_unique<DynamicLibraryData>();
+
+    m_ErrorMessage = std::move(other.m_ErrorMessage);
+}
+
+PulsarTools::DynamicLibrary::~DynamicLibrary()
+{
+    Unload();
+}
+
+bool PulsarTools::DynamicLibrary::IsLoaded() const
+{
+    return (bool)m_Data->Handle;
+}
+
+bool PulsarTools::DynamicLibrary::HasError() const
+{
+    return m_ErrorMessage.Length() > 0;
+}
+
+const Pulsar::String& PulsarTools::DynamicLibrary::GetErrorMessage() const
+{
+    return m_ErrorMessage;
+}
+
+#if defined(CPULSAR_PLATFORM_UNIX)
+
+#include <iostream>
+
+void PulsarTools::DynamicLibrary::Load()
+{
+    m_ErrorMessage.Resize(0);
+    if (m_Data->Handle) return;
+    int dlFlags = RTLD_NOW | (m_Flags.GlobalSymbols ? RTLD_GLOBAL : RTLD_LOCAL);
+    m_Data->Handle = dlopen(m_LibraryPath.CString(), dlFlags);
+    std::cout << m_LibraryPath.CString() << std::endl;
+    if (!m_Data->Handle)
+        m_ErrorMessage = dlerror();
+}
+
+void PulsarTools::DynamicLibrary::Unload()
+{
+    m_ErrorMessage.Resize(0);
+    if (!m_Data->Handle) return;
+    dlclose(m_Data->Handle);
+}
+
+void* PulsarTools::DynamicLibrary::GetSymbol(const char* symbolName)
+{
+    if (!m_Data->Handle) {
+        m_ErrorMessage = "Trying to get symbol of not loaded Dynamic Library.";
+        return nullptr;
+    }
+
+    m_ErrorMessage.Resize(0);
+    dlerror();
+    void* symbol = dlsym(m_Data->Handle, symbolName);
+    const char* error = dlerror();
+    if (error) m_ErrorMessage = error;
+    return symbol;
+}
+
+#elif defined(CPULSAR_PLATFORM_WINDOWS)
+
+void PulsarTools::DynamicLibrary::Load()
+{
+    m_ErrorMessage.Resize(0);
+    if (m_Data->Handle) return;
+    m_Data->Handle = LoadLibraryA(m_LibraryPath.CString());
+    if (!m_Data->Handle) {
         DWORD errorCode = GetLastError();
         LPSTR msgBuffer = NULL;
         DWORD fmAlloc = FormatMessageA(
@@ -143,33 +251,43 @@ PulsarTools::ExtBinding::ExtBinding(const char* path)
             m_ErrorMessage = (const char*)msgBuffer;
             LocalFree(msgBuffer);
         } else {
-            m_ErrorMessage = "Could not retrieve error message";
+            m_ErrorMessage = "Could not retrieve error message.";
         }
     }
-
 }
 
-PulsarTools::ExtBinding::~ExtBinding()
+void PulsarTools::DynamicLibrary::Unload()
 {
-    if (m_Lib) {
-        ExtLibImpl* lib = (ExtLibImpl*)m_Lib;
-        FreeLibrary(lib->Handle);
-        PULSAR_FREE(lib);
+    m_ErrorMessage.Resize(0);
+    if (!m_Data->Handle) return;
+    FreeLibrary(m_Data->Handle);
+}
 
-        m_Lib = nullptr;
-        m_BindTypes = nullptr;
-        m_BindFunctions = nullptr;
+void* PulsarTools::DynamicLibrary::GetSymbol(const char* symbolName)
+{
+    if (!m_Data->Handle) {
+        m_ErrorMessage = "Trying to get symbol of not loaded Dynamic Library.";
+        return nullptr;
     }
+
+    m_ErrorMessage.Resize(0);
+    return (void*)GetProcAddress(m_Data->Handle, symbolName);
 }
 
 #else // Unsupported Platform
 
-PulsarTools::ExtBinding::ExtBinding(const char* path)
+void PulsarTools::DynamicLibrary::Load()
 {
-    (void)path;
     m_ErrorMessage = "Loading of shared native libraries is not supported on your system.";
 }
 
-PulsarTools::ExtBinding::~ExtBinding() = default;
+void PulsarTools::DynamicLibrary::Unload()
+{
+}
+
+void* PulsarTools::DynamicLibrary::GetSymbol(const char* symbolName)
+{
+    return nullptr;
+}
 
 #endif
