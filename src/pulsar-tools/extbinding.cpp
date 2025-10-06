@@ -192,15 +192,12 @@ const Pulsar::String& PulsarTools::DynamicLibrary::GetErrorMessage() const
 
 #if defined(CPULSAR_PLATFORM_UNIX)
 
-#include <iostream>
-
 void PulsarTools::DynamicLibrary::Load()
 {
     m_ErrorMessage.Resize(0);
     if (m_Data->Handle) return;
     int dlFlags = RTLD_NOW | (m_Flags.GlobalSymbols ? RTLD_GLOBAL : RTLD_LOCAL);
     m_Data->Handle = dlopen(m_LibraryPath.CString(), dlFlags);
-    std::cout << m_LibraryPath.CString() << std::endl;
     if (!m_Data->Handle)
         m_ErrorMessage = dlerror();
 }
