@@ -3,7 +3,7 @@
 #include <chrono>
 #include <optional>
 
-#include <pulsar/platform.h>
+#include "pulsar/platform.h"
 
 #if defined(PULSAR_PLATFORM_MACOSX)
 #  include <mach-o/dyld.h>
@@ -18,6 +18,7 @@
 #include "pulsar/bytecode.h"
 #include "pulsar/binary/filereader.h"
 #include "pulsar/binary/filewriter.h"
+#include "pulsar/optimizer.h"
 
 #include "pulsar-tools/bindings.h"
 #include "pulsar-tools/views.h"
@@ -274,6 +275,70 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
     return 0;
 }
 
+int PulsarTools::CLI::Action::Optimize(Pulsar::Module& module, const OptimizerOptions& optimizerOptions, const Argue::StrOption* entryPoint)
+{
+    if (!optimizerOptions.HasOptimizationsActive()) return 0;
+
+    Logger& logger = GetLogger();
+
+    std::chrono::microseconds totalOptimizeTime(0);
+
+    Pulsar::BaseOptimizerSettings optimizerSettings;
+    {
+        bool exportAllFunctions = false;
+        Pulsar::List<Pulsar::StringView> exportedFunctions;
+
+        if (entryPoint && *entryPoint) {
+            exportedFunctions.PushBack((**entryPoint).c_str());
+        }
+
+        if (optimizerOptions.Exports) {
+            const auto& exports = *optimizerOptions.Exports;
+            exportAllFunctions = exports.ExportAllFunctions;
+            if (!exportAllFunctions) {
+                for (size_t i = 0; i < exports.ExportedFunctions.Size(); ++i)
+                    exportedFunctions.PushBack(exports.ExportedFunctions[i]);
+            }
+
+            optimizerSettings.IsExportedNative = exports.ExportAllNatives
+                ? [](size_t, const auto&) { return true; }
+                : Pulsar::UnusedOptimizer::Settings::CreateReachableNativesFilter(module, exports.ExportedNatives);
+
+            optimizerSettings.IsExportedGlobal = exports.ExportAllGlobals
+                ? [](size_t, const auto&) { return true; }
+                : Pulsar::UnusedOptimizer::Settings::CreateReachableGlobalsFilter(module, exports.ExportedGlobals);
+        }
+
+        optimizerSettings.IsExportedFunction = exportAllFunctions
+            ? [](size_t, const auto&) { return true; }
+            : Pulsar::UnusedOptimizer::Settings::CreateReachableFunctionsFilter(module, exportedFunctions);
+    }
+
+    if (*optimizerOptions.OptimizeUnused) {
+        size_t initFunctions = module.Functions.Size()
+            ,  initNatives   = module.NativeBindings.Size()
+            ,  initGlobals   = module.Globals.Size();
+
+        auto startTime = std::chrono::steady_clock::now();
+
+        Pulsar::UnusedOptimizer optimizer;
+        optimizer.Optimize(module, optimizerSettings);
+
+        auto endTime = std::chrono::steady_clock::now();
+        auto optimizeUnusedTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
+        totalOptimizeTime += optimizeUnusedTime;
+
+        logger.Info("Optimize Unused:");
+        logger.Info("- Removed {}/{} functions.", initFunctions-module.Functions.Size(),      initFunctions);
+        logger.Info("- Removed {}/{} natives.",   initNatives-module.NativeBindings.Size(), initNatives);
+        logger.Info("- Removed {}/{} globals.",   initGlobals-module.Globals.Size(),        initGlobals);
+        logger.Info("- Time: {}us", optimizeUnusedTime.count());
+    }
+
+    logger.Info("Optimizations took: {}us", totalOptimizeTime.count());
+    return 0;
+}
+
 int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOptions& runtimeOptions, const InputProgramArgs& input)
 {
     Logger& logger = GetLogger();
@@ -324,4 +389,62 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
     }
 
     return 0;
+}
+
+void PulsarTools::CLI::ExportOption::WriteHint(Argue::ITextBuilder& hint) const
+{
+    const char* ARG_FORMAT = "f:<FUNC>|n:<NATIVE>|g:<GLOBAL>";
+
+    const auto& parser = GetParser();
+    if (parser.HasShortPrefix() && HasShortName()) {
+        hint.PutText(Argue::s(
+            parser.GetPrefix(), GetName(), '=', ARG_FORMAT, ", ",
+            parser.GetShortPrefix(), GetShortName(), ARG_FORMAT
+        ));
+    } else {
+        hint.PutText(Argue::s(
+            parser.GetPrefix(), GetName(), '=', ARG_FORMAT
+        ));
+    }
+}
+
+bool PulsarTools::CLI::ExportOption::ParseValue(std::string_view val)
+{
+    size_t idSeparatorIdx = val.find_first_of(':');
+    if (idSeparatorIdx == std::string_view::npos)
+        return SetError("Could not find ':' to separate export type from identifier.");
+
+    bool* exportAllRef = nullptr;
+    Pulsar::List<Pulsar::String>* exportedRef = nullptr;
+
+    std::string_view exportType = val.substr(0, idSeparatorIdx);
+    if (exportType == "f" || exportType == "function") {
+        exportAllRef = &m_Exports.ExportAllFunctions;
+        exportedRef  = &m_Exports.ExportedFunctions;
+    } else if (exportType == "n" || exportType == "native") {
+        exportAllRef = &m_Exports.ExportAllNatives;
+        exportedRef  = &m_Exports.ExportedNatives;
+    } else if (exportType == "g" || exportType == "global") {
+        exportAllRef = &m_Exports.ExportAllGlobals;
+        exportedRef  = &m_Exports.ExportedGlobals;
+    } else {
+        return SetError("Invalid export type, valid export types are 'f' (function), 'n' (native), or 'g' (global).");
+    }
+
+    std::string_view identifier = val.substr(idSeparatorIdx+1);
+    if (identifier.empty()) {
+        return SetError("Invalid identifier, identifier may not be empty. You may specify either a name or '*' to export everything.");
+    }
+
+    if (!*exportAllRef) {
+        if (identifier == "*") {
+            *exportAllRef = true;
+            if (exportedRef->Size() > 0)
+                exportedRef->Clear();
+        } else {
+            exportedRef->EmplaceBack(Pulsar::String(identifier.data(), identifier.length()));
+        }
+    }
+
+    return true;
 }
