@@ -16,6 +16,14 @@ void Pulsar::UnusedOptimizer::Optimize(Module& module, const Settings& settings)
 
 void Pulsar::UnusedOptimizer::MarkReachables(const Module& module, const Settings& settings)
 {
+    // TODO: Graceful bounds checking
+#define MARK_REACHABLE(reachable, name)                                                 \
+    do {                                                                                \
+        size_t index = static_cast<size_t>(instruction.Arg0);                           \
+        PULSAR_ASSERT(index < (reachable).Size(), "Index out of bounds for " name "."); \
+        (reachable)[index] = true;                                                      \
+    } while (0)
+
     m_ReachableFunctions.Clear();
     m_ReachableFunctions.Resize(module.Functions.Size(), false);
 
@@ -24,6 +32,9 @@ void Pulsar::UnusedOptimizer::MarkReachables(const Module& module, const Setting
 
     m_ReachableGlobals.Clear();
     m_ReachableGlobals.Resize(module.Globals.Size(), false);
+
+    m_ReachableConstants.Clear();
+    m_ReachableConstants.Resize(module.Constants.Size(), false);
 
     if (settings.IsExportedFunction) {
         List<size_t> functionIndicesToCheck(module.Functions.Size());
@@ -43,15 +54,16 @@ void Pulsar::UnusedOptimizer::MarkReachables(const Module& module, const Setting
                 auto instruction = function.Code[j];
                 if (OptimizerUtils::InstructionReferencesFunction(instruction.Code)) {
                     size_t instrFnIdx = static_cast<size_t>(instruction.Arg0);
+                    PULSAR_ASSERT(instrFnIdx < m_ReachableFunctions.Size(), "Index out of bounds for function.");
                     if (!m_ReachableFunctions[instrFnIdx])
                         functionIndicesToCheck.PushBack(instrFnIdx);
                     m_ReachableFunctions[instrFnIdx] = true;
                 } else if (OptimizerUtils::InstructionReferencesNative(instruction.Code)) {
-                    size_t instrNativeIdx = static_cast<size_t>(instruction.Arg0);
-                    m_ReachableNatives[instrNativeIdx] = true;
+                    MARK_REACHABLE(m_ReachableNatives, "native");
                 } else if (OptimizerUtils::InstructionReferencesGlobal(instruction.Code)) {
-                    size_t instrGlobalIdx = static_cast<size_t>(instruction.Arg0);
-                    m_ReachableGlobals[instrGlobalIdx] = true;
+                    MARK_REACHABLE(m_ReachableGlobals, "global");
+                } else if (OptimizerUtils::InstructionReferencesConstant(instruction.Code)) {
+                    MARK_REACHABLE(m_ReachableConstants, "constant");
                 }
             }
         }
@@ -76,6 +88,8 @@ void Pulsar::UnusedOptimizer::MarkReachables(const Module& module, const Setting
             }
         }
     }
+
+#undef MARK_REACHABLE
 }
 
 void Pulsar::UnusedOptimizer::RemoveUnreachable(Module& module)
@@ -89,33 +103,40 @@ void Pulsar::UnusedOptimizer::RemoveUnreachable(Module& module)
     m_RemappedGlobals.Clear();
     m_RemappedGlobals.Resize(module.Globals.Size(), INVALID_INDEX);
 
+    m_RemappedConstants.Clear();
+    m_RemappedConstants.Resize(module.Constants.Size(), INVALID_INDEX);
+
     RemoveUnreachableFor(m_ReachableFunctions, m_RemappedFunctions, module.Functions);
     RemoveUnreachableFor(m_ReachableNatives,   m_RemappedNatives,   module.NativeBindings, module.NativeFunctions);
     RemoveUnreachableFor(m_ReachableGlobals,   m_RemappedGlobals,   module.Globals);
+    RemoveUnreachableFor(m_ReachableConstants, m_RemappedConstants, module.Constants);
 }
 
 void Pulsar::UnusedOptimizer::RemapIndices(Module& module)
 {
+#define REMAP_INDEX(map, name)                                                                   \
+    do {                                                                                         \
+        size_t index = static_cast<size_t>(instruction.Arg0);                                    \
+        size_t remappedIndex = (map)[index];                                                     \
+        PULSAR_ASSERT(remappedIndex != INVALID_INDEX, "Did not find remap for " name " index."); \
+        instruction.Arg0 = static_cast<int64_t>(remappedIndex);                                  \
+    } while (0)
+
     for (size_t fnIdx = 0; fnIdx < module.Functions.Size(); ++fnIdx) {
         auto& function = module.Functions[fnIdx];
         for (size_t j = 0; j < function.Code.Size(); ++j) {
             auto& instruction = function.Code[j];
             if (OptimizerUtils::InstructionReferencesFunction(instruction.Code)) {
-                size_t instrFnIdx = static_cast<size_t>(instruction.Arg0);
-                size_t remappedIndex = m_RemappedFunctions[instrFnIdx];
-                PULSAR_ASSERT(remappedIndex != INVALID_INDEX, "Did not find remap for function index.");
-                instruction.Arg0 = static_cast<int64_t>(remappedIndex);
+                REMAP_INDEX(m_RemappedFunctions, "function");
             } else if (OptimizerUtils::InstructionReferencesNative(instruction.Code)) {
-                size_t instrNativeIdx = static_cast<size_t>(instruction.Arg0);
-                size_t remappedIndex = m_RemappedNatives[instrNativeIdx];
-                PULSAR_ASSERT(remappedIndex != INVALID_INDEX, "Did not find remap for native index.");
-                instruction.Arg0 = static_cast<int64_t>(remappedIndex);
+                REMAP_INDEX(m_RemappedNatives, "native");
             } else if (OptimizerUtils::InstructionReferencesGlobal(instruction.Code)) {
-                size_t instrGlobalIdx = static_cast<size_t>(instruction.Arg0);
-                size_t remappedIndex = m_RemappedGlobals[instrGlobalIdx];
-                PULSAR_ASSERT(remappedIndex != INVALID_INDEX, "Did not find remap for global index.");
-                instruction.Arg0 = static_cast<int64_t>(remappedIndex);
+                REMAP_INDEX(m_RemappedGlobals, "global");
+            } else if (OptimizerUtils::InstructionReferencesConstant(instruction.Code)) {
+                REMAP_INDEX(m_RemappedConstants, "constant");
             }
         }
     }
+
+#undef REMAP_INDEX
 }

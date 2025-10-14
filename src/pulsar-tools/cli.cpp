@@ -317,7 +317,8 @@ int PulsarTools::CLI::Action::Optimize(Pulsar::Module& module, const OptimizerOp
     if (*optimizerOptions.OptimizeUnused) {
         size_t initFunctions = module.Functions.Size()
             ,  initNatives   = module.NativeBindings.Size()
-            ,  initGlobals   = module.Globals.Size();
+            ,  initGlobals   = module.Globals.Size()
+            ,  initConstants = module.Constants.Size();
 
         auto startTime = std::chrono::steady_clock::now();
 
@@ -329,9 +330,10 @@ int PulsarTools::CLI::Action::Optimize(Pulsar::Module& module, const OptimizerOp
         totalOptimizeTime += optimizeUnusedTime;
 
         logger.Info("Optimize Unused:");
-        logger.Info("- Removed {}/{} functions.", initFunctions-module.Functions.Size(),      initFunctions);
+        logger.Info("- Removed {}/{} functions.", initFunctions-module.Functions.Size(),    initFunctions);
         logger.Info("- Removed {}/{} natives.",   initNatives-module.NativeBindings.Size(), initNatives);
         logger.Info("- Removed {}/{} globals.",   initGlobals-module.Globals.Size(),        initGlobals);
+        logger.Info("- Removed {}/{} constants.", initConstants-module.Constants.Size(),    initConstants);
         logger.Info("- Time: {}us", optimizeUnusedTime.count());
     }
 

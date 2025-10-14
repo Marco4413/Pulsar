@@ -16,6 +16,7 @@ namespace Pulsar
         constexpr bool InstructionReferencesFunction(InstructionCode code);
         constexpr bool InstructionReferencesNative(InstructionCode code);
         constexpr bool InstructionReferencesGlobal(InstructionCode code);
+        constexpr bool InstructionReferencesConstant(InstructionCode code);
     }
 
     struct BaseOptimizerSettings
@@ -90,10 +91,12 @@ namespace Pulsar
         ReachableIndex m_ReachableFunctions;
         ReachableIndex m_ReachableNatives;
         ReachableIndex m_ReachableGlobals;
+        ReachableIndex m_ReachableConstants;
 
         RemappedIndex m_RemappedFunctions;
         RemappedIndex m_RemappedNatives;
         RemappedIndex m_RemappedGlobals;
+        RemappedIndex m_RemappedConstants;
     };
 }
 
@@ -115,6 +118,11 @@ constexpr bool Pulsar::OptimizerUtils::InstructionReferencesGlobal(InstructionCo
         || code == InstructionCode::PushGlobal
         || code == InstructionCode::PopIntoGlobal
         || code == InstructionCode::CopyIntoGlobal;
+}
+
+constexpr bool Pulsar::OptimizerUtils::InstructionReferencesConstant(InstructionCode code)
+{
+    return code == InstructionCode::PushConst;
 }
 
 template<typename T>
