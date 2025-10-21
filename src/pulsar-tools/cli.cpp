@@ -96,37 +96,6 @@ const std::filesystem::path& PulsarTools::CLI::GetInterpreterIncludeFolder()
     return s_InterpreterIncludeFolder->replace_filename("include");
 }
 
-// TODO: Move into Pulsar so that it can be used by other projects
-using IncludePaths = std::vector<std::string>;
-
-static Pulsar::ParseSettings::IncludeResolverFn CreateIncludeResolver(const IncludePaths& includePaths)
-{
-    return [includePaths](Pulsar::Parser& parser, Pulsar::String cwf, Pulsar::Token token) {
-        std::filesystem::path targetPath(token.StringVal.CString());
-
-        Pulsar::ParseResult result;
-        { // Try relative path first
-            std::filesystem::path workingPath(cwf.CString());
-            std::filesystem::path filePath = workingPath.parent_path() / targetPath;
-            result = parser.AddSourceFile(filePath.generic_string().c_str());
-            if (result == Pulsar::ParseResult::OK) return result;
-        }
-
-        for (size_t i = includePaths.size(); i > 0; --i) {
-            std::filesystem::path workingPath(includePaths[i-1]);
-            std::filesystem::path filePath = workingPath / targetPath;
-            if (std::filesystem::exists(filePath) &&
-                std::filesystem::is_regular_file(filePath)
-            ) {
-                parser.ClearError();
-                return parser.AddSourceFile(filePath.generic_string().c_str());
-            }
-        }
-
-        return result;
-    };
-}
-
 Pulsar::ParseSettings PulsarTools::CLI::ParserOptions::ToParseSettings() const
 {
     Pulsar::ParseSettings settings = Pulsar::ParseSettings_Default;
@@ -135,17 +104,25 @@ Pulsar::ParseSettings PulsarTools::CLI::ParserOptions::ToParseSettings() const
     settings.AllowIncludeDirective     = *this->AllowInclude;
     settings.AllowLabels               = *this->AllowLabels;
 
-    auto includeFolders = *this->IncludeFolders;
+    Pulsar::ParseSettings::IncludePaths includePaths;
+    includePaths.Reserve((*this->IncludeFolders).size()+1);
+
+    for (const auto& includeFolder : *this->IncludeFolders) {
+        includePaths.EmplaceBack(includeFolder.c_str());
+    }
+
     if (*this->InterpreterIncludeFolder) {
-        const auto& interpreterIncludeFolderPath = PulsarTools::CLI::GetInterpreterIncludeFolder();
-        if (!interpreterIncludeFolderPath.empty() && std::filesystem::exists(interpreterIncludeFolderPath)) {
-            includeFolders.push_back(interpreterIncludeFolderPath.generic_string());
+        const auto& interpreterIncludeFolder = PulsarTools::CLI::GetInterpreterIncludeFolder();
+        if (!interpreterIncludeFolder.empty() && std::filesystem::exists(interpreterIncludeFolder)) {
+            includePaths.EmplaceBack(interpreterIncludeFolder.generic_string().c_str());
         }
     }
 
-    if (!includeFolders.empty()) {
-        settings.IncludeResolver = CreateIncludeResolver(includeFolders);
+    if (!includePaths.IsEmpty()) {
+        settings.IncludeResolver = Pulsar::ParseSettings::CreateFileSystemIncludeResolver(
+                std::move(includePaths), true);
     }
+
     return settings;
 }
 
