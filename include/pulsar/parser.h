@@ -242,6 +242,11 @@ namespace Pulsar
         bool MapGlobalProducersToVoid       = false;
         IncludeResolverFn IncludeResolver   = nullptr;
         ParserNotifications Notifications   = {};
+
+        // The list is iterated in reverse order so that the last path is the most specific one.
+        using IncludePaths = List<String>;
+        // Returns nullptr if PULSAR_NO_FILESYSTEM is defined.
+        static IncludeResolverFn CreateFileSystemIncludeResolver(IncludePaths&& includePaths, bool showPathsInErrorMessage=false);
     };
 
     inline const ParseSettings ParseSettings_Default{};
@@ -266,6 +271,11 @@ namespace Pulsar
         const Token& GetErrorToken() const    { return m_ErrorToken; }
         ParseResult SetError(ParseResult errorType, const Token& token, const String& errorMsg);
         void ClearError();
+
+    public:
+        // If false is returned, normalized was not modified.
+        // Always returns false if PULSAR_NO_FILESYSTEM is defined.
+        static bool PathToNormalizedFileSystemPath(const String& path, String& outNormalized);
 
     private:
         ParseResult ParseModuleStatement(Module& module, GlobalScope& globalScope, const ParseSettings& settings);

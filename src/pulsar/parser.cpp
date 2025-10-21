@@ -112,26 +112,21 @@ Pulsar::ParseResult Pulsar::Parser::AddSourceFile(const String& path)
 #else // PULSAR_NO_FILESYSTEM
     auto rawPath = std::filesystem::path(path.CString());
 
-    std::error_code error;
-    auto normalizedPath = std::filesystem::relative(rawPath, error);
-
-    if (error || normalizedPath.empty()) {
-        // If path is empty it may be located on a different drive on Windows.
-        // In which case we should compute the canonical path.
-        normalizedPath = std::filesystem::canonical(rawPath, error);
+    String internalPath;
+    // Having a method which normalizes the path removes duplicate code.
+    // However, normalizedPath must be created again which is wasteful.
+    if (!PathToNormalizedFileSystemPath(path, internalPath)) {
+        return SetError(ParseResult::FileNotRead, token, "Could not resolve path '" + path + "'.");
     }
 
-    if (error) {
-        return SetError(ParseResult::FileNotRead, token, "Could not normalize path '" + path + "'.");
-    } else if (normalizedPath.empty()) {
-        return SetError(ParseResult::FileNotRead, token, "Could not resolve file '" + path + "'.");
-    }
+    std::filesystem::path normalizedPath(internalPath.CString());
 
-    String internalPath = normalizedPath.generic_string().c_str();
     if (!std::filesystem::exists(normalizedPath))
         return SetError(ParseResult::FileNotRead, token, "File '" + internalPath + "' does not exist.");
-    
+
     std::ifstream file(normalizedPath, std::ios::binary);
+
+    std::error_code error;
     size_t fileSize = (size_t)std::filesystem::file_size(normalizedPath, error);
     if (error) {
         return SetError(ParseResult::FileNotRead, token, "Could not get size of file '" + internalPath + "'.");
@@ -1324,6 +1319,95 @@ const Pulsar::String* Pulsar::Parser::CurrentSource() const
     if (m_LexerPool.Size() > 0)
         return &m_LexerPool.Back().Source;
     return nullptr;
+}
+
+bool Pulsar::Parser::PathToNormalizedFileSystemPath(const String& path, String& outNormalized)
+{
+#ifdef PULSAR_NO_FILESYSTEM
+    (void)path;
+    (void)outNormalized;
+    return false;
+#else // PULSAR_NO_FILESYSTEM
+    auto rawPath = std::filesystem::path(path.CString());
+
+    std::error_code error;
+    auto normalizedPath = std::filesystem::relative(rawPath, error);
+
+    if (error || normalizedPath.empty()) {
+        // If path is empty it may be located on a different drive on Windows.
+        // In which case we should compute the canonical path.
+        normalizedPath = std::filesystem::canonical(rawPath, error);
+    }
+
+    if (error || normalizedPath.empty()) {
+        return false;
+    }
+
+    outNormalized = normalizedPath.generic_string().c_str();
+    return true;
+#endif // PULSAR_NO_FILESYSTEM
+}
+
+Pulsar::ParseSettings::IncludeResolverFn Pulsar::ParseSettings::CreateFileSystemIncludeResolver(IncludePaths&& includePaths, bool showPathsInErrorMessage)
+{
+#ifdef PULSAR_NO_FILESYSTEM
+    (void)includePaths;
+    (void)showPathsInErrorMessage;
+    return nullptr;
+#else // PULSAR_NO_FILESYSTEM
+    return [includePaths = std::move(includePaths), showPathsInErrorMessage](Pulsar::Parser& parser, Pulsar::String cwf, Pulsar::Token token) {
+        // Populated only if showPathsInErrorMessage is true
+        List<String> triedPaths;
+
+        std::filesystem::path targetPath(token.StringVal.CString());
+
+        ParseResult result;
+        { // Try relative path first
+            std::filesystem::path workingPath(cwf.CString());
+            workingPath = workingPath.parent_path();
+            std::filesystem::path filePath = workingPath / targetPath;
+            String pulsarPath = filePath.generic_string().c_str();
+            result = parser.AddSourceFile(pulsarPath);
+            if (result == ParseResult::OK) return result;
+            if (showPathsInErrorMessage) triedPaths.EmplaceBack(std::move(pulsarPath));
+        }
+
+        if (!targetPath.is_absolute()) {
+            for (size_t i = includePaths.Size(); i > 0; --i) {
+                std::filesystem::path workingPath(includePaths[i-1].CString());
+                std::filesystem::path filePath = workingPath / targetPath;
+                String pulsarPath = filePath.generic_string().c_str();
+                result = parser.AddSourceFile(pulsarPath);
+                if (result == ParseResult::OK) return result;
+                if (showPathsInErrorMessage) triedPaths.EmplaceBack(std::move(pulsarPath));
+            }
+        }
+
+        // Here result is always != ParseResult::OK
+        if (showPathsInErrorMessage) {
+            // Relative and include paths failed
+            String errorMsg = "Could not read file ";
+
+            // triedPaths must at least contain the relative path
+            Parser::PathToNormalizedFileSystemPath(triedPaths[0], triedPaths[0]);
+            errorMsg += '\'';
+            errorMsg += triedPaths[0];
+            errorMsg += '\'';
+
+            for (size_t i = 1; i < triedPaths.Size(); ++i) {
+                Parser::PathToNormalizedFileSystemPath(triedPaths[i], triedPaths[i]);
+                errorMsg += ", '";
+                errorMsg += triedPaths[i];
+                errorMsg += '\'';
+            }
+
+            errorMsg += '.';
+            return parser.SetError(Pulsar::ParseResult::FileNotRead, token, errorMsg);
+        }
+
+        return result;
+    };
+#endif // PULSAR_NO_FILESYSTEM
 }
 
 const char* Pulsar::ParseResultToString(ParseResult presult)
