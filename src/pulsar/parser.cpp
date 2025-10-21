@@ -46,28 +46,19 @@
 
 Pulsar::ParseResult Pulsar::Parser::SetError(ParseResult errorType, const Token& token, const String& errorMsg)
 {
-    m_ErrorSource = CurrentSource();
-    m_ErrorPath = CurrentPath();
-    m_Error = errorType;
-    m_ErrorToken = token;
-    m_ErrorMsg = errorMsg;
+    m_ErrorMessage.SourceIndex = CurrentSourceIndex();
+    m_ErrorMessage.Token   = token;
+    m_ErrorMessage.Message = errorMsg;
+    m_ErrorMessage.Reason  = errorType;
     return errorType;
 }
 
 void Pulsar::Parser::ClearError()
 {
-    m_ErrorSource = nullptr;
-    m_ErrorPath = nullptr;
-    m_Error = ParseResult::OK;
-    m_ErrorToken = Token(TokenType::None);
-    m_ErrorMsg.Resize(0);
-}
-
-void Pulsar::Parser::Reset()
-{
-    ClearError();
-    m_ParsedSources.Clear();
-    m_LexerPool.Clear();
+    m_ErrorMessage.SourceIndex = INVALID_INDEX;
+    m_ErrorMessage.Token  = Token(TokenType::None);
+    m_ErrorMessage.Message.Resize(0);
+    m_ErrorMessage.Reason = ParseResult::OK;
 }
 
 bool Pulsar::Parser::AddSource(const String& path, const String& src)
@@ -79,10 +70,13 @@ bool Pulsar::Parser::AddSource(const String& path, const String& src)
         m_ParsedSources.Emplace(path);
     }
 
-    LexerSource& lexSource = m_LexerPool.EmplaceBack(path, src, Lexer(""));
-    lexSource.Lexer = Lexer(lexSource.Source);
+    size_t sourceIndex = m_SourceDebugSymbols.Size();
+    m_SourceDebugSymbols.EmplaceBack(path, src);
+    // NOTE: Reallocs to m_SourceDebugSymbols keep the lexer valid because
+    //       it stores a reference to the const char* of the source.
+    m_Lexers.EmplaceBack(sourceIndex, Lexer(m_SourceDebugSymbols[sourceIndex].Source));
 
-    m_Lexer = &m_LexerPool.Back().Lexer;
+    m_Lexer = &m_Lexers.Back().Lexer;
     m_Lexer->SkipShaBang();
     return true;
 }
@@ -96,10 +90,13 @@ bool Pulsar::Parser::AddSource(const String& path, String&& src)
         m_ParsedSources.Emplace(path);
     }
 
-    LexerSource& lexSource = m_LexerPool.EmplaceBack(path, std::move(src), Lexer(""));
-    lexSource.Lexer = Lexer(lexSource.Source);
+    size_t sourceIndex = m_SourceDebugSymbols.Size();
+    m_SourceDebugSymbols.EmplaceBack(path, std::move(src));
+    // HACK: Reallocs to m_SourceDebugSymbols keep the lexer valid because
+    //       it stores a reference to the const char* of the source.
+    m_Lexers.EmplaceBack(sourceIndex, Lexer(m_SourceDebugSymbols[sourceIndex].Source));
 
-    m_Lexer = &m_LexerPool.Back().Lexer;
+    m_Lexer = &m_Lexers.Back().Lexer;
     m_Lexer->SkipShaBang();
     return true;
 }
@@ -147,9 +144,8 @@ Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, const ParseS
     ClearError();
     GlobalScope globalScope;
     if (settings.StoreDebugSymbols) {
-        for (size_t i = 0; i < m_LexerPool.Size(); i++) {
-            globalScope.SourceDebugSymbols.Emplace(m_LexerPool[i].Path, module.SourceDebugSymbols.Size());
-            module.SourceDebugSymbols.EmplaceBack(m_LexerPool[i].Path, m_LexerPool[i].Source);
+        for (size_t i = 0; i < m_SourceDebugSymbols.Size(); i++) {
+            globalScope.SourceDebugSymbols.Emplace(m_SourceDebugSymbols[i].Path, i);
         }
     }
     for (size_t i = 0; i < module.Functions.Size(); i++)
@@ -159,17 +155,24 @@ Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, const ParseS
     for (size_t i = 0; i < module.Globals.Size(); i++)
         globalScope.Globals.Insert(module.Globals[i].Name, i);
 
-    while (m_LexerPool.Size() > 0) {
+    while (m_Lexers.Size() > 0) {
         auto result = ParseModuleStatement(module, globalScope, settings);
-        if (result != ParseResult::OK)
+        if (result != ParseResult::OK) {
             return result;
-        else if (IsEndOfFile()) {
+        } else if (IsEndOfFile()) {
             // No need to call ClearError because Result was OK
-            m_LexerPool.PopBack();
-            m_Lexer = m_LexerPool.IsEmpty() ? nullptr : &m_LexerPool.Back().Lexer;
+            m_Lexers.PopBack();
+            m_Lexer = !m_Lexers.IsEmpty()
+                ? &m_Lexers.Back().Lexer
+                : nullptr;
         }
     }
     module.NativeFunctions.Resize(module.NativeBindings.Size(), nullptr);
+    // NOTE: If there's any valid message that can be retrieved this should not be a move operation.
+    //       It will be required when warnings are added.
+    if (settings.StoreDebugSymbols)
+        module.SourceDebugSymbols = std::move(m_SourceDebugSymbols);
+    m_SourceDebugSymbols.Clear();
     return ParseResult::OK;
 }
 
@@ -208,12 +211,10 @@ Pulsar::ParseResult Pulsar::Parser::ParseModuleStatement(Module& module, GlobalS
 #endif // PULSAR_NO_FILESYSTEM
         }
         if (settings.StoreDebugSymbols) {
-            const String* path = CurrentPath();
-            PULSAR_ASSERT(path != nullptr, "Path should not be nullptr.");
-            const String* source = CurrentSource();
-            PULSAR_ASSERT(source != nullptr, "Source should not be nullptr.");
-            globalScope.SourceDebugSymbols.Emplace(*path, module.SourceDebugSymbols.Size());
-            module.SourceDebugSymbols.EmplaceBack(*path, *source);
+            // No error, a source was added
+            globalScope.SourceDebugSymbols.Emplace(
+                    m_SourceDebugSymbols.Back().Path,
+                    m_SourceDebugSymbols.Size()-1);
         }
         return ParseResult::OK;
     }
@@ -1307,18 +1308,39 @@ bool Pulsar::Parser::IsEndOfFile() const
     return m_Lexer->IsEndOfFile();
 }
 
+const Pulsar::String* Pulsar::Parser::GetSourceFromIndex(size_t sourceIndex) const
+{
+    if (sourceIndex == INVALID_INDEX || sourceIndex >= m_SourceDebugSymbols.Size())
+        return nullptr;
+    return &m_SourceDebugSymbols[sourceIndex].Source;
+}
+
+const Pulsar::String* Pulsar::Parser::GetPathFromIndex(size_t sourceIndex) const
+{
+    if (sourceIndex == INVALID_INDEX || sourceIndex >= m_SourceDebugSymbols.Size())
+        return nullptr;
+    return &m_SourceDebugSymbols[sourceIndex].Path;
+}
+
+size_t Pulsar::Parser::CurrentSourceIndex() const
+{
+    return m_Lexers.Size() > 0
+        ? m_Lexers.Back().SourceIndex
+        : INVALID_INDEX;
+}
+
 const Pulsar::String* Pulsar::Parser::CurrentPath() const
 {
-    if (m_LexerPool.Size() > 0)
-        return &m_LexerPool.Back().Path;
-    return nullptr;
+    auto sourceIndex = CurrentSourceIndex();
+    if (sourceIndex == INVALID_INDEX) return nullptr;
+    return &m_SourceDebugSymbols[sourceIndex].Path;
 }
 
 const Pulsar::String* Pulsar::Parser::CurrentSource() const
 {
-    if (m_LexerPool.Size() > 0)
-        return &m_LexerPool.Back().Source;
-    return nullptr;
+    auto sourceIndex = CurrentSourceIndex();
+    if (sourceIndex == INVALID_INDEX) return nullptr;
+    return &m_SourceDebugSymbols[sourceIndex].Source;
 }
 
 bool Pulsar::Parser::PathToNormalizedFileSystemPath(const String& path, String& outNormalized)

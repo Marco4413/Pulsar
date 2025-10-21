@@ -73,7 +73,7 @@ int main(int argc, const char** argv)
         // Pulsar::String is null-terminated, there's no need to worry about reading invalid memory.
         fmt::println("[PARSE ERROR]: {}: {}",
             Pulsar::ParseResultToString(parseResult),
-            parser.GetErrorMessage().CString());
+            parser.GetErrorMessage().Message.CString());
         return 1;
     }
 
@@ -100,16 +100,16 @@ int main(int argc, const char** argv)
         //   an "half-baked" representation of the file.
         // So its data is to be treated as invalid.
 
-        // Getting the Token where the error happened.
-        const Pulsar::Token& errorToken = parser.GetErrorToken();
+        // Get the error message.
+        const Pulsar::Parser::ErrorMessage& errorMessage = parser.GetErrorMessage();
         fmt::println("[PARSE ERROR]: {}:{}:{}: {}: {}",
             // The path of the file which caused the error.
-            parser.GetErrorPath()->CString(),
+            parser.GetPathFromIndex(errorMessage.SourceIndex)->CString(),
             // Line and Char within the line were the error occurred.
-            errorToken.SourcePos.Line+1,
-            errorToken.SourcePos.Char,
+            errorMessage.Token.SourcePos.Line+1,
+            errorMessage.Token.SourcePos.Char,
             Pulsar::ParseResultToString(parseResult),
-            parser.GetErrorMessage().CString());
+            errorMessage.Message.CString());
         return 1;
     }
 

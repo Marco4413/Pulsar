@@ -254,6 +254,23 @@ namespace Pulsar
     class Parser
     {
     public:
+        static constexpr auto INVALID_INDEX = Module::INVALID_INDEX;
+
+        struct Message
+        {
+            size_t SourceIndex;
+            Pulsar::Token Token;
+            String Message;
+        };
+
+        // Warnings are next!
+        // using WarningMessage = Message;
+        struct ErrorMessage : Message
+        {
+            ParseResult Reason;
+        };
+
+    public:
         Parser() = default;
         ~Parser() = default;
 
@@ -262,13 +279,12 @@ namespace Pulsar
         ParseResult AddSourceFile(const String& path);
 
         ParseResult ParseIntoModule(Module& module, const ParseSettings& settings=ParseSettings_Default);
-        void Reset(); // Call Reset after ParseIntoModule to reuse the Parser
 
-        const String* GetErrorSource() const  { return m_ErrorSource; }
-        const String* GetErrorPath() const    { return m_ErrorPath; }
-        ParseResult GetError() const          { return m_Error; }
-        const String& GetErrorMessage() const { return m_ErrorMsg; }
-        const Token& GetErrorToken() const    { return m_ErrorToken; }
+        const ErrorMessage& GetErrorMessage() const { return m_ErrorMessage; }
+        // Use these method to retrieve Source and Path given a sourceIndex within a Message.
+        const String* GetSourceFromIndex(size_t sourceIndex) const;
+        const String* GetPathFromIndex(size_t sourceIndex) const;
+
         ParseResult SetError(ParseResult errorType, const Token& token, const String& errorMsg);
         void ClearError();
 
@@ -293,29 +309,27 @@ namespace Pulsar
         const Token& CurrentToken() const;
         bool IsEndOfFile() const;
 
-        // Pointers are guaranteed to be valid until m_LexerPool changes.
+        size_t CurrentSourceIndex() const;
+        // Pointers are guaranteed to be valid until m_Lexers changes.
         // i.e. If parsing is on hold or has been aborted, they're safe to use.
         const String* CurrentPath() const;
         const String* CurrentSource() const;
+
     private:
         struct LexerSource
         {
-            String Path;
-            String Source;
+            size_t SourceIndex;
             Pulsar::Lexer Lexer;
         };
 
         HashMap<String, std::nullptr_t> m_ParsedSources;
-        List<LexerSource> m_LexerPool;
+        List<LexerSource> m_Lexers;
 
         Lexer* m_Lexer = nullptr;
         Token m_CurrentToken = Token(TokenType::None);
 
-        const String* m_ErrorSource = nullptr;
-        const String* m_ErrorPath = nullptr;
-        ParseResult m_Error = ParseResult::OK;
-        Token m_ErrorToken = Token(TokenType::None);
-        String m_ErrorMsg = "";
+        List<SourceDebugSymbol> m_SourceDebugSymbols;
+        ErrorMessage m_ErrorMessage;
     };
 }
 

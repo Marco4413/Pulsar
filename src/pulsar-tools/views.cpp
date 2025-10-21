@@ -110,9 +110,12 @@ std::string PulsarTools::CreateSourceErrorMessage(
 
 std::string PulsarTools::CreateParserErrorMessage(const Pulsar::Parser& parser, bool enableColors, TokenViewRange viewRange)
 {
+    const auto& errorMessage = parser.GetErrorMessage();
     return CreateSourceErrorMessage(
-        parser.GetErrorSource(), parser.GetErrorPath(),
-        parser.GetErrorToken(), parser.GetErrorMessage(),
+        parser.GetSourceFromIndex(errorMessage.SourceIndex),
+        parser.GetPathFromIndex(errorMessage.SourceIndex),
+        errorMessage.Token,
+        errorMessage.Message,
         enableColors, viewRange
     );
 }
