@@ -123,6 +123,8 @@ Pulsar::ParseSettings PulsarTools::CLI::ParserOptions::ToParseSettings() const
                 std::move(includePaths), true);
     }
 
+    settings.Warnings.DuplicateFunctionNames = *this->WarnDuplicateFunctionNames;
+
     return settings;
 }
 
@@ -148,9 +150,18 @@ int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const In
     auto parseTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
     logger.Info("Parsing took: {}us", parseTime.count());
 
+    const auto& warningMessages = parser.GetWarningMessages();
+    for (size_t i = 0; i < warningMessages.Size(); ++i) {
+        logger.Info(CreateParserMessageReport(
+                parser, MessageReportKind_Warning, warningMessages[i],
+                logger.GetColor()));
+    }
+
     if (parseResult != Pulsar::ParseResult::OK) {
         logger.Error("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
-        logger.Error(CreateParserErrorMessage(parser, logger.GetColor()));
+        logger.Error(CreateParserMessageReport(
+                parser, MessageReportKind_Error, parser.GetErrorMessage(),
+                logger.GetColor()));
         return 1;
     }
 
@@ -239,9 +250,18 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
     auto parseTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
     logger.Info("Parsing took: {}us", parseTime.count());
 
+    const auto& warningMessages = parser.GetWarningMessages();
+    for (size_t i = 0; i < warningMessages.Size(); ++i) {
+        logger.Warn(CreateParserMessageReport(
+                parser, MessageReportKind_Warning, warningMessages[i],
+                logger.GetColor()));
+    }
+
     if (parseResult != Pulsar::ParseResult::OK) {
         logger.Error("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
-        logger.Error(CreateParserErrorMessage(parser, logger.GetColor()));
+        logger.Error(CreateParserMessageReport(
+                parser, MessageReportKind_Error, parser.GetErrorMessage(),
+                logger.GetColor()));
         return 1;
     }
 
@@ -354,7 +374,7 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
         return 1;
     } else if (runtimeState != Pulsar::RuntimeState::OK) {
         logger.Error("Runtime Error: {}", Pulsar::RuntimeStateToString(runtimeState));
-        logger.Error(CreateRuntimeErrorMessage(context, stackTraceDepth, logger.GetColor()));
+        logger.Error(CreateRuntimeErrorMessageReport(context, stackTraceDepth, logger.GetColor()));
         return 1;
     }
 

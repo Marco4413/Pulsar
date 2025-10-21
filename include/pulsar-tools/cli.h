@@ -40,7 +40,7 @@ namespace PulsarTools::CLI
                 true),
             LogLevel(cmd, "log-level", "L", "LOGLEVEL",
                 "Sets the log level for the CLI. (default: all)",
-                {"all", "error"}, 0)
+                {"all", "warning", "error"}, 0)
         {}
 
         Argue::FlagOption Version;
@@ -75,7 +75,14 @@ namespace PulsarTools::CLI
                 true),
             AllowLabels(cmd, "allow-labels", "l",
                 "Allow the usage of labels. (default: false)",
-                false)
+                false),
+            WarnDuplicateFunctionNames(cmd, "warn-duplicate-function-names", "",
+                "Warn if duplicate function names are found."
+                " Multiple functions named 'main' won't be reported."
+                " (default: false)",
+                false),
+            WarnAll(cmd, "warn-all", "", "Enable all warnings. (default: false)", false,
+                WarnDuplicateFunctionNames)
         {}
 
         Pulsar::ParseSettings ToParseSettings() const;
@@ -88,6 +95,9 @@ namespace PulsarTools::CLI
         Argue::FlagOption ErrorNotes;
         Argue::FlagOption AllowInclude;
         Argue::FlagOption AllowLabels;
+
+        Argue::FlagOption WarnDuplicateFunctionNames;
+        Argue::FlagGroupOption WarnAll;
     };
 
     class ExportOption final :
