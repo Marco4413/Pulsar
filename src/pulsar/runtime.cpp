@@ -190,13 +190,10 @@ uint64_t Pulsar::Module::BindCustomType(const String& name, CustomType::DataFact
 
 Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(const String& funcName)
 {
-    for (size_t i = m_Module.Functions.Size(); i > 0; --i) {
-        const FunctionDefinition& funcDef = m_Module.Functions[i-1];
-        if (funcDef.Name != funcName)
-            continue;
-        return CallFunction(i-1);
-    }
-    return m_State = RuntimeState::FunctionNotFound;
+    size_t fnIdx = m_Module.FindFunctionByName(funcName);
+    if (fnIdx == m_Module.INVALID_INDEX)
+        return m_State = RuntimeState::FunctionNotFound;
+    return CallFunction(fnIdx);
 }
 
 Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(int64_t funcIdx)
@@ -208,6 +205,9 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(int64_t funcIdx)
 
 Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(const FunctionDefinition& funcDef)
 {
+    // Do not allow calls on errors
+    if (m_State != RuntimeState::OK) return m_State;
+
     ValueStack& callerStack = !m_CallStack.IsEmpty()
         ? m_CallStack.CurrentFrame().Stack : m_Stack;
     Frame frame = m_CallStack.CreateFrame(&funcDef, false);

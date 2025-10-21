@@ -125,6 +125,10 @@ namespace Pulsar
     class Module
     {
     public:
+        // Returned by Find* functions to indicate that the item was not found.
+        static constexpr size_t INVALID_INDEX = size_t(-1);
+
+    public:
         Module() = default;
         ~Module() = default;
 
@@ -147,6 +151,13 @@ namespace Pulsar
         bool HasCustomType(uint64_t typeId) const              { return CustomTypes.Find(typeId); }
 
         bool HasSourceDebugSymbols() const { return !SourceDebugSymbols.IsEmpty(); }
+
+        template<typename T>
+        size_t FindDefinitionByName(const List<T>& definitions, const String& name) const;
+
+        size_t FindFunctionByName(const String& name) const { return FindDefinitionByName(Functions, name); }
+        size_t FindNativeByName(const String& name)   const { return FindDefinitionByName(NativeBindings, name); }
+        size_t FindGlobalByName(const String& name)   const { return FindDefinitionByName(Globals, name); }
 
     public:
         // Access these member variables only for:
@@ -349,6 +360,18 @@ if (state != RuntimeState::OK) // ERROR
         bool m_StopRequested = false;
         RuntimeState m_State = RuntimeState::OK;
     };
+}
+
+template<typename T>
+size_t Pulsar::Module::FindDefinitionByName(const List<T>& definitions, const String& name) const
+{
+    for (size_t i = definitions.Size(); i > 0; --i) {
+        const T& definition = definitions[i-1];
+        if (definition.Name != name)
+            continue;
+        return i-1;
+    }
+    return INVALID_INDEX;
 }
 
 #endif // _PULSAR_RUNTIME_H

@@ -74,7 +74,7 @@ namespace Pulsar
         void RemapIndices(Module& module);
 
     private:
-        static constexpr auto INVALID_INDEX = size_t(-1);
+        static constexpr auto INVALID_INDEX = Module::INVALID_INDEX;
         // ReachableIndex[functionIndex] is true if functionIndex is reachable
         using ReachableIndex = List<bool>;
         // RemappedIndex[original index] is == INVALID_INDEX if functionIndex is unreachable.
@@ -128,14 +128,13 @@ constexpr bool Pulsar::OptimizerUtils::InstructionReferencesConstant(Instruction
 template<typename T>
 Pulsar::BaseOptimizerSettings::IsExportedDefinitionFn<T> Pulsar::BaseOptimizerSettings::CreateReachableDefinitionFilterFor(const List<T>& list, const List<StringView>& exportedNames)
 {
-    constexpr auto INVALID_INDEX = size_t(-1);
+    constexpr auto INVALID_INDEX = Module::INVALID_INDEX;
 
     HashMap<StringView, size_t> exportedNamesMap;
     for (size_t i = 0; i < exportedNames.Size(); ++i) {
         exportedNamesMap.Insert(exportedNames[i], INVALID_INDEX);
     }
 
-    // TODO: This should be added as a method to Module at least for functions, it's copy-pasted several times
     for (size_t i = 0; i < list.Size(); ++i) {
         size_t index = list.Size()-i-1;
         const T& definition = list[index];
