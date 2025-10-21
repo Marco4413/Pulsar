@@ -106,27 +106,36 @@ bool Pulsar::Parser::AddSource(const String& path, String&& src)
 
 Pulsar::ParseResult Pulsar::Parser::AddSourceFile(const String& path)
 {
-#ifdef PULSAR_NO_FILESYSTEM
     Token token = CurrentToken();
+#ifdef PULSAR_NO_FILESYSTEM
     return SetError(ParseResult::FileSystemNotAvailable, token, "Could not read '" + path + "' because filesystem was disabled.");
 #else // PULSAR_NO_FILESYSTEM
-    auto fsPath = std::filesystem::path(path.CString());
+    auto rawPath = std::filesystem::path(path.CString());
+
     std::error_code error;
-    auto relativePath = std::filesystem::relative(fsPath, error);
+    auto normalizedPath = std::filesystem::relative(rawPath, error);
 
-    Token token = CurrentToken();
+    if (error || normalizedPath.empty()) {
+        // If path is empty it may be located on a different drive on Windows.
+        // In which case we should compute the canonical path.
+        normalizedPath = std::filesystem::canonical(rawPath, error);
+    }
 
-    if (error)
+    if (error) {
         return SetError(ParseResult::FileNotRead, token, "Could not normalize path '" + path + "'.");
-    else if (relativePath.empty())
+    } else if (normalizedPath.empty()) {
         return SetError(ParseResult::FileNotRead, token, "Could not resolve file '" + path + "'.");
+    }
 
-    String internalPath = relativePath.generic_string().c_str();
-    if (!std::filesystem::exists(relativePath))
+    String internalPath = normalizedPath.generic_string().c_str();
+    if (!std::filesystem::exists(normalizedPath))
         return SetError(ParseResult::FileNotRead, token, "File '" + internalPath + "' does not exist.");
     
-    std::ifstream file(relativePath, std::ios::binary);
-    size_t fileSize = (size_t)std::filesystem::file_size(relativePath);
+    std::ifstream file(normalizedPath, std::ios::binary);
+    size_t fileSize = (size_t)std::filesystem::file_size(normalizedPath, error);
+    if (error) {
+        return SetError(ParseResult::FileNotRead, token, "Could not get size of file '" + internalPath + "'.");
+    }
 
     Pulsar::String source;
     source.Resize(fileSize);
