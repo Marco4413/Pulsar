@@ -44,13 +44,22 @@
         }}                                                                                \
     } while (0)
 
-Pulsar::ParseResult Pulsar::Parser::SetError(ParseResult errorType, const Token& token, const String& errorMsg)
+void Pulsar::Parser::EmitWarning(const Token& token, const String& message)
+{
+    WarningMessage warning;
+    warning.SourceIndex = CurrentSourceIndex();
+    warning.Token   = token;
+    warning.Message = message;
+    m_WarningMessages.EmplaceBack(std::move(warning));
+}
+
+Pulsar::ParseResult Pulsar::Parser::SetError(ParseResult result, const Token& token, const String& message)
 {
     m_ErrorMessage.SourceIndex = CurrentSourceIndex();
     m_ErrorMessage.Token   = token;
-    m_ErrorMessage.Message = errorMsg;
-    m_ErrorMessage.Reason  = errorType;
-    return errorType;
+    m_ErrorMessage.Message = message;
+    m_ErrorMessage.Reason  = result;
+    return result;
 }
 
 void Pulsar::Parser::ClearError()
@@ -168,11 +177,18 @@ Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, const ParseS
         }
     }
     module.NativeFunctions.Resize(module.NativeBindings.Size(), nullptr);
-    // NOTE: If there's any valid message that can be retrieved this should not be a move operation.
-    //       It will be required when warnings are added.
-    if (settings.StoreDebugSymbols)
-        module.SourceDebugSymbols = std::move(m_SourceDebugSymbols);
-    m_SourceDebugSymbols.Clear();
+    if (settings.StoreDebugSymbols) {
+        if (m_WarningMessages.IsEmpty()) {
+            module.SourceDebugSymbols = std::move(m_SourceDebugSymbols);
+        } else {
+            module.SourceDebugSymbols = m_SourceDebugSymbols;
+        }
+    }
+
+    if (m_WarningMessages.IsEmpty()) {
+        m_SourceDebugSymbols.Clear();
+    }
+
     return ParseResult::OK;
 }
 
@@ -425,7 +441,14 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
         if (curToken.Type != TokenType::Colon)
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected '->' for return count declaration or ':' to begin function body.");
         NOTIFY_FUNCTION_DEFINITION(false, false, module.Functions.Size(), def, identToken, args, settings);
-        globalScope.Functions.Emplace(def.Name, module.Functions.Size());
+        auto nameIdxPair = globalScope.Functions.Find(def.Name);
+        if (nameIdxPair) {
+            nameIdxPair->Value() = module.Functions.Size();
+            if (settings.Warnings.DuplicateFunctionNames && def.Name != "main")
+                EmitWarning(identToken, "Function definition has duplicate name.");
+        } else {
+            globalScope.Functions.Emplace(def.Name, module.Functions.Size());
+        }
         FunctionScope functionScope;
         LocalScope localScope{
             .Global = globalScope,

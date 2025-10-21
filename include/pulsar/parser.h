@@ -231,6 +231,11 @@ namespace Pulsar
          */
         using IncludeResolverFn = std::function<ParseResult(Parser&, String, Token)>;
 
+        struct WarningFlags
+        {
+            bool DuplicateFunctionNames = false;
+        };
+
         bool StoreDebugSymbols              = true;
         bool AppendStackTraceToErrorMessage = true;
         size_t StackTraceMaxDepth           = 10;
@@ -242,6 +247,7 @@ namespace Pulsar
         bool MapGlobalProducersToVoid       = false;
         IncludeResolverFn IncludeResolver   = nullptr;
         ParserNotifications Notifications   = {};
+        WarningFlags Warnings               = {};
 
         // The list is iterated in reverse order so that the last path is the most specific one.
         using IncludePaths = List<String>;
@@ -263,8 +269,7 @@ namespace Pulsar
             String Message;
         };
 
-        // Warnings are next!
-        // using WarningMessage = Message;
+        struct WarningMessage : Message {};
         struct ErrorMessage : Message
         {
             ParseResult Reason;
@@ -280,12 +285,14 @@ namespace Pulsar
 
         ParseResult ParseIntoModule(Module& module, const ParseSettings& settings=ParseSettings_Default);
 
+        const List<WarningMessage>& GetWarningMessages() const { return m_WarningMessages; }
         const ErrorMessage& GetErrorMessage() const { return m_ErrorMessage; }
         // Use these method to retrieve Source and Path given a sourceIndex within a Message.
         const String* GetSourceFromIndex(size_t sourceIndex) const;
         const String* GetPathFromIndex(size_t sourceIndex) const;
 
-        ParseResult SetError(ParseResult errorType, const Token& token, const String& errorMsg);
+        void EmitWarning(const Token& token, const String& message);
+        ParseResult SetError(ParseResult result, const Token& token, const String& message);
         void ClearError();
 
     public:
@@ -330,6 +337,7 @@ namespace Pulsar
 
         List<SourceDebugSymbol> m_SourceDebugSymbols;
         ErrorMessage m_ErrorMessage;
+        List<WarningMessage> m_WarningMessages;
     };
 }
 
