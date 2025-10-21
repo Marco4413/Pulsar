@@ -7,13 +7,20 @@
 
 Pulsar::String PulsarLSP::URIToNormalizedPath(const lsp::FileUri& uri)
 {
-    auto fsPath = std::filesystem::path(uri.path());
+    auto rawPath = std::filesystem::path(uri.path());
+
     std::error_code error;
-    auto relPath = std::filesystem::relative(fsPath, error);
-    Pulsar::String path = !(error || relPath.empty())
-        ? relPath.generic_string().c_str()
-        : fsPath.generic_string().c_str();
-    return path;
+    auto normalizedPath = std::filesystem::relative(rawPath, error);
+
+    if (error || normalizedPath.empty()) {
+        normalizedPath = std::filesystem::canonical(rawPath, error);
+    }
+
+    Pulsar::String internalPath = !(error || normalizedPath.empty())
+        ? normalizedPath.generic_string().c_str()
+        : rawPath.generic_string().c_str();
+
+    return internalPath;
 }
 
 lsp::FileUri PulsarLSP::NormalizedPathToURI(const Pulsar::String& path)
