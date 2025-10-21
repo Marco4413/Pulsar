@@ -3,23 +3,16 @@
 #include <filesystem>
 #include <fstream>
 
+#include "pulsar/parser.h"
 #include "pulsar/utf8.h"
 
 Pulsar::String PulsarLSP::URIToNormalizedPath(const lsp::FileUri& uri)
 {
-    auto rawPath = std::filesystem::path(uri.path());
+    std::filesystem::path path(uri.path());
+    Pulsar::String internalPath(path.generic_string().c_str());
 
-    std::error_code error;
-    auto normalizedPath = std::filesystem::relative(rawPath, error);
-
-    if (error || normalizedPath.empty()) {
-        normalizedPath = std::filesystem::canonical(rawPath, error);
-    }
-
-    Pulsar::String internalPath = !(error || normalizedPath.empty())
-        ? normalizedPath.generic_string().c_str()
-        : rawPath.generic_string().c_str();
-
+    // Discard return value, if false internalPath is not changed
+    (void)Pulsar::Parser::PathToNormalizedFileSystemPath(internalPath, internalPath);
     return internalPath;
 }
 
