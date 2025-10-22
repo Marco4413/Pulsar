@@ -37,14 +37,14 @@ CPULSAR_API CPulsar_ParseResult CPULSAR_CALL CPulsar_Parser_ParseIntoModule(CPul
         .ParseIntoModule(CPULSAR_DEREF(Module, _module));
 }
 
-CPULSAR_API CPulsar_ParseResult CPULSAR_CALL CPulsar_Parser_GetError(CPulsar_Parser _self)
+CPULSAR_API CPulsar_ParseResult CPULSAR_CALL CPulsar_Parser_GetErrorMessage_Reason(CPulsar_Parser _self)
 {
-    return (CPulsar_ParseResult)CPULSAR_DEREF(Parser, _self).GetError();
+    return (CPulsar_ParseResult)CPULSAR_DEREF(Parser, _self).GetErrorMessage().Reason;
 }
 
-CPULSAR_API const char* CPULSAR_CALL CPulsar_Parser_GetErrorMessage(const CPulsar_Parser _self)
+CPULSAR_API const char* CPULSAR_CALL CPulsar_Parser_GetErrorMessage_Message(const CPulsar_Parser _self)
 {
-    return CPULSAR_DEREF(const Parser, _self).GetErrorMessage().CString();
+    return CPULSAR_DEREF(const Parser, _self).GetErrorMessage().Message.CString();
 }
 
 }

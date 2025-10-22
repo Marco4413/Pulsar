@@ -264,9 +264,10 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
     if (!parser.AddSource(path, std::move(document))) return {};
     parsedDocument.ParseResult = parser.ParseIntoModule(parsedDocument.Module, settings);
     if (parsedDocument.ParseResult != Pulsar::ParseResult::OK) {
-        parsedDocument.ErrorFilePath = *parser.GetErrorPath();
-        parsedDocument.ErrorPosition = parser.GetErrorToken().SourcePos;
-        parsedDocument.ErrorMessage  = parser.GetErrorMessage();
+        const auto& errorMessage = parser.GetErrorMessage();
+        parsedDocument.ErrorFilePath = *parser.GetPathFromIndex(errorMessage.SourceIndex);
+        parsedDocument.ErrorPosition = errorMessage.Token.SourcePos;
+        parsedDocument.ErrorMessage  = errorMessage.Message;
     }
 
     functionScopes.ForEach([&parsedDocument](FunctionScopesMap::Bucket& bucket) {

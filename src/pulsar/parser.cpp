@@ -44,30 +44,30 @@
         }}                                                                                \
     } while (0)
 
-Pulsar::ParseResult Pulsar::Parser::SetError(ParseResult errorType, const Token& token, const String& errorMsg)
+void Pulsar::Parser::EmitWarning(const Token& token, const String& message)
 {
-    m_ErrorSource = CurrentSource();
-    m_ErrorPath = CurrentPath();
-    m_Error = errorType;
-    m_ErrorToken = token;
-    m_ErrorMsg = errorMsg;
-    return errorType;
+    WarningMessage warning;
+    warning.SourceIndex = CurrentSourceIndex();
+    warning.Token   = token;
+    warning.Message = message;
+    m_WarningMessages.EmplaceBack(std::move(warning));
+}
+
+Pulsar::ParseResult Pulsar::Parser::SetError(ParseResult result, const Token& token, const String& message)
+{
+    m_ErrorMessage.SourceIndex = CurrentSourceIndex();
+    m_ErrorMessage.Token   = token;
+    m_ErrorMessage.Message = message;
+    m_ErrorMessage.Reason  = result;
+    return result;
 }
 
 void Pulsar::Parser::ClearError()
 {
-    m_ErrorSource = nullptr;
-    m_ErrorPath = nullptr;
-    m_Error = ParseResult::OK;
-    m_ErrorToken = Token(TokenType::None);
-    m_ErrorMsg.Resize(0);
-}
-
-void Pulsar::Parser::Reset()
-{
-    ClearError();
-    m_ParsedSources.Clear();
-    m_LexerPool.Clear();
+    m_ErrorMessage.SourceIndex = INVALID_INDEX;
+    m_ErrorMessage.Token  = Token(TokenType::None);
+    m_ErrorMessage.Message.Resize(0);
+    m_ErrorMessage.Reason = ParseResult::OK;
 }
 
 bool Pulsar::Parser::AddSource(const String& path, const String& src)
@@ -79,10 +79,13 @@ bool Pulsar::Parser::AddSource(const String& path, const String& src)
         m_ParsedSources.Emplace(path);
     }
 
-    LexerSource& lexSource = m_LexerPool.EmplaceBack(path, src, Lexer(""));
-    lexSource.Lexer = Lexer(lexSource.Source);
+    size_t sourceIndex = m_SourceDebugSymbols.Size();
+    m_SourceDebugSymbols.EmplaceBack(path, src);
+    // NOTE: Reallocs to m_SourceDebugSymbols keep the lexer valid because
+    //       it stores a reference to the const char* of the source.
+    m_Lexers.EmplaceBack(sourceIndex, Lexer(m_SourceDebugSymbols[sourceIndex].Source));
 
-    m_Lexer = &m_LexerPool.Back().Lexer;
+    m_Lexer = &m_Lexers.Back().Lexer;
     m_Lexer->SkipShaBang();
     return true;
 }
@@ -96,37 +99,44 @@ bool Pulsar::Parser::AddSource(const String& path, String&& src)
         m_ParsedSources.Emplace(path);
     }
 
-    LexerSource& lexSource = m_LexerPool.EmplaceBack(path, std::move(src), Lexer(""));
-    lexSource.Lexer = Lexer(lexSource.Source);
+    size_t sourceIndex = m_SourceDebugSymbols.Size();
+    m_SourceDebugSymbols.EmplaceBack(path, std::move(src));
+    // HACK: Reallocs to m_SourceDebugSymbols keep the lexer valid because
+    //       it stores a reference to the const char* of the source.
+    m_Lexers.EmplaceBack(sourceIndex, Lexer(m_SourceDebugSymbols[sourceIndex].Source));
 
-    m_Lexer = &m_LexerPool.Back().Lexer;
+    m_Lexer = &m_Lexers.Back().Lexer;
     m_Lexer->SkipShaBang();
     return true;
 }
 
 Pulsar::ParseResult Pulsar::Parser::AddSourceFile(const String& path)
 {
-#ifdef PULSAR_NO_FILESYSTEM
     Token token = CurrentToken();
+#ifdef PULSAR_NO_FILESYSTEM
     return SetError(ParseResult::FileSystemNotAvailable, token, "Could not read '" + path + "' because filesystem was disabled.");
 #else // PULSAR_NO_FILESYSTEM
-    auto fsPath = std::filesystem::path(path.CString());
-    std::error_code error;
-    auto relativePath = std::filesystem::relative(fsPath, error);
+    auto rawPath = std::filesystem::path(path.CString());
 
-    Token token = CurrentToken();
+    String internalPath;
+    // Having a method which normalizes the path removes duplicate code.
+    // However, normalizedPath must be created again which is wasteful.
+    if (!PathToNormalizedFileSystemPath(path, internalPath)) {
+        return SetError(ParseResult::FileNotRead, token, "Could not resolve path '" + path + "'.");
+    }
 
-    if (error)
-        return SetError(ParseResult::FileNotRead, token, "Could not normalize path '" + path + "'.");
-    else if (relativePath.empty())
-        return SetError(ParseResult::FileNotRead, token, "Could not resolve file '" + path + "'.");
+    std::filesystem::path normalizedPath(internalPath.CString());
 
-    String internalPath = relativePath.generic_string().c_str();
-    if (!std::filesystem::exists(relativePath))
+    if (!std::filesystem::exists(normalizedPath))
         return SetError(ParseResult::FileNotRead, token, "File '" + internalPath + "' does not exist.");
-    
-    std::ifstream file(relativePath, std::ios::binary);
-    size_t fileSize = (size_t)std::filesystem::file_size(relativePath);
+
+    std::ifstream file(normalizedPath, std::ios::binary);
+
+    std::error_code error;
+    size_t fileSize = (size_t)std::filesystem::file_size(normalizedPath, error);
+    if (error) {
+        return SetError(ParseResult::FileNotRead, token, "Could not get size of file '" + internalPath + "'.");
+    }
 
     Pulsar::String source;
     source.Resize(fileSize);
@@ -143,9 +153,8 @@ Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, const ParseS
     ClearError();
     GlobalScope globalScope;
     if (settings.StoreDebugSymbols) {
-        for (size_t i = 0; i < m_LexerPool.Size(); i++) {
-            globalScope.SourceDebugSymbols.Emplace(m_LexerPool[i].Path, module.SourceDebugSymbols.Size());
-            module.SourceDebugSymbols.EmplaceBack(m_LexerPool[i].Path, m_LexerPool[i].Source);
+        for (size_t i = 0; i < m_SourceDebugSymbols.Size(); i++) {
+            globalScope.SourceDebugSymbols.Emplace(m_SourceDebugSymbols[i].Path, i);
         }
     }
     for (size_t i = 0; i < module.Functions.Size(); i++)
@@ -155,17 +164,31 @@ Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, const ParseS
     for (size_t i = 0; i < module.Globals.Size(); i++)
         globalScope.Globals.Insert(module.Globals[i].Name, i);
 
-    while (m_LexerPool.Size() > 0) {
+    while (m_Lexers.Size() > 0) {
         auto result = ParseModuleStatement(module, globalScope, settings);
-        if (result != ParseResult::OK)
+        if (result != ParseResult::OK) {
             return result;
-        else if (IsEndOfFile()) {
+        } else if (IsEndOfFile()) {
             // No need to call ClearError because Result was OK
-            m_LexerPool.PopBack();
-            m_Lexer = m_LexerPool.IsEmpty() ? nullptr : &m_LexerPool.Back().Lexer;
+            m_Lexers.PopBack();
+            m_Lexer = !m_Lexers.IsEmpty()
+                ? &m_Lexers.Back().Lexer
+                : nullptr;
         }
     }
+
     module.NativeFunctions.Resize(module.NativeBindings.Size(), nullptr);
+
+    if (settings.StoreDebugSymbols) {
+        if (HasMessages()) {
+            module.SourceDebugSymbols = m_SourceDebugSymbols;
+        } else {
+            module.SourceDebugSymbols = std::move(m_SourceDebugSymbols);
+        }
+    }
+
+    StripUnusedSources();
+
     return ParseResult::OK;
 }
 
@@ -204,12 +227,10 @@ Pulsar::ParseResult Pulsar::Parser::ParseModuleStatement(Module& module, GlobalS
 #endif // PULSAR_NO_FILESYSTEM
         }
         if (settings.StoreDebugSymbols) {
-            const String* path = CurrentPath();
-            PULSAR_ASSERT(path != nullptr, "Path should not be nullptr.");
-            const String* source = CurrentSource();
-            PULSAR_ASSERT(source != nullptr, "Source should not be nullptr.");
-            globalScope.SourceDebugSymbols.Emplace(*path, module.SourceDebugSymbols.Size());
-            module.SourceDebugSymbols.EmplaceBack(*path, *source);
+            // No error, a source was added
+            globalScope.SourceDebugSymbols.Emplace(
+                    m_SourceDebugSymbols.Back().Path,
+                    m_SourceDebugSymbols.Size()-1);
         }
         return ParseResult::OK;
     }
@@ -233,7 +254,14 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
     bool isConstant = constToken.Type == TokenType::KW_Const;
     if (isConstant) NextToken();
 
-    FunctionDefinition dummyFunc{"", 0, 1};
+    FunctionDefinition dummyFunc{
+        .Name        = "",
+        .Arity       = 0,
+        .Returns     = 1,
+        .StackArity  = 0,
+        .LocalsCount = 0,
+    };
+
     bool isProducer = curToken.Type == TokenType::RightArrow;
 
     if (!isProducer) {
@@ -360,7 +388,13 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
     if (curToken.Type != TokenType::Identifier)
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected function identifier.");
     Token identToken = curToken;
-    FunctionDefinition def = { identToken.StringVal, 0, 0 };
+    FunctionDefinition def{
+        .Name        = identToken.StringVal,
+        .Arity       = 0,
+        .Returns     = 0,
+        .StackArity  = 0,
+        .LocalsCount = 0,
+    };
     if (settings.StoreDebugSymbols) {
         const String* path = CurrentPath();
         PULSAR_ASSERT(path != nullptr, "Path should not be nullptr.");
@@ -411,7 +445,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
         } else {
             size_t nativeIdx = (int64_t)nameIdxPair->Value();
             FunctionDefinition& nativeFunc = module.NativeBindings[nativeIdx];
-            if (!nativeFunc.MatchesDeclaration(def))
+            if (!nativeFunc.DeclarationMatches(def))
                 return SetError(ParseResult::NativeFunctionRedeclaration, identToken, "Redeclaration of Native Function with different signature.");
             nativeFunc.DebugSymbol = def.DebugSymbol;
             NOTIFY_FUNCTION_DEFINITION(true, true, nativeIdx, nativeFunc, identToken, args, settings);
@@ -420,7 +454,14 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
         if (curToken.Type != TokenType::Colon)
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected '->' for return count declaration or ':' to begin function body.");
         NOTIFY_FUNCTION_DEFINITION(false, false, module.Functions.Size(), def, identToken, args, settings);
-        globalScope.Functions.Emplace(def.Name, module.Functions.Size());
+        auto nameIdxPair = globalScope.Functions.Find(def.Name);
+        if (nameIdxPair) {
+            nameIdxPair->Value() = module.Functions.Size();
+            if (settings.Warnings.DuplicateFunctionNames && def.Name != "main")
+                EmitWarning(identToken, "Function definition has duplicate name.");
+        } else {
+            globalScope.Functions.Emplace(def.Name, module.Functions.Size());
+        }
         FunctionScope functionScope;
         LocalScope localScope{
             .Global = globalScope,
@@ -1303,18 +1344,169 @@ bool Pulsar::Parser::IsEndOfFile() const
     return m_Lexer->IsEndOfFile();
 }
 
+const Pulsar::String* Pulsar::Parser::GetSourceFromIndex(size_t sourceIndex) const
+{
+    if (sourceIndex == INVALID_INDEX || sourceIndex >= m_SourceDebugSymbols.Size())
+        return nullptr;
+    return &m_SourceDebugSymbols[sourceIndex].Source;
+}
+
+const Pulsar::String* Pulsar::Parser::GetPathFromIndex(size_t sourceIndex) const
+{
+    if (sourceIndex == INVALID_INDEX || sourceIndex >= m_SourceDebugSymbols.Size())
+        return nullptr;
+    return &m_SourceDebugSymbols[sourceIndex].Path;
+}
+
+size_t Pulsar::Parser::CurrentSourceIndex() const
+{
+    return m_Lexers.Size() > 0
+        ? m_Lexers.Back().SourceIndex
+        : INVALID_INDEX;
+}
+
 const Pulsar::String* Pulsar::Parser::CurrentPath() const
 {
-    if (m_LexerPool.Size() > 0)
-        return &m_LexerPool.Back().Path;
-    return nullptr;
+    auto sourceIndex = CurrentSourceIndex();
+    if (sourceIndex == INVALID_INDEX) return nullptr;
+    return &m_SourceDebugSymbols[sourceIndex].Path;
 }
 
 const Pulsar::String* Pulsar::Parser::CurrentSource() const
 {
-    if (m_LexerPool.Size() > 0)
-        return &m_LexerPool.Back().Source;
+    auto sourceIndex = CurrentSourceIndex();
+    if (sourceIndex == INVALID_INDEX) return nullptr;
+    return &m_SourceDebugSymbols[sourceIndex].Source;
+}
+
+bool Pulsar::Parser::HasMessages() const
+{
+    return m_ErrorMessage.SourceIndex != INVALID_INDEX
+        || !m_WarningMessages.IsEmpty();
+}
+
+void Pulsar::Parser::StripUnusedSources()
+{
+    if (m_SourceDebugSymbols.IsEmpty()) return;
+
+    List<bool> usedSources(m_SourceDebugSymbols.Size());
+    usedSources.Resize(m_SourceDebugSymbols.Size(), false);
+
+    bool isAtLeastOneSourceUsed = false;
+
+    if (m_ErrorMessage.SourceIndex != INVALID_INDEX && m_ErrorMessage.SourceIndex < usedSources.Size()) {
+        usedSources[m_ErrorMessage.SourceIndex] = true;
+        isAtLeastOneSourceUsed = true;
+    }
+
+    for (size_t i = 0; i < m_WarningMessages.Size(); ++i) {
+        const Message& message = m_WarningMessages[i];
+        if (message.SourceIndex != INVALID_INDEX && message.SourceIndex < usedSources.Size()) {
+            usedSources[message.SourceIndex] = true;
+            isAtLeastOneSourceUsed = true;
+        }
+    }
+
+    if (isAtLeastOneSourceUsed) {
+        for (size_t i = 0; i < usedSources.Size(); ++i) {
+            if (!usedSources[i]) {
+                auto& symbol = m_SourceDebugSymbols[i];
+                symbol.Path   = String();
+                symbol.Source = String();
+            }
+        }
+    } else {
+        m_SourceDebugSymbols.Clear();
+    }
+}
+
+bool Pulsar::Parser::PathToNormalizedFileSystemPath(const String& path, String& outNormalized)
+{
+#ifdef PULSAR_NO_FILESYSTEM
+    (void)path;
+    (void)outNormalized;
+    return false;
+#else // PULSAR_NO_FILESYSTEM
+    auto rawPath = std::filesystem::path(path.CString());
+
+    std::error_code error;
+    auto normalizedPath = std::filesystem::relative(rawPath, error);
+
+    if (error || normalizedPath.empty()) {
+        // If path is empty it may be located on a different drive on Windows.
+        // In which case we should compute the canonical path.
+        normalizedPath = std::filesystem::canonical(rawPath, error);
+    }
+
+    if (error || normalizedPath.empty()) {
+        return false;
+    }
+
+    outNormalized = normalizedPath.generic_string().c_str();
+    return true;
+#endif // PULSAR_NO_FILESYSTEM
+}
+
+Pulsar::ParseSettings::IncludeResolverFn Pulsar::ParseSettings::CreateFileSystemIncludeResolver(IncludePaths&& includePaths, bool showPathsInErrorMessage)
+{
+#ifdef PULSAR_NO_FILESYSTEM
+    (void)includePaths;
+    (void)showPathsInErrorMessage;
     return nullptr;
+#else // PULSAR_NO_FILESYSTEM
+    return [includePaths = std::move(includePaths), showPathsInErrorMessage](Pulsar::Parser& parser, Pulsar::String cwf, Pulsar::Token token) {
+        // Populated only if showPathsInErrorMessage is true
+        List<String> triedPaths;
+
+        std::filesystem::path targetPath(token.StringVal.CString());
+
+        ParseResult result;
+        { // Try relative path first
+            std::filesystem::path workingPath(cwf.CString());
+            workingPath = workingPath.parent_path();
+            std::filesystem::path filePath = workingPath / targetPath;
+            String pulsarPath = filePath.generic_string().c_str();
+            result = parser.AddSourceFile(pulsarPath);
+            if (result == ParseResult::OK) return result;
+            if (showPathsInErrorMessage) triedPaths.EmplaceBack(std::move(pulsarPath));
+        }
+
+        if (!targetPath.is_absolute()) {
+            for (size_t i = includePaths.Size(); i > 0; --i) {
+                std::filesystem::path workingPath(includePaths[i-1].CString());
+                std::filesystem::path filePath = workingPath / targetPath;
+                String pulsarPath = filePath.generic_string().c_str();
+                result = parser.AddSourceFile(pulsarPath);
+                if (result == ParseResult::OK) return result;
+                if (showPathsInErrorMessage) triedPaths.EmplaceBack(std::move(pulsarPath));
+            }
+        }
+
+        // Here result is always != ParseResult::OK
+        if (showPathsInErrorMessage) {
+            // Relative and include paths failed
+            String errorMsg = "Could not read file ";
+
+            // triedPaths must at least contain the relative path
+            Parser::PathToNormalizedFileSystemPath(triedPaths[0], triedPaths[0]);
+            errorMsg += '\'';
+            errorMsg += triedPaths[0];
+            errorMsg += '\'';
+
+            for (size_t i = 1; i < triedPaths.Size(); ++i) {
+                Parser::PathToNormalizedFileSystemPath(triedPaths[i], triedPaths[i]);
+                errorMsg += ", '";
+                errorMsg += triedPaths[i];
+                errorMsg += '\'';
+            }
+
+            errorMsg += '.';
+            return parser.SetError(Pulsar::ParseResult::FileNotRead, token, errorMsg);
+        }
+
+        return result;
+    };
+#endif // PULSAR_NO_FILESYSTEM
 }
 
 const char* Pulsar::ParseResultToString(ParseResult presult)

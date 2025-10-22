@@ -14,6 +14,8 @@ int main(int argc, const char** argv)
     logger.SetColor(*program.Options.Color);
     if (logLevel == "all") {
         logger.SetLogLevel(PulsarTools::LogLevel::All);
+    } else if (logLevel == "warning") {
+        logger.SetLogLevel(PulsarTools::LogLevel::Warning);
     } else if (logLevel == "error") {
         logger.SetLogLevel(PulsarTools::LogLevel::Error);
     }

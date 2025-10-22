@@ -19,7 +19,9 @@ CPULSAR_API void           CPULSAR_CALL CPulsar_Parser_Delete(CPulsar_Parser sel
 
 CPULSAR_API CPulsar_ParseResult CPULSAR_CALL CPulsar_Parser_AddSourceFile(CPulsar_Parser self, const char* path);
 CPULSAR_API CPulsar_ParseResult CPULSAR_CALL CPulsar_Parser_ParseIntoModule(CPulsar_Parser self, CPulsar_Module module);
-CPULSAR_API const char*         CPULSAR_CALL CPulsar_Parser_GetErrorMessage(const CPulsar_Parser self);
+// TODO: These methods must be updated to the new ErrorMessage struct
+CPULSAR_API CPulsar_ParseResult CPULSAR_CALL CPulsar_Parser_GetErrorMessage_Reason(const CPulsar_Parser self);
+CPULSAR_API const char*         CPULSAR_CALL CPulsar_Parser_GetErrorMessage_Message(const CPulsar_Parser self);
 
 #ifdef CPULSAR_CPP
 }

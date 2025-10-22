@@ -158,14 +158,14 @@ Pulsar::RuntimeState Pulsar::CallStack::PrepareFrame(Frame& frame, ValueStack& c
     return RuntimeState::OK;
 }
 
-size_t Pulsar::Module::BindNativeFunction(const FunctionDefinition& def, NativeFunction func)
+size_t Pulsar::Module::BindNativeFunction(const FunctionSignature& sig, NativeFunction func)
 {
     if (NativeFunctions.Size() != NativeBindings.Size())
         return 0;
     size_t bound = 0;
     for (size_t i = 0; i < NativeBindings.Size(); i++) {
-        const FunctionDefinition& nDef = NativeBindings[i];
-        if (!nDef.MatchesDeclaration(def))
+        const FunctionDefinition& binding = NativeBindings[i];
+        if (!sig.MatchesNative(binding))
             continue;
         bound++;
         NativeFunctions[i] = func;
@@ -173,12 +173,29 @@ size_t Pulsar::Module::BindNativeFunction(const FunctionDefinition& def, NativeF
     return bound;
 }
 
-int64_t Pulsar::Module::DeclareAndBindNativeFunction(FunctionDefinition def, NativeFunction func)
+size_t Pulsar::Module::BindNativeFunction(const FunctionDefinition& def, NativeFunction func)
+{
+    if (def.Arity != def.LocalsCount) return 0;
+    FunctionSignature sig{ def.Name, def.Arity, def.Returns, def.StackArity };
+    return BindNativeFunction(sig, func);
+}
+
+size_t Pulsar::Module::DeclareAndBindNativeFunction(FunctionDefinition&& def, NativeFunction func)
 {
     NativeBindings.EmplaceBack(std::move(def));
     NativeFunctions.Resize(NativeBindings.Size());
     NativeFunctions.Back() = func;
-    return (int64_t)(NativeBindings.Size())-1;
+    return NativeBindings.Size()-1;
+}
+
+size_t Pulsar::Module::DeclareAndBindNativeFunction(const FunctionDefinition& def, NativeFunction func)
+{
+    return DeclareAndBindNativeFunction(std::forward<FunctionDefinition>(FunctionDefinition(def)), func);
+}
+
+size_t Pulsar::Module::DeclareAndBindNativeFunction(const FunctionSignature& sig, NativeFunction func)
+{
+    return DeclareAndBindNativeFunction(std::forward<FunctionDefinition>(sig.ToNativeDefinition()), func);
 }
 
 uint64_t Pulsar::Module::BindCustomType(const String& name, CustomType::DataFactoryFn dataFactory)
@@ -190,13 +207,10 @@ uint64_t Pulsar::Module::BindCustomType(const String& name, CustomType::DataFact
 
 Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(const String& funcName)
 {
-    for (size_t i = m_Module.Functions.Size(); i > 0; --i) {
-        const FunctionDefinition& funcDef = m_Module.Functions[i-1];
-        if (funcDef.Name != funcName)
-            continue;
-        return CallFunction(i-1);
-    }
-    return m_State = RuntimeState::FunctionNotFound;
+    size_t fnIdx = m_Module.FindFunctionByName(funcName);
+    if (fnIdx == m_Module.INVALID_INDEX)
+        return m_State = RuntimeState::FunctionNotFound;
+    return CallFunction(fnIdx);
 }
 
 Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(int64_t funcIdx)
@@ -208,6 +222,9 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(int64_t funcIdx)
 
 Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(const FunctionDefinition& funcDef)
 {
+    // Do not allow calls on errors
+    if (m_State != RuntimeState::OK) return m_State;
+
     ValueStack& callerStack = !m_CallStack.IsEmpty()
         ? m_CallStack.CurrentFrame().Stack : m_Stack;
     Frame frame = m_CallStack.CreateFrame(&funcDef, false);

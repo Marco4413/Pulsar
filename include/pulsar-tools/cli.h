@@ -41,7 +41,7 @@ namespace PulsarTools::CLI
                 true),
             LogLevel(cmd, "log-level", "L", "LOGLEVEL",
                 "Sets the log level for the CLI. (default: all)",
-                {"all", "error"}, 0)
+                {"all", "warning", "error"}, 0)
         {}
 
         Argue::FlagOption Version;
@@ -76,6 +76,16 @@ namespace PulsarTools::CLI
                 true),
             AllowLabels(cmd, "allow-labels", "l",
                 "Allow the usage of labels. (default: false)",
+                false),
+            WarnDuplicateFunctionNames(cmd, "warn-duplicate-function-names", "Wduplicate-function-names",
+                "Warn if duplicate function names are found."
+                " Multiple functions named 'main' won't be reported."
+                " (default: false)",
+                false),
+            WarnAll(cmd, "warn-all", "Wall", "Enable all warnings. (default: false)", false,
+                WarnDuplicateFunctionNames),
+            WarnAsError(cmd, "warn-as-error", "Werror",
+                "Treat warnings as errors. (default: false)",
                 false)
         {}
 
@@ -89,6 +99,80 @@ namespace PulsarTools::CLI
         Argue::FlagOption ErrorNotes;
         Argue::FlagOption AllowInclude;
         Argue::FlagOption AllowLabels;
+
+        Argue::FlagOption WarnDuplicateFunctionNames;
+        Argue::FlagGroupOption WarnAll;
+        Argue::FlagOption WarnAsError;
+    };
+
+    class ExportOption final :
+        public Argue::IOption
+    {
+    public:
+        struct Exports
+        {
+            bool ExportAllFunctions = false;
+            Pulsar::List<Pulsar::String> ExportedFunctions;
+
+            bool ExportAllNatives = false;
+            Pulsar::List<Pulsar::String> ExportedNatives;
+
+            bool ExportAllGlobals = false;
+            Pulsar::List<Pulsar::String> ExportedGlobals;
+        };
+
+    public:
+        ExportOption(
+                Argue::IArgParser& parser,
+                std::string_view name,
+                std::string_view shortName,
+                std::string_view description) :
+            IOption(parser, name, shortName, "EXPORT", description)
+        {}
+
+        virtual ~ExportOption() = default;
+
+        ARGUE_DELETE_MOVE_COPY(ExportOption)
+
+    public:
+        bool HasDefaultValue() const override { return true; }
+        bool IsVarOptional() const override { return false; }
+
+        const Exports& operator*() const { return GetValue(); }
+        const Exports& GetValue() const { return m_Exports; }
+
+    public:
+        void WriteHint(Argue::ITextBuilder& hint) const override;
+
+    protected:
+        bool ParseValue(std::string_view val) override;
+
+    private:
+        Exports m_Exports;
+    };
+
+    struct OptimizerOptions
+    {
+        OptimizerOptions(Argue::IArgParser& cmd) :
+            OptimizeUnused(cmd, "optimize-unused", "",
+                "Removed unused symbols. (default: false)",
+                false),
+            OptimizeAll(cmd, "optimize-all", "", "Apply all optimizations. (default: false)", false,
+                OptimizeUnused),
+            Exports(cmd, "export", "",
+                "Marks symbols as exported so that the optimizer may not remove/rename them.\n"
+                "If an entry point could be specified, it's added to the exported functions.")
+        {}
+
+        Argue::FlagOption OptimizeUnused;
+        Argue::FlagGroupOption OptimizeAll;
+
+        ExportOption Exports;
+
+        bool HasOptimizationsActive() const
+        {
+            return *OptimizeUnused;
+        }
     };
 
     struct RuntimeOptions
@@ -175,6 +259,7 @@ namespace PulsarTools::CLI
         int Read(Pulsar::Module& module, const ExternalBindings& extBindings, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input);
         int Write(const Pulsar::Module& module, const CompilerOptions& compilerOptions, const InputFileArgs& input);
         int Parse(Pulsar::Module& module, const ExternalBindings& extBindings, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input);
+        int Optimize(Pulsar::Module& module, const OptimizerOptions& optimizerOptions, const Argue::StrOption* entryPoint);
         int Run(const Pulsar::Module& module, const RuntimeOptions& runtimeOptions, const InputProgramArgs& input);
     }
 
@@ -205,6 +290,7 @@ namespace PulsarTools::CLI
         CompileCommand(Argue::IArgParser& parser) :
             m_Command(parser, "compile", "Compiles a Pulsar file into a Neutron file."),
             m_ParserOptions(m_Command),
+            m_OptimizerOptions(m_Command),
             m_RuntimeOptions(m_Command),
             m_CompilerOptions(m_Command),
             m_Input(m_Command)
@@ -222,6 +308,8 @@ namespace PulsarTools::CLI
                     ? Action::Read(module, extBindings, m_ParserOptions, m_RuntimeOptions, m_Input)
                     : Action::Parse(module, extBindings, m_ParserOptions, m_RuntimeOptions, m_Input);
                 if (exitCode) return exitCode;
+                exitCode = Action::Optimize(module, m_OptimizerOptions, &m_RuntimeOptions.EntryPoint);
+                if (exitCode) return exitCode;
                 return Action::Write(module, m_CompilerOptions, m_Input);
             }
         }
@@ -229,6 +317,7 @@ namespace PulsarTools::CLI
     private:
         Argue::CommandParser m_Command;
         ParserOptions m_ParserOptions;
+        OptimizerOptions m_OptimizerOptions;
         RuntimeOptions m_RuntimeOptions;
         CompilerOptions m_CompilerOptions;
         InputFileArgs m_Input;
@@ -240,6 +329,7 @@ namespace PulsarTools::CLI
         RunCommand(Argue::IArgParser& parser) :
             m_Command(parser, "run", "Runs a Pulsar or Neutron file."),
             m_ParserOptions(m_Command),
+            m_OptimizerOptions(m_Command),
             m_RuntimeOptions(m_Command),
             m_Input(m_Command)
         {}
@@ -256,6 +346,8 @@ namespace PulsarTools::CLI
                     ? Action::Read(module, extBindings, m_ParserOptions, m_RuntimeOptions, m_Input)
                     : Action::Parse(module, extBindings, m_ParserOptions, m_RuntimeOptions, m_Input);
                 if (exitCode) return exitCode;
+                exitCode = Action::Optimize(module, m_OptimizerOptions, &m_RuntimeOptions.EntryPoint);
+                if (exitCode) return exitCode;
                 return Action::Run(module, m_RuntimeOptions, m_Input);
             }
         }
@@ -263,6 +355,7 @@ namespace PulsarTools::CLI
     private:
         Argue::CommandParser m_Command;
         ParserOptions m_ParserOptions;
+        OptimizerOptions m_OptimizerOptions;
         RuntimeOptions m_RuntimeOptions;
         InputProgramArgs m_Input;
     };

@@ -5,35 +5,33 @@
 void PulsarTools::Logger::Info(const std::string& msg) const
 {
     if (!DoLogInfo()) return;
+    Log(m_Out, fmt::color::light_blue, "INFO", msg);
+}
 
-    if (m_Prefix) {
-        std::string prefix = m_Color
-            ? fmt::to_string(fmt::styled<std::string>("[INFO]:", fmt::fg(fmt::color::light_blue)))
-            : "[INFO]:";
-        if (msg.ends_with('\n')) {
-            fmt::print(m_Out, "{} {}", prefix, msg);
-        } else {
-            fmt::println(m_Out, "{} {}", prefix, msg);
-        }
-    } else {
-        fmt::println(m_Out, "{}", msg);
-    }
+void PulsarTools::Logger::Warn(const std::string& msg) const
+{
+    if (!DoLogWarn()) return;
+    Log(m_Out, fmt::color::orange, "WARN", msg);
 }
 
 void PulsarTools::Logger::Error(const std::string& msg) const
 {
     if (!DoLogError()) return;
+    Log(m_Err, fmt::color::red, "ERROR", msg);
+}
 
+void PulsarTools::Logger::Log(FILE* file, fmt::color color, const char* prefix, const std::string& msg) const
+{
     if (m_Prefix) {
-        std::string prefix = m_Color
-            ? fmt::to_string(fmt::styled<std::string>("[ERROR]:", fmt::fg(fmt::color::red)))
-            : "[ERROR]:";
+        std::string styledPrefix = m_Color
+            ? fmt::format(fmt::fg(color), "[{}]:", prefix)
+            : fmt::format("[{}]:", prefix);
         if (msg.ends_with('\n')) {
-            fmt::print(m_Err, "{} {}", prefix, msg);
+            fmt::print(file, "{} {}", styledPrefix, msg);
         } else {
-            fmt::println(m_Err, "{} {}", prefix, msg);
+            fmt::println(file, "{} {}", styledPrefix, msg);
         }
     } else {
-        fmt::println(m_Err, "{}", msg);
+        fmt::println(file, "{}", msg);
     }
 }

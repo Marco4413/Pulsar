@@ -56,7 +56,7 @@ CPULSAR_API size_t CPULSAR_CALL CPulsar_Module_BindNativeFunction(
 {
     auto nativeFnArgs = Pulsar::SharedRef<CBufferWrapper>::New(_nativeFnArgs);
     return CPULSAR_DEREF(Module, _self)
-        .BindNativeFunction({
+        .BindNativeFunction(Pulsar::FunctionSignature{
             .Name = fnSig.Name,
             .Arity = fnSig.Arity,
             .Returns = fnSig.Returns,
@@ -75,7 +75,7 @@ CPULSAR_API int64_t CPULSAR_CALL CPulsar_Module_DeclareAndBindNativeFunction(
 {
     auto nativeFnArgs = Pulsar::SharedRef<CBufferWrapper>::New(_nativeFnArgs);
     return CPULSAR_DEREF(Module, _self)
-        .DeclareAndBindNativeFunction({
+        .DeclareAndBindNativeFunction(Pulsar::FunctionSignature{
             .Name = fnSig.Name,
             .Arity = fnSig.Arity,
             .Returns = fnSig.Returns,
