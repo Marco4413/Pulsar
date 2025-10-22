@@ -94,19 +94,19 @@ namespace PulsarTools
             m_Dependencies.push_back(depPtr);
         }
 
-        void BindCustomType(const Pulsar::String& name, Pulsar::CustomType::DataFactoryFn dataFactory = nullptr)
+        void BindCustomType(Pulsar::StringView name, Pulsar::CustomType::DataFactoryFn dataFactory = nullptr)
         {
-            m_CustomTypesPool.emplace_back(name, dataFactory);
+            m_CustomTypesPool.emplace_back(Pulsar::String(name.DataFromStart(), name.Length()), dataFactory);
         }
 
-        void BindNativeFunction(const Pulsar::FunctionDefinition& def, NativeFunctionFactoryFn factory)
+        void BindNativeFunction(const Pulsar::FunctionSignature& sig, NativeFunctionFactoryFn factory)
         {
-            m_NativeFunctionsPool.emplace_back(def, factory);
+            m_NativeFunctionsPool.emplace_back(std::forward<Pulsar::FunctionDefinition>(sig.ToNativeDefinition()), factory);
         }
 
-        void BindNativeFunction(const Pulsar::FunctionDefinition& def, NativeFunction func)
+        void BindNativeFunction(const Pulsar::FunctionSignature& sig, NativeFunction func)
         {
-            BindNativeFunction(def, [func = std::move(func)](const CustomTypeResolver&) { return func; });
+            BindNativeFunction(sig, [func = std::move(func)](const CustomTypeResolver&) { return func; });
         }
 
     private:

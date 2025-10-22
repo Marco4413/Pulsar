@@ -6,6 +6,8 @@
 #include "pulsar/runtime/debug.h"
 #include "pulsar/runtime/instruction.h"
 #include "pulsar/structures/list.h"
+#include "pulsar/structures/string.h"
+#include "pulsar/structures/stringview.h"
 
 namespace Pulsar
 {
@@ -15,8 +17,8 @@ namespace Pulsar
         size_t Arity;
         size_t Returns;
         
-        size_t StackArity = 0;
-        size_t LocalsCount = Arity;
+        size_t StackArity;
+        size_t LocalsCount;
 
         List<Instruction> Code = List<Instruction>();
         
@@ -26,21 +28,13 @@ namespace Pulsar
         bool HasDebugSymbol() const { return DebugSymbol.Token.Type != TokenType::None; }
         bool HasCodeDebugSymbols() const { return !CodeDebugSymbols.IsEmpty(); }
 
-        bool MatchesDeclaration(const FunctionDefinition& other) const
+        bool DeclarationMatches(const FunctionDefinition& def) const
         {
-            return StackArity == other.StackArity
-                && Arity == other.Arity
-                && LocalsCount == other.LocalsCount
-                && Returns == other.Returns
-                && Name == other.Name;
-        }
-
-        bool MatchesSignature(const FunctionDefinition& other) const
-        {
-            return StackArity == other.StackArity
-                && Arity == other.Arity
-                && Returns == other.Returns
-                && Name == other.Name;
+            return StackArity  == def.StackArity
+                && Arity       == def.Arity
+                && LocalsCount == def.LocalsCount
+                && Returns     == def.Returns
+                && Name        == def.Name;
         }
 
         bool FindCodeDebugSymbolFor(size_t instructionIdx, size_t& symbolIdxOut) const
@@ -54,6 +48,38 @@ namespace Pulsar
                 symbolIdxOut = i;
             }
             return true;
+        }
+    };
+
+    // This struct is meant to be a lightweight version of a FunctionDefinition.
+    // The main performance benefit is that Name does not alloc since it's a StringView.
+    struct FunctionSignature
+    {
+        StringView Name;
+        size_t Arity;
+        size_t Returns;
+        size_t StackArity = 0;
+
+        bool Matches(const FunctionDefinition& def) const
+        {
+            return StackArity == def.StackArity
+                && Arity      == def.Arity
+                && Returns    == def.Returns
+                && Name       == def.Name;
+        }
+
+        bool MatchesNative(const FunctionDefinition& def) const
+        {
+            return StackArity == def.StackArity
+                && Arity      == def.Arity
+                && Arity      == def.LocalsCount
+                && Returns    == def.Returns
+                && Name       == def.Name;
+        }
+
+        FunctionDefinition ToNativeDefinition() const
+        {
+            return { String(Name.DataFromStart(), Name.Length()), Arity, Returns, StackArity, Arity };
         }
     };
 }

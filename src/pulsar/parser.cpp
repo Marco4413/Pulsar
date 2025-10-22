@@ -254,7 +254,14 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
     bool isConstant = constToken.Type == TokenType::KW_Const;
     if (isConstant) NextToken();
 
-    FunctionDefinition dummyFunc{"", 0, 1};
+    FunctionDefinition dummyFunc{
+        .Name        = "",
+        .Arity       = 0,
+        .Returns     = 1,
+        .StackArity  = 0,
+        .LocalsCount = 0,
+    };
+
     bool isProducer = curToken.Type == TokenType::RightArrow;
 
     if (!isProducer) {
@@ -381,7 +388,13 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
     if (curToken.Type != TokenType::Identifier)
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected function identifier.");
     Token identToken = curToken;
-    FunctionDefinition def = { identToken.StringVal, 0, 0 };
+    FunctionDefinition def{
+        .Name        = identToken.StringVal,
+        .Arity       = 0,
+        .Returns     = 0,
+        .StackArity  = 0,
+        .LocalsCount = 0,
+    };
     if (settings.StoreDebugSymbols) {
         const String* path = CurrentPath();
         PULSAR_ASSERT(path != nullptr, "Path should not be nullptr.");
@@ -432,7 +445,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
         } else {
             size_t nativeIdx = (int64_t)nameIdxPair->Value();
             FunctionDefinition& nativeFunc = module.NativeBindings[nativeIdx];
-            if (!nativeFunc.MatchesDeclaration(def))
+            if (!nativeFunc.DeclarationMatches(def))
                 return SetError(ParseResult::NativeFunctionRedeclaration, identToken, "Redeclaration of Native Function with different signature.");
             nativeFunc.DebugSymbol = def.DebugSymbol;
             NOTIFY_FUNCTION_DEFINITION(true, true, nativeIdx, nativeFunc, identToken, args, settings);

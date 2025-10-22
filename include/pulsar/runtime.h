@@ -141,8 +141,12 @@ namespace Pulsar
         using NativeFunction = std::function<RuntimeState(ExecutionContext&)>;
         // Returns how many definitions were bound.
         size_t BindNativeFunction(const FunctionDefinition& def, NativeFunction func);
+        size_t BindNativeFunction(const FunctionSignature& sig, NativeFunction func);
         // Returns the index of the newly declared function.
-        int64_t DeclareAndBindNativeFunction(FunctionDefinition def, NativeFunction func);
+        size_t DeclareAndBindNativeFunction(const FunctionDefinition& def, NativeFunction func);
+        size_t DeclareAndBindNativeFunction(FunctionDefinition&& def, NativeFunction func);
+        size_t DeclareAndBindNativeFunction(const FunctionSignature& sig, NativeFunction func);
+
         uint64_t BindCustomType(const String& name, CustomType::DataFactoryFn dataFactory = nullptr);
 
         // Be sure to check if the type exists first (unless you know for sure it exists)
