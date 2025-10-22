@@ -36,7 +36,7 @@ Pulsar::ExecutionContext Pulsar::ExecutionContext::Fork() const
         PULSAR_ASSERT(b.Value(), "Reference to CustomTypeData is nullptr.");
         uint64_t typeId = b.Key();
         CustomTypeData::Ref typeDataFork = b.Value()->Fork();
-        fork.SetCustomTypeData(typeId, typeDataFork ? typeDataFork : b.Value());
+        fork.m_CustomTypeData.Insert(typeId, typeDataFork ? typeDataFork : b.Value());
     });
 
     return fork;
