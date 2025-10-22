@@ -151,10 +151,17 @@ int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const In
     logger.Info("Parsing took: {}us", parseTime.count());
 
     const auto& warningMessages = parser.GetWarningMessages();
+    bool warningError = *parserOptions.WarnAsError && !warningMessages.IsEmpty();
     for (size_t i = 0; i < warningMessages.Size(); ++i) {
-        logger.Info(CreateParserMessageReport(
-                parser, MessageReportKind_Warning, warningMessages[i],
-                logger.GetColor()));
+        if (warningError) {
+            logger.Error(CreateParserMessageReport(
+                    parser, MessageReportKind_Error, warningMessages[i],
+                    logger.GetColor()));
+        } else {
+            logger.Warn(CreateParserMessageReport(
+                    parser, MessageReportKind_Warning, warningMessages[i],
+                    logger.GetColor()));
+        }
     }
 
     if (parseResult != Pulsar::ParseResult::OK) {
@@ -164,6 +171,8 @@ int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const In
                 logger.GetColor()));
         return 1;
     }
+
+    if (warningError) return 1;
 
     return 0;
 }
@@ -251,10 +260,17 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
     logger.Info("Parsing took: {}us", parseTime.count());
 
     const auto& warningMessages = parser.GetWarningMessages();
+    bool warningError = *parserOptions.WarnAsError && !warningMessages.IsEmpty();
     for (size_t i = 0; i < warningMessages.Size(); ++i) {
-        logger.Warn(CreateParserMessageReport(
-                parser, MessageReportKind_Warning, warningMessages[i],
-                logger.GetColor()));
+        if (warningError) {
+            logger.Error(CreateParserMessageReport(
+                    parser, MessageReportKind_Error, warningMessages[i],
+                    logger.GetColor()));
+        } else {
+            logger.Warn(CreateParserMessageReport(
+                    parser, MessageReportKind_Warning, warningMessages[i],
+                    logger.GetColor()));
+        }
     }
 
     if (parseResult != Pulsar::ParseResult::OK) {
@@ -264,6 +280,8 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
                 logger.GetColor()));
         return 1;
     }
+
+    if (warningError) return 1;
 
     if (!*parserOptions.DeclareBoundNatives) {
         BindNatives(module, runtimeOptions, false);

@@ -76,13 +76,16 @@ namespace PulsarTools::CLI
             AllowLabels(cmd, "allow-labels", "l",
                 "Allow the usage of labels. (default: false)",
                 false),
-            WarnDuplicateFunctionNames(cmd, "warn-duplicate-function-names", "",
+            WarnDuplicateFunctionNames(cmd, "warn-duplicate-function-names", "Wduplicate-function-names",
                 "Warn if duplicate function names are found."
                 " Multiple functions named 'main' won't be reported."
                 " (default: false)",
                 false),
-            WarnAll(cmd, "warn-all", "", "Enable all warnings. (default: false)", false,
-                WarnDuplicateFunctionNames)
+            WarnAll(cmd, "warn-all", "Wall", "Enable all warnings. (default: false)", false,
+                WarnDuplicateFunctionNames),
+            WarnAsError(cmd, "warn-as-error", "Werror",
+                "Treat warnings as errors. (default: false)",
+                false)
         {}
 
         Pulsar::ParseSettings ToParseSettings() const;
@@ -98,6 +101,7 @@ namespace PulsarTools::CLI
 
         Argue::FlagOption WarnDuplicateFunctionNames;
         Argue::FlagGroupOption WarnAll;
+        Argue::FlagOption WarnAsError;
     };
 
     class ExportOption final :
