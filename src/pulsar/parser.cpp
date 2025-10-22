@@ -176,18 +176,18 @@ Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, const ParseS
                 : nullptr;
         }
     }
+
     module.NativeFunctions.Resize(module.NativeBindings.Size(), nullptr);
+
     if (settings.StoreDebugSymbols) {
-        if (m_WarningMessages.IsEmpty()) {
-            module.SourceDebugSymbols = std::move(m_SourceDebugSymbols);
-        } else {
+        if (HasMessages()) {
             module.SourceDebugSymbols = m_SourceDebugSymbols;
+        } else {
+            module.SourceDebugSymbols = std::move(m_SourceDebugSymbols);
         }
     }
 
-    if (m_WarningMessages.IsEmpty()) {
-        m_SourceDebugSymbols.Clear();
-    }
+    StripUnusedSources();
 
     return ParseResult::OK;
 }
@@ -1364,6 +1364,47 @@ const Pulsar::String* Pulsar::Parser::CurrentSource() const
     auto sourceIndex = CurrentSourceIndex();
     if (sourceIndex == INVALID_INDEX) return nullptr;
     return &m_SourceDebugSymbols[sourceIndex].Source;
+}
+
+bool Pulsar::Parser::HasMessages() const
+{
+    return m_ErrorMessage.SourceIndex != INVALID_INDEX
+        || !m_WarningMessages.IsEmpty();
+}
+
+void Pulsar::Parser::StripUnusedSources()
+{
+    if (m_SourceDebugSymbols.IsEmpty()) return;
+
+    List<bool> usedSources(m_SourceDebugSymbols.Size());
+    usedSources.Resize(m_SourceDebugSymbols.Size(), false);
+
+    bool isAtLeastOneSourceUsed = false;
+
+    if (m_ErrorMessage.SourceIndex != INVALID_INDEX && m_ErrorMessage.SourceIndex < usedSources.Size()) {
+        usedSources[m_ErrorMessage.SourceIndex] = true;
+        isAtLeastOneSourceUsed = true;
+    }
+
+    for (size_t i = 0; i < m_WarningMessages.Size(); ++i) {
+        const Message& message = m_WarningMessages[i];
+        if (message.SourceIndex != INVALID_INDEX && message.SourceIndex < usedSources.Size()) {
+            usedSources[message.SourceIndex] = true;
+            isAtLeastOneSourceUsed = true;
+        }
+    }
+
+    if (isAtLeastOneSourceUsed) {
+        for (size_t i = 0; i < usedSources.Size(); ++i) {
+            if (!usedSources[i]) {
+                auto& symbol = m_SourceDebugSymbols[i];
+                symbol.Path   = String();
+                symbol.Source = String();
+            }
+        }
+    } else {
+        m_SourceDebugSymbols.Clear();
+    }
 }
 
 bool Pulsar::Parser::PathToNormalizedFileSystemPath(const String& path, String& outNormalized)

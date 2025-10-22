@@ -322,6 +322,9 @@ namespace Pulsar
         const String* CurrentPath() const;
         const String* CurrentSource() const;
 
+        bool HasMessages() const;
+        void StripUnusedSources();
+
     private:
         struct LexerSource
         {
