@@ -44,22 +44,23 @@
         }}                                                                                \
     } while (0)
 
-void Pulsar::Parser::EmitWarning(const Token& token, const String& message)
+void Pulsar::Parser::EmitWarning(ParseWarning reason, const Token& token, const String& message)
 {
     WarningMessage warning;
     warning.SourceIndex = CurrentSourceIndex();
     warning.Token   = token;
     warning.Message = message;
+    warning.Reason  = reason;
     m_WarningMessages.EmplaceBack(std::move(warning));
 }
 
-Pulsar::ParseResult Pulsar::Parser::SetError(ParseResult result, const Token& token, const String& message)
+Pulsar::ParseResult Pulsar::Parser::SetError(ParseResult reason, const Token& token, const String& message)
 {
     m_ErrorMessage.SourceIndex = CurrentSourceIndex();
     m_ErrorMessage.Token   = token;
     m_ErrorMessage.Message = message;
-    m_ErrorMessage.Reason  = result;
-    return result;
+    m_ErrorMessage.Reason  = reason;
+    return reason;
 }
 
 void Pulsar::Parser::ClearError()
@@ -458,7 +459,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
         if (nameIdxPair) {
             nameIdxPair->Value() = module.Functions.Size();
             if (settings.Warnings.DuplicateFunctionNames && def.Name != "main")
-                EmitWarning(identToken, "Function definition has duplicate name.");
+                EmitWarning(ParseWarning::DuplicateFunctionNames, identToken, "Function definition has duplicate name.");
         } else {
             globalScope.Functions.Emplace(def.Name, module.Functions.Size());
         }
@@ -1509,9 +1510,9 @@ Pulsar::ParseSettings::IncludeResolverFn Pulsar::ParseSettings::CreateFileSystem
 #endif // PULSAR_NO_FILESYSTEM
 }
 
-const char* Pulsar::ParseResultToString(ParseResult presult)
+const char* Pulsar::ParseResultToString(ParseResult result)
 {
-    switch (presult) {
+    switch (result) {
     case ParseResult::OK:
         return "OK";
     case ParseResult::Error:
@@ -1552,6 +1553,17 @@ const char* Pulsar::ParseResultToString(ParseResult presult)
         return "RedeclarationOfLabel";
     case ParseResult::TerminatedByNotification:
         return "TerminatedByNotification";
+    }
+    return "Unknown";
+}
+
+const char* Pulsar::ParseWarningToString(ParseWarning warning)
+{
+    switch (warning) {
+    case ParseWarning::None:
+        return "None";
+    case ParseWarning::DuplicateFunctionNames:
+        return "DuplicateFunctionNames";
     }
     return "Unknown";
 }

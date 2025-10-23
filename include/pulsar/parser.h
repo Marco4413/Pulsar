@@ -126,7 +126,14 @@ namespace Pulsar
         TerminatedByNotification,
     };
 
-    const char* ParseResultToString(ParseResult presult);
+    enum class ParseWarning
+    {
+        None = 0,
+        DuplicateFunctionNames,
+    };
+
+    const char* ParseResultToString(ParseResult result);
+    const char* ParseWarningToString(ParseWarning warning);
 
     struct ParserNotifications
     {
@@ -269,10 +276,14 @@ namespace Pulsar
             String Message;
         };
 
-        struct WarningMessage : Message {};
         struct ErrorMessage : Message
         {
             ParseResult Reason;
+        };
+
+        struct WarningMessage : Message
+        {
+            ParseWarning Reason;
         };
 
     public:
@@ -291,8 +302,8 @@ namespace Pulsar
         const String* GetSourceFromIndex(size_t sourceIndex) const;
         const String* GetPathFromIndex(size_t sourceIndex) const;
 
-        void EmitWarning(const Token& token, const String& message);
-        ParseResult SetError(ParseResult result, const Token& token, const String& message);
+        void EmitWarning(ParseWarning reason, const Token& token, const String& message);
+        ParseResult SetError(ParseResult reason, const Token& token, const String& message);
         void ClearError();
 
     public:
