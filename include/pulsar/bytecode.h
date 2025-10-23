@@ -10,7 +10,6 @@
 #include "pulsar/binary/bytewriter.h"
 
 #include "pulsar/lexer.h"
-#include "pulsar/parser.h"
 #include "pulsar/runtime.h"
 #include "pulsar/runtime/debug.h"
 #include "pulsar/structures/list.h"
