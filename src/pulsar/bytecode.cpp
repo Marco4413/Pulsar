@@ -103,12 +103,15 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadSized(IReader& reader, 
     uint64_t size = 0;
     if (!reader.ReadU64(size))
         return ReadResult::UnexpectedEOF;
+
     List<uint8_t> data;
     data.Resize((size_t)size);
     if (!reader.ReadData((uint64_t)data.Size(), (uint8_t*)data.Data()))
         return ReadResult::UnexpectedEOF;
-    ByteReader byteReader(std::move(data));
+
+    ByteReader byteReader(data.Size(), data.Data());
     RETURN_IF_NOT_OK(func(byteReader, settings));
+
     return byteReader.IsAtEndOfFile()
         ? ReadResult::OK
         : ReadResult::DataNotConsumed;
