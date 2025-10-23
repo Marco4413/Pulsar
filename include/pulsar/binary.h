@@ -21,9 +21,9 @@ namespace Pulsar::Binary
 
     constexpr uint8_t GLOBAL_FLAG_CONSTANT = 1;
 
-    constexpr uint16_t _N = 0x0001;
+    constexpr uint32_t _IS_LITTLE_ENDIAN_N = 0x04030201;
     // Are we running on a Little Endian Processor?
-    constexpr bool IS_LITTLE_ENDIAN = static_cast<const uint8_t&>(_N) == 0x01;
+    constexpr bool IS_LITTLE_ENDIAN = static_cast<const uint8_t&>(_IS_LITTLE_ENDIAN_N) == 0x01;
 }
 
 #endif // _PULSAR_BINARY_H
