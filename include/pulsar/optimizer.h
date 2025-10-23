@@ -57,15 +57,16 @@ namespace Pulsar
         UnusedOptimizer() = default;
         ~UnusedOptimizer() = default;
 
-        void Optimize(
+        // Returns false on error. On error `module` is not modified.
+        bool Optimize(
                 Module& module,
                 /* Leaving IsExportedFunction to nullptr may remove everything
                    as nothing is reachable from the outside */
                 const Settings& settings);
 
     private:
-        // Marks reachable functions.
-        void MarkReachables(const Module& module, const Settings& settings);
+        // Marks reachable functions. Returns false on error (index out of bounds).
+        bool MarkReachables(const Module& module, const Settings& settings);
 
         // Removes items marked as unreachable from module and stores remapped indices.
         void RemoveUnreachable(Module& module);
