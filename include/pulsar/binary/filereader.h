@@ -1,8 +1,9 @@
-#ifndef PULSAR_NO_FILESYSTEM
 #ifndef _PULSAR_BINARY_FILEREADER_H
 #define _PULSAR_BINARY_FILEREADER_H
 
-#include <fstream>
+#ifndef PULSAR_NO_FILESYSTEM
+#  include <fstream>
+#endif // PULSAR_NO_FILESYSTEM
 
 #include "pulsar/core.h"
 
@@ -11,6 +12,7 @@
 
 namespace Pulsar::Binary
 {
+#ifndef PULSAR_NO_FILESYSTEM
     class FileReader : public IReader
     {
     public:
@@ -26,7 +28,19 @@ namespace Pulsar::Binary
     private:
         std::ifstream m_File;
     };
+#else // PULSAR_NO_FILESYSTEM
+    class FileReader : public IReader
+    {
+    public:
+        FileReader(const String& path) { (void)path; }
+
+        bool ReadData(uint64_t size, uint8_t* data) override
+        {
+            (void)size; (void)data;
+            return false;
+        }
+    };
+#endif // PULSAR_NO_FILESYSTEM
 }
 
 #endif // _PULSAR_BINARY_FILEREADER_H
-#endif // PULSAR_NO_FILESYSTEM
