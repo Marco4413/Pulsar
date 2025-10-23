@@ -253,6 +253,7 @@ int PulsarTools::CLI::Action::Optimize(Pulsar::Module& module, const OptimizerOp
 
     Logger& logger = GetLogger();
 
+    size_t appliedOptimizations = 0;
     std::chrono::microseconds totalOptimizeTime(0);
 
     Pulsar::BaseOptimizerSettings optimizerSettings;
@@ -295,21 +296,28 @@ int PulsarTools::CLI::Action::Optimize(Pulsar::Module& module, const OptimizerOp
         auto startTime = std::chrono::steady_clock::now();
 
         Pulsar::UnusedOptimizer optimizer;
-        optimizer.Optimize(module, optimizerSettings);
+        bool ok = optimizer.Optimize(module, optimizerSettings);
 
         auto endTime = std::chrono::steady_clock::now();
         auto optimizeUnusedTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
-        totalOptimizeTime += optimizeUnusedTime;
 
-        logger.Info("Optimize Unused:");
-        logger.Info("- Removed {}/{} functions.", initFunctions-module.Functions.Size(),    initFunctions);
-        logger.Info("- Removed {}/{} natives.",   initNatives-module.NativeBindings.Size(), initNatives);
-        logger.Info("- Removed {}/{} globals.",   initGlobals-module.Globals.Size(),        initGlobals);
-        logger.Info("- Removed {}/{} constants.", initConstants-module.Constants.Size(),    initConstants);
-        logger.Info("- Time: {}us", optimizeUnusedTime.count());
+        if (ok) {
+            ++appliedOptimizations;
+            totalOptimizeTime += optimizeUnusedTime;
+
+            logger.Info("Optimize Unused:");
+            logger.Info("- Removed {}/{} functions.", initFunctions-module.Functions.Size(),    initFunctions);
+            logger.Info("- Removed {}/{} natives.",   initNatives-module.NativeBindings.Size(), initNatives);
+            logger.Info("- Removed {}/{} globals.",   initGlobals-module.Globals.Size(),        initGlobals);
+            logger.Info("- Removed {}/{} constants.", initConstants-module.Constants.Size(),    initConstants);
+            logger.Info("- Time: {}us", optimizeUnusedTime.count());
+        } else {
+            logger.Warn("Optimize Unused: Failed!");
+        }
     }
 
-    logger.Info("Optimizations took: {}us", totalOptimizeTime.count());
+    if (appliedOptimizations > 0)
+        logger.Info("Optimizations took: {}us", totalOptimizeTime.count());
     return 0;
 }
 
