@@ -150,30 +150,8 @@ int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const In
     auto parseTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
     logger.Info("Parsing took: {}us", parseTime.count());
 
-    const auto& warningMessages = parser.GetWarningMessages();
-    bool warningError = *parserOptions.WarnAsError && !warningMessages.IsEmpty();
-    for (size_t i = 0; i < warningMessages.Size(); ++i) {
-        if (warningError) {
-            logger.Error(CreateParserMessageReport(
-                    parser, MessageReportKind_Error, warningMessages[i],
-                    logger.GetColor()));
-        } else {
-            logger.Warn(CreateParserMessageReport(
-                    parser, MessageReportKind_Warning, warningMessages[i],
-                    logger.GetColor()));
-        }
-    }
-
-    if (parseResult != Pulsar::ParseResult::OK) {
-        logger.Error("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
-        logger.Error(CreateParserMessageReport(
-                parser, MessageReportKind_Error, parser.GetErrorMessage(),
-                logger.GetColor()));
+    if (LogParserErrors(parser, parserOptions))
         return 1;
-    }
-
-    if (warningError) return 1;
-
     return 0;
 }
 
@@ -259,29 +237,8 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
     auto parseTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
     logger.Info("Parsing took: {}us", parseTime.count());
 
-    const auto& warningMessages = parser.GetWarningMessages();
-    bool warningError = *parserOptions.WarnAsError && !warningMessages.IsEmpty();
-    for (size_t i = 0; i < warningMessages.Size(); ++i) {
-        if (warningError) {
-            logger.Error(CreateParserMessageReport(
-                    parser, MessageReportKind_Error, warningMessages[i],
-                    logger.GetColor()));
-        } else {
-            logger.Warn(CreateParserMessageReport(
-                    parser, MessageReportKind_Warning, warningMessages[i],
-                    logger.GetColor()));
-        }
-    }
-
-    if (parseResult != Pulsar::ParseResult::OK) {
-        logger.Error("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
-        logger.Error(CreateParserMessageReport(
-                parser, MessageReportKind_Error, parser.GetErrorMessage(),
-                logger.GetColor()));
+    if (LogParserErrors(parser, parserOptions))
         return 1;
-    }
-
-    if (warningError) return 1;
 
     if (!*parserOptions.DeclareBoundNatives) {
         BindNatives(module, runtimeOptions, false);
@@ -406,6 +363,47 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
     }
 
     return 0;
+}
+
+bool PulsarTools::CLI::LogParserErrors(const Pulsar::Parser& parser, const PulsarTools::CLI::ParserOptions& parserOptions)
+{
+    Logger& logger = GetLogger();
+
+    const auto& warningMessages = parser.GetWarningMessages();
+    bool warningError = *parserOptions.WarnAsError && !warningMessages.IsEmpty();
+    for (size_t i = 0; i < warningMessages.Size(); ++i) {
+        const auto& warningMessage = warningMessages[i];
+        auto reportKind = warningError
+                ? MessageReportKind_Error
+                : MessageReportKind_Warning;
+        auto name = fmt::format("{}({})",
+                MessageReportKind_Warning.Name,
+                Pulsar::ParseWarningToString(warningMessage.Reason));
+        reportKind.Name = name.c_str();
+
+        if (warningError) {
+            logger.Error(CreateParserMessageReport(
+                    parser, reportKind, warningMessage, logger.GetColor()));
+        } else {
+            logger.Warn(CreateParserMessageReport(
+                    parser, reportKind, warningMessage, logger.GetColor()));
+        }
+    }
+
+    const auto& errorMessage = parser.GetErrorMessage();
+    if (errorMessage.Reason != Pulsar::ParseResult::OK) {
+        auto reportKind = MessageReportKind_Error;
+        auto name = fmt::format("{}({})",
+                reportKind.Name,
+                Pulsar::ParseResultToString(errorMessage.Reason));
+        reportKind.Name = name.c_str();
+
+        logger.Error(CreateParserMessageReport(
+                parser, reportKind, parser.GetErrorMessage(), logger.GetColor()));
+        return true;
+    }
+
+    return warningError;
 }
 
 void PulsarTools::CLI::ExportOption::WriteHint(Argue::ITextBuilder& hint) const

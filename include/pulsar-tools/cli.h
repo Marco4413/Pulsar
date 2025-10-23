@@ -247,6 +247,9 @@ namespace PulsarTools::CLI
         Argue::StrVarArgument Args;
     };
 
+    // Returns true if an error was encountered.
+    bool LogParserErrors(const Pulsar::Parser& parser, const ParserOptions& parserOptions);
+
     namespace Action
     {
         int Check(const ParserOptions& parserOptions, const InputFileArgs& input);
