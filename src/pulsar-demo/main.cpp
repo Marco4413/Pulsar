@@ -15,6 +15,9 @@ By reading this demo you should be able to get Pulsar up and running within your
 #include "pulsar/parser.h"
 #include "pulsar/runtime.h"
 
+// Utility which helps printing errors.
+#include "pulsar/sourceviewer.h"
+
 // Uncomment the following line if you want to read a Neutron file
 // #define READ_AS_NEUTRON_FILE
 
@@ -105,11 +108,24 @@ int main(int argc, const char** argv)
         fmt::println("[PARSE ERROR]: {}:{}:{}: {}: {}",
             // The path of the file which caused the error.
             parser.GetPathFromIndex(errorMessage.SourceIndex)->CString(),
-            // Line and Char within the line were the error occurred.
+            // Line and Char within the line where the error occurred.
+            // NOTE: In editors like VSCode, cursor position is indexed from 1.
             errorMessage.Token.SourcePos.Line+1,
-            errorMessage.Token.SourcePos.Char,
+            errorMessage.Token.SourcePos.Char+1,
             Pulsar::ParseResultToString(parseResult),
             errorMessage.Message.CString());
+
+        const Pulsar::String* source = parser.GetSourceFromIndex(errorMessage.SourceIndex);
+        // Make sure the source is available.
+        if (source) {
+            // Create a SourceViewer and generate a RangeView of the error.
+            Pulsar::SourceViewer sourceViewer(*source);
+            Pulsar::SourceViewer::RangeView errorView = sourceViewer.ComputeRangeView(
+                    errorMessage.Token.SourcePos, Pulsar::SourceViewer::Range{20,20});
+            fmt::println("{:.{}}", errorView.View.Data(), errorView.View.Length());
+            // Print ~~~ underneath the token which generated the error.
+            fmt::println("{0: ^{1}}{0:~^{2}}", "", errorView.WidthToTokenStart, errorView.TokenWidth);
+        }
         return 1;
     }
 
