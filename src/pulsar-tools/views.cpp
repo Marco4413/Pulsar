@@ -63,7 +63,7 @@ PulsarTools::TokenViewLine PulsarTools::CreateTokenView(const Pulsar::String& so
     std::string lineContents;
     if (charsTrimmedFromStart > 0)
         lineContents += "... ";
-    lineContents.append(errorView.DataFromStart(), errorView.Length());
+    lineContents.append(errorView.Data(), errorView.Length());
     if (charsTrimmedFromEnd > 0)
         lineContents += " ...";
 

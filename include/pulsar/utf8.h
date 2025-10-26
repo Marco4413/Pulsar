@@ -32,8 +32,9 @@ namespace UTF8
     class Decoder
     {
     public:
-        Decoder(StringView data) :
-            m_Data(data)
+        Decoder(StringView data)
+            : m_DataStart(data.Data())
+            , m_Data(data)
         {}
 
         Decoder(const Decoder&) = default;
@@ -48,7 +49,7 @@ namespace UTF8
         bool IsInvalidEncoding() const { return m_IsInvalidEncoding; }
 
         size_t GetRemainingBytes() const    { return m_Data.Length(); }
-        size_t GetDecodedBytes() const      { return m_Data.GetStart(); }
+        size_t GetDecodedBytes() const      { return static_cast<size_t>(m_Data.Data()-m_DataStart); }
         size_t GetDecodedCodepoints() const { return m_DecodedCodepoints; }
 
         StringView Data() const { return m_Data; }
@@ -83,6 +84,7 @@ namespace UTF8
         }
 
     private:
+        const char* m_DataStart;
         StringView m_Data;
 
         Codepoint m_PeekedCodepoint = 0;

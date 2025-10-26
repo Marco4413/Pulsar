@@ -17,23 +17,28 @@ namespace Pulsar
             : StringView(str, std::strlen(str)) { }
 
         StringView(const char* str, size_t length)
-            : m_Data(str), m_End(length) { }
-        
+            : m_Begin(str), m_End(str+length) { }
+
         StringView(const StringView&) = default;
         StringView(StringView&&) = default;
         StringView& operator=(const StringView&) = default;
         StringView& operator=(StringView&&) = default;
-        
-        String GetPrefix(size_t count) const
+
+        String ToString() const
+        {
+            return String(m_Begin, Length());
+        }
+
+        String PrefixToString(size_t count) const
         {
             PULSAR_ASSERT(count <= Length(), "Getting more characters than the available amount.");
-            return String(m_Data+m_Start, count);
+            return String(m_Begin, count);
         }
 
         void RemovePrefix(size_t count)
         {
             PULSAR_ASSERT(count <= Length(), "Removing more characters than the available amount.");
-            m_Start += count;
+            m_Begin += count;
         }
 
         void RemoveSuffix(size_t count)
@@ -42,10 +47,16 @@ namespace Pulsar
             m_End -= count;
         }
 
+        void SetLength(size_t newLength)
+        {
+            PULSAR_ASSERT(newLength <= Length(), "Setting length to a value greater than the max length.");
+            m_End = m_Begin + newLength;
+        }
+
         char operator[](size_t idx) const
         {
             PULSAR_ASSERT(idx < Length(), "StringView index out of bounds.");
-            return m_Data[m_Start+idx];
+            return m_Begin[idx];
         }
 
         bool operator==(const StringView& other) const
@@ -61,16 +72,13 @@ namespace Pulsar
 
         bool operator!=(const StringView& other) const { return !(*this == other); }
 
-        size_t Length() const   { return Empty() ? 0 : m_End - m_Start; }
-        bool Empty() const      { return m_Start >= m_End; }
-        size_t GetStart() const { return m_Start; }
+        size_t Length() const   { return Empty() ? 0 : m_End - m_Begin; }
+        bool Empty() const      { return m_Begin >= m_End; }
         // Data may not be null-terminated, use StringView::Length to get the remaining characters.
-        // TODO: Do we need an assert? If so, what should it check?
-        const char* DataFromStart() const { return &m_Data[m_Start]; }
+        const char* Data() const { return m_Begin; }
     private:
-        const char* m_Data = nullptr;
-        size_t m_Start = 0;
-        size_t m_End = 0;
+        const char* m_Begin;
+        const char* m_End;
     };
 }
 

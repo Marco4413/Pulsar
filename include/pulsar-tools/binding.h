@@ -96,7 +96,7 @@ namespace PulsarTools
 
         void BindCustomType(Pulsar::StringView name, Pulsar::CustomType::DataFactoryFn dataFactory = nullptr)
         {
-            m_CustomTypesPool.emplace_back(Pulsar::String(name.DataFromStart(), name.Length()), dataFactory);
+            m_CustomTypesPool.emplace_back(name.ToString(), dataFactory);
         }
 
         void BindNativeFunction(const Pulsar::FunctionSignature& sig, NativeFunctionFactoryFn factory)

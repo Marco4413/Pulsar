@@ -234,7 +234,7 @@ Pulsar::Token Pulsar::Lexer::ParseIdentifier()
         return CreateNoneToken();
 
     size_t idBytes = decoder.GetDecodedBytes() - m_Decoder.GetDecodedBytes();
-    String id = m_Decoder.Data().GetPrefix(idBytes);
+    String id = m_Decoder.Data().PrefixToString(idBytes);
 
     return PullToken(decoder, TokenType::Identifier, std::move(id));
 }
@@ -256,7 +256,7 @@ Pulsar::Token Pulsar::Lexer::ParseLabel()
     idView.RemovePrefix(1); // '@'
     idView.RemoveSuffix(idView.Length()-idBytes);
 
-    return PullToken(decoder, TokenType::Label, idView.GetPrefix(idView.Length()));
+    return PullToken(decoder, TokenType::Label, idView.PrefixToString(idView.Length()));
 }
 
 Pulsar::Token Pulsar::Lexer::ParseCompilerDirective()
@@ -276,7 +276,7 @@ Pulsar::Token Pulsar::Lexer::ParseCompilerDirective()
     idView.RemovePrefix(1); // '#'
     idView.RemoveSuffix(idView.Length()-idBytes);
 
-    Token token = PullToken(decoder, TokenType::CompilerDirective, idView.GetPrefix(idView.Length()));
+    Token token = PullToken(decoder, TokenType::CompilerDirective, idView.PrefixToString(idView.Length()));
     token.IntegerVal = TOKEN_CD_GENERIC;
 
     auto cdNameValPair = CompilerDirectives.Find(token.StringVal);
@@ -508,13 +508,13 @@ Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
             default: {
                 StringView data = decoder.Data();
                 size_t codepointBytes = decoder.Skip();
-                val += data.GetPrefix(codepointBytes);
+                val += data.PrefixToString(codepointBytes);
             } break;
             }
         } else {
             StringView data = decoder.Data();
             size_t codepointBytes = decoder.Skip();
-            val += data.GetPrefix(codepointBytes);
+            val += data.PrefixToString(codepointBytes);
         }
     }
     if (decoder.Next() != '"')

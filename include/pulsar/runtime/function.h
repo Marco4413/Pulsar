@@ -79,7 +79,7 @@ namespace Pulsar
 
         FunctionDefinition ToNativeDefinition() const
         {
-            return { String(Name.DataFromStart(), Name.Length()), Arity, Returns, StackArity, Arity };
+            return { Name.ToString(), Arity, Returns, StackArity, Arity };
         }
     };
 }
