@@ -14,6 +14,11 @@ namespace Pulsar
     class SourceViewer
     {
     public:
+        enum class PositionEncoding
+        {
+            UTF8, UTF16, UTF32
+        };
+
         struct Range
         {
             size_t Before;
@@ -43,14 +48,35 @@ namespace Pulsar
         };
 
     public:
-        // The given source must outlive any object returned by this class.
+        static size_t GetEncodedSize(Unicode::Codepoint codepoint, PositionEncoding encoding);
+
+    public:
+        // The given source must outlive any View returned by the methods of this class.
         SourceViewer(StringView source)
             : m_Source(source) {}
 
-        StringView ComputeLineView(SourcePosition pos) const;
-        // Computes a RangeView which shows the token at pos with at most range.Before
-        //  chars before the token and at most range.After chars after the end of the token.
-        RangeView ComputeRangeView(SourcePosition pos, Range range=Range_Infinite) const;
+        // If `pos.Index` is valid, consider enabling `usePositionIndex` to speed up line search.
+        // `pos.Index` allows for jumping directly to the line so only bounds are computed.
+        // The returned `StringView` is contained between `source.Data()` and `source.Data()+source.Length()`.
+        StringView ComputeLineView(
+                SourcePosition pos,
+                bool usePositionIndex=true
+            ) const;
+        // If `false` is returned, `inPos` was ill-formed and `outPos` represents an approximation of the correct position.
+        // Converts to a position represented as `PositionEncoding` from another `PositionEncoding`.
+        // `outPos.Index` is filled with a valid index if `true` is returned.
+        // The default encoding of `SourcePosition` is `::UTF32`.
+        bool ConvertPositionTo(
+                SourcePosition& outPos, PositionEncoding outEncoding,
+                SourcePosition  inPos,  PositionEncoding inEncoding=PositionEncoding::UTF32,
+                bool usePositionIndex=true
+            ) const;
+        // Computes a `RangeView` which shows the token at pos with at most `range.Before`
+        //  chars before the token and at most `range.After` chars after the end of the token.
+        RangeView ComputeRangeView(
+                SourcePosition pos, Range range=Range_Infinite,
+                bool usePositionIndex=true
+            ) const;
 
     private:
         StringView m_Source;
