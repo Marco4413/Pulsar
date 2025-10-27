@@ -9,7 +9,7 @@ namespace Pulsar
 {
     /**
      * Class which helps with showing source code to the user.
-     * It will also include utilities from Pulsar-LSP to convert between UTF-8/16/32 codepoint counts.
+     * It also includes utilities to convert positions between UTF-8/16/32 codepoint counts.
      */
     class SourceViewer
     {
