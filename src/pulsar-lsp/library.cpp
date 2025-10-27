@@ -6,6 +6,8 @@
 #include "pulsar/parser.h"
 #include "pulsar/utf8.h"
 
+#include "pulsar-lsp/helpers.h"
+
 Pulsar::String PulsarLSP::URIToNormalizedPath(const lsp::FileUri& uri)
 {
     std::filesystem::path path(uri.path());
@@ -58,48 +60,7 @@ bool PulsarLSP::ReadFile(const lsp::FileUri& uri, Pulsar::String& buffer)
 
 size_t PulsarLSP::Unicode::GetEncodedSize(Codepoint code, PositionEncodingKind encodingKind)
 {
-    switch (encodingKind) {
-    case PositionEncodingKind::UTF8:
-        return Pulsar::UTF8::GetEncodedSize(code);
-    case PositionEncodingKind::UTF16:
-        if (code <= 0xFFFF) return 1;
-        return 2;
-    case PositionEncodingKind::UTF32:
-    default:
-        return 1;
-    }
-}
-
-void PulsarLSP::UTF8::DecoderExt::AdvanceToLine(Decoder& decoder, size_t startLine, size_t line)
-{
-    size_t currentLine = startLine;
-    while (decoder && currentLine != line) {
-        Codepoint ch = decoder.Next();
-        // CRLF
-        if (ch == '\r' && decoder.Peek() == '\n') {
-            ++currentLine;
-            decoder.Skip();
-        // CR or LF
-        } else if (ch == '\r' || ch == '\n') {
-            ++currentLine;
-        }
-    }
-}
-
-void PulsarLSP::UTF8::DecoderExt::AdvanceToChar(Decoder& decoder, size_t startChar, size_t character, PositionEncodingKind encodingKind)
-{
-    size_t currCharacter = startChar;
-    while (decoder && currCharacter < character) {
-        Codepoint ch = decoder.Next();
-        currCharacter += Unicode::GetEncodedSize(ch, encodingKind);
-
-        if (ch == '\r' && decoder.Peek() == '\n') {
-            decoder.Skip();
-            break;
-        } else if (ch == '\r' || ch == '\n') {
-            break;
-        }
-    }
+    return Pulsar::SourceViewer::GetEncodedSize(code, ToPulsarPositionEncoding(encodingKind));
 }
 
 PulsarLSP::ConstSharedText PulsarLSP::Library::FindDocument(const lsp::FileUri& uri) const
@@ -176,16 +137,19 @@ void PulsarLSP::Library::DeleteAllDocuments()
 
 std::pair<size_t, size_t> PulsarLSP::Library::GetRangeIndices(const Pulsar::String& text, lsp::Range range) const
 {
-    UTF8::Decoder start(text);
-    UTF8::DecoderExt::AdvanceToLine(start, 0, (size_t)range.start.line);
+    Pulsar::SourcePosition rangeStart = PositionToSourcePosition(range.start);
+    Pulsar::SourcePosition rangeEnd   = PositionToSourcePosition(range.end);
 
-    UTF8::Decoder end = start;
-    UTF8::DecoderExt::AdvanceToLine(end, (size_t)range.start.line, (size_t)range.end.line);
-
-    UTF8::DecoderExt::AdvanceToChar(start, 0, (size_t)range.start.character, GetPositionEncoding());
-    UTF8::DecoderExt::AdvanceToChar(end, 0, (size_t)range.end.character, GetPositionEncoding());
-
-    return { start.GetDecodedBytes(), end.GetDecodedBytes() };
+    Pulsar::SourceViewer sourceViewer(text);
+    sourceViewer.ConvertPositionTo(
+            rangeStart, ToPulsarPositionEncoding(GetPositionEncoding()),
+            rangeStart, ToPulsarPositionEncoding(GetPositionEncoding()),
+            false);
+    sourceViewer.ConvertPositionTo(
+            rangeEnd, ToPulsarPositionEncoding(GetPositionEncoding()),
+            rangeEnd, ToPulsarPositionEncoding(GetPositionEncoding()),
+            false);
+    return { rangeStart.Index, rangeEnd.Index };
 }
 
 void PulsarLSP::Library::PutRangePatch(Pulsar::String& text, const lsp::TextDocumentContentChangeEvent_Range_Text& change)

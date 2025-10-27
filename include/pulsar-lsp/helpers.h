@@ -62,6 +62,16 @@ namespace PulsarLSP
         };
     }
 
+    constexpr Pulsar::SourcePosition PositionToSourcePosition(lsp::Position position)
+    {
+        return Pulsar::SourcePosition{
+            .Line = static_cast<size_t>(position.line),
+            .Char = static_cast<size_t>(position.character),
+            .Index    = 0,
+            .CharSpan = 0,
+        };
+    }
+
     constexpr bool IsNullRange(lsp::Range range)
     {
         return range.start.line == 0 && range.start.character == 0 &&

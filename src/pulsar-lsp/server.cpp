@@ -922,17 +922,17 @@ lsp::Position PulsarLSP::Server::DocumentPositionToEditorPosition(ConstSharedTex
 {
     if (!doc) return pos;
 
-    UTF8::Decoder start(*doc);
-    UTF8::DecoderExt::AdvanceToLine(start, 0, (size_t)pos.line);
+    Pulsar::SourcePosition sourcePos = PositionToSourcePosition(pos);
 
-    lsp::uint editorStartChar = 0;
-    for (lsp::uint i = 0; i < pos.character && start; ++i) {
-        editorStartChar += (lsp::uint)Unicode::GetEncodedSize(start.Next(), GetPositionEncoding());
-    }
+    Pulsar::SourceViewer sourceViewer(*doc);
+    sourceViewer.ConvertPositionTo(
+            sourcePos, ToPulsarPositionEncoding(GetPositionEncoding()),
+            sourcePos, Pulsar::SourceViewer::PositionEncoding::UTF32,
+            false);
 
     return lsp::Position{
         .line = pos.line,
-        .character = editorStartChar
+        .character = static_cast<lsp::uint>(sourcePos.Char)
     };
 }
 
@@ -940,17 +940,17 @@ lsp::Position PulsarLSP::Server::EditorPositionToDocumentPosition(ConstSharedTex
 {
     if (!doc) return pos;
 
-    UTF8::Decoder start(*doc);
-    UTF8::DecoderExt::AdvanceToLine(start, 0, (size_t)pos.line);
+    Pulsar::SourcePosition sourcePos = PositionToSourcePosition(pos);
 
-    lsp::uint startChar = 0;
-    for (lsp::uint i = 0; i < pos.character && start; ++startChar) {
-        i += (lsp::uint)Unicode::GetEncodedSize(start.Next(), GetPositionEncoding());
-    }
+    Pulsar::SourceViewer sourceViewer(*doc);
+    sourceViewer.ConvertPositionTo(
+            sourcePos, Pulsar::SourceViewer::PositionEncoding::UTF32,
+            sourcePos, ToPulsarPositionEncoding(GetPositionEncoding()),
+            false);
 
     return lsp::Position{
         .line = pos.line,
-        .character = startChar
+        .character = static_cast<lsp::uint>(sourcePos.Char)
     };
 }
 
@@ -970,30 +970,27 @@ lsp::Range PulsarLSP::Server::DocumentRangeToEditorRange(ConstSharedText doc, ls
 {
     if (!doc) return range;
 
-    UTF8::Decoder start(*doc);
-    UTF8::DecoderExt::AdvanceToLine(start, 0, (size_t)range.start.line);
+    Pulsar::SourcePosition rangeStart = PositionToSourcePosition(range.start);
+    Pulsar::SourcePosition rangeEnd   = PositionToSourcePosition(range.end);
 
-    UTF8::Decoder end = start;
-    UTF8::DecoderExt::AdvanceToLine(end, (size_t)range.start.line, (size_t)range.end.line);
-
-    lsp::uint editorStartChar = 0;
-    for (lsp::uint i = 0; i < range.start.character && start; ++i) {
-        editorStartChar += (lsp::uint)Unicode::GetEncodedSize(start.Next(), GetPositionEncoding());
-    }
-
-    lsp::uint editorEndChar = 0;
-    for (lsp::uint i = 0; i < range.end.character && end; ++i) {
-        editorEndChar += (lsp::uint)Unicode::GetEncodedSize(end.Next(), GetPositionEncoding());
-    }
+    Pulsar::SourceViewer sourceViewer(*doc);
+    sourceViewer.ConvertPositionTo(
+            rangeStart, ToPulsarPositionEncoding(GetPositionEncoding()),
+            rangeStart, Pulsar::SourceViewer::PositionEncoding::UTF32,
+            false);
+    sourceViewer.ConvertPositionTo(
+            rangeEnd, ToPulsarPositionEncoding(GetPositionEncoding()),
+            rangeEnd, Pulsar::SourceViewer::PositionEncoding::UTF32,
+            false);
 
     return lsp::Range{
         .start = {
             .line = range.start.line,
-            .character = editorStartChar
+            .character = static_cast<lsp::uint>(rangeStart.Char)
         },
         .end = {
             .line = range.end.line,
-            .character = editorEndChar
+            .character = static_cast<lsp::uint>(rangeEnd.Char)
         }
     };
 }
@@ -1002,30 +999,27 @@ lsp::Range PulsarLSP::Server::EditorRangeToDocumentRange(ConstSharedText doc, ls
 {
     if (!doc) return range;
 
-    UTF8::Decoder start(*doc);
-    UTF8::DecoderExt::AdvanceToLine(start, 0, (size_t)range.start.line);
+    Pulsar::SourcePosition rangeStart = PositionToSourcePosition(range.start);
+    Pulsar::SourcePosition rangeEnd   = PositionToSourcePosition(range.end);
 
-    UTF8::Decoder end = start;
-    UTF8::DecoderExt::AdvanceToLine(end, (size_t)range.start.line, (size_t)range.end.line);
-
-    lsp::uint startChar = 0;
-    for (lsp::uint i = 0; i < range.start.character && start; ++startChar) {
-        i += (lsp::uint)Unicode::GetEncodedSize(start.Next(), GetPositionEncoding());
-    }
-
-    lsp::uint endChar = 0;
-    for (lsp::uint i = 0; i < range.end.character && end; ++endChar) {
-        i += (lsp::uint)Unicode::GetEncodedSize(end.Next(), GetPositionEncoding());
-    }
+    Pulsar::SourceViewer sourceViewer(*doc);
+    sourceViewer.ConvertPositionTo(
+            rangeStart, Pulsar::SourceViewer::PositionEncoding::UTF32,
+            rangeStart, ToPulsarPositionEncoding(GetPositionEncoding()),
+            false);
+    sourceViewer.ConvertPositionTo(
+            rangeEnd, Pulsar::SourceViewer::PositionEncoding::UTF32,
+            rangeEnd, ToPulsarPositionEncoding(GetPositionEncoding()),
+            false);
 
     return lsp::Range{
         .start = {
             .line = range.start.line,
-            .character = startChar
+            .character = static_cast<lsp::uint>(rangeStart.Char)
         },
         .end = {
             .line = range.end.line,
-            .character = endChar
+            .character = static_cast<lsp::uint>(rangeEnd.Char)
         }
     };
 }
