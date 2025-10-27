@@ -19,13 +19,7 @@ namespace UTF8
     constexpr bool IsValidCodepoint(Codepoint code) { return Unicode::IsValidCodepoint(code); }
 
     constexpr size_t MAX_ENCODED_SIZE = 4;
-    constexpr size_t GetEncodedSize(Codepoint code)
-    {
-        if (code <= 0x7F) return 1;
-        else if (code <= 0x7FF) return 2;
-        else if (code <= 0xFFFF) return 3;
-        return 4;
-    }
+    constexpr size_t GetEncodedSize(Codepoint code) { return Unicode::GetUTF8EncodedSize(code); }
 
     Pulsar::String Encode(Codepoint code);
 
