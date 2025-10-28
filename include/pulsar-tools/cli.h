@@ -3,7 +3,7 @@
 
 #include <filesystem>
 
-#include "argue.hpp"
+#include <argue.hpp>
 
 #include "pulsar/parser.h"
 #include "pulsar/runtime.h"

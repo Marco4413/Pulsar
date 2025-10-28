@@ -1,6 +1,6 @@
-#include <pulsar-lsp/server.h>
-
 #include <lsp/io/standardio.h>
+
+#include "pulsar-lsp/server.h"
 
 int main(int argc, const char** argv)
 {

@@ -1,8 +1,8 @@
 #include "pulsar-tools/bindings/print.h"
 
-#include "pulsar-tools/fmt.h"
+#include <fmt/base.h>
 
-#include "fmt/base.h"
+#include "pulsar-tools/fmt.h"
 
 PulsarTools::Bindings::Print::Print() :
     IBinding()
