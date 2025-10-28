@@ -30,6 +30,18 @@ PulsarTools::Logger& PulsarTools::CLI::GetLogger()
     return g_Logger;
 }
 
+static PulsarTools::PositionSettings g_PreferredPositionSettings = PulsarTools::PositionSettings_Default;
+
+PulsarTools::PositionSettings PulsarTools::CLI::GetPreferredPositionSettings()
+{
+    return g_PreferredPositionSettings;
+}
+
+void PulsarTools::CLI::SetPreferredPositionSettings(PositionSettings settings)
+{
+    g_PreferredPositionSettings = settings;
+}
+
 const std::filesystem::path& PulsarTools::CLI::GetThisProcessExecutable()
 {
     static thread_local std::optional<std::filesystem::path> s_ThisProcessExecutable = std::nullopt;
@@ -357,7 +369,8 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
         return 1;
     } else if (runtimeState != Pulsar::RuntimeState::OK) {
         logger.Error("Runtime Error: {}", Pulsar::RuntimeStateToString(runtimeState));
-        logger.Error(CreateRuntimeErrorMessageReport(context, stackTraceDepth, logger.GetColor()));
+        logger.Error(CreateRuntimeErrorMessageReport(context, stackTraceDepth,
+                GetPreferredPositionSettings(), logger.GetColor()));
         return 1;
     }
 
@@ -391,10 +404,12 @@ bool PulsarTools::CLI::LogParserErrors(const Pulsar::Parser& parser, const Pulsa
 
         if (warningError) {
             logger.Error(CreateParserMessageReport(
-                    parser, reportKind, warningMessage, logger.GetColor()));
+                    parser, reportKind, warningMessage,
+                    GetPreferredPositionSettings(), logger.GetColor()));
         } else {
             logger.Warn(CreateParserMessageReport(
-                    parser, reportKind, warningMessage, logger.GetColor()));
+                    parser, reportKind, warningMessage,
+                    GetPreferredPositionSettings(), logger.GetColor()));
         }
     }
 
@@ -407,7 +422,8 @@ bool PulsarTools::CLI::LogParserErrors(const Pulsar::Parser& parser, const Pulsa
         reportKind.Name = name.c_str();
 
         logger.Error(CreateParserMessageReport(
-                parser, reportKind, parser.GetErrorMessage(), logger.GetColor()));
+                parser, reportKind, parser.GetErrorMessage(),
+                GetPreferredPositionSettings(), logger.GetColor()));
         return true;
     }
 

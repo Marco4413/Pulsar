@@ -7,6 +7,20 @@
 
 #include "pulsar-tools/fmt.h"
 
+static Pulsar::SourcePosition ConvertDefaultPositionWith(
+        const Pulsar::String& source,
+        Pulsar::SourcePosition position,
+        PulsarTools::PositionSettings settings)
+{
+    if (settings.Encoding != PulsarTools::PositionEncoding::UTF32) {
+        Pulsar::SourceViewer sourceViewer(source);
+        sourceViewer.ConvertPositionTo(position, settings.Encoding, position);
+    }
+    position.Line += settings.LineIndexedFrom;
+    position.Char += settings.CharIndexedFrom;
+    return position;
+}
+
 PulsarTools::TokenView PulsarTools::CreateTokenView(const Pulsar::String& source, const Pulsar::Token& token, TokenViewRange viewRange)
 {
     Pulsar::SourceViewer sourceViewer(source);
@@ -30,13 +44,18 @@ std::string PulsarTools::CreateSourceMessageReport(
         MessageReportKind reportKind,
         const Pulsar::String* source, const Pulsar::String* filepath,
         const Pulsar::Token& token, const Pulsar::String& message,
+        PositionSettings outPositionSettings,
         bool enableColors, TokenViewRange viewRange)
 {
     std::string result;
     if (filepath) {
+        Pulsar::SourcePosition sourcePos = source
+            ? ConvertDefaultPositionWith(*source, token.SourcePos, outPositionSettings)
+            : token.SourcePos;
+
         result += fmt::format(
                 "{}:{}:{}: {}: {}\n",
-                *filepath, token.SourcePos.Line+1, token.SourcePos.Char+1,
+                *filepath, sourcePos.Line, sourcePos.Char,
                 reportKind.Name, message);
     } else {
         result += fmt::format(
@@ -66,6 +85,7 @@ std::string PulsarTools::CreateParserMessageReport(
         const Pulsar::Parser& parser,
         MessageReportKind reportKind,
         const Pulsar::Parser::Message& message,
+        PositionSettings outPositionSettings,
         bool enableColors, TokenViewRange viewRange)
 {
     return CreateSourceMessageReport(
@@ -74,10 +94,14 @@ std::string PulsarTools::CreateParserMessageReport(
             parser.GetPathFromIndex(message.SourceIndex),
             message.Token,
             message.Message,
+            outPositionSettings,
             enableColors, viewRange);
 }
 
-std::string PulsarTools::CreateRuntimeErrorMessageReport(const Pulsar::ExecutionContext& context, size_t stackTraceDepth, bool enableColors, TokenViewRange viewRange)
+std::string PulsarTools::CreateRuntimeErrorMessageReport(
+        const Pulsar::ExecutionContext& context, size_t stackTraceDepth,
+        PositionSettings outPositionSettings,
+        bool enableColors, TokenViewRange viewRange)
 {
     const Pulsar::Module& module = context.GetModule();
     const Pulsar::CallStack& callStack = context.GetCallStack();
@@ -86,7 +110,12 @@ std::string PulsarTools::CreateRuntimeErrorMessageReport(const Pulsar::Execution
         return "No Runtime Error Information.";
     }
 
-    Pulsar::String stackTrace = context.GetStackTrace(stackTraceDepth);
+    Pulsar::String stackTrace = context.GetStackTrace(
+            stackTraceDepth,
+            [outPositionSettings](const auto& source, auto position)
+            {
+                return ConvertDefaultPositionWith(source.Source, position, outPositionSettings);
+            });
 
     const Pulsar::Frame& frame = callStack.CurrentFrame();
     if (!module.HasSourceDebugSymbols()
@@ -105,6 +134,7 @@ std::string PulsarTools::CreateRuntimeErrorMessageReport(const Pulsar::Execution
                 &srcSymbol.Source, &srcSymbol.Path,
                 frame.Function->DebugSymbol.Token,
                 "Within function " + frame.Function->Name,
+                outPositionSettings,
                 enableColors, viewRange);
         if (stackTrace.Length() > 0)
             result += fmt::format("\n{}", stackTrace);
@@ -119,6 +149,7 @@ std::string PulsarTools::CreateRuntimeErrorMessageReport(const Pulsar::Execution
                 &srcSymbol.Source, &srcSymbol.Path,
                 frame.Function->CodeDebugSymbols[codeSymbolIdx].Token,
                 "In function " + frame.Function->Name,
+                outPositionSettings,
                 enableColors, viewRange);
         if (stackTrace.Length() > 0)
             result += fmt::format("\n{}", stackTrace);
@@ -130,5 +161,6 @@ std::string PulsarTools::CreateRuntimeErrorMessageReport(const Pulsar::Execution
             &srcSymbol.Source, &srcSymbol.Path,
             frame.Function->DebugSymbol.Token,
             "In function call " + frame.Function->Name,
+            outPositionSettings,
             enableColors, viewRange);
 }

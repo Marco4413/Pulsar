@@ -20,6 +20,35 @@ int main(int argc, const char** argv)
         logger.SetLogLevel(PulsarTools::LogLevel::Error);
     }
 
+    PulsarTools::PositionSettings positionSettings = PulsarTools::PositionSettings_Default;
+
+    std::string_view positionEncoding = *program.Options.PositionEncoding;
+    if (positionEncoding == "utf16") {
+        positionSettings.Encoding = PulsarTools::PositionEncoding::UTF16;
+    } else if (positionEncoding == "utf32") {
+        positionSettings.Encoding = PulsarTools::PositionEncoding::UTF32;
+    } else if (positionEncoding == "utf8") {
+        positionSettings.Encoding = PulsarTools::PositionEncoding::UTF8;
+    }
+
+    positionSettings.LineIndexedFrom = 0;
+    positionSettings.CharIndexedFrom = 0;
+    if (program.Options.PositionIndexedFrom) {
+        if (*program.Options.PositionIndexedFrom > 0) {
+            positionSettings.LineIndexedFrom = static_cast<size_t>(*program.Options.PositionIndexedFrom);
+            positionSettings.CharIndexedFrom = static_cast<size_t>(*program.Options.PositionIndexedFrom);
+        }
+    } else {
+        if (*program.Options.PositionLineIndexedFrom > 0) {
+            positionSettings.LineIndexedFrom = static_cast<size_t>(*program.Options.PositionLineIndexedFrom);
+        }
+        if (*program.Options.PositionCharIndexedFrom > 0) {
+            positionSettings.CharIndexedFrom = static_cast<size_t>(*program.Options.PositionCharIndexedFrom);
+        }
+    }
+
+    PulsarTools::CLI::SetPreferredPositionSettings(positionSettings);
+
     if (!program.Parser) {
         logger.Error(program.Parser.GetError());
         return 1;

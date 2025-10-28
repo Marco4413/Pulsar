@@ -13,6 +13,20 @@
 
 namespace PulsarTools
 {
+    using PositionEncoding = Pulsar::SourceViewer::PositionEncoding;
+    struct PositionSettings
+    {
+        PositionEncoding Encoding;
+        size_t LineIndexedFrom;
+        size_t CharIndexedFrom;
+    };
+
+    constexpr PositionSettings PositionSettings_Default{
+        .Encoding        = PositionEncoding::UTF32,
+        .LineIndexedFrom = 1,
+        .CharIndexedFrom = 1,
+    };
+
     using TokenViewRange = Pulsar::SourceViewer::Range;
     constexpr TokenViewRange TokenViewRange_Default = {20,20};
 
@@ -41,6 +55,7 @@ namespace PulsarTools
             MessageReportKind reportKind,
             const Pulsar::String* source, const Pulsar::String* filepath,
             const Pulsar::Token& token, const Pulsar::String& message,
+            PositionSettings outPositionSettings=PositionSettings_Default,
             bool enableColors=true,
             TokenViewRange viewRange=TokenViewRange_Default);
 
@@ -48,12 +63,14 @@ namespace PulsarTools
             const Pulsar::Parser& parser,
             MessageReportKind reportKind,
             const Pulsar::Parser::Message& message,
+            PositionSettings outPositionSettings=PositionSettings_Default,
             bool enableColors=true,
             TokenViewRange viewRange=TokenViewRange_Default);
 
     std::string CreateRuntimeErrorMessageReport(
             const Pulsar::ExecutionContext& context,
             size_t stackTraceDepth=10,
+            PositionSettings outPositionSettings=PositionSettings_Default,
             bool enableColors=true,
             TokenViewRange viewRange=TokenViewRange_Default);
 }
