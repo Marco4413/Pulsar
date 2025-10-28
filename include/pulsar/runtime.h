@@ -202,6 +202,8 @@ if (state != RuntimeState::OK) // ERROR
     public:
         // typeId -> typeData
         using CustomTypeDataMap = HashMap<uint64_t, CustomTypeData::Ref>;
+        // Consider using the SourceViewer class for conversion.
+        using PositionConverterFn = std::function<SourcePosition(const SourceDebugSymbol& source, SourcePosition position)>;
 
         /**
          * Create a new ExecutionContext from a specified module.
@@ -258,10 +260,14 @@ if (state != RuntimeState::OK) // ERROR
         const List<GlobalInstance>& GetGlobals() const { return m_Globals; }
 
         // Generates the trace for a single call in the CallStack.
-        String GetCallTrace(size_t callIdx) const;
+        // Provide a `positionConverter` to convert from UTF32 0-indexed positions to other position kinds.
+        //  The default behaviour is to convert 0-indexed UTF32 to 1-indexed.
+        String GetCallTrace(size_t callIdx, const PositionConverterFn& positionConverter=nullptr) const;
         // Generates the trace for `maxDepth` calls in the CallStack.
         // Set `maxDepth` to -1 for "infinite depth".
-        String GetStackTrace(size_t maxDepth) const;
+        // Provide a `positionConverter` to convert from UTF32 0-indexed positions to other position kinds.
+        //  The default behaviour is to convert 0-indexed UTF32 to 1-indexed.
+        String GetStackTrace(size_t maxDepth, const PositionConverterFn& positionConverter=nullptr) const;
 
         RuntimeState CallFunction(const String& funcName);
         RuntimeState CallFunction(int64_t funcIdx);

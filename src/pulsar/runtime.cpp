@@ -42,7 +42,7 @@ Pulsar::ExecutionContext Pulsar::ExecutionContext::Fork() const
     return fork;
 }
 
-Pulsar::String Pulsar::ExecutionContext::GetCallTrace(size_t callIdx) const
+Pulsar::String Pulsar::ExecutionContext::GetCallTrace(size_t callIdx, const PositionConverterFn& positionConverter) const
 {
     const Frame& frame = m_CallStack[callIdx];
     String trace;
@@ -51,27 +51,42 @@ Pulsar::String Pulsar::ExecutionContext::GetCallTrace(size_t callIdx) const
         trace += '*';
     trace += frame.Function->Name + ')';
     if (frame.Function->HasDebugSymbol() && m_Module.HasSourceDebugSymbols()) {
-        const Pulsar::String& filePath = m_Module.SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx].Path;
+        const auto& sourceDebugSymbol = m_Module.SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
+        const Pulsar::String& filePath = sourceDebugSymbol.Path;
 
         size_t codeSymbolIdx = 0;
         if (frame.InstructionIndex > 0 && frame.Function->FindCodeDebugSymbolFor(frame.InstructionIndex-1, codeSymbolIdx)) {
             const auto& token = frame.Function->CodeDebugSymbols[codeSymbolIdx].Token;
+            auto sourcePos = token.SourcePos;
+            if (positionConverter) {
+                sourcePos = positionConverter(sourceDebugSymbol, token.SourcePos);
+            } else {
+                ++sourcePos.Line;
+                ++sourcePos.Char;
+            }
             trace += " '" + filePath;
-            trace += ":" + UIntToString(token.SourcePos.Line+1);
-            trace += ":" + UIntToString(token.SourcePos.Char+1);
+            trace += ":" + UIntToString(sourcePos.Line);
+            trace += ":" + UIntToString(sourcePos.Char);
             trace += "'";
         } else {
             const auto& token = frame.Function->DebugSymbol.Token;
+            auto sourcePos = token.SourcePos;
+            if (positionConverter) {
+                sourcePos = positionConverter(sourceDebugSymbol, token.SourcePos);
+            } else {
+                ++sourcePos.Line;
+                ++sourcePos.Char;
+            }
             trace += " defined at '" + filePath;
-            trace += ":" + UIntToString(token.SourcePos.Line+1);
-            trace += ":" + UIntToString(token.SourcePos.Char+1);
+            trace += ":" + UIntToString(sourcePos.Line);
+            trace += ":" + UIntToString(sourcePos.Char);
             trace += "'";
         }
     }
     return trace;
 }
 
-Pulsar::String Pulsar::ExecutionContext::GetStackTrace(size_t maxDepth) const
+Pulsar::String Pulsar::ExecutionContext::GetStackTrace(size_t maxDepth, const PositionConverterFn& positionConverter) const
 {
     // TODO: I think that in this case we should return the number of calls.
     // NOTE: Be careful when implementing the TODO above!!
@@ -83,7 +98,7 @@ Pulsar::String Pulsar::ExecutionContext::GetStackTrace(size_t maxDepth) const
         return "    <empty>";
 
     String trace("    ");
-    trace += GetCallTrace(m_CallStack.Size()-1);
+    trace += GetCallTrace(m_CallStack.Size()-1, positionConverter);
     if (m_CallStack.Size() == 1)
         return trace;
 
@@ -96,7 +111,7 @@ Pulsar::String Pulsar::ExecutionContext::GetStackTrace(size_t maxDepth) const
     // Starting from 1 since the top-most call was already serialized.
     for (size_t i = 1; i < halfMaxDepth; i++) {
         trace += "\n    ";
-        trace += GetCallTrace(m_CallStack.Size()-i-1);
+        trace += GetCallTrace(m_CallStack.Size()-i-1, positionConverter);
     }
 
     if (maxDepth < m_CallStack.Size()) {
@@ -109,7 +124,7 @@ Pulsar::String Pulsar::ExecutionContext::GetStackTrace(size_t maxDepth) const
     // Iterating from halfMaxDepth to 0 with unsigned numbers.
     for (size_t i = halfMaxDepth; i < maxDepth; i++) {
         trace += "\n    ";
-        trace += GetCallTrace(maxDepth-i-1);
+        trace += GetCallTrace(maxDepth-i-1, positionConverter);
     }
 
     return trace;
