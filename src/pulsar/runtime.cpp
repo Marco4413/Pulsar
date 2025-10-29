@@ -173,7 +173,7 @@ Pulsar::RuntimeState Pulsar::CallStack::PrepareFrame(Frame& frame, ValueStack& c
     return RuntimeState::OK;
 }
 
-size_t Pulsar::Module::BindNativeFunction(const FunctionSignature& sig, NativeFunction func)
+size_t Pulsar::Module::BindNativeFunction(FunctionSignature sig, NativeFunction func)
 {
     if (NativeFunctions.Size() != NativeBindings.Size())
         return 0;
@@ -208,7 +208,7 @@ size_t Pulsar::Module::DeclareAndBindNativeFunction(const FunctionDefinition& de
     return DeclareAndBindNativeFunction(std::forward<FunctionDefinition>(FunctionDefinition(def)), func);
 }
 
-size_t Pulsar::Module::DeclareAndBindNativeFunction(const FunctionSignature& sig, NativeFunction func)
+size_t Pulsar::Module::DeclareAndBindNativeFunction(FunctionSignature sig, NativeFunction func)
 {
     return DeclareAndBindNativeFunction(std::forward<FunctionDefinition>(sig.ToNativeDefinition()), func);
 }
@@ -220,9 +220,28 @@ uint64_t Pulsar::Module::BindCustomType(const String& name, CustomType::DataFact
     return m_LastTypeId;
 }
 
+size_t Pulsar::Module::FindFunctionBySignature(FunctionSignature sig) const
+{
+    for (size_t i = Functions.Size(); i > 0; --i) {
+        const auto& definition = Functions[i-1];
+        if (sig.Matches(definition))
+            continue;
+        return i-1;
+    }
+    return INVALID_INDEX;
+}
+
 Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(const String& funcName)
 {
     size_t fnIdx = m_Module.FindFunctionByName(funcName);
+    if (fnIdx == m_Module.INVALID_INDEX)
+        return m_State = RuntimeState::FunctionNotFound;
+    return CallFunction(fnIdx);
+}
+
+Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(FunctionSignature funcSig)
+{
+    size_t fnIdx = m_Module.FindFunctionBySignature(funcSig);
     if (fnIdx == m_Module.INVALID_INDEX)
         return m_State = RuntimeState::FunctionNotFound;
     return CallFunction(fnIdx);
@@ -233,6 +252,13 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(int64_t funcIdx)
     if (funcIdx < 0 || (size_t)funcIdx >= m_Module.Functions.Size())
         return m_State = RuntimeState::OutOfBoundsFunctionIndex;
     return CallFunction(m_Module.Functions[(size_t)funcIdx]);
+}
+
+Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(size_t funcIdx)
+{
+    if (funcIdx >= m_Module.Functions.Size())
+        return m_State = RuntimeState::OutOfBoundsFunctionIndex;
+    return CallFunction(m_Module.Functions[funcIdx]);
 }
 
 Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(const FunctionDefinition& funcDef)

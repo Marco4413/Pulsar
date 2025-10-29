@@ -141,11 +141,11 @@ namespace Pulsar
         using NativeFunction = std::function<RuntimeState(ExecutionContext&)>;
         // Returns how many definitions were bound.
         size_t BindNativeFunction(const FunctionDefinition& def, NativeFunction func);
-        size_t BindNativeFunction(const FunctionSignature& sig, NativeFunction func);
+        size_t BindNativeFunction(FunctionSignature sig, NativeFunction func);
         // Returns the index of the newly declared function.
         size_t DeclareAndBindNativeFunction(const FunctionDefinition& def, NativeFunction func);
         size_t DeclareAndBindNativeFunction(FunctionDefinition&& def, NativeFunction func);
-        size_t DeclareAndBindNativeFunction(const FunctionSignature& sig, NativeFunction func);
+        size_t DeclareAndBindNativeFunction(FunctionSignature sig, NativeFunction func);
 
         uint64_t BindCustomType(const String& name, CustomType::DataFactoryFn dataFactory = nullptr);
 
@@ -162,6 +162,8 @@ namespace Pulsar
         size_t FindFunctionByName(const String& name) const { return FindDefinitionByName(Functions, name); }
         size_t FindNativeByName(const String& name)   const { return FindDefinitionByName(NativeBindings, name); }
         size_t FindGlobalByName(const String& name)   const { return FindDefinitionByName(Globals, name); }
+
+        size_t FindFunctionBySignature(FunctionSignature sig) const;
 
     public:
         // Access these member variables only for:
@@ -270,6 +272,10 @@ if (state != RuntimeState::OK) // ERROR
         String GetStackTrace(size_t maxDepth, const PositionConverterFn& positionConverter=nullptr) const;
 
         RuntimeState CallFunction(const String& funcName);
+        RuntimeState CallFunction(FunctionSignature funcSig);
+        // TODO: Add `typedef size_t index_t;` within Module?
+        //       This would require a big refactor to make sure we're not using size_t anymore.
+        RuntimeState CallFunction(size_t funcIdx);
         RuntimeState CallFunction(int64_t funcIdx);
 
         /**
