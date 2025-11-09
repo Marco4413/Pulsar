@@ -11,6 +11,9 @@ namespace Pulsar
     class LinkedList; // Forward Declaration
 
     template<typename T>
+    class LinkedListNode; // Forward Declaration
+
+    template<typename T>
     class List
     {
     public:

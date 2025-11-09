@@ -1,6 +1,5 @@
 #include "pulsar/sourceviewer.h"
 
-#include "pulsar/unicode.h"
 #include "pulsar/utf8.h"
 
 size_t Pulsar::SourceViewer::GetEncodedSize(Unicode::Codepoint codepoint, PositionEncoding encoding)

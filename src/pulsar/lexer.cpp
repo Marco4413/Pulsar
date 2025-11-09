@@ -1,91 +1,5 @@
 #include "pulsar/lexer.h"
 
-void Pulsar::PutHexString(String& out, uint64_t n, size_t maxHexDigits)
-{
-    constexpr size_t MAX_DIGITS = sizeof(n) * 2;
-    size_t digitsCount = 0;
-    // digits is null terminated
-    char digits[MAX_DIGITS+1] = {0};
-
-    do {
-        size_t digitIdx = MAX_DIGITS - ++digitsCount;
-        uint8_t digit = n & 0xF;
-        n = n >> 4;
-
-        if (digit >= 0xA) {
-            digits[digitIdx] = (char)('A'+digit-10);
-        } else {
-            digits[digitIdx] = (char)('0'+digit);
-        }
-    } while (n > 0 && digitsCount < maxHexDigits);
-
-    out += &digits[MAX_DIGITS-digitsCount];
-}
-
-Pulsar::String Pulsar::ToStringLiteral(const String& str)
-{
-    String lit(1, '"');
-    size_t decoderOffset = 0;
-    UTF8::Decoder decoder(str);
-    while (decoder.HasData()) {
-        UTF8::Codepoint code = decoder.Next();
-        if (decoder.IsInvalidEncoding()) {
-            size_t byteIdx = decoderOffset + decoder.GetDecodedBytes();
-            uint8_t byte = (uint8_t)(str[byteIdx]);
-
-            lit += "\\x";
-            PutHexString(lit, byte, 2);
-            lit += ';';
-
-            decoderOffset = byteIdx+1;
-            // Create new decoder which points at the byte after the bad one.
-            // Maybe put this into a method of the Decoder.
-            decoder = UTF8::Decoder(StringView(
-                str.Data()   + decoderOffset,
-                str.Length() - decoderOffset
-            ));
-            continue;
-        }
-
-        switch (code) {
-        case '"':  lit += "\\\""; break;
-        case '\n': lit += "\\n";  break;
-        case '\r': lit += "\\r";  break;
-        case '\t': lit += "\\t";  break;
-        default:
-            if (Unicode::IsAscii(code)) {
-                if (Unicode::IsControl(code)) {
-                    lit += "\\x";
-                    PutHexString(lit, code, 2);
-                    lit += ';';
-                } else {
-                    lit += (char)(code);
-                }
-            } else {
-                lit += "\\u";
-                // See UTF8::MAX_CODEPOINT for digits
-                PutHexString(lit, code, 6);
-                lit += ';';
-            }
-        }
-    }
-    lit += '"';
-    return lit;
-}
-
-bool Pulsar::IsIdentifier(const String& s)
-{
-    if (s.Length() == 0)
-        return false;
-
-    Lexer::Decoder decoder(s);
-    if (!IsIdentifierStart(decoder.Peek()))
-        return false;
-
-    while (decoder && IsIdentifierContinuation(decoder.Next()));
-    return !decoder.HasData() && !decoder.IsInvalidEncoding();
-}
-
 bool Pulsar::Lexer::SkipShaBang()
 {
     Decoder decoder = m_Decoder;
@@ -398,15 +312,16 @@ Pulsar::Token Pulsar::Lexer::ParseDoubleLiteral()
     Decoder decoder = m_Decoder;
 
     Codepoint signCode = decoder.Peek();
-    double exp = signCode == '-' ? -1 : 1;
-    if (exp < 0 || signCode == '+')
+    bool isNegative = signCode == '-';
+    if (isNegative || signCode == '+')
         decoder.Skip();
 
     if (!Unicode::IsDecimalDigit(decoder.Peek()))
         return CreateNoneToken();
 
     bool isFloating = false;
-    double val = 0.0;
+    double fexp = 1;
+    double i = 0.0, f = 0.0;
     while (decoder) {
         Codepoint digit = decoder.Peek();
         if (IsIdentifierStart(digit)) {
@@ -422,15 +337,20 @@ Pulsar::Token Pulsar::Lexer::ParseDoubleLiteral()
         } else if (!Unicode::IsDecimalDigit(digit))
             break;
 
-        if (isFloating)
-            exp /= 10;
+        if (isFloating) {
+            fexp /= 10;
+            f *= 10;
+            f += digit - '0';
+        } else {
+            i *= 10;
+            i += digit - '0';
+        }
 
-        val *= 10;
-        val += digit - '0';
         decoder.Skip();
     }
 
-    val *= exp;
+    double val = i + f*fexp;
+    if (isNegative) val = -val;
     return PullToken(decoder, TokenType::DoubleLiteral, val);
 }
 
@@ -707,107 +627,4 @@ bool Pulsar::Lexer::SkipComments()
     }
 
     return true;
-}
-
-const char* Pulsar::TokenTypeToString(TokenType ttype)
-{
-    switch (ttype) {
-    case TokenType::None:
-        return "None";
-    case TokenType::Identifier:
-        return "Identifier";
-    case TokenType::OpenParenth:
-        return "OpenParenth";
-    case TokenType::CloseParenth:
-        return "CloseParenth";
-    case TokenType::OpenBracket:
-        return "OpenBracket";
-    case TokenType::CloseBracket:
-        return "CloseBracket";
-    case TokenType::IntegerLiteral:
-        return "IntegerLiteral";
-    case TokenType::DoubleLiteral:
-        return "DoubleLiteral";
-    case TokenType::StringLiteral:
-        return "StringLiteral";
-    case TokenType::Plus:
-        return "Plus";
-    case TokenType::Minus:
-        return "Minus";
-    case TokenType::Star:
-        return "Star";
-    case TokenType::Slash:
-        return "Slash";
-    case TokenType::Modulus:
-        return "Modulus";
-    case TokenType::BitAnd:
-        return "BitAnd";
-    case TokenType::BitOr:
-        return "BitOr";
-    case TokenType::BitNot:
-        return "BitNot";
-    case TokenType::BitXor:
-        return "BitXor";
-    case TokenType::BitShiftLeft:
-        return "BitShiftLeft";
-    case TokenType::BitShiftRight:
-        return "BitShiftRight";
-    case TokenType::FullStop:
-        return "FullStop";
-    case TokenType::Negate:
-        return "Negate";
-    case TokenType::Colon:
-        return "Colon";
-    case TokenType::Comma:
-        return "Comma";
-    case TokenType::RightArrow:
-        return "RightArrow";
-    case TokenType::LeftArrow:
-        return "LeftArrow";
-    case TokenType::BothArrows:
-        return "BothArrows";
-    case TokenType::Equals:
-        return "Equals";
-    case TokenType::NotEquals:
-        return "NotEquals";
-    case TokenType::Less:
-        return "Less";
-    case TokenType::LessOrEqual:
-        return "LessOrEqual";
-    case TokenType::More:
-        return "More";
-    case TokenType::MoreOrEqual:
-        return "MoreOrEqual";
-    case TokenType::PushReference:
-        return "PushReference";
-    case TokenType::KW_Not:
-        return "KW_Not";
-    case TokenType::KW_If:
-        return "KW_If";
-    case TokenType::KW_Else:
-        return "KW_Else";
-    case TokenType::KW_End:
-        return "KW_End";
-    case TokenType::KW_Global:
-        return "KW_Global";
-    case TokenType::KW_Const:
-        return "KW_Const";
-    case TokenType::KW_Do:
-        return "KW_Do";
-    case TokenType::KW_While:
-        return "KW_While";
-    case TokenType::KW_Break:
-        return "KW_Break";
-    case TokenType::KW_Continue:
-        return "KW_Continue";
-    case TokenType::KW_Local:
-        return "KW_Local";
-    case TokenType::CompilerDirective:
-        return "CompilerDirective";
-    case TokenType::Label:
-        return "Label";
-    case TokenType::EndOfFile:
-        return "EndOfFile";
-    }
-    return "Unknown";
 }

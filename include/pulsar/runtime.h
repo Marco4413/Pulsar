@@ -6,37 +6,15 @@
 #include "pulsar/runtime/debug.h"
 #include "pulsar/runtime/function.h"
 #include "pulsar/runtime/global.h"
+#include "pulsar/runtime/module.h"
+#include "pulsar/runtime/state.h"
 #include "pulsar/runtime/value.h"
 #include "pulsar/structures/list.h"
 #include "pulsar/structures/ref.h"
 
 namespace Pulsar
 {
-    enum class RuntimeState
-    {
-        OK = 0,
-        Error = 1,
-        TypeError,
-        StackOverflow,
-        StackUnderflow,
-        OutOfBoundsConstantIndex,
-        OutOfBoundsLocalIndex,
-        OutOfBoundsGlobalIndex,
-        WritingOnConstantGlobal,
-        OutOfBoundsFunctionIndex,
-        CallStackUnderflow,
-        NativeFunctionBindingsMismatch,
-        UnboundNativeFunction,
-        FunctionNotFound,
-        ListIndexOutOfBounds,
-        StringIndexOutOfBounds,
-        NoCustomTypeData,
-        InvalidCustomTypeHandle,
-        InvalidCustomTypeReference,
-    };
-
-    const char* RuntimeStateToString(RuntimeState rstate);
-
+    // TODO: Rename to Stack
     using ValueStack = List<Value>;
     struct Frame
     {
@@ -85,103 +63,6 @@ namespace Pulsar
 
     private:
         List<Frame> m_Frames;
-    };
-
-    // Extend this class to store your custom type's global data
-    // TODO: Maybe rename to CustomTypeGlobalData
-    class CustomTypeData
-    {
-    public:
-        using Ref = SharedRef<Pulsar::CustomTypeData>;
-
-        virtual ~CustomTypeData() = default;
-        /**
-         * When a new sandboxed ExecutionContext is created from an already existing one
-         *  this function is called.
-         * This function must return a "copy" of the data which won't affect the original
-         *  context.
-         * If this function returns nullptr, it means that the data held doesn't require
-         *  to be sandboxed, this may be useful for stats tracking.
-         * It's advised to make the data thread-safe if it's meant to be shared.
-         */
-        virtual Ref Fork() const = 0;
-    };
-
-    struct CustomType
-    {
-        using DataFactoryFn = std::function<CustomTypeData::Ref()>;
-
-        String Name;
-        // Method that generates a new instance of a derived class from CustomTypeData
-        DataFactoryFn DataFactory = nullptr;
-    };
-
-    class ExecutionContext; // Forward Declaration
-
-    /**
-     * This class represents an executable Pulsar program.
-     * See ExecutionContext for program execution.
-     */
-    class Module
-    {
-    public:
-        // Returned by Find* functions to indicate that the item was not found.
-        static constexpr size_t INVALID_INDEX = size_t(-1);
-
-    public:
-        Module() = default;
-        ~Module() = default;
-
-        Module(const Module&) = default;
-        Module(Module&&) = default;
-
-        Module& operator=(const Module&) = default;
-        Module& operator=(Module&&) = default;
-
-        using NativeFunction = std::function<RuntimeState(ExecutionContext&)>;
-        // Returns how many definitions were bound.
-        size_t BindNativeFunction(const FunctionDefinition& def, NativeFunction func);
-        size_t BindNativeFunction(FunctionSignature sig, NativeFunction func);
-        // Returns the index of the newly declared function.
-        size_t DeclareAndBindNativeFunction(const FunctionDefinition& def, NativeFunction func);
-        size_t DeclareAndBindNativeFunction(FunctionDefinition&& def, NativeFunction func);
-        size_t DeclareAndBindNativeFunction(FunctionSignature sig, NativeFunction func);
-
-        uint64_t BindCustomType(const String& name, CustomType::DataFactoryFn dataFactory = nullptr);
-
-        // Be sure to check if the type exists first (unless you know for sure it exists)
-        CustomType& GetCustomType(uint64_t typeId)             { return CustomTypes.Find(typeId)->Value(); }
-        const CustomType& GetCustomType(uint64_t typeId) const { return CustomTypes.Find(typeId)->Value(); }
-        bool HasCustomType(uint64_t typeId) const              { return CustomTypes.Find(typeId); }
-
-        bool HasSourceDebugSymbols() const { return !SourceDebugSymbols.IsEmpty(); }
-
-        template<typename T>
-        size_t FindDefinitionByName(const List<T>& definitions, const String& name) const;
-
-        size_t FindFunctionByName(const String& name) const { return FindDefinitionByName(Functions, name); }
-        size_t FindNativeByName(const String& name)   const { return FindDefinitionByName(NativeBindings, name); }
-        size_t FindGlobalByName(const String& name)   const { return FindDefinitionByName(Globals, name); }
-
-        size_t FindFunctionBySignature(FunctionSignature sig) const;
-
-    public:
-        // Access these member variables only for:
-        // - Inspecting the Module.
-        // - Creating your own language which runs on the Pulsar VM.
-        List<FunctionDefinition> Functions;
-        List<FunctionDefinition> NativeBindings;
-        List<GlobalDefinition> Globals;
-        List<Value> Constants;
-
-        List<SourceDebugSymbol> SourceDebugSymbols;
-
-        // These are managed by the Bind* methods.
-        List<NativeFunction> NativeFunctions;
-        HashMap<uint64_t, CustomType> CustomTypes;
-
-    private:
-        uint64_t m_LastTypeId = 0;
     };
 
     /**
@@ -376,18 +257,6 @@ if (state != RuntimeState::OK) // ERROR
         bool m_StopRequested = false;
         RuntimeState m_State = RuntimeState::OK;
     };
-}
-
-template<typename T>
-size_t Pulsar::Module::FindDefinitionByName(const List<T>& definitions, const String& name) const
-{
-    for (size_t i = definitions.Size(); i > 0; --i) {
-        const T& definition = definitions[i-1];
-        if (definition.Name != name)
-            continue;
-        return i-1;
-    }
-    return INVALID_INDEX;
 }
 
 #endif // _PULSAR_RUNTIME_H

@@ -53,29 +53,8 @@ namespace UTF8
         Codepoint Peek();
         size_t Skip();
 
-        Codepoint Peek() const
-        {
-            // == PEEK CACHE == //
-            if (m_PeekedCodepoint != 0)
-                return m_PeekedCodepoint;
-            // == PEEK CACHE == //
-            Decoder decoder = *this;
-            return decoder.Next();
-        }
-
-        Codepoint Peek(size_t lookAhead) const
-        {
-            if (lookAhead == 0) {
-                return '\0';
-            } else if (lookAhead == 1) {
-                return Peek();
-            }
-
-            Decoder decoder = *this;
-            for (size_t i = 1; i < lookAhead && decoder; ++i)
-                decoder.Skip();
-            return decoder.Next();
-        }
+        Codepoint Peek() const;
+        Codepoint Peek(size_t lookAhead) const;
 
     private:
         const char* m_DataStart;

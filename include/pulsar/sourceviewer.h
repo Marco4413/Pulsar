@@ -2,8 +2,10 @@
 #define _PULSAR_SOURCEVIEWER_H
 
 #include "pulsar/core.h"
-#include "pulsar/lexer.h"
+
+#include "pulsar/lexer/token.h"
 #include "pulsar/structures/stringview.h"
+#include "pulsar/unicode.h"
 
 namespace Pulsar
 {
