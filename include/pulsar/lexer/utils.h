@@ -9,8 +9,8 @@
 
 namespace Pulsar
 {
-    // maxHexDigits must be >= 1, conversion will stop when outputted digits are >= maxHexDigits
-    void PutHexString(String& out, uint64_t n, size_t maxHexDigits);
+    // maxHexDigits must be >= 1, conversion will stop when outputted digits are >= maxHexDigits if padToMaxDigits is false
+    void PutHexString(String& out, uint64_t n, size_t maxHexDigits, bool padToMaxDigits=false);
 
     String ToStringLiteral(StringView str);
 

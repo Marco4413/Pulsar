@@ -1,6 +1,6 @@
 #include "pulsar/lexer/utils.h"
 
-void Pulsar::PutHexString(String& out, uint64_t n, size_t maxHexDigits)
+void Pulsar::PutHexString(String& out, uint64_t n, size_t maxHexDigits, bool padToMaxDigits)
 {
     constexpr size_t MAX_DIGITS = sizeof(n) * 2;
     size_t digitsCount = 0;
@@ -17,7 +17,7 @@ void Pulsar::PutHexString(String& out, uint64_t n, size_t maxHexDigits)
         } else {
             digits[digitIdx] = (char)('0'+digit);
         }
-    } while (n > 0 && digitsCount < maxHexDigits);
+    } while ((padToMaxDigits || n > 0) && digitsCount < maxHexDigits);
 
     out += &digits[MAX_DIGITS-digitsCount];
 }
