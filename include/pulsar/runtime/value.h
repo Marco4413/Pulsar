@@ -53,6 +53,9 @@ namespace Pulsar
     // TODO: Move into Value::List
     using ValueList = LinkedList<Value>;
 
+    // Forward declaration for ToString and ToRepr
+    class Module;
+
     class Value
     {
     public:
@@ -92,6 +95,21 @@ namespace Pulsar
         Value& SetString(String&& val)                 { Reset(); m_Type = ValueType::String;                  m_AsString  = std::move(val); return *this; }
         Value& SetString(const String& val)            { Reset(); m_Type = ValueType::String;                  m_AsString  = val;            return *this; }
         Value& SetCustom(const CustomData& val)        { Reset(); m_Type = ValueType::Custom;                  m_AsCustom  = val;            return *this; }
+
+    public:
+        struct ToReprOptions
+        {
+            // If set, names of types are queried from it.
+            const Pulsar::Module* Module = nullptr;
+            size_t MaxDepth = 16;
+            size_t FloatPrecision = 6;
+        };
+
+        static inline const ToReprOptions ToReprOptions_Default{nullptr,16,6};
+
+        // Unlike ::ToRepr(), if Value is a String, the String is returned un-quoted.
+        String ToString(ToReprOptions options=ToReprOptions_Default) const;
+        String ToRepr(ToReprOptions options=ToReprOptions_Default) const;
 
     private:
         void Reset();

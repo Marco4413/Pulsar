@@ -1,5 +1,8 @@
 #include "pulsar/runtime/value.h"
 
+#include "pulsar/lexer/utils.h"
+#include "pulsar/runtime/module.h"
+
 Pulsar::Value::Value()
 {
     PULSAR_MEMSET((void*)this, 0, sizeof(Value));
@@ -88,6 +91,91 @@ bool Pulsar::Value::operator==(const Value& other) const
         }
     }
     return false;
+}
+
+Pulsar::String Pulsar::Value::ToString(ToReprOptions options) const
+{
+    if (Type() == ValueType::String)
+        return AsString();
+    return ToRepr(options);
+}
+
+Pulsar::String Pulsar::Value::ToRepr(ToReprOptions options) const
+{
+    switch (Type()) {
+    case ValueType::Void:
+        return "(!Void)";
+    case ValueType::Integer:
+        return IntToString(AsInteger());
+    case ValueType::Double:
+        return DoubleToString(AsDouble(), options.FloatPrecision);
+    case ValueType::FunctionReference: {
+        String s = "&(";
+        int64_t functionIdx = AsInteger();
+        if (options.Module && functionIdx >= 0 && static_cast<size_t>(functionIdx) < options.Module->Functions.Size()) {
+            const String& functionName = options.Module->Functions[static_cast<size_t>(functionIdx)].Name;
+            s += IsIdentifier(functionName) ? functionName : ToStringLiteral(functionName);
+        }
+
+        s += '@';
+        s += IntToString(AsInteger());
+        s += ')';
+        return s;
+    }
+    case ValueType::NativeFunctionReference: {
+        String s = "&(*";
+        int64_t nativeIdx = AsInteger();
+        if (options.Module && nativeIdx >= 0 && static_cast<size_t>(nativeIdx) < options.Module->NativeBindings.Size()) {
+            const String& nativeName = options.Module->NativeBindings[static_cast<size_t>(nativeIdx)].Name;
+            s += IsIdentifier(nativeName) ? nativeName : ToStringLiteral(nativeName);
+        }
+
+        s += '@';
+        s += IntToString(AsInteger());
+        s += ')';
+        return s;
+    }
+    case ValueType::List: {
+        // TODO: Non-recursive
+        auto node = AsList().Front();
+        if (!node) return "[ ]";
+        else if (options.MaxDepth <= 0) return "[ ... ]";
+
+        ToReprOptions recOptions = options;
+        --recOptions.MaxDepth;
+
+        Pulsar::String result = "[ ";
+        result += node->Value().ToRepr(recOptions);
+        while (node->HasNext()) {
+            node = node->Next();
+            result += ", ";
+            result += node->Value().ToRepr(recOptions);
+        }
+        result += " ]";
+
+        return result;
+    }
+    case ValueType::String:
+        return ToStringLiteral(AsString());
+    case ValueType::Custom: {
+        String s = "(!Custom/";
+        if (options.Module && options.Module->HasCustomType(AsCustom().Type)) {
+            const String& customTypeName = options.Module->GetCustomType(AsCustom().Type).Name;
+            s += IsIdentifier(customTypeName) ? customTypeName : ToStringLiteral(customTypeName);
+        }
+
+        s += '#';
+        s += UIntToString(AsCustom().Type);
+        s += " 0x";
+        PutHexString(s,
+                reinterpret_cast<uint64_t>(AsCustom().Data.Get()),
+                sizeof(uintptr_t)*2,
+                true);
+        s += ')';
+        return s;
+    }
+    }
+    return "(!Unknown)";
 }
 
 void Pulsar::Value::Reset()
