@@ -64,6 +64,8 @@ namespace Pulsar
     };
 
     String UIntToString(uint64_t n);
+    String IntToString(int64_t n);
+    String DoubleToString(double n, size_t precision=6);
 }
 
 template<>

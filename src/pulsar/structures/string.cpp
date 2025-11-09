@@ -192,3 +192,65 @@ Pulsar::String Pulsar::UIntToString(uint64_t n)
     }
     return res;
 }
+
+Pulsar::String Pulsar::IntToString(int64_t n)
+{
+    bool isNegative = n < 0;
+    String res = isNegative ? "-" : "";
+    res += UIntToString(static_cast<uint64_t>(isNegative ? -n : n));
+    return res;
+}
+
+Pulsar::String Pulsar::DoubleToString(double n, size_t precision)
+{
+    if (std::isnan(n))
+        return "NaN";
+    if (std::isinf(n))
+        return n >= 0 ? "+INF" : "-INF";
+
+    bool isNegative = n < 0;
+    n = n >= 0 ? n : -n;
+
+    double i, f;
+    f = std::modf(n, &i);
+
+    String intPart;
+    // Reserve some memory
+    intPart.Reserve(16);
+    do {
+        double id = std::modf(i/10, &i) * 10;
+        char digit = '0' + static_cast<int>(id);
+        intPart += digit;
+    } while (i > 0);
+    // Reverse intPart
+    for (size_t i = 0, endIdx = intPart.Length(); i < intPart.Length()/2; i++) {
+        char ch = intPart[i];
+        intPart[i] = intPart[--endIdx];
+        intPart[endIdx] = ch;
+    }
+
+    String fpPart;
+    // Reserve some memory
+    fpPart.Reserve(16);
+    if (precision > 0) {
+        do {
+            double fd; f = std::modf(f*10, &fd);
+            char digit = '0' + static_cast<int>(fd);
+            fpPart += digit;
+        } while (f > 0 && fpPart.Length() < precision);
+        // Trim all trailing zeroes except 1
+        size_t fpLength = fpPart.Length();
+        for (; fpLength > 1 && fpPart[fpLength-1] == '0'; --fpLength);
+        fpPart.Resize(fpLength);
+    } else {
+        fpPart = "0";
+    }
+
+    String res;
+    res.Reserve(intPart.Length()+fpPart.Length() + (isNegative ? 2 : 1) /* Sign and dot */);
+    if (isNegative) res += '-';
+    res += intPart;
+    res += '.';
+    res += fpPart;
+    return res;
+}
