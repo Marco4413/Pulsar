@@ -3,7 +3,7 @@
 
 #include <lsp/types.h>
 
-#include "pulsar/lexer.h"
+#include "pulsar/lexer/token.h"
 #include "pulsar/runtime.h"
 
 namespace PulsarLSP
