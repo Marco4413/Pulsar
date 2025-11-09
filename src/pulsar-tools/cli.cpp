@@ -378,7 +378,7 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
     if (stack.Size() > 0) {
         logger.Info("Stack after ({}) call:", *runtimeOptions.EntryPoint);
         for (size_t i = 0; i < stack.Size(); i++)
-            logger.Info("{}. {}", i+1, stack[i]);
+            logger.Info("{}. {}", i+1, stack[i].ToRepr({ .Module = &module }));
     } else {
         logger.Info("Stack after ({}) call: []", *runtimeOptions.EntryPoint);
     }

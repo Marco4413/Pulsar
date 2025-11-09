@@ -5,7 +5,7 @@
 
 #include <fmt/color.h>
 
-#include "pulsar/lexer.h"
+#include "pulsar/lexer/token.h"
 #include "pulsar/parser.h"
 #include "pulsar/runtime.h"
 
