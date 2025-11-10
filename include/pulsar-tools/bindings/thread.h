@@ -19,7 +19,7 @@ namespace PulsarTools::Bindings
         struct ChannelData
         {
             // FIFO List
-            Pulsar::ValueList Pipe;
+            Pulsar::Value::List Pipe;
             bool IsClosed = false;
             std::mutex Mutex;
             std::condition_variable CV;

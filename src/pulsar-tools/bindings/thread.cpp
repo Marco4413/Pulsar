@@ -91,22 +91,21 @@ Pulsar::RuntimeState PulsarTools::Bindings::Thread::FJoinAll(Pulsar::ExecutionCo
     if (threadReferencesList.Type() != Pulsar::ValueType::List)
         return Pulsar::RuntimeState::TypeError;
     
-    Pulsar::ValueList threadResults;
-    Pulsar::ValueList& threadReferences = threadReferencesList.AsList();
-    Pulsar::ValueList::Node* threadReferenceNode = threadReferences.Front();
+    Pulsar::Value::List threadResults;
+    Pulsar::Value::List& threadReferences = threadReferencesList.AsList();
+    Pulsar::Value::List::Node* threadReferenceNode = threadReferences.Front();
     while (threadReferenceNode) {
         Pulsar::Value& threadReference = threadReferenceNode->Value();
         if (threadReference.Type() != Pulsar::ValueType::Custom
             || threadReference.AsCustom().Type != threadTypeId)
             return Pulsar::RuntimeState::TypeError;
 
-
         ThreadType::Ref thread = threadReference.AsCustom().As<ThreadType>();
         if (!thread)
             return Pulsar::RuntimeState::InvalidCustomTypeReference;
         
         Join(thread, frame.Stack);
-        Pulsar::ValueList threadResult;
+        Pulsar::Value::List threadResult;
         threadResult.Append(std::move(frame.Stack.Back()));
         frame.Stack.PopBack();
         threadResult.Append(std::move(frame.Stack.Back()));
@@ -159,16 +158,16 @@ Pulsar::RuntimeState PulsarTools::Bindings::Thread::FIsValid(Pulsar::ExecutionCo
 void PulsarTools::Bindings::Thread::Join(Pulsar::SharedRef<ThreadData> thread, Pulsar::ValueStack& stack)
 {
     thread->Thread.join();
-    Pulsar::ValueList threadResult;
+    Pulsar::Value::List threadResult;
     Pulsar::RuntimeState threadState = thread->ThreadContext->Context.GetState();
     if (threadState != Pulsar::RuntimeState::OK) {
         // An error occurred
-        stack.EmplaceBack().SetList(Pulsar::ValueList());
+        stack.EmplaceBack().SetList(Pulsar::Value::List());
         stack.EmplaceBack().SetInteger((int64_t)threadState);
         return;
     }
 
-    Pulsar::ValueList returnValues(std::move(thread->ThreadContext->Context.GetStack()));
+    Pulsar::Value::List returnValues(std::move(thread->ThreadContext->Context.GetStack()));
     stack.EmplaceBack().SetList(std::move(returnValues));
     stack.EmplaceBack().SetInteger(0);
 }

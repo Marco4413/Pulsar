@@ -77,8 +77,8 @@ bool Pulsar::Value::operator==(const Value& other) const
         return AsCustom().Type == other.AsCustom().Type
             && AsCustom().Data == other.AsCustom().Data;
     case ValueType::List:
-        const ValueList::Node* aNext = AsList().Front();
-        const ValueList::Node* bNext = other.AsList().Front();
+        const List::Node* aNext = AsList().Front();
+        const List::Node* bNext = other.AsList().Front();
         while (true) {
             if (aNext == bNext)
                 return true;
@@ -144,7 +144,7 @@ Pulsar::String Pulsar::Value::ToRepr(ToReprOptions options) const
         ToReprOptions recOptions = options;
         --recOptions.MaxDepth;
 
-        Pulsar::String result = "[ ";
+        String result = "[ ";
         result += node->Value().ToRepr(recOptions);
         while (node->HasNext()) {
             node = node->Next();
@@ -190,7 +190,7 @@ void Pulsar::Value::Reset()
         break;
     case ValueType::List:
         m_AsList.~LinkedList();
-        PULSAR_MEMSET((void*)&m_AsList, 0, sizeof(ValueList));
+        PULSAR_MEMSET((void*)&m_AsList, 0, sizeof(List));
         break;
     case ValueType::String:
         m_AsString.~String();

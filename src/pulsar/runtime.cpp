@@ -357,7 +357,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
         global.Value = frame.Stack.Back();
     } break;
     case InstructionCode::Pack: {
-        ValueList list;
+        Value::List list;
         // If Arg0 <= 0, push an empty list
         if (instr.Arg0 > 0) {
             size_t packing = (size_t)instr.Arg0;
@@ -703,7 +703,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
         frame.Stack.EmplaceBack(std::move(isEmpty));
     } break;
     case InstructionCode::PushEmptyList:
-        frame.Stack.EmplaceBack().SetList(ValueList());
+        frame.Stack.EmplaceBack().SetList(Value::List());
         break;
     case InstructionCode::Prepend: {
         if (frame.Stack.Size() < 2)
@@ -757,7 +757,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
             return RuntimeState::StackUnderflow;
         Value& list = frame.Stack.Back();
         if (list.Type() == ValueType::List) {
-            ValueList::Node* node = list.AsList().Front();
+            Value::List::Node* node = list.AsList().Front();
             if (!node) return RuntimeState::ListIndexOutOfBounds;
             Value val(std::move(node->Value()));
             list.AsList().RemoveFront(1);
@@ -778,14 +778,14 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
         if (frame.Stack.Back().Type() != ValueType::List)
             return RuntimeState::TypeError;
 
-        ValueList listToUnpack = std::move(frame.Stack.Back()).AsList();
+        Value::List listToUnpack = std::move(frame.Stack.Back()).AsList();
         frame.Stack.PopBack();
 
         // If Arg0 <= 0, pop list
         if (instr.Arg0 > 0) {
             size_t unpackCount = (size_t)instr.Arg0;
 
-            ValueList::Node* node = listToUnpack.Back();
+            Value::List::Node* node = listToUnpack.Back();
             for (size_t i = 1; i < unpackCount && node; i++) {
                 node = node->Prev();
             }
@@ -808,7 +808,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
         if (list.Type() == ValueType::List) {
             if (index.AsInteger() < 0)
                 return RuntimeState::ListIndexOutOfBounds;
-            ValueList::Node* node = list.AsList().Front();
+            Value::List::Node* node = list.AsList().Front();
             for (size_t i = 0; i < (size_t)index.AsInteger() && node; i++)
                 node = node->Next();
             if (!node)

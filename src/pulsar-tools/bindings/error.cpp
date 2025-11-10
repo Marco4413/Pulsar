@@ -41,7 +41,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Error::FSafeCall(Pulsar::ExecutionCo
     safeContext.CallFunction(functionIdx);
     Pulsar::RuntimeState callState = safeContext.Run();
     if (callState == Pulsar::RuntimeState::OK)
-        functionArguments.AsList() = Pulsar::ValueList(std::move(safeContext.GetStack()));
+        functionArguments.AsList() = Pulsar::Value::List(std::move(safeContext.GetStack()));
     
     frame.Stack.EmplaceBack(std::move(functionArguments));
     frame.Stack.EmplaceBack().SetInteger((int64_t)callState);
@@ -70,7 +70,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Error::FTryCall(Pulsar::ExecutionCon
     ctx.CallFunction(functionIdx);
     Pulsar::RuntimeState callState = ctx.Run();
     if (callState == Pulsar::RuntimeState::OK)
-        functionArguments.AsList() = Pulsar::ValueList(std::move(ctx.GetStack()));
+        functionArguments.AsList() = Pulsar::Value::List(std::move(ctx.GetStack()));
 
     frame.Stack.EmplaceBack(std::move(functionArguments));
     frame.Stack.EmplaceBack()

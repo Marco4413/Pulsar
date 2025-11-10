@@ -55,7 +55,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Module::FRun(Pulsar::ExecutionContex
     if (runtimeState != Pulsar::RuntimeState::OK)
         return runtimeState;
 
-    Pulsar::ValueList retValues(std::move(context.GetStack()));
+    Pulsar::Value::List retValues(std::move(context.GetStack()));
     frame.Stack.EmplaceBack()
         .SetList(std::move(retValues));
     return Pulsar::RuntimeState::OK;

@@ -58,7 +58,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Lexer::FNextToken(Pulsar::ExecutionC
 
     Pulsar::Token token = (**lexer).NextToken();
 
-    Pulsar::ValueList tokenAsList;
+    Pulsar::Value::List tokenAsList;
     tokenAsList.Append()->Value().SetInteger((int64_t)token.Type);
     tokenAsList.Append()->Value().SetString(Pulsar::TokenTypeToString(token.Type));
     switch (token.Type) {

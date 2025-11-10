@@ -161,7 +161,7 @@ int main(int argc, const char** argv)
     //   needed by the function to be called (main only needs a List).
     Pulsar::ValueStack& stack = context.GetStack();
     stack.EmplaceBack()
-        .SetList(Pulsar::ValueList());
+        .SetList(Pulsar::Value::List());
     // Call the last function named "main". We can assume it accepts 1 argument (args) and returns anything.
     context.CallFunction("main");
     Pulsar::RuntimeState runtimeState = context.Run();

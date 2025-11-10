@@ -49,16 +49,14 @@ namespace Pulsar
             || vtype == ValueType::NativeFunctionReference;
     }
 
-    class Value; // Forward Declaration
-    // TODO: Move into Value::List
-    using ValueList = LinkedList<Value>;
-
     // Forward declaration for ToString and ToRepr
     class Module;
 
     class Value
     {
     public:
+        using List = LinkedList<Value>;
+
         // Type = Void
         Value();
         ~Value();
@@ -78,8 +76,8 @@ namespace Pulsar
         ValueType Type() const    { return m_Type; }
         int64_t AsInteger() const { return m_AsInteger; }
         double AsDouble() const   { return m_AsDouble; }
-        ValueList& AsList()             { return m_AsList; }
-        const ValueList& AsList() const { return m_AsList; }
+        List& AsList()             { return m_AsList; }
+        const List& AsList() const { return m_AsList; }
         String& AsString()             { return m_AsString; }
         const String& AsString() const { return m_AsString; }
         CustomData& AsCustom()             { return m_AsCustom; }
@@ -90,8 +88,8 @@ namespace Pulsar
         Value& SetDouble(double val)                   { Reset(); m_Type = ValueType::Double;                  m_AsDouble  = val;            return *this; }
         Value& SetFunctionReference(int64_t val)       { Reset(); m_Type = ValueType::FunctionReference;       m_AsInteger = val;            return *this; }
         Value& SetNativeFunctionReference(int64_t val) { Reset(); m_Type = ValueType::NativeFunctionReference; m_AsInteger = val;            return *this; }
-        Value& SetList(ValueList&& val)                { Reset(); m_Type = ValueType::List;                    m_AsList    = std::move(val); return *this; }
-        Value& SetList(const ValueList& val)           { Reset(); m_Type = ValueType::List;                    m_AsList    = val;            return *this; }
+        Value& SetList(List&& val)                     { Reset(); m_Type = ValueType::List;                    m_AsList    = std::move(val); return *this; }
+        Value& SetList(const List& val)                { Reset(); m_Type = ValueType::List;                    m_AsList    = val;            return *this; }
         Value& SetString(String&& val)                 { Reset(); m_Type = ValueType::String;                  m_AsString  = std::move(val); return *this; }
         Value& SetString(const String& val)            { Reset(); m_Type = ValueType::String;                  m_AsString  = val;            return *this; }
         Value& SetCustom(const CustomData& val)        { Reset(); m_Type = ValueType::Custom;                  m_AsCustom  = val;            return *this; }
@@ -120,7 +118,7 @@ namespace Pulsar
         {
             int64_t m_AsInteger;
             double m_AsDouble;
-            ValueList m_AsList;
+            List m_AsList;
             String m_AsString;
             CustomData m_AsCustom;
         };

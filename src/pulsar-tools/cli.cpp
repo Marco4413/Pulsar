@@ -348,7 +348,7 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
     Pulsar::ExecutionContext context(module);
     Pulsar::ValueStack& stack = context.GetStack();
     { // Push argv into the Stack.
-        Pulsar::ValueList argList;
+        Pulsar::Value::List argList;
         argList.Append()->Value().SetString((*input.FilePath).c_str());
         for (const std::string& arg : *input.Args)
             argList.Append()->Value().SetString(arg.c_str());
