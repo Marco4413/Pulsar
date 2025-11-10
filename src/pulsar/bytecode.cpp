@@ -374,11 +374,9 @@ bool Pulsar::Binary::ByteCode::WriteLinkedList(IWriter& writer, const LinkedList
 {
     if (!writer.WriteU64((uint64_t)list.Length()))
         return false;
-    const LinkedList<Value>::Node* next = list.Front();
-    while (next) {
-        if (!WriteValue(writer, next->Value(), settings))
+    for (const Value& v : list) {
+        if (!WriteValue(writer, v, settings))
             return false;
-        next = next->Next();
     }
     return true;
 }

@@ -10,6 +10,8 @@ namespace Pulsar
     class StringView
     {
     public:
+        using ConstIterator = const char*;
+
         StringView(const String& str)
             : StringView(str.CString(), str.Length()) { }
 
@@ -76,6 +78,12 @@ namespace Pulsar
         bool Empty() const      { return m_Begin >= m_End; }
         // Data may not be null-terminated, use StringView::Length to get the remaining characters.
         const char* Data() const { return m_Begin; }
+
+        ConstIterator Begin() const { return m_Begin; }
+        ConstIterator End()   const { return m_End;   }
+
+        PULSAR_ITERABLE_IMPL(StringView, ConstIterator, ConstIterator)
+
     private:
         const char* m_Begin;
         const char* m_End;

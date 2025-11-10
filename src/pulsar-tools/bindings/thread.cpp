@@ -90,12 +90,9 @@ Pulsar::RuntimeState PulsarTools::Bindings::Thread::FJoinAll(Pulsar::ExecutionCo
     Pulsar::Value& threadReferencesList = frame.Locals[0];
     if (threadReferencesList.Type() != Pulsar::ValueType::List)
         return Pulsar::RuntimeState::TypeError;
-    
+
     Pulsar::Value::List threadResults;
-    Pulsar::Value::List& threadReferences = threadReferencesList.AsList();
-    Pulsar::Value::List::Node* threadReferenceNode = threadReferences.Front();
-    while (threadReferenceNode) {
-        Pulsar::Value& threadReference = threadReferenceNode->Value();
+    for (Pulsar::Value& threadReference : threadReferencesList.AsList()) {
         if (threadReference.Type() != Pulsar::ValueType::Custom
             || threadReference.AsCustom().Type != threadTypeId)
             return Pulsar::RuntimeState::TypeError;
@@ -112,8 +109,6 @@ Pulsar::RuntimeState PulsarTools::Bindings::Thread::FJoinAll(Pulsar::ExecutionCo
         frame.Stack.PopBack();
 
         threadResults.Append()->Value().SetList(std::move(threadResult));
-
-        threadReferenceNode = threadReferenceNode->Next();
     }
 
     frame.Stack.EmplaceBack()

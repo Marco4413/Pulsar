@@ -147,11 +147,11 @@ Pulsar::BaseOptimizerSettings::IsExportedDefinitionFn<T> Pulsar::BaseOptimizerSe
 
     HashMap<size_t, bool> exportedIndices;
     exportedIndices.Reserve(exportedNames.Size());
-    exportedNamesMap.ForEach([&exportedIndices](const auto& bucket)
-    {
-        if (bucket.Value() != INVALID_INDEX)
-            exportedIndices.Insert(bucket.Value(), true);
-    });
+    for (const auto& [ name, index ] : exportedNamesMap) {
+        (void)name;
+        if (index != INVALID_INDEX)
+            exportedIndices.Insert(index, true);
+    }
 
     return [exportedIndices = std::move(exportedIndices)](size_t index, const auto&)
     {

@@ -8,6 +8,9 @@ namespace Pulsar
     class String
     {
     public:
+        using ConstIterator   = const char*;
+        using MutableIterator = char*;
+
         String();
         ~String();
 
@@ -57,6 +60,14 @@ namespace Pulsar
 
         size_t Length() const { return m_Length; }
         size_t Capacity() const { return m_Capacity; }
+
+        ConstIterator Begin() const { return m_Data; }
+        ConstIterator End()   const { return m_Data+m_Length; }
+        MutableIterator Begin() { return m_Data; }
+        MutableIterator End()   { return m_Data+m_Length; }
+
+        PULSAR_ITERABLE_IMPL(String, ConstIterator, MutableIterator)
+
     private:
         char* m_Data;
         size_t m_Length;

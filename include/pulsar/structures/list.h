@@ -18,6 +18,8 @@ namespace Pulsar
     {
     public:
         using Self = List<T>;
+        using ConstIterator   = const T*;
+        using MutableIterator = T*;
 
         List()
             : m_Data(nullptr)
@@ -49,21 +51,13 @@ namespace Pulsar
         explicit List(const LinkedList<T>& ll)
             : List()
         {
-            const LinkedListNode<T>* next = ll.Front();
-            while (next) {
-                EmplaceBack(next->Value());
-                next = next->Next();
-            }
+            for (const T& v : ll) EmplaceBack(v);
         }
 
         explicit List(LinkedList<T>&& ll)
             : List()
         {
-            LinkedListNode<T>* next = ll.Front();
-            while (next) {
-                EmplaceBack(std::move(next->Value()));
-                next = next->Next();
-            }
+            for (T& v : ll) EmplaceBack(std::move(v));
             ll.Clear();
         }
 
@@ -190,6 +184,14 @@ namespace Pulsar
         size_t Size() const     { return m_Size; }
         size_t Capacity() const { return m_Capacity; }
         bool IsEmpty() const    { return m_Size == 0; }
+
+        ConstIterator Begin() const { return m_Data; }
+        ConstIterator End()   const { return m_Data+m_Size; }
+        MutableIterator Begin() { return m_Data; }
+        MutableIterator End()   { return m_Data+m_Size; }
+
+        PULSAR_ITERABLE_IMPL(Self, ConstIterator, MutableIterator)
+
     protected:
         void ResizeUninitialized(size_t newSize)
         {
