@@ -50,8 +50,9 @@
   #endif // PULSAR_NO_ATOMIC
 #endif // PULSAR_ATOMIC_SIZE_T
 
-template<typename ...Args>
-inline constexpr void PULSAR_UNUSED(const Args& ...args) { ((void)args, ...); };
+#ifndef PULSAR_UNUSED
+#define PULSAR_UNUSED(...) Pulsar::Core::Unused( __VA_ARGS__ )
+#endif // PULSAR_UNUSED
 
 #define PULSAR_ITERABLE_IMPL(TSelf, TConstIterator, TMutableIterator) \
     inline TConstIterator CBegin() const { return /* std::as_const */ static_cast<const TSelf*>(this)->Begin(); } \
@@ -105,6 +106,12 @@ inline constexpr void PULSAR_UNUSED(const Args& ...args) { ((void)args, ...); };
 
 namespace Pulsar::Core
 {
+    template<typename ...Args>
+    inline constexpr void Unused(const Args& ...args)
+    {
+        ((void)args, ...);
+    }
+
     // New and Delete that strictly use PULSAR_ macros to allocate memory
     template<typename T, typename ...Args>
     inline T* PlacementNew(T* ptr, Args&& ...args)
