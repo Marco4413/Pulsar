@@ -219,13 +219,13 @@ Pulsar::String Pulsar::DoubleToString(double n, size_t precision)
     intPart.Reserve(16);
     do {
         double id = std::modf(i/10, &i) * 10;
-        char digit = '0' + static_cast<int>(id);
+        char digit = static_cast<char>('0' + static_cast<int>(id));
         intPart += digit;
     } while (i > 0);
     // Reverse intPart
-    for (size_t i = 0, endIdx = intPart.Length(); i < intPart.Length()/2; i++) {
-        char ch = intPart[i];
-        intPart[i] = intPart[--endIdx];
+    for (size_t idx = 0, endIdx = intPart.Length(); idx < intPart.Length()/2; idx++) {
+        char ch = intPart[idx];
+        intPart[idx] = intPart[--endIdx];
         intPart[endIdx] = ch;
     }
 
@@ -235,7 +235,7 @@ Pulsar::String Pulsar::DoubleToString(double n, size_t precision)
     if (precision > 0) {
         do {
             double fd; f = std::modf(f*10, &fd);
-            char digit = '0' + static_cast<int>(fd);
+            char digit = static_cast<char>('0' + static_cast<int>(fd));
             fpPart += digit;
         } while (f > 0 && fpPart.Length() < precision);
         // Trim all trailing zeroes except 1
