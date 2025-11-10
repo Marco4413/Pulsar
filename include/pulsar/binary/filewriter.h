@@ -32,11 +32,11 @@ namespace Pulsar::Binary
     class FileWriter : public IWriter
     {
     public:
-        FileWriter(const String& path) { (void)path; }
+        FileWriter(const String& path) { PULSAR_UNUSED(path); }
 
         bool WriteData(uint64_t size, const uint8_t* data) override
         {
-            (void)size; (void)data;
+            PULSAR_UNUSED(size, data);
             return false;
         }
     };

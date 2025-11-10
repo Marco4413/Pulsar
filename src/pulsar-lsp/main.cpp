@@ -4,8 +4,7 @@
 
 int main(int argc, const char** argv)
 {
-    (void)argc;
-    (void)argv;
+    PULSAR_UNUSED(argc, argv);
 
     lsp::Connection connection(lsp::io::standardIO());
     PulsarLSP::Server server(connection);

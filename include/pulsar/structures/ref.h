@@ -41,7 +41,7 @@ namespace Pulsar
             : m_RefCount(nullptr), m_Value(nullptr) { }
 
         SharedRef(std::nullptr_t null)
-            : SharedRef() { (void)null; }
+            : SharedRef() { PULSAR_UNUSED(null); }
         
         SharedRef(const SharedRef<T>& o)
             : SharedRef()

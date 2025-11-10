@@ -148,7 +148,7 @@ Pulsar::BaseOptimizerSettings::IsExportedDefinitionFn<T> Pulsar::BaseOptimizerSe
     HashMap<size_t, bool> exportedIndices;
     exportedIndices.Reserve(exportedNames.Size());
     for (const auto& [ name, index ] : exportedNamesMap) {
-        (void)name;
+        PULSAR_UNUSED(name);
         if (index != INVALID_INDEX)
             exportedIndices.Insert(index, true);
     }

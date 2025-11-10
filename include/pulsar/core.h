@@ -50,6 +50,9 @@
   #endif // PULSAR_NO_ATOMIC
 #endif // PULSAR_ATOMIC_SIZE_T
 
+template<typename ...Args>
+inline constexpr void PULSAR_UNUSED(const Args& ...args) { ((void)args, ...); };
+
 #define PULSAR_ITERABLE_IMPL(TSelf, TConstIterator, TMutableIterator) \
     inline TConstIterator CBegin() const { return /* std::as_const */ static_cast<const TSelf*>(this)->Begin(); } \
     inline TConstIterator CEnd()   const { return /* std::as_const */ static_cast<const TSelf*>(this)->End();   } \

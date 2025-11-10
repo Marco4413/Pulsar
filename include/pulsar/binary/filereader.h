@@ -32,11 +32,11 @@ namespace Pulsar::Binary
     class FileReader : public IReader
     {
     public:
-        FileReader(const String& path) { (void)path; }
+        FileReader(const String& path) { PULSAR_UNUSED(path); }
 
         bool ReadData(uint64_t size, uint8_t* data) override
         {
-            (void)size; (void)data;
+            PULSAR_UNUSED(size, data);
             return false;
         }
     };

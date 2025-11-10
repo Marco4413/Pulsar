@@ -32,7 +32,7 @@ int main(int argc, const char** argv)
 {
     // This demo uses hard-coded paths.
     // argv is ignored.
-    (void)argc; (void)argv;
+    PULSAR_UNUSED(argc, argv);
 
 #ifdef READ_AS_NEUTRON_FILE
 

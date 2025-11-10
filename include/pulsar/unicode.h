@@ -61,7 +61,7 @@ namespace Unicode
 
     constexpr size_t GetUTF32EncodedSize(Codepoint code)
     {
-        (void)code;
+        PULSAR_UNUSED(code);
         return 1;
     }
 }

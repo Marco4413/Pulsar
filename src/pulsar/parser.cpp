@@ -1424,8 +1424,7 @@ void Pulsar::Parser::StripUnusedSources()
 bool Pulsar::Parser::PathToNormalizedFileSystemPath(const String& path, String& outNormalized)
 {
 #ifdef PULSAR_NO_FILESYSTEM
-    (void)path;
-    (void)outNormalized;
+    PULSAR_UNUSED(path, outNormalized);
     return false;
 #else // PULSAR_NO_FILESYSTEM
     auto rawPath = std::filesystem::path(path.CString());
@@ -1451,8 +1450,7 @@ bool Pulsar::Parser::PathToNormalizedFileSystemPath(const String& path, String& 
 Pulsar::ParseSettings::IncludeResolverFn Pulsar::ParseSettings::CreateFileSystemIncludeResolver(IncludePaths&& includePaths, bool showPathsInErrorMessage)
 {
 #ifdef PULSAR_NO_FILESYSTEM
-    (void)includePaths;
-    (void)showPathsInErrorMessage;
+    PULSAR_UNUSED(includePaths, showPathsInErrorMessage);
     return nullptr;
 #else // PULSAR_NO_FILESYSTEM
     return [includePaths = std::move(includePaths), showPathsInErrorMessage](Pulsar::Parser& parser, Pulsar::String cwf, Pulsar::Token token) {

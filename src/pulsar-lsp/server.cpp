@@ -1192,7 +1192,7 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
         .add<lsp::requests::TextDocument_Diagnostic>([](lsp::requests::TextDocument_Diagnostic::Params&& params)
             -> lsp::requests::TextDocument_Diagnostic::Result
         {
-            (void)params;
+            PULSAR_UNUSED(params);
             lsp::RelatedFullDocumentDiagnosticReport result;
             return result;
         })

@@ -13,8 +13,8 @@ Pulsar::String PulsarLSP::URIToNormalizedPath(const lsp::FileUri& uri)
     std::filesystem::path path(uri.path());
     Pulsar::String internalPath(path.generic_string().c_str());
 
-    // Discard return value, if false internalPath is not changed
-    (void)Pulsar::Parser::PathToNormalizedFileSystemPath(internalPath, internalPath);
+    // Ignore return value, if false internalPath is not changed
+    Pulsar::Parser::PathToNormalizedFileSystemPath(internalPath, internalPath);
     return internalPath;
 }
 
