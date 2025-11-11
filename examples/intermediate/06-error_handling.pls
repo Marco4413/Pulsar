@@ -12,7 +12,7 @@
 *(main args):
   // scall forks globals:
   // - Changes to globals don't affect the main context
-  // - CustomTypeData is NOT shared with the main context.
+  // - CustomTypeGlobalData is NOT shared with the main context.
   //   If supported, it is forked from its current state.
   //   Otherwise, the data is meant to be shared between contexts.
   random/seed -> seed
@@ -22,7 +22,7 @@
 
   // tcall shares the context:
   // - Changes to globals affect the main context
-  // - CustomTypeData is shared with the main context.
+  // - CustomTypeGlobalData is shared with the main context.
   random/seed -> seed
   [] <& (my-func) (*tcall) if not: (*error!) end
   // random/seed MUST have changed

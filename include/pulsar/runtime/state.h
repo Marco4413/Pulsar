@@ -23,7 +23,7 @@ namespace Pulsar
         FunctionNotFound,
         ListIndexOutOfBounds,
         StringIndexOutOfBounds,
-        NoCustomTypeData,
+        NoCustomTypeGlobalData,
         InvalidCustomTypeHandle,
         InvalidCustomTypeReference,
     };

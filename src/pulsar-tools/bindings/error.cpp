@@ -63,7 +63,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Error::FTryCall(Pulsar::ExecutionCon
     int64_t functionIdx = functionReference.AsInteger();
 
     Pulsar::ExecutionContext ctx(eContext.GetModule(), false);
-    ctx.GetAllCustomTypeData() = std::move(eContext.GetAllCustomTypeData());
+    ctx.GetAllCustomTypeGlobalData() = std::move(eContext.GetAllCustomTypeGlobalData());
     ctx.GetGlobals() = std::move(eContext.GetGlobals());
 
     ctx.GetStack() = Pulsar::ValueStack(std::move(functionArguments.AsList()));
@@ -76,7 +76,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Error::FTryCall(Pulsar::ExecutionCon
     frame.Stack.EmplaceBack()
         .SetInteger((int64_t)callState);
 
-    eContext.GetAllCustomTypeData() = std::move(ctx.GetAllCustomTypeData());
+    eContext.GetAllCustomTypeGlobalData() = std::move(ctx.GetAllCustomTypeGlobalData());
     eContext.GetGlobals() = std::move(ctx.GetGlobals());
 
     return Pulsar::RuntimeState::OK;

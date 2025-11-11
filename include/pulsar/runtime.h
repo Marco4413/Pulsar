@@ -84,7 +84,7 @@ if (state != RuntimeState::OK) // ERROR
     {
     public:
         // typeId -> typeData
-        using CustomTypeDataMap = HashMap<uint64_t, CustomTypeData::Ref>;
+        using CustomTypeGlobalDataMap = HashMap<uint64_t, CustomTypeGlobalData::Ref>;
         // Consider using the SourceViewer class for conversion.
         using PositionConverterFn = std::function<SourcePosition(const SourceDebugSymbol& source, SourcePosition position)>;
 
@@ -102,23 +102,23 @@ if (state != RuntimeState::OK) // ERROR
         void Init();
 
         void InitGlobals();
-        void InitCustomTypeData();
+        void InitCustomTypeGlobalData();
 
         /**
          * Creates a new "child" ExecutionContext which inherits global data from this one.
-         * Global data is CustomTypeData and Globals. Any change to the forked context
-         *  won't affect the original one (except for CustomTypeData that explicitly wants that).
+         * Global data is CustomTypeGlobalData and Globals. Any change to the forked context
+         *  won't affect the original one (except for CustomTypeGlobalData that explicitly wants that).
          */
         ExecutionContext Fork() const;
 
         /**
-         * Retrieves and casts to the correct type an instance of CustomTypeData.
+         * Retrieves and casts to the correct type an instance of CustomTypeGlobalData.
          * If the type does not exist, nullptr is returned.
          */
         template<typename T>
-        SharedRef<T> GetCustomTypeData(uint64_t typeId)
+        SharedRef<T> GetCustomTypeGlobalData(uint64_t typeId)
         {
-            auto typeDataPair = m_CustomTypeData.Find(typeId);
+            auto typeDataPair = m_CustomTypeGlobalData.Find(typeId);
             if (!typeDataPair) return nullptr;
             return typeDataPair->Value().CastTo<T>();
         }
@@ -127,16 +127,16 @@ if (state != RuntimeState::OK) // ERROR
          * Sets type data for the provided type.
          * If the provided type does not exist, nothing is set.
          */
-        bool SetCustomTypeData(uint64_t typeId, CustomTypeData::Ref typeData)
+        bool SetCustomTypeGlobalData(uint64_t typeId, CustomTypeGlobalData::Ref typeData)
         {
-            auto typeDataPair = m_CustomTypeData.Find(typeId);
+            auto typeDataPair = m_CustomTypeGlobalData.Find(typeId);
             if (typeDataPair) typeDataPair->Value() = typeData;
             return (bool)typeDataPair;
         }
 
         // Do not insert new or remove keys from the returned map.
-        CustomTypeDataMap& GetAllCustomTypeData()             { return m_CustomTypeData; }
-        const CustomTypeDataMap& GetAllCustomTypeData() const { return m_CustomTypeData; }
+        CustomTypeGlobalDataMap& GetAllCustomTypeGlobalData()             { return m_CustomTypeGlobalData; }
+        const CustomTypeGlobalDataMap& GetAllCustomTypeGlobalData() const { return m_CustomTypeGlobalData; }
 
         // Do not add or remove values from the returned list.
         List<GlobalInstance>& GetGlobals()             { return m_Globals; }
@@ -251,7 +251,7 @@ if (state != RuntimeState::OK) // ERROR
         Pulsar::ValueStack m_Stack;
         Pulsar::CallStack m_CallStack;
         List<GlobalInstance> m_Globals;
-        CustomTypeDataMap m_CustomTypeData;
+        CustomTypeGlobalDataMap m_CustomTypeGlobalData;
 
         bool m_Running = false;
         bool m_StopRequested = false;

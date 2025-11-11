@@ -9,7 +9,7 @@ Pulsar::ExecutionContext::ExecutionContext(const Module& module, bool init)
 void Pulsar::ExecutionContext::Init()
 {
     InitGlobals();
-    InitCustomTypeData();
+    InitCustomTypeGlobalData();
 }
 
 void Pulsar::ExecutionContext::InitGlobals()
@@ -18,12 +18,12 @@ void Pulsar::ExecutionContext::InitGlobals()
         m_Globals.EmplaceBack(m_Module.Globals[i].CreateInstance());
 }
 
-void Pulsar::ExecutionContext::InitCustomTypeData()
+void Pulsar::ExecutionContext::InitCustomTypeGlobalData()
 {
-    m_CustomTypeData.Reserve(m_Module.CustomTypes.Count());
+    m_CustomTypeGlobalData.Reserve(m_Module.CustomTypes.Count());
     m_Module.CustomTypes.ForEach([this](const HashMapBucket<uint64_t, CustomType>& b) {
-        if (b.Value().DataFactory)
-            this->m_CustomTypeData.Emplace(b.Key(), b.Value().DataFactory());
+        if (b.Value().GlobalDataFactory)
+            this->m_CustomTypeGlobalData.Emplace(b.Key(), b.Value().GlobalDataFactory());
     });
 }
 
@@ -32,11 +32,11 @@ Pulsar::ExecutionContext Pulsar::ExecutionContext::Fork() const
     ExecutionContext fork(this->GetModule(), false);
 
     fork.GetGlobals() = this->GetGlobals();
-    this->GetAllCustomTypeData().ForEach([&fork](const auto& b) {
-        PULSAR_ASSERT(b.Value(), "Reference to CustomTypeData is nullptr.");
+    this->GetAllCustomTypeGlobalData().ForEach([&fork](const auto& b) {
+        PULSAR_ASSERT(b.Value(), "Reference to CustomTypeGlobalData is nullptr.");
         uint64_t typeId = b.Key();
-        CustomTypeData::Ref typeDataFork = b.Value()->Fork();
-        fork.m_CustomTypeData.Insert(typeId, typeDataFork ? typeDataFork : b.Value());
+        CustomTypeGlobalData::Ref typeDataFork = b.Value()->Fork();
+        fork.m_CustomTypeGlobalData.Insert(typeId, typeDataFork ? typeDataFork : b.Value());
     });
 
     return fork;

@@ -9,13 +9,12 @@
 namespace Pulsar
 {
     // Extend this class to store your custom type's global data
-    // TODO: Maybe rename to CustomTypeGlobalData
-    class CustomTypeData
+    class CustomTypeGlobalData
     {
     public:
-        using Ref = SharedRef<Pulsar::CustomTypeData>;
+        using Ref = SharedRef<Pulsar::CustomTypeGlobalData>;
 
-        virtual ~CustomTypeData() = default;
+        virtual ~CustomTypeGlobalData() = default;
         /**
          * When a new sandboxed ExecutionContext is created from an already existing one
          *  this function is called.
@@ -30,11 +29,11 @@ namespace Pulsar
 
     struct CustomType
     {
-        using DataFactoryFn = std::function<CustomTypeData::Ref()>;
+        using GlobalDataFactoryFn = std::function<CustomTypeGlobalData::Ref()>;
 
         String Name;
-        // Method that generates a new instance of a derived class from CustomTypeData
-        DataFactoryFn DataFactory = nullptr;
+        // Method that generates a new instance of a derived class from CustomTypeGlobalData
+        GlobalDataFactoryFn GlobalDataFactory = nullptr;
     };
 }
 

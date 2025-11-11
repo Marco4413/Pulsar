@@ -46,7 +46,7 @@ namespace Pulsar
         size_t DeclareAndBindNativeFunction(FunctionDefinition&& def, NativeFunction func);
         size_t DeclareAndBindNativeFunction(FunctionSignature sig, NativeFunction func);
 
-        uint64_t BindCustomType(const String& name, CustomType::DataFactoryFn dataFactory = nullptr);
+        uint64_t BindCustomType(const String& name, CustomType::GlobalDataFactoryFn globalDataFactory=nullptr);
 
         // Be sure to check if the type exists first (unless you know for sure it exists)
         CustomType& GetCustomType(uint64_t typeId)             { return CustomTypes.Find(typeId)->Value(); }

@@ -40,10 +40,10 @@ size_t Pulsar::Module::DeclareAndBindNativeFunction(FunctionSignature sig, Nativ
     return DeclareAndBindNativeFunction(std::forward<FunctionDefinition>(sig.ToNativeDefinition()), func);
 }
 
-uint64_t Pulsar::Module::BindCustomType(const String& name, CustomType::DataFactoryFn dataFactory)
+uint64_t Pulsar::Module::BindCustomType(const String& name, CustomType::GlobalDataFactoryFn globalDataFactory)
 {
     while (CustomTypes.Find(++m_LastTypeId));
-    CustomTypes.Emplace(m_LastTypeId, name, dataFactory);
+    CustomTypes.Emplace(m_LastTypeId, name, globalDataFactory);
     return m_LastTypeId;
 }
 

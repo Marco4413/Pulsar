@@ -19,7 +19,7 @@ const char* Pulsar::RuntimeStateToString(RuntimeState rstate)
     case RuntimeState::FunctionNotFound:               return "FunctionNotFound";
     case RuntimeState::ListIndexOutOfBounds:           return "ListIndexOutOfBounds";
     case RuntimeState::StringIndexOutOfBounds:         return "StringIndexOutOfBounds";
-    case RuntimeState::NoCustomTypeData:               return "NoCustomTypeData";
+    case RuntimeState::NoCustomTypeGlobalData:         return "NoCustomTypeGlobalData";
     case RuntimeState::InvalidCustomTypeHandle:        return "InvalidCustomTypeHandle";
     case RuntimeState::InvalidCustomTypeReference:     return "InvalidCustomTypeReference";
     }
