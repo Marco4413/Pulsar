@@ -9,19 +9,132 @@
 #include "pulsar/runtime/module.h"
 #include "pulsar/runtime/state.h"
 #include "pulsar/runtime/value.h"
+#include "pulsar/structures/linkedlist.h"
 #include "pulsar/structures/list.h"
 #include "pulsar/structures/ref.h"
 
 namespace Pulsar
 {
-    // TODO: Rename to Stack
-    using ValueStack = List<Value>;
+    class Stack
+    {
+    public:
+        using ConstIterator   = List<Value>::ConstIterator;
+        using MutableIterator = List<Value>::MutableIterator;
+
+        Stack() = default;
+
+        Stack(size_t initCapacity)
+            : m_Values(initCapacity) {}
+
+        explicit Stack(const LinkedList<Value>& ll) : m_Values(ll) {}
+        explicit Stack(LinkedList<Value>&& ll) : m_Values(std::move(ll)) {}
+
+        explicit Stack(const List<Value>& l) : m_Values(l) {}
+        explicit Stack(List<Value>&& l) : m_Values(std::move(l)) {}
+
+        Stack(const Stack& other) = default;
+        Stack(Stack&& other) = default;
+
+        ~Stack() = default;
+
+        Stack& operator=(const Stack& other) = default;
+        Stack& operator=(Stack&& other) = default;
+
+        void Resize(size_t newSize)      { m_Values.Resize(newSize); }
+        void Reserve(size_t newCapacity) { m_Values.Reserve(newCapacity); }
+
+        void Push(const Value& value) { m_Values.PushBack(value); }
+        void Push(Value&& value)      { m_Values.PushBack(std::move(value)); }
+
+        // Pushes a new Void Value and returns its reference
+        //  (reference is invalidated once something else is
+        //  pushed onto the stack).
+        Value& Emplace() { return m_Values.EmplaceBack(); }
+
+        Value& EmplaceInteger(int64_t integer) { return Emplace().SetInteger(integer); }
+        Value& EmplaceDouble(double doublev)   { return Emplace().SetDouble(doublev); }
+
+        Value& EmplaceFunctionReference(int64_t functionIndex)     { return Emplace().SetFunctionReference(functionIndex); }
+        Value& EmplaceNativeFunctionReference(int64_t nativeIndex) { return Emplace().SetNativeFunctionReference(nativeIndex); }
+
+        Value& EmplaceString(const String& string) { return Emplace().SetString(string); }
+        Value& EmplaceString(String&& string)      { return Emplace().SetString(std::move(string)); }
+
+        // Pushes an empty list
+        Value& EmplaceList()                        { return Emplace().SetList(Value::List()); }
+        Value& EmplaceList(const Value::List& list) { return Emplace().SetList(list); }
+        Value& EmplaceList(Value::List&& list)      { return Emplace().SetList(std::move(list)); }
+
+        Value& EmplaceCustom(const CustomData& custom) { return Emplace().SetCustom(custom); }
+
+        Value Pop()
+        {
+            Value value(std::move(m_Values.Back()));
+            m_Values.PopBack();
+            return value;
+        }
+
+        // Access from the bottom of the stack to the top
+        Value& operator[](size_t index)
+        {
+            PULSAR_ASSERT(index < Size(), "Stack index out of bounds.");
+            return m_Values[index];
+        }
+
+        // Access from the bottom of the stack to the top
+        const Value& operator[](size_t index) const
+        {
+            PULSAR_ASSERT(index < Size(), "Stack index out of bounds.");
+            return m_Values[index];
+        }
+
+        // index >= 0, access from the bottom of the stack
+        // index <  0, access from the top of the stack
+        Value& operator[](int index)
+        {
+            if (index >= 0) return (*this)[static_cast<size_t>(index)];
+            size_t reverseIndex = static_cast<size_t>(-index);
+            PULSAR_ASSERT(reverseIndex <= Size(), "Stack index out of bounds.");
+            return (*this)[Size() - reverseIndex];
+        }
+
+        // index >= 0, access from the bottom of the stack
+        // index <  0, access from the top of the stack
+        const Value& operator[](int index) const
+        {
+            if (index >= 0) return (*this)[static_cast<size_t>(index)];
+            size_t reverseIndex = static_cast<size_t>(-index);
+            PULSAR_ASSERT(reverseIndex <= Size(), "Stack index out of bounds.");
+            return (*this)[m_Values.Size() - reverseIndex];
+        }
+
+        Value& Top()             { return (*this)[-1]; }
+        const Value& Top() const { return (*this)[-1]; }
+
+        void Clear() { m_Values.Clear(); }
+        size_t Size() const     { return m_Values.Size(); }
+        size_t Capacity() const { return m_Values.Capacity(); }
+        bool IsEmpty() const    { return m_Values.IsEmpty(); }
+
+        /* Iterators iterate from bottom to top */
+
+        ConstIterator Begin() const { return m_Values.Begin(); }
+        ConstIterator End()   const { return m_Values.End(); }
+        MutableIterator Begin() { return m_Values.Begin(); }
+        MutableIterator End()   { return m_Values.End(); }
+
+        PULSAR_ITERABLE_IMPL(Stack, ConstIterator, MutableIterator);
+
+    private:
+        List<Value> m_Values;
+    };
+
     struct Frame
     {
         const FunctionDefinition* Function;
-        bool IsNative = false;
-        List<Value> Locals = List<Value>();
-        ValueStack Stack = ValueStack();
+        bool IsNative           = false;
+        List<Value> Locals      = List<Value>();
+        Pulsar::Stack Stack     = Pulsar::Stack();
         size_t InstructionIndex = 0;
     };
 
@@ -51,7 +164,7 @@ namespace Pulsar
         Frame CreateFrame(const FunctionDefinition* def, bool native=false);
         Frame& CreateAndPushFrame(const FunctionDefinition* def, bool native=false);
         RuntimeState PrepareFrame(Frame& frame);
-        RuntimeState PrepareFrame(Frame& frame, ValueStack& callerStack);
+        RuntimeState PrepareFrame(Frame& frame, Stack& callerStack);
 
         Frame& PushFrame(Frame&& frame) { return m_Frames.EmplaceBack(std::move(frame)); }
         void PopFrame() { m_Frames.PopBack(); }
@@ -72,7 +185,7 @@ namespace Pulsar
      * 
 ```cpp
 ExecutionContext context(module);
-ValueStack& stack = context.GetStack();
+Stack& stack = context.GetStack();
 // Push arguments into stack
 context.CallFunction("main");
 RuntimeState state = context.Run();
@@ -167,8 +280,8 @@ if (state != RuntimeState::OK) // ERROR
 
         const Module& GetModule() const { return m_Module; }
 
-        ValueStack& GetStack()             { return m_Stack; }
-        const ValueStack& GetStack() const { return m_Stack; }
+        Stack& GetStack()             { return m_Stack; }
+        const Stack& GetStack() const { return m_Stack; }
 
         CallStack& GetCallStack()             { return m_CallStack; }
         const CallStack& GetCallStack() const { return m_CallStack; }
@@ -248,7 +361,7 @@ if (state != RuntimeState::OK) // ERROR
 
     private:
         const Module& m_Module;
-        Pulsar::ValueStack m_Stack;
+        Pulsar::Stack m_Stack;
         Pulsar::CallStack m_CallStack;
         List<GlobalInstance> m_Globals;
         CustomTypeGlobalDataMap m_CustomTypeGlobalData;

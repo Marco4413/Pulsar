@@ -159,9 +159,8 @@ int main(int argc, const char** argv)
     Pulsar::ExecutionContext context(module);
     // We prepare the initial stack which must contain all arguments
     //   needed by the function to be called (main only needs a List).
-    Pulsar::ValueStack& stack = context.GetStack();
-    stack.EmplaceBack()
-        .SetList(Pulsar::Value::List());
+    Pulsar::Stack& stack = context.GetStack();
+    stack.EmplaceList();
     // Call the last function named "main". We can assume it accepts 1 argument (args) and returns anything.
     context.CallFunction("main");
     Pulsar::RuntimeState runtimeState = context.Run();

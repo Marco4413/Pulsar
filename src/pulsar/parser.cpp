@@ -320,11 +320,11 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
     dummyFunc.Name += '}';
 
     ExecutionContext context(module);
-    ValueStack& stack = context.GetStack();
+    Stack& stack = context.GetStack();
     auto evalResult = RuntimeState::OK;
 
     if (isProducer && settings.MapGlobalProducersToVoid) {
-        stack.EmplaceBack().SetVoid();
+        stack.Emplace();
     } else {
         context.CallFunction(dummyFunc);
         evalResult = context.Run();
@@ -356,10 +356,10 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
     GlobalDefinition* globalDef;
     if (!globalNameIdxPair) {
         globalScope.Globals.Emplace(identToken.StringVal, module.Globals.Size());
-        globalDef = &module.Globals.EmplaceBack(std::move(identToken.StringVal), std::move(stack.Back()), isConstant);
+        globalDef = &module.Globals.EmplaceBack(std::move(identToken.StringVal), std::move(stack.Top()), isConstant);
     } else {
         globalDef = &module.Globals[globalNameIdxPair->Value()];
-        globalDef->InitialValue = std::move(stack.Back());
+        globalDef->InitialValue = std::move(stack.Top());
     }
 
     if (settings.StoreDebugSymbols) {

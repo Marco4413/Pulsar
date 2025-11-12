@@ -135,8 +135,8 @@ Pulsar::Frame Pulsar::CallStack::CreateFrame(const FunctionDefinition* def, bool
     return {
         .Function = def,
         .IsNative = native,
-        .Locals = List<Value>(def->Arity),
-        .Stack = ValueStack(),
+        .Locals   = List<Value>(def->Arity),
+        .Stack    = Stack(),
         .InstructionIndex = 0,
     };
 }
@@ -152,22 +152,20 @@ Pulsar::RuntimeState Pulsar::CallStack::PrepareFrame(Frame& frame)
     return PrepareFrame(frame, CurrentFrame().Stack);
 }
 
-Pulsar::RuntimeState Pulsar::CallStack::PrepareFrame(Frame& frame, ValueStack& callerStack)
+Pulsar::RuntimeState Pulsar::CallStack::PrepareFrame(Frame& frame, Stack& callerStack)
 {
     if (callerStack.Size() < (frame.Function->StackArity + frame.Function->Arity))
         return RuntimeState::StackUnderflow;
 
     frame.Locals.Resize(frame.Function->LocalsCount);
     for (size_t i = 0; i < frame.Function->Arity; i++) {
-        frame.Locals[frame.Function->Arity-i-1] = std::move(callerStack.Back());
-        callerStack.PopBack();
+        frame.Locals[frame.Function->Arity-i-1] = callerStack.Pop();
     }
 
     // TODO: Figure out if this tanks performance when StackArity is 0
     frame.Stack.Resize(frame.Function->StackArity);
     for (size_t i = 0; i < frame.Function->StackArity; i++) {
-        frame.Stack[frame.Function->StackArity-i-1] = std::move(callerStack.Back());
-        callerStack.PopBack();
+        frame.Stack[frame.Function->StackArity-i-1] = callerStack.Pop();
     }
 
     return RuntimeState::OK;
@@ -208,7 +206,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::CallFunction(const FunctionDefini
     // Do not allow calls on errors
     if (m_State != RuntimeState::OK) return m_State;
 
-    ValueStack& callerStack = !m_CallStack.IsEmpty()
+    Stack& callerStack = !m_CallStack.IsEmpty()
         ? m_CallStack.CurrentFrame().Stack : m_Stack;
     Frame frame = m_CallStack.CreateFrame(&funcDef, false);
     if ((m_State = m_CallStack.PrepareFrame(frame, callerStack)) != RuntimeState::OK)
@@ -225,7 +223,7 @@ void Pulsar::ExecutionContext::InternalStep()
         return;
     }
 
-    ValueStack& callerStack = m_CallStack.HasCaller()
+    Stack& callerStack = m_CallStack.HasCaller()
         ? m_CallStack.CallingFrame().Stack : m_Stack;
 
     Frame& returningFrame = m_CallStack.CurrentFrame();
@@ -236,7 +234,7 @@ void Pulsar::ExecutionContext::InternalStep()
 
     for (size_t i = 0; i < returningFrame.Function->Returns; i++) {
         size_t popIdx = returningFrame.Stack.Size()-returningFrame.Function->Returns+i;
-        callerStack.EmplaceBack(std::move(returningFrame.Stack[popIdx]));
+        callerStack.Push(std::move(returningFrame.Stack[popIdx]));
     }
 
     m_CallStack.PopFrame();
@@ -277,55 +275,54 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     const Instruction& instr = frame.Function->Code[frame.InstructionIndex++];
     switch (instr.Code) {
     case InstructionCode::PushInt:
-        frame.Stack.EmplaceBack().SetInteger(instr.Arg0);
+        frame.Stack.EmplaceInteger(instr.Arg0);
         break;
     case InstructionCode::PushDbl: {
         static_assert(sizeof(double) == sizeof(int64_t));
-        void* arg0 = (void*)&instr.Arg0;
-        double val = *(double*)arg0;
-        frame.Stack.EmplaceBack().SetDouble(val);
+        const void* arg0AsVoid     = reinterpret_cast<const void*>(&instr.Arg0);
+        const double* arg0AsDouble = reinterpret_cast<const double*>(arg0AsVoid);
+        frame.Stack.EmplaceDouble(*arg0AsDouble);
         // Don't want to rely on std::bit_cast since my g++ does not have it.
     } break;
     case InstructionCode::PushFunctionReference:
-        frame.Stack.EmplaceBack().SetFunctionReference(instr.Arg0);
+        frame.Stack.EmplaceFunctionReference(instr.Arg0);
         break;
     case InstructionCode::PushNativeFunctionReference:
-        frame.Stack.EmplaceBack().SetNativeFunctionReference(instr.Arg0);
+        frame.Stack.EmplaceNativeFunctionReference(instr.Arg0);
         break;
     case InstructionCode::PushConst:
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= m_Module.Constants.Size())
             return RuntimeState::OutOfBoundsConstantIndex;
-        frame.Stack.EmplaceBack(m_Module.Constants[(size_t)instr.Arg0]);
+        frame.Stack.Push(m_Module.Constants[(size_t)instr.Arg0]);
         break;
     case InstructionCode::PushLocal:
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= frame.Locals.Size())
             return RuntimeState::OutOfBoundsLocalIndex;
-        frame.Stack.PushBack(frame.Locals[(size_t)instr.Arg0]);
+        frame.Stack.Push(frame.Locals[(size_t)instr.Arg0]);
         break;
     case InstructionCode::MoveLocal:
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= frame.Locals.Size())
             return RuntimeState::OutOfBoundsLocalIndex;
-        frame.Stack.PushBack(std::move(frame.Locals[(size_t)instr.Arg0]));
+        frame.Stack.Push(std::move(frame.Locals[(size_t)instr.Arg0]));
         break;
     case InstructionCode::PopIntoLocal:
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= frame.Locals.Size())
             return RuntimeState::OutOfBoundsLocalIndex;
-        frame.Locals[(size_t)instr.Arg0] = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
+        frame.Locals[(size_t)instr.Arg0] = frame.Stack.Pop();
         break;
     case InstructionCode::CopyIntoLocal:
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= frame.Locals.Size())
             return RuntimeState::OutOfBoundsLocalIndex;
-        frame.Locals[(size_t)instr.Arg0] = frame.Stack.Back();
+        frame.Locals[(size_t)instr.Arg0] = frame.Stack.Top();
         break;
     case InstructionCode::PushGlobal:
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= m_Globals.Size())
             return RuntimeState::OutOfBoundsGlobalIndex;
-        frame.Stack.PushBack(m_Globals[(size_t)instr.Arg0].Value);
+        frame.Stack.Push(m_Globals[(size_t)instr.Arg0].Value);
         break;
     case InstructionCode::MoveGlobal: {
         if (instr.Arg0 < 0 || (size_t)instr.Arg0 >= m_Globals.Size())
@@ -333,7 +330,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
         GlobalInstance& global = m_Globals[(size_t)instr.Arg0];
         if (global.IsConstant)
             return RuntimeState::WritingOnConstantGlobal;
-        frame.Stack.PushBack(std::move(global.Value));
+        frame.Stack.Push(std::move(global.Value));
     } break;
     case InstructionCode::PopIntoGlobal: {
         if (frame.Stack.Size() < 1)
@@ -343,8 +340,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
         GlobalInstance& global = m_Globals[(size_t)instr.Arg0];
         if (global.IsConstant)
             return RuntimeState::WritingOnConstantGlobal;
-        global.Value = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
+        global.Value = frame.Stack.Pop();
     } break;
     case InstructionCode::CopyIntoGlobal: {
         if (frame.Stack.Size() < 1)
@@ -354,7 +350,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
         GlobalInstance& global = m_Globals[(size_t)instr.Arg0];
         if (global.IsConstant)
             return RuntimeState::WritingOnConstantGlobal;
-        global.Value = frame.Stack.Back();
+        global.Value = frame.Stack.Top();
     } break;
     case InstructionCode::Pack: {
         Value::List list;
@@ -364,36 +360,33 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
             if (frame.Stack.Size() < packing)
                 return RuntimeState::StackUnderflow;
             for (size_t i = 0; i < packing; i++) {
-                list.Prepend(std::move(frame.Stack.Back()));
-                frame.Stack.PopBack();
+                list.Prepend(frame.Stack.Pop());
             }
         }
-        frame.Stack.EmplaceBack()
-            .SetList(std::move(list));
+        frame.Stack.EmplaceList(std::move(list));
     } break;
     case InstructionCode::Pop: {
         size_t popCount = (size_t)(instr.Arg0 > 0 ? instr.Arg0 : 1);
         if (frame.Stack.Size() < popCount)
             return RuntimeState::StackUnderflow;
         for (size_t i = 0; i < popCount; i++)
-            frame.Stack.PopBack();
+            frame.Stack.Pop();
     } break;
     case InstructionCode::Swap: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value back(std::move(frame.Stack.Back()));
-        size_t secondToLastIdx = frame.Stack.Size()-2;
-        frame.Stack.Back() = std::move(frame.Stack[secondToLastIdx]);
-        frame.Stack[secondToLastIdx] = std::move(back);
+        Value tmp(frame.Stack[-1]);
+        frame.Stack[-1] = std::move(frame.Stack[-2]);
+        frame.Stack[-2] = std::move(tmp);
     } break;
     case InstructionCode::Dup: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
         size_t dupCount = (size_t)(instr.Arg0 > 0 ? instr.Arg0 : 1);
-        Value val(frame.Stack.Back());
+        Value val(frame.Stack.Top());
         for (size_t i = 0; i < dupCount-1; i++)
-            frame.Stack.PushBack(val);
-        frame.Stack.EmplaceBack(std::move(val));
+            frame.Stack.Push(val);
+        frame.Stack.Push(std::move(val));
     } break;
     case InstructionCode::Call: {
         int64_t funcIdx = instr.Arg0;
@@ -433,8 +426,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::ICall: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
-        Value funcIdxValue = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
+        Value funcIdxValue = frame.Stack.Pop();
         if (funcIdxValue.Type() == ValueType::FunctionReference) {
             int64_t funcIdx = funcIdxValue.AsInteger();
             if (funcIdx < 0 || (size_t)funcIdx >= m_Module.Functions.Size())
@@ -466,9 +458,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::DynSum: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value b = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
-        Value& a = frame.Stack.Back();
+        Value  b = frame.Stack.Pop();
+        Value& a = frame.Stack.Top();
         if (!IsNumericValueType(a.Type()) || !IsNumericValueType(b.Type()))
             return RuntimeState::TypeError;
         if (a.Type() == ValueType::Double || b.Type() == ValueType::Double) {
@@ -480,9 +471,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::DynSub: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value b = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
-        Value& a = frame.Stack.Back();
+        Value  b = frame.Stack.Pop();
+        Value& a = frame.Stack.Top();
         if (!IsNumericValueType(a.Type()) || !IsNumericValueType(b.Type()))
             return RuntimeState::TypeError;
         if (a.Type() == ValueType::Double || b.Type() == ValueType::Double) {
@@ -494,9 +484,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::DynMul: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value b = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
-        Value& a = frame.Stack.Back();
+        Value  b = frame.Stack.Pop();
+        Value& a = frame.Stack.Top();
         if (!IsNumericValueType(a.Type()) || !IsNumericValueType(b.Type()))
             return RuntimeState::TypeError;
         if (a.Type() == ValueType::Double || b.Type() == ValueType::Double) {
@@ -508,9 +497,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::DynDiv: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value b = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
-        Value& a = frame.Stack.Back();
+        Value  b = frame.Stack.Pop();
+        Value& a = frame.Stack.Top();
         if (!IsNumericValueType(a.Type()) || !IsNumericValueType(b.Type()))
             return RuntimeState::TypeError;
         if (a.Type() == ValueType::Double || b.Type() == ValueType::Double) {
@@ -522,9 +510,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::Mod: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value b = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
-        Value& a = frame.Stack.Back();
+        Value  b = frame.Stack.Pop();
+        Value& a = frame.Stack.Top();
         if (a.Type() != ValueType::Integer || b.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
         a.SetInteger(a.AsInteger() % b.AsInteger());
@@ -532,9 +519,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::BitAnd: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value b = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
-        Value& a = frame.Stack.Back();
+        Value  b = frame.Stack.Pop();
+        Value& a = frame.Stack.Top();
         if (a.Type() != ValueType::Integer || b.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
         a.SetInteger(a.AsInteger() & b.AsInteger());
@@ -542,9 +528,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::BitOr: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value b = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
-        Value& a = frame.Stack.Back();
+        Value  b = frame.Stack.Pop();
+        Value& a = frame.Stack.Top();
         if (a.Type() != ValueType::Integer || b.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
         a.SetInteger(a.AsInteger() | b.AsInteger());
@@ -552,7 +537,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::BitNot: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
-        Value& a = frame.Stack.Back();
+        Value& a = frame.Stack.Top();
         if (a.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
         a.SetInteger(~a.AsInteger());
@@ -560,9 +545,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::BitXor: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value b = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
-        Value& a = frame.Stack.Back();
+        Value  b = frame.Stack.Pop();
+        Value& a = frame.Stack.Top();
         if (a.Type() != ValueType::Integer || b.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
         a.SetInteger(a.AsInteger() ^ b.AsInteger());
@@ -570,9 +554,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::BitShiftLeft: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value b = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
-        Value& a = frame.Stack.Back();
+        Value  b = frame.Stack.Pop();
+        Value& a = frame.Stack.Top();
         if (a.Type() != ValueType::Integer || b.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
         constexpr int64_t BITS_OF_INT = 8*sizeof(b.AsInteger());
@@ -590,9 +573,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::BitShiftRight: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value b = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
-        Value& a = frame.Stack.Back();
+        Value  b = frame.Stack.Pop();
+        Value& a = frame.Stack.Top();
         if (a.Type() != ValueType::Integer || b.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
         constexpr int64_t BITS_OF_INT = 8*sizeof(b.AsInteger());
@@ -611,7 +593,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::Floor: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
-        Value& val = frame.Stack.Back();
+        Value& val = frame.Stack.Top();
         if (!IsNumericValueType(val.Type()))
             return RuntimeState::TypeError;
         if (val.Type() == ValueType::Double)
@@ -620,7 +602,7 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::Ceil: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
-        Value& val = frame.Stack.Back();
+        Value& val = frame.Stack.Top();
         if (!IsNumericValueType(val.Type()))
             return RuntimeState::TypeError;
         if (val.Type() == ValueType::Double)
@@ -629,9 +611,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::Compare: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value b = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
-        Value& a = frame.Stack.Back();
+        Value  b = frame.Stack.Pop();
+        Value& a = frame.Stack.Top();
 
         if (IsNumericValueType(a.Type()) && IsNumericValueType(b.Type())) {
             if (a.Type() == ValueType::Double || b.Type() == ValueType::Double) {
@@ -649,9 +630,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::Equals: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value b = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
-        Value& a = frame.Stack.Back();
+        Value  b = frame.Stack.Pop();
+        Value& a = frame.Stack.Top();
         a.SetInteger(a == b ? 1 : 0);
     } break;
     case InstructionCode::J:
@@ -665,10 +645,9 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::JLEZ: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
-        Value truthValue = std::move(frame.Stack.Back());
+        Value truthValue = frame.Stack.Pop();
         if (!IsNumericValueType(truthValue.Type()))
             return RuntimeState::TypeError;
-        frame.Stack.PopBack();
         // TODO: Check for bounds (maybe not)
         if (truthValue.Type() == ValueType::Double) {
             if (ShouldJump(instr.Code, truthValue.AsDouble()))
@@ -679,38 +658,37 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::Length: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
-        const Value& list = frame.Stack.Back();
+        const Value& list = frame.Stack.Top();
         if (list.Type() == ValueType::List) {
             Value len;
             len.SetInteger((int64_t)list.AsList().Length());
-            frame.Stack.EmplaceBack(std::move(len));
+            frame.Stack.Push(std::move(len));
         } else if (list.Type() == ValueType::String) {
             Value len;
             len.SetInteger((int64_t)list.AsString().Length());
-            frame.Stack.EmplaceBack(std::move(len));
+            frame.Stack.Push(std::move(len));
         } else return RuntimeState::TypeError;
     } break;
     case InstructionCode::IsEmpty: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
-        const Value& list = frame.Stack.Back();
+        const Value& list = frame.Stack.Top();
         Value isEmpty;
         if (list.Type() == ValueType::List) {
             isEmpty.SetInteger(list.AsList().Front() ? 0 : 1);
         } else if (list.Type() == ValueType::String) {
             isEmpty.SetInteger(list.AsString().Length() == 0 ? 1 : 0);
         } else return RuntimeState::TypeError;
-        frame.Stack.EmplaceBack(std::move(isEmpty));
+        frame.Stack.Push(std::move(isEmpty));
     } break;
     case InstructionCode::PushEmptyList:
-        frame.Stack.EmplaceBack().SetList(Value::List());
+        frame.Stack.EmplaceList();
         break;
     case InstructionCode::Prepend: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value toPrepend = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
-        Value& list = frame.Stack.Back();
+        Value toPrepend = frame.Stack.Pop();
+        Value& list = frame.Stack.Top();
         if (list.Type() == ValueType::List) {
             list.AsList().Prepend(std::move(toPrepend));
         } else if (list.Type() == ValueType::String) {
@@ -729,9 +707,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::Append: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value toAppend = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
-        Value& list = frame.Stack.Back();
+        Value toAppend = frame.Stack.Pop();
+        Value& list = frame.Stack.Top();
         if (list.Type() == ValueType::List) {
             list.AsList().Append(std::move(toAppend));
         } else if (list.Type() == ValueType::String) {
@@ -745,9 +722,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::Concat: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value toConcat = std::move(frame.Stack.Back());
-        frame.Stack.PopBack();
-        Value& list = frame.Stack.Back();
+        Value toConcat = frame.Stack.Pop();
+        Value& list = frame.Stack.Top();
         if (toConcat.Type() == ValueType::List && list.Type() == ValueType::List) {
             list.AsList().Concat(std::move(toConcat.AsList()));
         } else return RuntimeState::TypeError;
@@ -755,19 +731,19 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::Head: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
-        Value& list = frame.Stack.Back();
+        Value& list = frame.Stack.Top();
         if (list.Type() == ValueType::List) {
             Value::List::Node* node = list.AsList().Front();
             if (!node) return RuntimeState::ListIndexOutOfBounds;
             Value val(std::move(node->Value()));
             list.AsList().RemoveFront(1);
-            frame.Stack.PushBack(std::move(val));
+            frame.Stack.Push(std::move(val));
         } else return RuntimeState::TypeError;
     } break;
     case InstructionCode::Tail: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
-        Value& list = frame.Stack.Back();
+        Value& list = frame.Stack.Top();
         if (list.Type() == ValueType::List) {
             list.AsList().RemoveFront(1);
         } else return RuntimeState::TypeError;
@@ -775,24 +751,22 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::Unpack: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
-        if (frame.Stack.Back().Type() != ValueType::List)
+        Value listToUnpack = frame.Stack.Pop();
+        if (listToUnpack.Type() != ValueType::List)
             return RuntimeState::TypeError;
-
-        Value::List listToUnpack = std::move(frame.Stack.Back()).AsList();
-        frame.Stack.PopBack();
 
         // If Arg0 <= 0, pop list
         if (instr.Arg0 > 0) {
             size_t unpackCount = (size_t)instr.Arg0;
 
-            Value::List::Node* node = listToUnpack.Back();
+            Value::List::Node* node = listToUnpack.AsList().Back();
             for (size_t i = 1; i < unpackCount && node; i++) {
                 node = node->Prev();
             }
 
             for (size_t i = 0; i < unpackCount; i++) {
                 if (!node) return RuntimeState::ListIndexOutOfBounds;
-                frame.Stack.PushBack(std::move(node->Value()));
+                frame.Stack.Push(std::move(node->Value()));
                 node = node->Next();
             }
         }
@@ -800,8 +774,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::Index: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value& list = frame.Stack[frame.Stack.Size()-2];
-        Value& index = frame.Stack[frame.Stack.Size()-1];
+        Value& list = frame.Stack[-2];
+        Value& index = frame.Stack[-1];
         if (index.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
 
@@ -824,8 +798,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::Prefix: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value& str = frame.Stack[frame.Stack.Size()-2];
-        Value& length = frame.Stack[frame.Stack.Size()-1];
+        Value& str = frame.Stack[-2];
+        Value& length = frame.Stack[-1];
         if (length.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
 
@@ -845,8 +819,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::Suffix: {
         if (frame.Stack.Size() < 2)
             return RuntimeState::StackUnderflow;
-        Value& str = frame.Stack[frame.Stack.Size()-2];
-        Value& length = frame.Stack[frame.Stack.Size()-1];
+        Value& str = frame.Stack[-2];
+        Value& length = frame.Stack[-1];
         if (length.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
 
@@ -866,14 +840,13 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::Substr: {
         if (frame.Stack.Size() < 3)
             return RuntimeState::StackUnderflow;
-        Value endIdx = frame.Stack.Back();
+        Value endIdx = frame.Stack.Pop();
         if (endIdx.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
-        frame.Stack.PopBack();
-        Value& startIdx = frame.Stack[frame.Stack.Size()-1];
+        Value& startIdx = frame.Stack[-1];
         if (startIdx.Type() != ValueType::Integer)
             return RuntimeState::TypeError;
-        Value& str = frame.Stack[frame.Stack.Size()-2];
+        Value& str = frame.Stack[-2];
 
         if (str.Type() == ValueType::String) {
             if (startIdx.AsInteger() < 0 || endIdx.AsInteger() < 0)
@@ -895,9 +868,8 @@ Pulsar::RuntimeState Pulsar::ExecutionContext::ExecuteInstruction(Frame& frame)
     case InstructionCode::IsCustom: {
         if (frame.Stack.Size() < 1)
             return RuntimeState::StackUnderflow;
-        ValueType valueType = frame.Stack.Back().Type();
-        frame.Stack.EmplaceBack()
-            .SetInteger(_InstrTypeCheck(instr.Code, valueType) ? 1 : 0);
+        ValueType valueType = frame.Stack.Top().Type();
+        frame.Stack.EmplaceInteger(_InstrTypeCheck(instr.Code, valueType) ? 1 : 0);
     } break;
     }
 

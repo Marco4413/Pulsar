@@ -24,8 +24,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Lexer::FFromFile(Pulsar::ExecutionCo
 
     std::filesystem::path fsPath(filePath.AsString().CString());
     if (!std::filesystem::exists(fsPath)) {
-        frame.Stack.EmplaceBack()
-            .SetCustom({ lexerTypeId });
+        frame.Stack.EmplaceCustom({ lexerTypeId, nullptr });
         return Pulsar::RuntimeState::OK;
     }
 
@@ -35,13 +34,11 @@ Pulsar::RuntimeState PulsarTools::Bindings::Lexer::FFromFile(Pulsar::ExecutionCo
     Pulsar::String source;
     source.Resize(fileSize);
     if (!file.read(source.Data(), fileSize)) {
-        frame.Stack.EmplaceBack()
-            .SetCustom({ lexerTypeId });
+        frame.Stack.EmplaceCustom({ lexerTypeId, nullptr });
         return Pulsar::RuntimeState::OK;
     }
 
-    frame.Stack.EmplaceBack()
-        .SetCustom({ .Type=lexerTypeId, .Data=LexerType::Ref::New(std::move(source)) });
+    frame.Stack.EmplaceCustom({ lexerTypeId, LexerType::Ref::New(std::move(source)) });
     return Pulsar::RuntimeState::OK;
 }
 
@@ -73,8 +70,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Lexer::FNextToken(Pulsar::ExecutionC
             tokenAsList.Append()->Value().SetString(token.StringVal);
     }
 
-    frame.Stack.EmplaceBack()
-        .SetList(std::move(tokenAsList));
+    frame.Stack.EmplaceList(std::move(tokenAsList));
     return Pulsar::RuntimeState::OK;
 }
 
@@ -87,6 +83,6 @@ Pulsar::RuntimeState PulsarTools::Bindings::Lexer::FIsValid(Pulsar::ExecutionCon
         return Pulsar::RuntimeState::TypeError;
 
     LexerType::Ref lexer = lexerReference.AsCustom().As<LexerType>();
-    frame.Stack.EmplaceBack().SetInteger(lexer ? 1 : 0);
+    frame.Stack.EmplaceInteger(lexer ? 1 : 0);
     return Pulsar::RuntimeState::OK;
 }

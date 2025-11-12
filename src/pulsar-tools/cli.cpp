@@ -346,13 +346,13 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
     auto startTime = std::chrono::steady_clock::now();
 
     Pulsar::ExecutionContext context(module);
-    Pulsar::ValueStack& stack = context.GetStack();
+    Pulsar::Stack& stack = context.GetStack();
     { // Push argv into the Stack.
         Pulsar::Value::List argList;
         argList.Append()->Value().SetString((*input.FilePath).c_str());
         for (const std::string& arg : *input.Args)
             argList.Append()->Value().SetString(arg.c_str());
-        stack.EmplaceBack().SetList(std::move(argList));
+        stack.EmplaceList(std::move(argList));
     }
 
     auto functionCallState = context.CallFunction((*runtimeOptions.EntryPoint).c_str());

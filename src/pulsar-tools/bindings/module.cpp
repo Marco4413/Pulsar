@@ -21,21 +21,18 @@ Pulsar::RuntimeState PulsarTools::Bindings::Module::FFromFile(Pulsar::ExecutionC
     Pulsar::Parser parser;
     auto result = parser.AddSourceFile(modulePath.AsString());
     if (result != Pulsar::ParseResult::OK) {
-        frame.Stack.EmplaceBack()
-            .SetCustom({ moduleTypeId });
+        frame.Stack.EmplaceCustom({ moduleTypeId, nullptr });
         return Pulsar::RuntimeState::OK;
     }
     
     ModuleType::Ref module = ModuleType::Ref::New();
     result = parser.ParseIntoModule(*module, Pulsar::ParseSettings_Default);
     if (result != Pulsar::ParseResult::OK) {
-        frame.Stack.EmplaceBack()
-            .SetCustom({ moduleTypeId });
+        frame.Stack.EmplaceCustom({ moduleTypeId, nullptr });
         return Pulsar::RuntimeState::OK;
     }
 
-    frame.Stack.EmplaceBack()
-        .SetCustom({ .Type=moduleTypeId, .Data=module });
+    frame.Stack.EmplaceCustom({ moduleTypeId, module });
     return Pulsar::RuntimeState::OK;
 }
 
@@ -55,9 +52,9 @@ Pulsar::RuntimeState PulsarTools::Bindings::Module::FRun(Pulsar::ExecutionContex
     if (runtimeState != Pulsar::RuntimeState::OK)
         return runtimeState;
 
-    Pulsar::Value::List retValues(std::move(context.GetStack()));
-    frame.Stack.EmplaceBack()
-        .SetList(std::move(retValues));
+    Pulsar::Value::List returnValues;
+    for (Pulsar::Value& value : context.GetStack()) returnValues.Append(std::move(value));
+    frame.Stack.EmplaceList(std::move(returnValues));
     return Pulsar::RuntimeState::OK;
 }
 
@@ -70,7 +67,6 @@ Pulsar::RuntimeState PulsarTools::Bindings::Module::FIsValid(Pulsar::ExecutionCo
         return Pulsar::RuntimeState::TypeError;
 
     ModuleType::Ref module = moduleRef.AsCustom().As<ModuleType>();
-    frame.Stack.EmplaceBack()
-        .SetInteger(module ? 1 : 0);
+    frame.Stack.EmplaceInteger(module ? 1 : 0);
     return Pulsar::RuntimeState::OK;
 }
