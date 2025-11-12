@@ -19,7 +19,7 @@ namespace PulsarTools::Bindings
         struct ChannelData
         {
             // FIFO List
-            Pulsar::ValueList Pipe;
+            Pulsar::Value::List Pipe;
             bool IsClosed = false;
             std::mutex Mutex;
             std::condition_variable CV;
@@ -84,7 +84,7 @@ namespace PulsarTools::Bindings
         static Pulsar::RuntimeState FIsAlive(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
         static Pulsar::RuntimeState FIsValid(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
 
-        static void Join(Pulsar::SharedRef<ThreadData> thread, Pulsar::ValueStack& stack);
+        static void Join(Pulsar::SharedRef<ThreadData> thread, Pulsar::Stack& stack);
     };
 }
 

@@ -1,6 +1,6 @@
 #include "cpulsar/platform.h"
 
-#include <pulsar/platform.h>
+#include "pulsar/platform.h"
 
 #if    defined(CPULSAR_PLATFORM_WINDOWS) != defined(PULSAR_PLATFORM_WINDOWS) \
     || defined(CPULSAR_PLATFORM_MACOSX)  != defined(PULSAR_PLATFORM_MACOSX)  \

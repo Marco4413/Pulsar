@@ -23,7 +23,7 @@ void PulsarTools::IBinding::BindTypes(Pulsar::Module& module) const
         dep->BindTypes(module);
     }
     for (const auto& customType : m_CustomTypesPool) {
-        module.BindCustomType(customType.Name, customType.DataFactory);
+        module.BindCustomType(customType.Name, customType.GlobalDataFactory);
     }
 }
 

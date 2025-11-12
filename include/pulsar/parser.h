@@ -5,6 +5,7 @@
 
 #include "pulsar/lexer.h"
 #include "pulsar/runtime.h"
+#include "pulsar/parser/scopes.h"
 #include "pulsar/structures/hashmap.h"
 #include "pulsar/structures/list.h"
 
@@ -52,56 +53,6 @@ namespace Pulsar
         { "jlez!",      { InstructionCode::JLEZ      } },
     };
 
-    struct SkippableBlock
-    {
-        const bool AllowBreak = false;
-        const bool AllowContinue = false;
-        // Used for back-patching jump addresses.
-        List<size_t> BreakStatements = List<size_t>();
-        List<size_t> ContinueStatements = List<size_t>();
-    };
-
-    struct GlobalScope
-    {
-        // Path -> Idx map
-        HashMap<String, size_t> SourceDebugSymbols;
-        // Name -> Idx maps
-        HashMap<String, size_t> Functions;
-        HashMap<String, size_t> NativeFunctions;
-        HashMap<String, size_t> Globals;
-    };
-
-    struct FunctionScope
-    {
-        struct Label
-        {
-            Token Label;
-            size_t CodeDstIdx;
-        };
-
-        struct LabelBackPatch
-        {
-            Token Label;
-            size_t CodeIdx;
-        };
-
-        HashMap<String, Label> Labels;
-        List<LabelBackPatch> LabelUsages;
-    };
-
-    struct LocalScope
-    {
-        struct LocalVar
-        {
-            String Name;
-            SourcePosition DeclaredAt;
-        };
-
-        const GlobalScope& Global;
-        FunctionScope* const Function;
-        List<LocalVar> Locals = List<LocalVar>();
-    };
-
     enum class ParseResult
     {
         OK = 0,
@@ -126,7 +77,14 @@ namespace Pulsar
         TerminatedByNotification,
     };
 
-    const char* ParseResultToString(ParseResult presult);
+    enum class ParseWarning
+    {
+        None = 0,
+        DuplicateFunctionNames,
+    };
+
+    const char* ParseResultToString(ParseResult result);
+    const char* ParseWarningToString(ParseWarning warning);
 
     struct ParserNotifications
     {
@@ -269,10 +227,14 @@ namespace Pulsar
             String Message;
         };
 
-        struct WarningMessage : Message {};
         struct ErrorMessage : Message
         {
             ParseResult Reason;
+        };
+
+        struct WarningMessage : Message
+        {
+            ParseWarning Reason;
         };
 
     public:
@@ -291,8 +253,8 @@ namespace Pulsar
         const String* GetSourceFromIndex(size_t sourceIndex) const;
         const String* GetPathFromIndex(size_t sourceIndex) const;
 
-        void EmitWarning(const Token& token, const String& message);
-        ParseResult SetError(ParseResult result, const Token& token, const String& message);
+        void EmitWarning(ParseWarning reason, const Token& token, const String& message);
+        ParseResult SetError(ParseResult reason, const Token& token, const String& message);
         void ClearError();
 
     public:

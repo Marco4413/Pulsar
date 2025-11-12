@@ -17,7 +17,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Debug::FStackDump(Pulsar::ExecutionC
     std::string dump("Stack Dump: [");
     for (size_t i = 0; i < frame.Stack.Size(); i++) {
         if (i > 0) dump += ',';
-        dump += fmt::format(" {}", frame.Stack[i]);
+        dump += fmt::format(" {}", frame.Stack[i].ToRepr({ .Module = &eContext.GetModule() }));
     }
     dump += " ]";
     fmt::println(stdout, "{}", dump);

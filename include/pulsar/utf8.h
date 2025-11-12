@@ -19,21 +19,16 @@ namespace UTF8
     constexpr bool IsValidCodepoint(Codepoint code) { return Unicode::IsValidCodepoint(code); }
 
     constexpr size_t MAX_ENCODED_SIZE = 4;
-    constexpr size_t GetEncodedSize(Codepoint code)
-    {
-        if (code <= 0x7F) return 1;
-        else if (code <= 0x7FF) return 2;
-        else if (code <= 0xFFFF) return 3;
-        return 4;
-    }
+    constexpr size_t GetEncodedSize(Codepoint code) { return Unicode::GetUTF8EncodedSize(code); }
 
     Pulsar::String Encode(Codepoint code);
 
     class Decoder
     {
     public:
-        Decoder(StringView data) :
-            m_Data(data)
+        Decoder(StringView data)
+            : m_DataStart(data.Data())
+            , m_Data(data)
         {}
 
         Decoder(const Decoder&) = default;
@@ -48,7 +43,7 @@ namespace UTF8
         bool IsInvalidEncoding() const { return m_IsInvalidEncoding; }
 
         size_t GetRemainingBytes() const    { return m_Data.Length(); }
-        size_t GetDecodedBytes() const      { return m_Data.GetStart(); }
+        size_t GetDecodedBytes() const      { return static_cast<size_t>(m_Data.Data()-m_DataStart); }
         size_t GetDecodedCodepoints() const { return m_DecodedCodepoints; }
 
         StringView Data() const { return m_Data; }
@@ -58,31 +53,11 @@ namespace UTF8
         Codepoint Peek();
         size_t Skip();
 
-        Codepoint Peek() const
-        {
-            // == PEEK CACHE == //
-            if (m_PeekedCodepoint != 0)
-                return m_PeekedCodepoint;
-            // == PEEK CACHE == //
-            Decoder decoder = *this;
-            return decoder.Next();
-        }
-
-        Codepoint Peek(size_t lookAhead) const
-        {
-            if (lookAhead == 0) {
-                return '\0';
-            } else if (lookAhead == 1) {
-                return Peek();
-            }
-
-            Decoder decoder = *this;
-            for (size_t i = 1; i < lookAhead && decoder; ++i)
-                decoder.Skip();
-            return decoder.Next();
-        }
+        Codepoint Peek() const;
+        Codepoint Peek(size_t lookAhead) const;
 
     private:
+        const char* m_DataStart;
         StringView m_Data;
 
         Codepoint m_PeekedCodepoint = 0;

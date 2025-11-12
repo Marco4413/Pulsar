@@ -65,6 +65,9 @@ namespace Pulsar
     public:
         using Self = LinkedList<T>;
         using Node = LinkedListNode<T>;
+        // Forward Declarations
+        class ConstIterator;
+        class MutableIterator;
 
         LinkedList() = default;
         ~LinkedList() { PULSAR_DELETE(Node, m_Start); }
@@ -72,15 +75,13 @@ namespace Pulsar
         explicit LinkedList(const List<T>& list)
             : LinkedList()
         {
-            for (size_t i = 0; i < list.Size(); i++)
-                Append(list[i]);
+            for (const T& v : list) Append(v);
         }
 
         explicit LinkedList(List<T>&& list)
             : LinkedList()
         {
-            for (size_t i = 0; i < list.Size(); i++)
-                Append(std::move(list[i]));
+            for (T& v : list) Append(std::move(v));
             list.Clear();
         }
 
@@ -230,6 +231,70 @@ namespace Pulsar
 
         void Clear()          { PULSAR_DELETE(Node, m_Start); m_Start = nullptr; m_End = nullptr; }
         size_t Length() const { return m_Start ? m_Start->Length() : 0; }
+
+        ConstIterator Begin() const { return ConstIterator(m_Start); }
+        ConstIterator End()   const { return ConstIterator(nullptr); }
+        MutableIterator Begin() { return MutableIterator(m_Start); }
+        MutableIterator End()   { return MutableIterator(nullptr); }
+
+        PULSAR_ITERABLE_IMPL(Self, ConstIterator, MutableIterator)
+
+    public:
+        class ConstIterator
+        {
+        public:
+            explicit ConstIterator(const Node* node)
+                : m_Node(node) {}
+
+            bool operator==(const ConstIterator& other) const = default;
+            bool operator!=(const ConstIterator& other) const = default;
+            const T& operator*() const { return m_Node->Value(); }
+
+            ConstIterator& operator++()
+            {
+                PULSAR_ASSERT(m_Node, "Called ++LinkedList<T>::ConstIterator on complete iterator.");
+                m_Node = m_Node->Next();
+                return *this;
+            }
+
+            ConstIterator operator++(int)
+            {
+                ConstIterator ret = *this;
+                ++(*this);
+                return ret;
+            }
+        private:
+            const Node* m_Node;
+        };
+
+        class MutableIterator
+        {
+        public:
+            MutableIterator(Node* node)
+                : m_Node(node) {}
+
+            bool operator==(const MutableIterator& other) const = default;
+            bool operator!=(const MutableIterator& other) const = default;
+            T& operator*()             { return m_Node->Value(); }
+            const T& operator*() const { return m_Node->Value(); }
+
+            MutableIterator& operator++()
+            {
+                PULSAR_ASSERT(m_Node, "Called ++LinkedList<T>::MutableIterator on complete iterator.");
+                m_Node = m_Node->Next();
+                return *this;
+            }
+
+            MutableIterator operator++(int)
+            {
+                MutableIterator ret = *this;
+                ++(*this);
+                return ret;
+            }
+        private:
+            Node* m_Node;
+        };
+
     private:
         Node* m_Start = nullptr;
         Node* m_End = nullptr;

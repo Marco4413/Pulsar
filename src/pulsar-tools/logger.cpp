@@ -1,6 +1,6 @@
 #include "pulsar-tools/logger.h"
 
-#include "fmt/color.h"
+#include <fmt/color.h>
 
 void PulsarTools::Logger::Info(const std::string& msg) const
 {

@@ -50,6 +50,20 @@
   #endif // PULSAR_NO_ATOMIC
 #endif // PULSAR_ATOMIC_SIZE_T
 
+#ifndef PULSAR_UNUSED
+#define PULSAR_UNUSED(...) Pulsar::Core::Unused( __VA_ARGS__ )
+#endif // PULSAR_UNUSED
+
+#define PULSAR_ITERABLE_IMPL(TSelf, TConstIterator, TMutableIterator) \
+    inline TConstIterator CBegin() const { return /* std::as_const */ static_cast<const TSelf*>(this)->Begin(); } \
+    inline TConstIterator CEnd()   const { return /* std::as_const */ static_cast<const TSelf*>(this)->End();   } \
+    inline TConstIterator begin() const { return this->Begin(); } \
+    inline TConstIterator end()   const { return this->End();   } \
+    inline TMutableIterator begin() { return this->Begin(); } \
+    inline TMutableIterator end()   { return this->End();   } \
+    inline TConstIterator cbegin() const { return this->CBegin(); } \
+    inline TConstIterator cend()   const { return this->CEnd();   }
+
 #ifndef PULSAR_MALLOC
 #define PULSAR_MALLOC(size) \
     Pulsar::Core::Malloc(size)
@@ -95,6 +109,12 @@ namespace Pulsar::Core
     void* Malloc(size_t size);
     void* Realloc(void* block, size_t newSize);
     void Free(void* block);
+
+    template<typename ...Args>
+    inline constexpr void Unused(const Args& ...args)
+    {
+        ((void)args, ...);
+    }
 
     // New and Delete that strictly use PULSAR_ macros to allocate memory
     template<typename T, typename ...Args>

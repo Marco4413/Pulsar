@@ -7,21 +7,21 @@ Pulsar::BaseOptimizerSettings::IsExportedNativeFn   Pulsar::BaseOptimizerSetting
 Pulsar::BaseOptimizerSettings::IsExportedGlobalFn   Pulsar::BaseOptimizerSettings::CreateReachableGlobalsFilter(const Module& module, const List<StringView>& exportedNames)   { return CreateReachableDefinitionFilterFor(module.Globals, exportedNames); }
 Pulsar::BaseOptimizerSettings::IsExportedGlobalFn   Pulsar::BaseOptimizerSettings::CreateReachableGlobalsFilter(const Module& module, const List<String>& exportedNames)       { return CreateReachableDefinitionFilterFor(module.Globals, exportedNames); }
 
-void Pulsar::UnusedOptimizer::Optimize(Module& module, const Settings& settings)
+bool Pulsar::UnusedOptimizer::Optimize(Module& module, const Settings& settings)
 {
-    MarkReachables(module, settings);
+    if (!MarkReachables(module, settings)) return false;
     RemoveUnreachable(module);
     RemapIndices(module);
+    return true;
 }
 
-void Pulsar::UnusedOptimizer::MarkReachables(const Module& module, const Settings& settings)
+bool Pulsar::UnusedOptimizer::MarkReachables(const Module& module, const Settings& settings)
 {
-    // TODO: Graceful bounds checking
-#define MARK_REACHABLE(reachable, name)                                                 \
-    do {                                                                                \
-        size_t index = static_cast<size_t>(instruction.Arg0);                           \
-        PULSAR_ASSERT(index < (reachable).Size(), "Index out of bounds for " name "."); \
-        (reachable)[index] = true;                                                      \
+#define MARK_REACHABLE(reachable, name)                       \
+    do {                                                      \
+        size_t index = static_cast<size_t>(instruction.Arg0); \
+        if (index >= (reachable).Size()) return false;        \
+        (reachable)[index] = true;                            \
     } while (0)
 
     m_ReachableFunctions.Clear();
@@ -89,6 +89,7 @@ void Pulsar::UnusedOptimizer::MarkReachables(const Module& module, const Setting
         }
     }
 
+    return true;
 #undef MARK_REACHABLE
 }
 

@@ -3,15 +3,15 @@
 
 #include "pulsar/runtime.h"
 
-class CustomTypeDataBuffer final :
-    public Pulsar::CustomTypeData
+class CustomTypeGlobalDataBuffer final :
+    public Pulsar::CustomTypeGlobalData
 {
 public:
-    CustomTypeDataBuffer(CPulsar_CBuffer buffer) :
+    CustomTypeGlobalDataBuffer(CPulsar_CBuffer buffer) :
         m_Buffer(buffer)
     {}
 
-    ~CustomTypeDataBuffer()
+    ~CustomTypeGlobalDataBuffer()
     {
         if (m_Buffer.Free) {
             m_Buffer.Free(m_Buffer.Data);
@@ -22,7 +22,7 @@ public:
     {
         if (!m_Buffer.Copy)
             return nullptr;
-        return Pulsar::SharedRef<CustomTypeDataBuffer>::New(CPulsar_CBuffer{
+        return Pulsar::SharedRef<CustomTypeGlobalDataBuffer>::New(CPulsar_CBuffer{
             .Data = m_Buffer.Copy(m_Buffer.Data),
             .Free = m_Buffer.Free,
             .Copy = m_Buffer.Copy,
@@ -59,21 +59,21 @@ private:
 extern "C"
 {
 
-CPULSAR_API CPulsar_CustomTypeData_Ref CPULSAR_CALL CPulsar_CustomTypeData_Ref_FromBuffer(CPulsar_CBuffer buffer)
+CPULSAR_API CPulsar_CustomTypeGlobalData_Ref CPULSAR_CALL CPulsar_CustomTypeGlobalData_Ref_FromBuffer(CPulsar_CBuffer buffer)
 {
-    auto ref = Pulsar::SharedRef<CustomTypeDataBuffer>::New(buffer);
-    return CPULSAR_REF(CPulsar_CustomTypeData_Ref_S, *PULSAR_NEW(Pulsar::CustomTypeData::Ref, ref));
+    auto ref = Pulsar::SharedRef<CustomTypeGlobalDataBuffer>::New(buffer);
+    return CPULSAR_REF(CPulsar_CustomTypeGlobalData_Ref_S, *PULSAR_NEW(Pulsar::CustomTypeGlobalData::Ref, ref));
 }
 
-CPULSAR_API CPulsar_CBuffer* CPULSAR_CALL CPulsar_CustomTypeData_Ref_GetBuffer(CPulsar_CustomTypeData_Ref _self)
+CPULSAR_API CPulsar_CBuffer* CPULSAR_CALL CPulsar_CustomTypeGlobalData_Ref_GetBuffer(CPulsar_CustomTypeGlobalData_Ref _self)
 {
-    auto bufferData = CPULSAR_DEREF(Pulsar::CustomTypeData::Ref, _self).CastTo<CustomTypeDataBuffer>();
+    auto bufferData = CPULSAR_DEREF(Pulsar::CustomTypeGlobalData::Ref, _self).CastTo<CustomTypeGlobalDataBuffer>();
     return bufferData ? &bufferData->GetBuffer() : NULL;
 }
 
-CPULSAR_API void CPULSAR_CALL CPulsar_CustomTypeData_Ref_Delete(CPulsar_CustomTypeData_Ref _self)
+CPULSAR_API void CPULSAR_CALL CPulsar_CustomTypeGlobalData_Ref_Delete(CPulsar_CustomTypeGlobalData_Ref _self)
 {
-    PULSAR_DELETE(Pulsar::CustomTypeData::Ref, &CPULSAR_DEREF(Pulsar::CustomTypeData::Ref, _self));
+    PULSAR_DELETE(Pulsar::CustomTypeGlobalData::Ref, &CPULSAR_DEREF(Pulsar::CustomTypeGlobalData::Ref, _self));
 }
 
 CPULSAR_API CPulsar_CustomDataHolder_Ref CPULSAR_CALL CPulsar_CustomDataHolder_Ref_FromBuffer(CPulsar_CBuffer buffer)

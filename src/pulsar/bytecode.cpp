@@ -79,7 +79,7 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadList(IReader& reader, L
 
 Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadString(IReader& reader, String& out, bool requireValidUTF8, const ReadSettings& settings)
 {
-    (void)settings;
+    PULSAR_UNUSED(settings);
     uint64_t length = 0;
     if (!reader.ReadU64(length))
         return ReadResult::UnexpectedEOF;
@@ -103,12 +103,15 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadSized(IReader& reader, 
     uint64_t size = 0;
     if (!reader.ReadU64(size))
         return ReadResult::UnexpectedEOF;
+
     List<uint8_t> data;
     data.Resize((size_t)size);
     if (!reader.ReadData((uint64_t)data.Size(), (uint8_t*)data.Data()))
         return ReadResult::UnexpectedEOF;
-    ByteReader byteReader(std::move(data));
+
+    ByteReader byteReader(data.Size(), data.Data());
     RETURN_IF_NOT_OK(func(byteReader, settings));
+
     return byteReader.IsAtEndOfFile()
         ? ReadResult::OK
         : ReadResult::DataNotConsumed;
@@ -116,7 +119,7 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadSized(IReader& reader, 
 
 Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadSourcePosition(IReader& reader, SourcePosition& out, const ReadSettings& settings)
 {
-    (void)settings;
+    PULSAR_UNUSED(settings);
     uint64_t line;
     if (!reader.ReadU64(line))
         return ReadResult::UnexpectedEOF;
@@ -167,7 +170,7 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadBlockDebugSymbol(IReade
 
 Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadInstruction(IReader& reader, Instruction& out, const ReadSettings& settings)
 {
-    (void)settings;
+    PULSAR_UNUSED(settings);
     uint8_t instrCode = 0;
     if (!reader.ReadU8(instrCode))
         return ReadResult::UnexpectedEOF;
@@ -250,7 +253,7 @@ Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadSourceDebugSymbol(IRead
 
 Pulsar::Binary::ReadResult Pulsar::Binary::ByteCode::ReadHeader(IReader& reader, const ReadSettings& settings)
 {
-    (void)settings;
+    PULSAR_UNUSED(settings);
     char sig[SIGNATURE_LENGTH];
     if (!reader.ReadData(SIGNATURE_LENGTH, (uint8_t*)sig))
         return ReadResult::UnexpectedEOF;
@@ -371,11 +374,9 @@ bool Pulsar::Binary::ByteCode::WriteLinkedList(IWriter& writer, const LinkedList
 {
     if (!writer.WriteU64((uint64_t)list.Length()))
         return false;
-    const LinkedList<Value>::Node* next = list.Front();
-    while (next) {
-        if (!WriteValue(writer, next->Value(), settings))
+    for (const Value& v : list) {
+        if (!WriteValue(writer, v, settings))
             return false;
-        next = next->Next();
     }
     return true;
 }
@@ -426,7 +427,7 @@ bool Pulsar::Binary::ByteCode::WriteList(IWriter& writer, const List<SourceDebug
 
 bool Pulsar::Binary::ByteCode::WriteString(IWriter& writer, const String& string, const WriteSettings& settings)
 {
-    (void)settings;
+    PULSAR_UNUSED(settings);
     return writer.WriteU64((uint64_t)string.Length())
         && writer.WriteData(string.Length(), (const uint8_t*)string.Data());
 }
@@ -442,7 +443,7 @@ bool Pulsar::Binary::ByteCode::WriteSized(IWriter& writer, std::function<bool(By
 
 bool Pulsar::Binary::ByteCode::WriteSourcePosition(IWriter& writer, const SourcePosition& sourcePos, const WriteSettings& settings)
 {
-    (void)settings;
+    PULSAR_UNUSED(settings);
     return writer.WriteU64((uint64_t)sourcePos.Line)
         && writer.WriteU64((uint64_t)sourcePos.Char)
         && writer.WriteU64((uint64_t)sourcePos.Index)
@@ -469,7 +470,7 @@ bool Pulsar::Binary::ByteCode::WriteBlockDebugSymbol(IWriter& writer, const Bloc
 
 bool Pulsar::Binary::ByteCode::WriteInstruction(IWriter& writer, const Instruction& instr, const WriteSettings& settings)
 {
-    (void)settings;
+    PULSAR_UNUSED(settings);
     return writer.WriteU8((uint8_t)instr.Code)
         && writer.WriteSLEB(instr.Arg0);
 }
@@ -520,7 +521,7 @@ bool Pulsar::Binary::ByteCode::WriteSourceDebugSymbol(IWriter& writer, const Sou
 
 bool Pulsar::Binary::ByteCode::WriteHeader(IWriter& writer, const WriteSettings& settings)
 {
-    (void)settings;
+    PULSAR_UNUSED(settings);
     return writer.WriteData(SIGNATURE_LENGTH, (const uint8_t*)SIGNATURE)
         && writer.WriteU32(FORMAT_VERSION);
 }

@@ -197,15 +197,15 @@ it would be an [integer literal](#integer-literals).
 
 Currently there's no support for exponential notation (i.e. 0.1E4).
 
-#### CustomTypeData
+#### CustomTypeGlobalData
 
-*CustomTypeData* is a global kind of data which is shared across the
-whole execution context. It may be provided by native bindings.
+*CustomTypeGlobalData* is a global kind of data which is shared across
+the whole execution context. It may be provided by native bindings.
 
-*CustomTypeData* was previously used to hold information about
-custom types provided by native bindings. However, the *Custom*
-type now holds a direct reference to its data. As of now, it's
-no longer used by standard bindings.
+*CustomTypeGlobalData* was previously used to hold information
+about custom types provided by native bindings. However, the
+*Custom* type now holds a direct reference to its data. As of now,
+it's no longer used by standard bindings.
 
 ### Complex Datatypes
 

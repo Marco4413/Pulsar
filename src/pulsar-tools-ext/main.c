@@ -20,7 +20,7 @@ CPulsar_RuntimeState CPULSAR_CALL NativePrintln(CPulsar_ExecutionContext context
 }
 
 void CPULSAR_CALL ExtIntegerData_Free(void* data);
-CPulsar_CustomTypeData_Ref CPULSAR_CALL ExtIntegerData_Factory(void);
+CPulsar_CustomTypeGlobalData_Ref CPULSAR_CALL ExtIntegerData_Factory(void);
 
 void CPULSAR_CALL ExtInteger_Free(void* data);
 CPulsar_CBuffer CPULSAR_CALL ExtInteger_Create(int64_t initValue);
@@ -123,12 +123,12 @@ void* CPULSAR_CALL ExtIntegerData_Copy(void* data)
     return dataCopy;
 }
 
-CPulsar_CustomTypeData_Ref CPULSAR_CALL ExtIntegerData_Factory(void)
+CPulsar_CustomTypeGlobalData_Ref CPULSAR_CALL ExtIntegerData_Factory(void)
 {
     printf("ExtIntegerData_Factory\n");
     int64_t* data = CPulsar_Malloc(sizeof(int64_t));
     *data = 1;
-    return CPulsar_CustomTypeData_Ref_FromBuffer(
+    return CPulsar_CustomTypeGlobalData_Ref_FromBuffer(
         (CPulsar_CBuffer){
             .Data = data,
             .Free = ExtIntegerData_Free,
@@ -171,10 +171,10 @@ CPulsar_RuntimeState CPULSAR_CALL NativeExtIntegerCreate(CPulsar_ExecutionContex
     CPulsar_Frame frame = CPulsar_ExecutionContext_CurrentFrame(context);
     CPulsar_Stack stack = CPulsar_Frame_GetStack(frame);
 
-    CPulsar_CBuffer* typeData = CPulsar_ExecutionContext_GetCustomTypeDataBuffer(context, typeIds->ExtIntegerId);
+    CPulsar_CBuffer* typeData = CPulsar_ExecutionContext_GetCustomTypeGlobalDataBuffer(context, typeIds->ExtIntegerId);
     int64_t initValue = *(int64_t*)(typeData->Data);
 
-    CPulsar_Value extIntegerVal = CPulsar_Stack_PushEmpty(stack);
+    CPulsar_Value extIntegerVal = CPulsar_Stack_Emplace(stack);
     CPulsar_Value_SetCustomBuffer(extIntegerVal, typeIds->ExtIntegerId, ExtInteger_Create(initValue));
 
     return CPulsar_RuntimeState_OK;

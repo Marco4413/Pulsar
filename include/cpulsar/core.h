@@ -4,7 +4,7 @@
 #include <stddef.h> // size_t
 #include <inttypes.h> // int64_t
 
-#include <cpulsar/platform.h>
+#include "cpulsar/platform.h"
 
 #ifdef __cplusplus
 #  define CPULSAR_CPP
@@ -13,6 +13,17 @@
 // Derefs an opaque pointer, this is mainly useful to search where opaques are dereferenced.
 #define CPULSAR_DEREF(upType, opaque) (*(upType*)opaque)
 #define CPULSAR_REF(downType, value) ((downType*)&value)
+
+// CPULSAR_DEPRECATED() can be defined globally to change its behaviour.
+#ifndef CPULSAR_DEPRECATED
+#  if defined(__clang__) || defined(__GNUC__)
+#    define CPULSAR_DEPRECATED(message) __attribute__((deprecated(message)))
+#  elif defined(_MSC_VER)
+#    define CPULSAR_DEPRECATED(message) __declspec(deprecated(message))
+#  else // Unknown Compiler
+#    define CPULSAR_DEPRECATED(message)
+#  endif
+#endif // CPULSAR_DEPRECATED
 
 #ifdef CPULSAR_CPP
 #  define CPULSAR_LITERAL_S(structType, init) (structType init)

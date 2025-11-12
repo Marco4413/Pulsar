@@ -30,6 +30,18 @@ PulsarTools::Logger& PulsarTools::CLI::GetLogger()
     return g_Logger;
 }
 
+static PulsarTools::PositionSettings g_PreferredPositionSettings = PulsarTools::PositionSettings_Default;
+
+PulsarTools::PositionSettings PulsarTools::CLI::GetPreferredPositionSettings()
+{
+    return g_PreferredPositionSettings;
+}
+
+void PulsarTools::CLI::SetPreferredPositionSettings(PositionSettings settings)
+{
+    g_PreferredPositionSettings = settings;
+}
+
 const std::filesystem::path& PulsarTools::CLI::GetThisProcessExecutable()
 {
     static thread_local std::optional<std::filesystem::path> s_ThisProcessExecutable = std::nullopt;
@@ -168,30 +180,8 @@ int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const In
     auto parseTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
     logger.Info("Parsing took: {}us", parseTime.count());
 
-    const auto& warningMessages = parser.GetWarningMessages();
-    bool warningError = *parserOptions.WarnAsError && !warningMessages.IsEmpty();
-    for (size_t i = 0; i < warningMessages.Size(); ++i) {
-        if (warningError) {
-            logger.Error(CreateParserMessageReport(
-                    parser, MessageReportKind_Error, warningMessages[i],
-                    logger.GetColor()));
-        } else {
-            logger.Warn(CreateParserMessageReport(
-                    parser, MessageReportKind_Warning, warningMessages[i],
-                    logger.GetColor()));
-        }
-    }
-
-    if (parseResult != Pulsar::ParseResult::OK) {
-        logger.Error("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
-        logger.Error(CreateParserMessageReport(
-                parser, MessageReportKind_Error, parser.GetErrorMessage(),
-                logger.GetColor()));
+    if (LogParserErrors(parser, parserOptions))
         return 1;
-    }
-
-    if (warningError) return 1;
-
     return 0;
 }
 
@@ -281,29 +271,8 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ExternalBindin
     auto parseTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
     logger.Info("Parsing took: {}us", parseTime.count());
 
-    const auto& warningMessages = parser.GetWarningMessages();
-    bool warningError = *parserOptions.WarnAsError && !warningMessages.IsEmpty();
-    for (size_t i = 0; i < warningMessages.Size(); ++i) {
-        if (warningError) {
-            logger.Error(CreateParserMessageReport(
-                    parser, MessageReportKind_Error, warningMessages[i],
-                    logger.GetColor()));
-        } else {
-            logger.Warn(CreateParserMessageReport(
-                    parser, MessageReportKind_Warning, warningMessages[i],
-                    logger.GetColor()));
-        }
-    }
-
-    if (parseResult != Pulsar::ParseResult::OK) {
-        logger.Error("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
-        logger.Error(CreateParserMessageReport(
-                parser, MessageReportKind_Error, parser.GetErrorMessage(),
-                logger.GetColor()));
+    if (LogParserErrors(parser, parserOptions))
         return 1;
-    }
-
-    if (warningError) return 1;
 
     if (!*parserOptions.DeclareBoundNatives) {
         BindNatives(module, runtimeOptions, false);
@@ -320,6 +289,7 @@ int PulsarTools::CLI::Action::Optimize(Pulsar::Module& module, const OptimizerOp
 
     Logger& logger = GetLogger();
 
+    size_t appliedOptimizations = 0;
     std::chrono::microseconds totalOptimizeTime(0);
 
     Pulsar::BaseOptimizerSettings optimizerSettings;
@@ -362,21 +332,28 @@ int PulsarTools::CLI::Action::Optimize(Pulsar::Module& module, const OptimizerOp
         auto startTime = std::chrono::steady_clock::now();
 
         Pulsar::UnusedOptimizer optimizer;
-        optimizer.Optimize(module, optimizerSettings);
+        bool ok = optimizer.Optimize(module, optimizerSettings);
 
         auto endTime = std::chrono::steady_clock::now();
         auto optimizeUnusedTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
-        totalOptimizeTime += optimizeUnusedTime;
 
-        logger.Info("Optimize Unused:");
-        logger.Info("- Removed {}/{} functions.", initFunctions-module.Functions.Size(),    initFunctions);
-        logger.Info("- Removed {}/{} natives.",   initNatives-module.NativeBindings.Size(), initNatives);
-        logger.Info("- Removed {}/{} globals.",   initGlobals-module.Globals.Size(),        initGlobals);
-        logger.Info("- Removed {}/{} constants.", initConstants-module.Constants.Size(),    initConstants);
-        logger.Info("- Time: {}us", optimizeUnusedTime.count());
+        if (ok) {
+            ++appliedOptimizations;
+            totalOptimizeTime += optimizeUnusedTime;
+
+            logger.Info("Optimize Unused:");
+            logger.Info("- Removed {}/{} functions.", initFunctions-module.Functions.Size(),    initFunctions);
+            logger.Info("- Removed {}/{} natives.",   initNatives-module.NativeBindings.Size(), initNatives);
+            logger.Info("- Removed {}/{} globals.",   initGlobals-module.Globals.Size(),        initGlobals);
+            logger.Info("- Removed {}/{} constants.", initConstants-module.Constants.Size(),    initConstants);
+            logger.Info("- Time: {}us", optimizeUnusedTime.count());
+        } else {
+            logger.Warn("Optimize Unused: Failed!");
+        }
     }
 
-    logger.Info("Optimizations took: {}us", totalOptimizeTime.count());
+    if (appliedOptimizations > 0)
+        logger.Info("Optimizations took: {}us", totalOptimizeTime.count());
     return 0;
 }
 
@@ -393,13 +370,13 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
     auto startTime = std::chrono::steady_clock::now();
 
     Pulsar::ExecutionContext context(module);
-    Pulsar::ValueStack& stack = context.GetStack();
+    Pulsar::Stack& stack = context.GetStack();
     { // Push argv into the Stack.
-        Pulsar::ValueList argList;
+        Pulsar::Value::List argList;
         argList.Append()->Value().SetString((*input.FilePath).c_str());
         for (const std::string& arg : *input.Args)
             argList.Append()->Value().SetString(arg.c_str());
-        stack.EmplaceBack().SetList(std::move(argList));
+        stack.EmplaceList(std::move(argList));
     }
 
     auto functionCallState = context.CallFunction((*runtimeOptions.EntryPoint).c_str());
@@ -416,7 +393,8 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
         return 1;
     } else if (runtimeState != Pulsar::RuntimeState::OK) {
         logger.Error("Runtime Error: {}", Pulsar::RuntimeStateToString(runtimeState));
-        logger.Error(CreateRuntimeErrorMessageReport(context, stackTraceDepth, logger.GetColor()));
+        logger.Error(CreateRuntimeErrorMessageReport(context, stackTraceDepth,
+                GetPreferredPositionSettings(), logger.GetColor()));
         return 1;
     }
 
@@ -424,12 +402,56 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
     if (stack.Size() > 0) {
         logger.Info("Stack after ({}) call:", *runtimeOptions.EntryPoint);
         for (size_t i = 0; i < stack.Size(); i++)
-            logger.Info("{}. {}", i+1, stack[i]);
+            logger.Info("{}. {}", i+1, stack[i].ToRepr({ .Module = &module }));
     } else {
         logger.Info("Stack after ({}) call: []", *runtimeOptions.EntryPoint);
     }
 
     return 0;
+}
+
+bool PulsarTools::CLI::LogParserErrors(const Pulsar::Parser& parser, const PulsarTools::CLI::ParserOptions& parserOptions)
+{
+    Logger& logger = GetLogger();
+
+    const auto& warningMessages = parser.GetWarningMessages();
+    bool warningError = *parserOptions.WarnAsError && !warningMessages.IsEmpty();
+    for (size_t i = 0; i < warningMessages.Size(); ++i) {
+        const auto& warningMessage = warningMessages[i];
+        auto reportKind = warningError
+                ? MessageReportKind_Error
+                : MessageReportKind_Warning;
+        auto name = fmt::format("{}({})",
+                MessageReportKind_Warning.Name,
+                Pulsar::ParseWarningToString(warningMessage.Reason));
+        reportKind.Name = name.c_str();
+
+        if (warningError) {
+            logger.Error(CreateParserMessageReport(
+                    parser, reportKind, warningMessage,
+                    GetPreferredPositionSettings(), logger.GetColor()));
+        } else {
+            logger.Warn(CreateParserMessageReport(
+                    parser, reportKind, warningMessage,
+                    GetPreferredPositionSettings(), logger.GetColor()));
+        }
+    }
+
+    const auto& errorMessage = parser.GetErrorMessage();
+    if (errorMessage.Reason != Pulsar::ParseResult::OK) {
+        auto reportKind = MessageReportKind_Error;
+        auto name = fmt::format("{}({})",
+                reportKind.Name,
+                Pulsar::ParseResultToString(errorMessage.Reason));
+        reportKind.Name = name.c_str();
+
+        logger.Error(CreateParserMessageReport(
+                parser, reportKind, parser.GetErrorMessage(),
+                GetPreferredPositionSettings(), logger.GetColor()));
+        return true;
+    }
+
+    return warningError;
 }
 
 void PulsarTools::CLI::ExportOption::WriteHint(Argue::ITextBuilder& hint) const

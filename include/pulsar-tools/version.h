@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "fmt/format.h"
+#include <fmt/format.h>
 
 #include "pulsar/binary.h"
 #include "pulsar/version.h"

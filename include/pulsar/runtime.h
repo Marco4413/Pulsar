@@ -6,44 +6,135 @@
 #include "pulsar/runtime/debug.h"
 #include "pulsar/runtime/function.h"
 #include "pulsar/runtime/global.h"
+#include "pulsar/runtime/module.h"
+#include "pulsar/runtime/state.h"
 #include "pulsar/runtime/value.h"
+#include "pulsar/structures/linkedlist.h"
 #include "pulsar/structures/list.h"
 #include "pulsar/structures/ref.h"
 
 namespace Pulsar
 {
-    enum class RuntimeState
+    class Stack
     {
-        OK = 0,
-        Error = 1,
-        TypeError,
-        StackOverflow,
-        StackUnderflow,
-        OutOfBoundsConstantIndex,
-        OutOfBoundsLocalIndex,
-        OutOfBoundsGlobalIndex,
-        WritingOnConstantGlobal,
-        OutOfBoundsFunctionIndex,
-        CallStackUnderflow,
-        NativeFunctionBindingsMismatch,
-        UnboundNativeFunction,
-        FunctionNotFound,
-        ListIndexOutOfBounds,
-        StringIndexOutOfBounds,
-        NoCustomTypeData,
-        InvalidCustomTypeHandle,
-        InvalidCustomTypeReference,
+    public:
+        using ConstIterator   = List<Value>::ConstIterator;
+        using MutableIterator = List<Value>::MutableIterator;
+
+        Stack() = default;
+
+        Stack(size_t initCapacity)
+            : m_Values(initCapacity) {}
+
+        explicit Stack(const LinkedList<Value>& ll) : m_Values(ll) {}
+        explicit Stack(LinkedList<Value>&& ll) : m_Values(std::move(ll)) {}
+
+        explicit Stack(const List<Value>& l) : m_Values(l) {}
+        explicit Stack(List<Value>&& l) : m_Values(std::move(l)) {}
+
+        Stack(const Stack& other) = default;
+        Stack(Stack&& other) = default;
+
+        ~Stack() = default;
+
+        Stack& operator=(const Stack& other) = default;
+        Stack& operator=(Stack&& other) = default;
+
+        void Resize(size_t newSize)      { m_Values.Resize(newSize); }
+        void Reserve(size_t newCapacity) { m_Values.Reserve(newCapacity); }
+
+        void Push(const Value& value) { m_Values.PushBack(value); }
+        void Push(Value&& value)      { m_Values.PushBack(std::move(value)); }
+
+        // Pushes a new Void Value and returns its reference
+        //  (reference is invalidated once something else is
+        //  pushed onto the stack).
+        Value& Emplace() { return m_Values.EmplaceBack(); }
+
+        Value& EmplaceInteger(int64_t integer) { return Emplace().SetInteger(integer); }
+        Value& EmplaceDouble(double doublev)   { return Emplace().SetDouble(doublev); }
+
+        Value& EmplaceFunctionReference(int64_t functionIndex)     { return Emplace().SetFunctionReference(functionIndex); }
+        Value& EmplaceNativeFunctionReference(int64_t nativeIndex) { return Emplace().SetNativeFunctionReference(nativeIndex); }
+
+        Value& EmplaceString(const String& string) { return Emplace().SetString(string); }
+        Value& EmplaceString(String&& string)      { return Emplace().SetString(std::move(string)); }
+
+        // Pushes an empty list
+        Value& EmplaceList()                        { return Emplace().SetList(Value::List()); }
+        Value& EmplaceList(const Value::List& list) { return Emplace().SetList(list); }
+        Value& EmplaceList(Value::List&& list)      { return Emplace().SetList(std::move(list)); }
+
+        Value& EmplaceCustom(const CustomData& custom) { return Emplace().SetCustom(custom); }
+
+        Value Pop()
+        {
+            Value value(std::move(m_Values.Back()));
+            m_Values.PopBack();
+            return value;
+        }
+
+        // Access from the bottom of the stack to the top
+        Value& operator[](size_t index)
+        {
+            PULSAR_ASSERT(index < Size(), "Stack index out of bounds.");
+            return m_Values[index];
+        }
+
+        // Access from the bottom of the stack to the top
+        const Value& operator[](size_t index) const
+        {
+            PULSAR_ASSERT(index < Size(), "Stack index out of bounds.");
+            return m_Values[index];
+        }
+
+        // index >= 0, access from the bottom of the stack
+        // index <  0, access from the top of the stack
+        Value& operator[](int index)
+        {
+            if (index >= 0) return (*this)[static_cast<size_t>(index)];
+            size_t reverseIndex = static_cast<size_t>(-index);
+            PULSAR_ASSERT(reverseIndex <= Size(), "Stack index out of bounds.");
+            return (*this)[Size() - reverseIndex];
+        }
+
+        // index >= 0, access from the bottom of the stack
+        // index <  0, access from the top of the stack
+        const Value& operator[](int index) const
+        {
+            if (index >= 0) return (*this)[static_cast<size_t>(index)];
+            size_t reverseIndex = static_cast<size_t>(-index);
+            PULSAR_ASSERT(reverseIndex <= Size(), "Stack index out of bounds.");
+            return (*this)[m_Values.Size() - reverseIndex];
+        }
+
+        Value& Top()             { return (*this)[-1]; }
+        const Value& Top() const { return (*this)[-1]; }
+
+        void Clear() { m_Values.Clear(); }
+        size_t Size() const     { return m_Values.Size(); }
+        size_t Capacity() const { return m_Values.Capacity(); }
+        bool IsEmpty() const    { return m_Values.IsEmpty(); }
+
+        /* Iterators iterate from bottom to top */
+
+        ConstIterator Begin() const { return m_Values.Begin(); }
+        ConstIterator End()   const { return m_Values.End(); }
+        MutableIterator Begin() { return m_Values.Begin(); }
+        MutableIterator End()   { return m_Values.End(); }
+
+        PULSAR_ITERABLE_IMPL(Stack, ConstIterator, MutableIterator);
+
+    private:
+        List<Value> m_Values;
     };
 
-    const char* RuntimeStateToString(RuntimeState rstate);
-
-    using ValueStack = List<Value>;
     struct Frame
     {
         const FunctionDefinition* Function;
-        bool IsNative = false;
-        List<Value> Locals = List<Value>();
-        ValueStack Stack = ValueStack();
+        bool IsNative           = false;
+        List<Value> Locals      = List<Value>();
+        Pulsar::Stack Stack     = Pulsar::Stack();
         size_t InstructionIndex = 0;
     };
 
@@ -73,7 +164,7 @@ namespace Pulsar
         Frame CreateFrame(const FunctionDefinition* def, bool native=false);
         Frame& CreateAndPushFrame(const FunctionDefinition* def, bool native=false);
         RuntimeState PrepareFrame(Frame& frame);
-        RuntimeState PrepareFrame(Frame& frame, ValueStack& callerStack);
+        RuntimeState PrepareFrame(Frame& frame, Stack& callerStack);
 
         Frame& PushFrame(Frame&& frame) { return m_Frames.EmplaceBack(std::move(frame)); }
         void PopFrame() { m_Frames.PopBack(); }
@@ -87,101 +178,6 @@ namespace Pulsar
         List<Frame> m_Frames;
     };
 
-    // Extend this class to store your custom type's global data
-    // TODO: Maybe rename to CustomTypeGlobalData
-    class CustomTypeData
-    {
-    public:
-        using Ref = SharedRef<Pulsar::CustomTypeData>;
-
-        virtual ~CustomTypeData() = default;
-        /**
-         * When a new sandboxed ExecutionContext is created from an already existing one
-         *  this function is called.
-         * This function must return a "copy" of the data which won't affect the original
-         *  context.
-         * If this function returns nullptr, it means that the data held doesn't require
-         *  to be sandboxed, this may be useful for stats tracking.
-         * It's advised to make the data thread-safe if it's meant to be shared.
-         */
-        virtual Ref Fork() const = 0;
-    };
-
-    struct CustomType
-    {
-        using DataFactoryFn = std::function<CustomTypeData::Ref()>;
-
-        String Name;
-        // Method that generates a new instance of a derived class from CustomTypeData
-        DataFactoryFn DataFactory = nullptr;
-    };
-
-    class ExecutionContext; // Forward Declaration
-
-    /**
-     * This class represents an executable Pulsar program.
-     * See ExecutionContext for program execution.
-     */
-    class Module
-    {
-    public:
-        // Returned by Find* functions to indicate that the item was not found.
-        static constexpr size_t INVALID_INDEX = size_t(-1);
-
-    public:
-        Module() = default;
-        ~Module() = default;
-
-        Module(const Module&) = default;
-        Module(Module&&) = default;
-
-        Module& operator=(const Module&) = default;
-        Module& operator=(Module&&) = default;
-
-        using NativeFunction = std::function<RuntimeState(ExecutionContext&)>;
-        // Returns how many definitions were bound.
-        size_t BindNativeFunction(const FunctionDefinition& def, NativeFunction func);
-        size_t BindNativeFunction(const FunctionSignature& sig, NativeFunction func);
-        // Returns the index of the newly declared function.
-        size_t DeclareAndBindNativeFunction(const FunctionDefinition& def, NativeFunction func);
-        size_t DeclareAndBindNativeFunction(FunctionDefinition&& def, NativeFunction func);
-        size_t DeclareAndBindNativeFunction(const FunctionSignature& sig, NativeFunction func);
-
-        uint64_t BindCustomType(const String& name, CustomType::DataFactoryFn dataFactory = nullptr);
-
-        // Be sure to check if the type exists first (unless you know for sure it exists)
-        CustomType& GetCustomType(uint64_t typeId)             { return CustomTypes.Find(typeId)->Value(); }
-        const CustomType& GetCustomType(uint64_t typeId) const { return CustomTypes.Find(typeId)->Value(); }
-        bool HasCustomType(uint64_t typeId) const              { return CustomTypes.Find(typeId); }
-
-        bool HasSourceDebugSymbols() const { return !SourceDebugSymbols.IsEmpty(); }
-
-        template<typename T>
-        size_t FindDefinitionByName(const List<T>& definitions, const String& name) const;
-
-        size_t FindFunctionByName(const String& name) const { return FindDefinitionByName(Functions, name); }
-        size_t FindNativeByName(const String& name)   const { return FindDefinitionByName(NativeBindings, name); }
-        size_t FindGlobalByName(const String& name)   const { return FindDefinitionByName(Globals, name); }
-
-    public:
-        // Access these member variables only for:
-        // - Inspecting the Module.
-        // - Creating your own language which runs on the Pulsar VM.
-        List<FunctionDefinition> Functions;
-        List<FunctionDefinition> NativeBindings;
-        List<GlobalDefinition> Globals;
-        List<Value> Constants;
-
-        List<SourceDebugSymbol> SourceDebugSymbols;
-
-        // These are managed by the Bind* methods.
-        List<NativeFunction> NativeFunctions;
-        HashMap<uint64_t, CustomType> CustomTypes;
-
-    private:
-        uint64_t m_LastTypeId = 0;
-    };
-
     /**
      * This class is the Pulsar VM.
      * Its job is running a valid Pulsar Module.
@@ -189,7 +185,7 @@ namespace Pulsar
      * 
 ```cpp
 ExecutionContext context(module);
-ValueStack& stack = context.GetStack();
+Stack& stack = context.GetStack();
 // Push arguments into stack
 context.CallFunction("main");
 RuntimeState state = context.Run();
@@ -201,7 +197,9 @@ if (state != RuntimeState::OK) // ERROR
     {
     public:
         // typeId -> typeData
-        using CustomTypeDataMap = HashMap<uint64_t, CustomTypeData::Ref>;
+        using CustomTypeGlobalDataMap = HashMap<uint64_t, CustomTypeGlobalData::Ref>;
+        // Consider using the SourceViewer class for conversion.
+        using PositionConverterFn = std::function<SourcePosition(const SourceDebugSymbol& source, SourcePosition position)>;
 
         /**
          * Create a new ExecutionContext from a specified module.
@@ -217,23 +215,23 @@ if (state != RuntimeState::OK) // ERROR
         void Init();
 
         void InitGlobals();
-        void InitCustomTypeData();
+        void InitCustomTypeGlobalData();
 
         /**
          * Creates a new "child" ExecutionContext which inherits global data from this one.
-         * Global data is CustomTypeData and Globals. Any change to the forked context
-         *  won't affect the original one (except for CustomTypeData that explicitly wants that).
+         * Global data is CustomTypeGlobalData and Globals. Any change to the forked context
+         *  won't affect the original one (except for CustomTypeGlobalData that explicitly wants that).
          */
         ExecutionContext Fork() const;
 
         /**
-         * Retrieves and casts to the correct type an instance of CustomTypeData.
+         * Retrieves and casts to the correct type an instance of CustomTypeGlobalData.
          * If the type does not exist, nullptr is returned.
          */
         template<typename T>
-        SharedRef<T> GetCustomTypeData(uint64_t typeId)
+        SharedRef<T> GetCustomTypeGlobalData(uint64_t typeId)
         {
-            auto typeDataPair = m_CustomTypeData.Find(typeId);
+            auto typeDataPair = m_CustomTypeGlobalData.Find(typeId);
             if (!typeDataPair) return nullptr;
             return typeDataPair->Value().CastTo<T>();
         }
@@ -242,28 +240,36 @@ if (state != RuntimeState::OK) // ERROR
          * Sets type data for the provided type.
          * If the provided type does not exist, nothing is set.
          */
-        bool SetCustomTypeData(uint64_t typeId, CustomTypeData::Ref typeData)
+        bool SetCustomTypeGlobalData(uint64_t typeId, CustomTypeGlobalData::Ref typeData)
         {
-            auto typeDataPair = m_CustomTypeData.Find(typeId);
+            auto typeDataPair = m_CustomTypeGlobalData.Find(typeId);
             if (typeDataPair) typeDataPair->Value() = typeData;
             return (bool)typeDataPair;
         }
 
         // Do not insert new or remove keys from the returned map.
-        CustomTypeDataMap& GetAllCustomTypeData()             { return m_CustomTypeData; }
-        const CustomTypeDataMap& GetAllCustomTypeData() const { return m_CustomTypeData; }
+        CustomTypeGlobalDataMap& GetAllCustomTypeGlobalData()             { return m_CustomTypeGlobalData; }
+        const CustomTypeGlobalDataMap& GetAllCustomTypeGlobalData() const { return m_CustomTypeGlobalData; }
 
         // Do not add or remove values from the returned list.
         List<GlobalInstance>& GetGlobals()             { return m_Globals; }
         const List<GlobalInstance>& GetGlobals() const { return m_Globals; }
 
         // Generates the trace for a single call in the CallStack.
-        String GetCallTrace(size_t callIdx) const;
+        // Provide a `positionConverter` to convert from UTF32 0-indexed positions to other position kinds.
+        //  The default behaviour is to convert 0-indexed UTF32 to 1-indexed.
+        String GetCallTrace(size_t callIdx, const PositionConverterFn& positionConverter=nullptr) const;
         // Generates the trace for `maxDepth` calls in the CallStack.
         // Set `maxDepth` to -1 for "infinite depth".
-        String GetStackTrace(size_t maxDepth) const;
+        // Provide a `positionConverter` to convert from UTF32 0-indexed positions to other position kinds.
+        //  The default behaviour is to convert 0-indexed UTF32 to 1-indexed.
+        String GetStackTrace(size_t maxDepth, const PositionConverterFn& positionConverter=nullptr) const;
 
         RuntimeState CallFunction(const String& funcName);
+        RuntimeState CallFunction(FunctionSignature funcSig);
+        // TODO: Add `typedef size_t index_t;` within Module?
+        //       This would require a big refactor to make sure we're not using size_t anymore.
+        RuntimeState CallFunction(size_t funcIdx);
         RuntimeState CallFunction(int64_t funcIdx);
 
         /**
@@ -274,8 +280,8 @@ if (state != RuntimeState::OK) // ERROR
 
         const Module& GetModule() const { return m_Module; }
 
-        ValueStack& GetStack()             { return m_Stack; }
-        const ValueStack& GetStack() const { return m_Stack; }
+        Stack& GetStack()             { return m_Stack; }
+        const Stack& GetStack() const { return m_Stack; }
 
         CallStack& GetCallStack()             { return m_CallStack; }
         const CallStack& GetCallStack() const { return m_CallStack; }
@@ -355,27 +361,15 @@ if (state != RuntimeState::OK) // ERROR
 
     private:
         const Module& m_Module;
-        Pulsar::ValueStack m_Stack;
+        Pulsar::Stack m_Stack;
         Pulsar::CallStack m_CallStack;
         List<GlobalInstance> m_Globals;
-        CustomTypeDataMap m_CustomTypeData;
+        CustomTypeGlobalDataMap m_CustomTypeGlobalData;
 
         bool m_Running = false;
         bool m_StopRequested = false;
         RuntimeState m_State = RuntimeState::OK;
     };
-}
-
-template<typename T>
-size_t Pulsar::Module::FindDefinitionByName(const List<T>& definitions, const String& name) const
-{
-    for (size_t i = definitions.Size(); i > 0; --i) {
-        const T& definition = definitions[i-1];
-        if (definition.Name != name)
-            continue;
-        return i-1;
-    }
-    return INVALID_INDEX;
 }
 
 #endif // _PULSAR_RUNTIME_H

@@ -22,8 +22,8 @@ Pulsar::RuntimeState PulsarTools::Bindings::Stdio::FInRead(Pulsar::ExecutionCont
         line += buffer;
     } while (std::cin.fail() && !std::cin.eof() && !std::cin.bad());
 
-    eContext.CurrentFrame().Stack
-        .EmplaceBack().SetString(std::move(line));
+    eContext.CurrentFrame()
+        .Stack.EmplaceString(std::move(line));
 
     return Pulsar::RuntimeState::OK;
 }

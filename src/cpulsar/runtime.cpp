@@ -106,9 +106,9 @@ CPULSAR_API uint64_t CPULSAR_CALL CPulsar_Module_BindCustomType(CPulsar_Module _
         .BindCustomType(
             typeName,
             [dataFactory]() {
-                CPulsar_CustomTypeData_Ref cref = dataFactory();
-                Pulsar::CustomTypeData::Ref ref = CPULSAR_DEREF(Pulsar::CustomTypeData::Ref, cref);
-                CPulsar_CustomTypeData_Ref_Delete(cref);
+                CPulsar_CustomTypeGlobalData_Ref cref = dataFactory();
+                Pulsar::CustomTypeGlobalData::Ref ref = CPULSAR_DEREF(Pulsar::CustomTypeGlobalData::Ref, cref);
+                CPulsar_CustomTypeGlobalData_Ref_Delete(cref);
                 return ref;
             }
         );
@@ -147,19 +147,19 @@ CPULSAR_API void CPULSAR_CALL CPulsar_ExecutionContext_Delete(CPulsar_ExecutionC
     PULSAR_DELETE(ExecutionContext, &CPULSAR_DEREF(ExecutionContext, _self));
 }
 
-CPULSAR_API CPulsar_CustomTypeData_Ref CPULSAR_CALL CPulsar_ExecutionContext_GetCustomTypeData(CPulsar_ExecutionContext _self, uint64_t typeId)
+CPULSAR_API CPulsar_CustomTypeGlobalData_Ref CPULSAR_CALL CPulsar_ExecutionContext_GetCustomTypeGlobalData(CPulsar_ExecutionContext _self, uint64_t typeId)
 {
     ExecutionContext& self = CPULSAR_DEREF(ExecutionContext, _self);
-    auto typeData = self.GetCustomTypeData<Pulsar::CustomTypeData>(typeId);
+    auto typeData = self.GetCustomTypeGlobalData<Pulsar::CustomTypeGlobalData>(typeId);
     if (!typeData) return NULL;
-    return CPULSAR_REF(CPulsar_CustomTypeData_Ref_S, *PULSAR_NEW(Pulsar::CustomTypeData::Ref, typeData));
+    return CPULSAR_REF(CPulsar_CustomTypeGlobalData_Ref_S, *PULSAR_NEW(Pulsar::CustomTypeGlobalData::Ref, typeData));
 }
 
-CPULSAR_API CPulsar_CBuffer* CPULSAR_CALL CPulsar_ExecutionContext_GetCustomTypeDataBuffer(CPulsar_ExecutionContext self, uint64_t typeId)
+CPULSAR_API CPulsar_CBuffer* CPULSAR_CALL CPulsar_ExecutionContext_GetCustomTypeGlobalDataBuffer(CPulsar_ExecutionContext self, uint64_t typeId)
 {
-    CPulsar_CustomTypeData_Ref ref = CPulsar_ExecutionContext_GetCustomTypeData(self, typeId);
-    CPulsar_CBuffer* buf = CPulsar_CustomTypeData_Ref_GetBuffer(ref);
-    CPulsar_CustomTypeData_Ref_Delete(ref);
+    CPulsar_CustomTypeGlobalData_Ref ref = CPulsar_ExecutionContext_GetCustomTypeGlobalData(self, typeId);
+    CPulsar_CBuffer* buf = CPulsar_CustomTypeGlobalData_Ref_GetBuffer(ref);
+    CPulsar_CustomTypeGlobalData_Ref_Delete(ref);
     return buf;
 }
 
@@ -225,8 +225,8 @@ static Pulsar::RuntimeState CRuntimeStateToCppRuntimeState(CPulsar_RuntimeState 
         return Pulsar::RuntimeState::ListIndexOutOfBounds;
     case CPulsar_RuntimeState_StringIndexOutOfBounds:
         return Pulsar::RuntimeState::StringIndexOutOfBounds;
-    case CPulsar_RuntimeState_NoCustomTypeData:
-        return Pulsar::RuntimeState::NoCustomTypeData;
+    case CPulsar_RuntimeState_NoCustomTypeGlobalData:
+        return Pulsar::RuntimeState::NoCustomTypeGlobalData;
     case CPulsar_RuntimeState_InvalidCustomTypeHandle:
         return Pulsar::RuntimeState::InvalidCustomTypeHandle;
     case CPulsar_RuntimeState_InvalidCustomTypeReference:

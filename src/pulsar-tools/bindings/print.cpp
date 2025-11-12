@@ -1,8 +1,8 @@
 #include "pulsar-tools/bindings/print.h"
 
-#include "pulsar-tools/fmt.h"
+#include <fmt/base.h>
 
-#include "fmt/base.h"
+#include "pulsar-tools/fmt.h"
 
 PulsarTools::Bindings::Print::Print() :
     IBinding()
@@ -15,9 +15,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Print::FPrint(Pulsar::ExecutionConte
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& val = frame.Locals[0];
-    if (val.Type() == Pulsar::ValueType::String)
-        fmt::print("{}", val.AsString());
-    else fmt::print("{}", val);
+    fmt::print(stdout, "{}", val.ToString({ .Module = &eContext.GetModule() }));
     return Pulsar::RuntimeState::OK;
 }
 
@@ -25,8 +23,6 @@ Pulsar::RuntimeState PulsarTools::Bindings::Print::FPrintln(Pulsar::ExecutionCon
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& val = frame.Locals[0];
-    if (val.Type() == Pulsar::ValueType::String)
-        fmt::println(stdout, "{}", val.AsString());
-    else fmt::println(stdout, "{}", val);
+    fmt::println(stdout, "{}", val.ToString({ .Module = &eContext.GetModule() }));
     return Pulsar::RuntimeState::OK;
 }

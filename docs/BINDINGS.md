@@ -70,8 +70,8 @@ If an error occurred, return values is an empty list.
 
 Also known as "Safe/Sandboxed Call", `scall` forks the calling Context:
 - Changes to Globals don't affect the main context.
-- Any CustomTypeData is forked from the main context.
-  CustomTypeData may actually be shared if it's meant to be shared.
+- Any CustomTypeGlobalData is forked from the main context.
+  CustomTypeGlobalData may actually be shared if it's meant to be shared.
 
 **WARNING**: Since CustomType(s) are references, they may
 be permanently modified.
@@ -93,7 +93,7 @@ If an error occurred, return values is an empty list.
 
 Also known as "Try Call", `tcall` inherits the main context:
 - Changes to Globals affect the main context.
-- CustomTypeData is shared with the main context.
+- CustomTypeGlobalData is shared with the main context.
 
 ## FS
 
@@ -256,8 +256,8 @@ Types: `List, FunctionReference -> Thread`
 
 Runs a new thread with `fn` and `args`.
 - All Globals are copied from the current context.
-- CustomTypeData is forked from the main context.
-  CustomTypeData may actually be shared if it's meant to be shared.
+- CustomTypeGlobalData is forked from the main context.
+  CustomTypeGlobalData may actually be shared if it's meant to be shared.
 
 All `args` are pushed onto the stack before calling `fn`.
 

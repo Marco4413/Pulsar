@@ -3,18 +3,22 @@
 
 #include <filesystem>
 
-#include "argue.hpp"
+#include <argue.hpp>
 
 #include "pulsar/parser.h"
 #include "pulsar/runtime.h"
 
 #include "pulsar-tools/extbinding.h"
 #include "pulsar-tools/logger.h"
+#include "pulsar-tools/views.h"
 #include "pulsar-tools/utils.h"
 
 namespace PulsarTools::CLI
 {
     Logger& GetLogger();
+
+    PositionSettings GetPreferredPositionSettings();
+    void SetPreferredPositionSettings(PositionSettings settings);
 
     // If empty an error occurred. The path is computed once for each thread and stored in static storage.
     const std::filesystem::path& GetThisProcessExecutable();
@@ -33,6 +37,21 @@ namespace PulsarTools::CLI
                 "Prevents any execution and prints the version of Pulsar-Tools, Pulsar and the Neutron format."
                 " (recommended flags: --no-prefix)",
                 false),
+            PositionEncoding(cmd, "position-encoding", "", "ENCODING",
+                "Sets the preferred position encoding for message reporting."
+                " Editors like VSCode use utf16 for encoding positions."
+                " Pulsar uses utf32 so conversion is required to have proper reporting in editors."
+                " If source is not available, encoding conversion won't be possible."
+                " (default: utf16)",
+                {"utf16", "utf32", "utf8"}, 0),
+            PositionLineIndexedFrom(cmd, "position-line-indexed-from", "", "INDEX",
+                "Sets from which number >= 0 line positions are indexed from. (default: 1)",
+                1),
+            PositionCharIndexedFrom(cmd, "position-char-indexed-from", "", "INDEX",
+                "Sets from which number >= 0 char positions are indexed from. (default: 1)",
+                1),
+            PositionIndexedFrom(cmd, "position-indexed-from", "", "INDEX",
+                "If set, overrides both line and char starting indices."),
             Prefix(cmd, "prefix", "",
                 "Enables prefixes in logs (e.g. log level). (default: true)",
                 true),
@@ -45,6 +64,12 @@ namespace PulsarTools::CLI
         {}
 
         Argue::FlagOption Version;
+
+        Argue::ChoiceOption PositionEncoding;
+        Argue::IntOption PositionLineIndexedFrom;
+        Argue::IntOption PositionCharIndexedFrom;
+        Argue::IntOption PositionIndexedFrom;
+
         Argue::FlagOption Prefix;
         Argue::FlagOption Color;
         Argue::ChoiceOption LogLevel;
@@ -250,7 +275,11 @@ namespace PulsarTools::CLI
         Argue::StrVarArgument Args;
     };
 
+    // Returns true if an error was encountered.
+    bool LogParserErrors(const Pulsar::Parser& parser, const ParserOptions& parserOptions);
+
     using ExternalBindings = std::vector<ExtBinding>;
+
     namespace Action
     {
         int LoadExternalBindings(const RuntimeOptions& runtimeOptions, ExternalBindings& out);

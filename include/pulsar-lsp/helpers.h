@@ -3,7 +3,7 @@
 
 #include <lsp/types.h>
 
-#include "pulsar/lexer.h"
+#include "pulsar/lexer/token.h"
 #include "pulsar/runtime.h"
 
 namespace PulsarLSP
@@ -59,6 +59,16 @@ namespace PulsarLSP
                 .line = (lsp::uint)pos.Line,
                 .character = (lsp::uint)(pos.Char+pos.CharSpan)
             }
+        };
+    }
+
+    constexpr Pulsar::SourcePosition PositionToSourcePosition(lsp::Position position)
+    {
+        return Pulsar::SourcePosition{
+            .Line = static_cast<size_t>(position.line),
+            .Char = static_cast<size_t>(position.character),
+            .Index    = 0,
+            .CharSpan = 0,
         };
     }
 

@@ -4,7 +4,7 @@
 #include "pulsar/runtime.h"
 
 using Value = Pulsar::Value;
-using ValueList = Pulsar::ValueList;
+using ValueList = Pulsar::Value::List;
 
 extern "C"
 {

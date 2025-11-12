@@ -4,7 +4,7 @@
 #include <memory> // std::unique_ptr
 
 // We need to specifically check for CPulsar's platform
-#include <cpulsar/platform.h>
+#include "cpulsar/platform.h"
 
 #include "pulsar-tools/binding.h"
 
