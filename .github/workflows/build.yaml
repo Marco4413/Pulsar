@@ -57,6 +57,7 @@ jobs:
           cp    LICENSE.md                                        artifact/${{ env.ARTIFACT_NAME }}/
           cp -R resources/**                                      artifact/${{ env.ARTIFACT_NAME }}/
           cp -R include/cpulsar                                   artifact/${{ env.ARTIFACT_NAME }}/include/
+          rm    artifact/${{ env.ARTIFACT_NAME }}/include/cpulsar/_* # Remove all private CPulsar header files
           cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp"      artifact/${{ env.ARTIFACT_NAME }}/
           cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools"  artifact/${{ env.ARTIFACT_NAME }}/
           cp    "build/pulsar-tools/$PREMAKE_BUILD/libcpulsar.so" artifact/${{ env.ARTIFACT_NAME }}/
@@ -173,6 +174,7 @@ jobs:
           cp    LICENSE.md                                           artifact/${{ env.ARTIFACT_NAME }}/
           cp -R resources/**                                         artifact/${{ env.ARTIFACT_NAME }}/
           cp -R include/cpulsar                                      artifact/${{ env.ARTIFACT_NAME }}/include/
+          rm    artifact/${{ env.ARTIFACT_NAME }}/include/cpulsar/_* # Remove all private CPulsar header files
           cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp.exe"     artifact/${{ env.ARTIFACT_NAME }}/
           cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools.exe" artifact/${{ env.ARTIFACT_NAME }}/
           cp    "build/pulsar-tools/$PREMAKE_BUILD/cpulsar.dll"      artifact/${{ env.ARTIFACT_NAME }}/
