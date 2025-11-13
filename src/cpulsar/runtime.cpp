@@ -1,14 +1,10 @@
 #define _CPULSAR_IMPLEMENTATION
 #include "cpulsar/runtime.h"
+#include "cpulsar/_opaque.hpp"
 
 #include "pulsar/runtime.h"
 
 static_assert(sizeof(CPulsar_RuntimeState) >= sizeof(Pulsar::RuntimeState));
-
-using Module           = Pulsar::Module;
-
-using Frame            = Pulsar::Frame;
-using ExecutionContext = Pulsar::ExecutionContext;
 
 class CBufferWrapper
 {
@@ -40,22 +36,22 @@ CPULSAR_API const char* CPULSAR_CALL CPulsar_RuntimeState_ToString(CPulsar_Runti
     return RuntimeStateToString(CRuntimeStateToCppRuntimeState(runtimeState));
 }
 
-CPULSAR_API CPulsar_Module CPULSAR_CALL CPulsar_Module_Create(void)
+CPULSAR_API CPulsar_Module* CPULSAR_CALL CPulsar_Module_Create(void)
 {
-    return CPULSAR_REF(CPulsar_Module_S, *PULSAR_NEW(Module));
+    return CPULSAR_WRAP(*PULSAR_NEW(Pulsar::Module));
 }
 
-CPULSAR_API void CPULSAR_CALL CPulsar_Module_Delete(CPulsar_Module _self)
+CPULSAR_API void CPULSAR_CALL CPulsar_Module_Delete(CPulsar_Module* _self)
 {
-    PULSAR_DELETE(Module, &CPULSAR_DEREF(Module, _self));
+    PULSAR_DELETE(Pulsar::Module, &CPULSAR_UNWRAP(_self));
 }
 
 CPULSAR_API size_t CPULSAR_CALL CPulsar_Module_BindNativeFunction(
-        CPulsar_Module _self, CPulsar_FunctionSignature fnSig,
+        CPulsar_Module* _self, CPulsar_FunctionSignature fnSig,
         CPulsar_NativeFunction nativeFn, CPulsar_CBuffer _nativeFnArgs)
 {
     auto nativeFnArgs = Pulsar::SharedRef<CBufferWrapper>::New(_nativeFnArgs);
-    return CPULSAR_DEREF(Module, _self)
+    return CPULSAR_UNWRAP(_self)
         .BindNativeFunction(Pulsar::FunctionSignature{
             .Name = fnSig.Name,
             .Arity = fnSig.Arity,
@@ -63,18 +59,18 @@ CPULSAR_API size_t CPULSAR_CALL CPulsar_Module_BindNativeFunction(
             .StackArity = fnSig.StackArity,
         }, [nativeFn, nativeFnArgs](Pulsar::ExecutionContext& context) {
             return CRuntimeStateToCppRuntimeState(nativeFn(
-                CPULSAR_REF(CPulsar_ExecutionContext_S, context),
+                CPULSAR_WRAP(context),
                 nativeFnArgs->GetBuffer().Data
             ));
         });
 }
 
 CPULSAR_API int64_t CPULSAR_CALL CPulsar_Module_DeclareAndBindNativeFunction(
-        CPulsar_Module _self, CPulsar_FunctionSignature fnSig,
+        CPulsar_Module* _self, CPulsar_FunctionSignature fnSig,
         CPulsar_NativeFunction nativeFn, CPulsar_CBuffer _nativeFnArgs)
 {
     auto nativeFnArgs = Pulsar::SharedRef<CBufferWrapper>::New(_nativeFnArgs);
-    return CPULSAR_DEREF(Module, _self)
+    return CPULSAR_UNWRAP(_self)
         .DeclareAndBindNativeFunction(Pulsar::FunctionSignature{
             .Name = fnSig.Name,
             .Arity = fnSig.Arity,
@@ -82,14 +78,14 @@ CPULSAR_API int64_t CPULSAR_CALL CPulsar_Module_DeclareAndBindNativeFunction(
             .StackArity = fnSig.StackArity,
         }, [nativeFn, nativeFnArgs](Pulsar::ExecutionContext& context) {
             return CRuntimeStateToCppRuntimeState(nativeFn(
-                CPULSAR_REF(CPulsar_ExecutionContext_S, context),
+                CPULSAR_WRAP(context),
                 nativeFnArgs->GetBuffer().Data
             ));
         });
 }
 
 CPULSAR_API void CPULSAR_CALL CPulsar_Module_BindNativeFunctionEx(
-        CPulsar_Module self, CPulsar_FunctionSignature fnSig,
+        CPulsar_Module* self, CPulsar_FunctionSignature fnSig,
         CPulsar_NativeFunction nativeFn, CPulsar_CBuffer nativeFnArgs,
         int declareAndBind)
 {
@@ -100,23 +96,23 @@ CPULSAR_API void CPULSAR_CALL CPulsar_Module_BindNativeFunctionEx(
     }
 }
 
-CPULSAR_API uint64_t CPULSAR_CALL CPulsar_Module_BindCustomType(CPulsar_Module _self, const char* typeName, CPulsar_CustomType_DataFactoryFn dataFactory)
+CPULSAR_API uint64_t CPULSAR_CALL CPulsar_Module_BindCustomType(CPulsar_Module* _self, const char* typeName, CPulsar_CustomType_DataFactoryFn dataFactory)
 {
-    return CPULSAR_DEREF(Module, _self)
+    return CPULSAR_UNWRAP(_self)
         .BindCustomType(
             typeName,
             [dataFactory]() {
-                CPulsar_CustomTypeGlobalData_Ref cref = dataFactory();
-                Pulsar::CustomTypeGlobalData::Ref ref = CPULSAR_DEREF(Pulsar::CustomTypeGlobalData::Ref, cref);
+                CPulsar_CustomTypeGlobalData_Ref* cref = dataFactory();
+                Pulsar::CustomTypeGlobalData::Ref ref = CPULSAR_UNWRAP(cref);
                 CPulsar_CustomTypeGlobalData_Ref_Delete(cref);
                 return ref;
             }
         );
 }
 
-CPULSAR_API uint64_t CPULSAR_CALL CPulsar_Module_FindCustomType(const CPulsar_Module _self, const char* typeName)
+CPULSAR_API uint64_t CPULSAR_CALL CPulsar_Module_FindCustomType(const CPulsar_Module* _self, const char* typeName)
 {
-    Module& self = CPULSAR_DEREF(Module, _self);
+    const Pulsar::Module& self = CPULSAR_UNWRAP(_self);
     uint64_t typeId = 0;
     // HACK: There should be a method to do this. It's being done enough times to warrant it.
     self.CustomTypes.ForEach([typeName, &typeId](const auto& bucket) {
@@ -127,65 +123,65 @@ CPULSAR_API uint64_t CPULSAR_CALL CPulsar_Module_FindCustomType(const CPulsar_Mo
     return typeId;
 }
 
-CPULSAR_API CPulsar_Locals CPULSAR_CALL CPulsar_Frame_GetLocals(CPulsar_Frame _self)
+CPULSAR_API CPulsar_Locals* CPULSAR_CALL CPulsar_Frame_GetLocals(CPulsar_Frame* _self)
 {
-    return CPULSAR_REF(CPulsar_Locals_S, CPULSAR_DEREF(Frame, _self).Locals);
+    return CPULSAR_WRAP(CPULSAR_UNWRAP(_self).Locals);
 }
 
-CPULSAR_API CPulsar_Stack CPULSAR_CALL CPulsar_Frame_GetStack(CPulsar_Frame _self)
+CPULSAR_API CPulsar_Stack* CPULSAR_CALL CPulsar_Frame_GetStack(CPulsar_Frame* _self)
 {
-    return CPULSAR_REF(CPulsar_Stack_S, CPULSAR_DEREF(Frame, _self).Stack);
+    return CPULSAR_WRAP(CPULSAR_UNWRAP(_self).Stack);
 }
 
-CPULSAR_API CPulsar_ExecutionContext CPULSAR_CALL CPulsar_ExecutionContext_Create(const CPulsar_Module _module)
+CPULSAR_API CPulsar_ExecutionContext* CPULSAR_CALL CPulsar_ExecutionContext_Create(const CPulsar_Module* _module)
 {
-    return CPULSAR_REF(CPulsar_ExecutionContext_S, *PULSAR_NEW(ExecutionContext, CPULSAR_DEREF(const Module, _module)));
+    return CPULSAR_WRAP(*PULSAR_NEW(Pulsar::ExecutionContext, CPULSAR_UNWRAP(_module)));
 }
 
-CPULSAR_API void CPULSAR_CALL CPulsar_ExecutionContext_Delete(CPulsar_ExecutionContext _self)
+CPULSAR_API void CPULSAR_CALL CPulsar_ExecutionContext_Delete(CPulsar_ExecutionContext* _self)
 {
-    PULSAR_DELETE(ExecutionContext, &CPULSAR_DEREF(ExecutionContext, _self));
+    PULSAR_DELETE(Pulsar::ExecutionContext, &CPULSAR_UNWRAP(_self));
 }
 
-CPULSAR_API CPulsar_CustomTypeGlobalData_Ref CPULSAR_CALL CPulsar_ExecutionContext_GetCustomTypeGlobalData(CPulsar_ExecutionContext _self, uint64_t typeId)
+CPULSAR_API CPulsar_CustomTypeGlobalData_Ref* CPULSAR_CALL CPulsar_ExecutionContext_GetCustomTypeGlobalData(CPulsar_ExecutionContext* _self, uint64_t typeId)
 {
-    ExecutionContext& self = CPULSAR_DEREF(ExecutionContext, _self);
+    Pulsar::ExecutionContext& self = CPULSAR_UNWRAP(_self);
     auto typeData = self.GetCustomTypeGlobalData<Pulsar::CustomTypeGlobalData>(typeId);
     if (!typeData) return NULL;
-    return CPULSAR_REF(CPulsar_CustomTypeGlobalData_Ref_S, *PULSAR_NEW(Pulsar::CustomTypeGlobalData::Ref, typeData));
+    return CPULSAR_WRAP(*PULSAR_NEW(Pulsar::CustomTypeGlobalData::Ref, typeData));
 }
 
-CPULSAR_API CPulsar_CBuffer* CPULSAR_CALL CPulsar_ExecutionContext_GetCustomTypeGlobalDataBuffer(CPulsar_ExecutionContext self, uint64_t typeId)
+CPULSAR_API CPulsar_CBuffer* CPULSAR_CALL CPulsar_ExecutionContext_GetCustomTypeGlobalDataBuffer(CPulsar_ExecutionContext* self, uint64_t typeId)
 {
-    CPulsar_CustomTypeGlobalData_Ref ref = CPulsar_ExecutionContext_GetCustomTypeGlobalData(self, typeId);
+    CPulsar_CustomTypeGlobalData_Ref* ref = CPulsar_ExecutionContext_GetCustomTypeGlobalData(self, typeId);
     CPulsar_CBuffer* buf = CPulsar_CustomTypeGlobalData_Ref_GetBuffer(ref);
     CPulsar_CustomTypeGlobalData_Ref_Delete(ref);
     return buf;
 }
 
-CPULSAR_API CPulsar_Stack CPULSAR_CALL CPulsar_ExecutionContext_GetStack(CPulsar_ExecutionContext _self)
+CPULSAR_API CPulsar_Stack* CPULSAR_CALL CPulsar_ExecutionContext_GetStack(CPulsar_ExecutionContext* _self)
 {
-    return CPULSAR_REF(CPulsar_Stack_S, CPULSAR_DEREF(ExecutionContext, _self).GetStack());
+    return CPULSAR_WRAP(CPULSAR_UNWRAP(_self).GetStack());
 }
 
-CPULSAR_API CPulsar_Frame CPULSAR_CALL CPulsar_ExecutionContext_CurrentFrame(CPulsar_ExecutionContext _self)
+CPULSAR_API CPulsar_Frame* CPULSAR_CALL CPulsar_ExecutionContext_CurrentFrame(CPulsar_ExecutionContext* _self)
 {
-    return CPULSAR_REF(CPulsar_Frame_S, CPULSAR_DEREF(ExecutionContext, _self).CurrentFrame());
+    return CPULSAR_WRAP(CPULSAR_UNWRAP(_self).CurrentFrame());
 }
 
-CPULSAR_API CPulsar_RuntimeState CPULSAR_CALL CPulsar_ExecutionContext_CallFunctionByName(CPulsar_ExecutionContext _self, const char* fnName)
+CPULSAR_API CPulsar_RuntimeState CPULSAR_CALL CPulsar_ExecutionContext_CallFunctionByName(CPulsar_ExecutionContext* _self, const char* fnName)
 {
-    return (CPulsar_RuntimeState)CPULSAR_DEREF(ExecutionContext, _self).CallFunction(fnName);
+    return (CPulsar_RuntimeState)CPULSAR_UNWRAP(_self).CallFunction(fnName);
 }
 
-CPULSAR_API CPulsar_RuntimeState CPULSAR_CALL CPulsar_ExecutionContext_Run(CPulsar_ExecutionContext _self)
+CPULSAR_API CPulsar_RuntimeState CPULSAR_CALL CPulsar_ExecutionContext_Run(CPulsar_ExecutionContext* _self)
 {
-    return (CPulsar_RuntimeState)CPULSAR_DEREF(ExecutionContext, _self).Run();
+    return (CPulsar_RuntimeState)CPULSAR_UNWRAP(_self).Run();
 }
 
-CPULSAR_API CPulsar_RuntimeState CPULSAR_CALL CPulsar_ExecutionContext_GetState(const CPulsar_ExecutionContext _self)
+CPULSAR_API CPulsar_RuntimeState CPULSAR_CALL CPulsar_ExecutionContext_GetState(const CPulsar_ExecutionContext* _self)
 {
-    return (CPulsar_RuntimeState)CPULSAR_DEREF(const ExecutionContext, _self).GetState();
+    return (CPulsar_RuntimeState)CPULSAR_UNWRAP(_self).GetState();
 }
 
 }

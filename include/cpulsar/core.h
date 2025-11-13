@@ -4,15 +4,12 @@
 #include <stddef.h> // size_t
 #include <inttypes.h> // int64_t
 
+#include "cpulsar/opaque.h"
 #include "cpulsar/platform.h"
 
 #ifdef __cplusplus
 #  define CPULSAR_CPP
 #endif // __cplusplus
-
-// Derefs an opaque pointer, this is mainly useful to search where opaques are dereferenced.
-#define CPULSAR_DEREF(upType, opaque) (*(upType*)opaque)
-#define CPULSAR_REF(downType, value) ((downType*)&value)
 
 // CPULSAR_DEPRECATED() can be defined globally to change its behaviour.
 #ifndef CPULSAR_DEPRECATED
