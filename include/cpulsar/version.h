@@ -3,6 +3,22 @@
 
 #include "cpulsar/core.h"
 
+#ifdef PULSAR_DEBUG
+#  define CPULSAR_VERSION_CURRENT_BUILD_KIND() (CPulsar_BuildKind_Debug)
+#else // PULSAR_DEBUG
+#  define CPULSAR_VERSION_CURRENT_BUILD_KIND() (CPulsar_BuildKind_Release)
+#endif // PULSAR_DEBUG
+
+// Returns the version of CPulsar referenced by this header file.
+#define CPULSAR_VERSION_CURRENT() CPULSAR_LITERAL_S( \
+        CPulsar_SemVer,                              \
+        .Major = 0, .Minor = 1, .Patch = 0,          \
+        .Pre   = {CPulsar_PreReleaseKind_Alpha, 0},  \
+        .Build = CPULSAR_VERSION_CURRENT_BUILD_KIND())
+
+// Returns the version number of CPulsar referenced by this header file.
+#define CPULSAR_VERSION_NUMBER_CURRENT() (CPulsar_SemVer_ToNumber(CPULSAR_VERSION_CURRENT()))
+
 typedef enum {
     CPulsar_PreReleaseKind_Alpha = 0,
     CPulsar_PreReleaseKind_Beta  = 1,
@@ -33,6 +49,11 @@ extern "C" {
 #endif
 
 CPULSAR_API uint64_t CPULSAR_CALL CPulsar_SemVer_ToNumber(CPulsar_SemVer self);
+
+// Returns the version of CPulsar referenced by the linked library.
+CPULSAR_API CPulsar_SemVer CPULSAR_CALL CPulsar_GetVersion(void);
+// Returns the version number of CPulsar referenced by the linked library.
+CPULSAR_API uint64_t       CPULSAR_CALL CPulsar_GetVersionNumber(void);
 
 CPULSAR_API CPulsar_SemVer CPULSAR_CALL CPulsar_GetLanguageVersion(void);
 CPULSAR_API uint32_t       CPULSAR_CALL CPulsar_GetNeutronVersion(void);

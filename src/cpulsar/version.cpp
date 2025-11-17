@@ -17,6 +17,16 @@ CPULSAR_API uint64_t CPULSAR_CALL CPulsar_SemVer_ToNumber(CPulsar_SemVer self)
     return versionNumber;
 }
 
+CPULSAR_API CPulsar_SemVer CPULSAR_CALL CPulsar_GetVersion(void)
+{
+    return CPULSAR_VERSION_CURRENT();
+}
+
+CPULSAR_API uint64_t CPULSAR_CALL CPulsar_GetVersionNumber(void)
+{
+    return CPULSAR_VERSION_NUMBER_CURRENT();
+}
+
 CPULSAR_API CPulsar_SemVer CPULSAR_CALL CPulsar_GetLanguageVersion(void)
 {
     return {

@@ -19,6 +19,6 @@ typedef struct {
     CPulsar_CBuffer_Copy Copy;
 } CPulsar_CBuffer;
 
-#define CPULSAR_CBUFFER_NULL CPULSAR_LITERAL_S(CPulsar_CBuffer, {0})
+#define CPULSAR_CBUFFER_NULL CPULSAR_LITERAL_S(CPulsar_CBuffer, 0)
 
 #endif // _CPULSAR_CBUFFER_H
