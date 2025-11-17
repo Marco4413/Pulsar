@@ -207,6 +207,7 @@ void PulsarTools::DynamicLibrary::Unload()
     m_ErrorMessage.Resize(0);
     if (!m_Data->Handle) return;
     dlclose(m_Data->Handle);
+    m_Data->Handle = nullptr;
 }
 
 void* PulsarTools::DynamicLibrary::GetSymbol(const char* symbolName)
@@ -258,6 +259,7 @@ void PulsarTools::DynamicLibrary::Unload()
     m_ErrorMessage.Resize(0);
     if (!m_Data->Handle) return;
     FreeLibrary(m_Data->Handle);
+    m_Data->Handle = NULL;
 }
 
 void* PulsarTools::DynamicLibrary::GetSymbol(const char* symbolName)
