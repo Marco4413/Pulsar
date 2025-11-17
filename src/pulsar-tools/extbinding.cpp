@@ -48,16 +48,16 @@ PulsarTools::ExtBinding::ExtBinding(const char* path)
         return;
     }
 
-    GetPulsarVersionFn getPulsarVersion = (GetPulsarVersionFn)m_Lib.GetSymbol("GetPulsarVersion");
-    if (!getPulsarVersion) {
-        m_ErrorMessage = "Function GetPulsarVersion not found.";
+    GetCPulsarVersionFn getCPulsarVersion = (GetCPulsarVersionFn)m_Lib.GetSymbol("GetCPulsarVersion");
+    if (!getCPulsarVersion) {
+        m_ErrorMessage = "Function GetCPulsarVersion not found.";
         m_Lib.Unload();
         return;
     }
 
-    uint64_t pulsarVersion = getPulsarVersion();
-    if (!IsPulsarVersionSupported(pulsarVersion)) {
-        m_ErrorMessage  = "Binding was made for an unsupported Pulsar version (";
+    uint64_t pulsarVersion = getCPulsarVersion();
+    if (!IsCPulsarVersionSupported(pulsarVersion)) {
+        m_ErrorMessage  = "Binding was made for an unsupported CPulsar version (";
         m_ErrorMessage += Version::ToString(Version::FromNumber(pulsarVersion)).c_str();
         m_ErrorMessage += ").";
         m_Lib.Unload();
@@ -101,15 +101,38 @@ void PulsarTools::ExtBinding::BindFunctions(Pulsar::Module& module, bool declare
     }
 }
 
-bool PulsarTools::ExtBinding::IsPulsarVersionSupported(uint64_t versionNumber)
+bool PulsarTools::ExtBinding::GetCPulsarVersionNumber(uint64_t& cpulsarVersionNumber)
 {
-    auto vPls = GetPulsarVersion();
-    // Require perfect match for in-dev builds
-    if (vPls.Major == 0 || vPls.Pre.Kind != Version::PreReleaseKind::None)
-        return vPls.ToNumber() == versionNumber;
+    static GetCPulsarVersionFn s_GetCPulsarVersionNumber = nullptr;
+    static uint64_t s_CPulsarVersionNumber = 0;
 
-    auto vLib = Version::FromNumber(versionNumber);
-    return vLib.Major == vPls.Major;
+    if (!s_GetCPulsarVersionNumber) {
+        if (!s_CPulsarDL.IsLoaded()) return false;
+        s_GetCPulsarVersionNumber = (GetCPulsarVersionFn)s_CPulsarDL.GetSymbol("CPulsar_GetVersionNumber");
+        if (!s_GetCPulsarVersionNumber) return false;
+        s_CPulsarVersionNumber = s_GetCPulsarVersionNumber();
+    }
+
+    cpulsarVersionNumber = s_CPulsarVersionNumber;
+    return true;
+}
+
+bool PulsarTools::ExtBinding::IsCPulsarVersionSupported(uint64_t libVersionNumber)
+{
+    static GetCPulsarVersionFn s_GetCPulsarVersionNumber = nullptr;
+    if (!s_GetCPulsarVersionNumber) {
+        if (!s_CPulsarDL.IsLoaded()) return false;
+        s_GetCPulsarVersionNumber = (GetCPulsarVersionFn)s_CPulsarDL.GetSymbol("CPulsar_GetVersionNumber");
+        if (!s_GetCPulsarVersionNumber) return false;
+    }
+
+    auto cpulsarVersion = Version::FromNumber(s_GetCPulsarVersionNumber());
+    // Require perfect match for in-dev builds
+    if (cpulsarVersion.Major == 0 || cpulsarVersion.Pre.Kind != Version::PreReleaseKind::None)
+        return cpulsarVersion.ToNumber() == libVersionNumber;
+
+    auto libVersion = Version::FromNumber(libVersionNumber);
+    return libVersion.Major == cpulsarVersion.Major;
 }
 
 #if defined(CPULSAR_PLATFORM_UNIX)

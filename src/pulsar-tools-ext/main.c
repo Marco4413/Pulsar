@@ -35,19 +35,11 @@ CPulsar_RuntimeState CPULSAR_CALL NativeExtIntegerCreate(CPulsar_ExecutionContex
 CPulsar_RuntimeState CPULSAR_CALL NativeExtIntegerSet(CPulsar_ExecutionContext* context, void* args);
 CPulsar_RuntimeState CPULSAR_CALL NativeExtIntegerGet(CPulsar_ExecutionContext* context, void* args);
 
-// Returns the version of Pulsar this binding was made for
-CPULSAR_EXPORT uint64_t CPULSAR_CALL GetPulsarVersion(void)
+// Returns the version of CPulsar this binding was made for.
+// CPULSAR_VERSION_CURRENT is a macro that defines the version used by the header files.
+CPULSAR_EXPORT uint64_t CPULSAR_CALL GetCPulsarVersion(void)
 {
-    // SemVer::Build can be ignored
-    return CPulsar_SemVer_ToNumber((CPulsar_SemVer){
-        .Major = 0,
-        .Minor = 7,
-        .Patch = 0,
-        .Pre   = {
-            .Kind     = CPulsar_PreReleaseKind_Beta,
-            .Revision = 0,
-        },
-    });
+    return CPULSAR_VERSION_NUMBER_CURRENT();
 }
 
 CPULSAR_EXPORT void CPULSAR_CALL BindTypes(CPulsar_Module* module)

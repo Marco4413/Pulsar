@@ -59,9 +59,12 @@ namespace PulsarTools
     class ExtBinding final
     {
     public:
-        using GetPulsarVersionFn = uint64_t(CPULSAR_CALL *)(void);
-        using BindTypesFn        = void(CPULSAR_CALL *)(Pulsar::Module*);
-        using BindFunctionsFn    = void(CPULSAR_CALL *)(Pulsar::Module*, int);
+        using GetCPulsarVersionFn = uint64_t(CPULSAR_CALL *)(void);
+        using BindTypesFn         = void(CPULSAR_CALL *)(Pulsar::Module*);
+        using BindFunctionsFn     = void(CPULSAR_CALL *)(Pulsar::Module*, int);
+
+        static bool GetCPulsarVersionNumber(uint64_t& cpulsarVersionNumber);
+        static bool IsCPulsarVersionSupported(uint64_t libVersionNumber);
 
     public:
         ExtBinding(const char* path);
@@ -86,9 +89,6 @@ namespace PulsarTools
         const Pulsar::String& GetErrorMessage() const { return m_ErrorMessage; }
 
         operator bool() const { return (bool)m_Lib.IsLoaded(); }
-
-    private:
-        static bool IsPulsarVersionSupported(uint64_t versionNumber);
 
     private:
         DynamicLibrary m_Lib;
