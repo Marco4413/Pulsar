@@ -33,7 +33,9 @@ int main(int argc, const char** argv)
 
     positionSettings.LineIndexedFrom = 0;
     positionSettings.CharIndexedFrom = 0;
-    if (program.Options.PositionIndexedFrom) {
+    // FIXME: Argue does not fail if an option with no default does not get a value when a subcommand is called.
+    //        When checking subcommands, Argue returns early without checking for options validity.
+    if (program.Options.PositionIndexedFrom.WasParsed()) {
         if (*program.Options.PositionIndexedFrom > 0) {
             positionSettings.LineIndexedFrom = static_cast<size_t>(*program.Options.PositionIndexedFrom);
             positionSettings.CharIndexedFrom = static_cast<size_t>(*program.Options.PositionIndexedFrom);
