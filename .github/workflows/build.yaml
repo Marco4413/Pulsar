@@ -116,13 +116,13 @@ jobs:
           PREMAKE_BUILD="$OS/$CONFIG"
 
           mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
-          cp    LICENSE.md                                        artifact/${{ env.ARTIFACT_NAME }}/
-          cp -R resources/**                                      artifact/${{ env.ARTIFACT_NAME }}/
-          cp -R include/cpulsar                                   artifact/${{ env.ARTIFACT_NAME }}/include/
+          cp    LICENSE.md                                           artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R resources/**                                         artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R include/cpulsar                                      artifact/${{ env.ARTIFACT_NAME }}/include/
           rm    artifact/${{ env.ARTIFACT_NAME }}/include/cpulsar/_* # Remove all private CPulsar header files
-          cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp"      artifact/${{ env.ARTIFACT_NAME }}/
-          cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools"  artifact/${{ env.ARTIFACT_NAME }}/
-          cp    "build/pulsar-tools/$PREMAKE_BUILD/libcpulsar.so" artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp"         artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools"     artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-tools/$PREMAKE_BUILD/libcpulsar.dylib" artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         uses: actions/upload-artifact@v4
