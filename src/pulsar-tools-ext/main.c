@@ -37,17 +37,17 @@ CPulsar_RuntimeState CPULSAR_CALL NativeExtIntegerGet(CPulsar_ExecutionContext* 
 
 // Returns the version of CPulsar this binding was made for.
 // CPULSAR_VERSION_CURRENT is a macro that defines the version used by the header files.
-CPULSAR_EXPORT uint64_t CPULSAR_CALL GetCPulsarVersion(void)
+CPULSAR_EXPORT uint64_t CPULSAR_CALL PulsarExt_GetCPulsarVersion(void)
 {
     return CPULSAR_VERSION_NUMBER_CURRENT();
 }
 
-CPULSAR_EXPORT void CPULSAR_CALL BindTypes(CPulsar_Module* module)
+CPULSAR_EXPORT void CPULSAR_CALL PulsarExt_BindTypes(CPulsar_Module* module)
 {
     CPulsar_Module_BindCustomType(module, "Ext/Integer", ExtIntegerData_Factory);
 }
 
-CPULSAR_EXPORT void CPULSAR_CALL BindFunctions(CPulsar_Module* module, int declareAndBind)
+CPULSAR_EXPORT void CPULSAR_CALL PulsarExt_BindFunctions(CPulsar_Module* module, int declareAndBind)
 {
     CPulsar_Module_BindNativeFunctionEx(
         module,
