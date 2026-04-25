@@ -15,7 +15,9 @@
 static PulsarTools::DynamicLibrary s_CPulsarDL(
         PulsarTools::CLI::GetThisProcessExecutable()
             .parent_path()
-#if defined(CPULSAR_PLATFORM_UNIX)
+#if defined(CPULSAR_PLATFORM_MACOSX)
+            .append("libcpulsar.dylib")
+#elif defined(CPULSAR_PLATFORM_UNIX)
             .append("libcpulsar.so")
 #elif defined(CPULSAR_PLATFORM_WINDOWS)
             .append("cpulsar.dll")

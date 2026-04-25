@@ -6,6 +6,8 @@ local cflags    = require "common/cflags"
 local function get_slib_filename(basename)
   if os.target() == "windows" then
     return basename .. ".dll"
+  elseif os.target() == "macosx" then
+    return "lib" .. basename .. ".dylib"
   else
     return "lib" .. basename .. ".so"
   end
