@@ -3,6 +3,7 @@
 #include <chrono>
 #include <optional>
 
+#include "pulsar/architecture.h"
 #include "pulsar/platform.h"
 
 #if defined(PULSAR_PLATFORM_MACOSX)
@@ -140,19 +141,123 @@ Pulsar::ParseSettings PulsarTools::CLI::ParserOptions::ToParseSettings() const
     return settings;
 }
 
+static std::optional<std::filesystem::path> _TryLibraryPath(const std::filesystem::path& libraryPath, std::vector<std::filesystem::path>* triedPaths)
+{
+    std::error_code ec;
+    std::filesystem::path canonicalLibraryPath = std::filesystem::weakly_canonical(libraryPath, ec);
+    if (ec) return std::nullopt;
+
+    if (std::filesystem::is_regular_file(canonicalLibraryPath))
+        return canonicalLibraryPath;
+
+    if (triedPaths) {
+        triedPaths->emplace_back(std::move(canonicalLibraryPath));
+    }
+
+    return std::nullopt;
+}
+
+std::optional<std::filesystem::path> PulsarTools::CLI::SearchLibrary(const PulsarTools::CLI::RuntimeOptions& runtimeOptions, const std::filesystem::path& libraryPath, std::vector<std::filesystem::path>* triedPaths)
+{
+    if (triedPaths) triedPaths->clear();
+    if (libraryPath.empty()) return std::nullopt;
+
+    std::string libraryName = libraryPath.filename().generic_string();
+    std::vector<std::string> candidateFileNames;
+
+    if (!libraryPath.has_parent_path()) {
+        std::string architecture;
+#if defined(PULSAR_ARCHITECTURE_AMD64)
+        architecture = "amd64";
+#elif defined(PULSAR_ARCHITECTURE_ARM64)
+        architecture = "arm64";
+#else
+        architecture = "unknown";
+#endif
+
+#ifdef PULSAR_PLATFORM_MACOSX
+        candidateFileNames.push_back(libraryName + ".cpulsar.macosx-" + architecture + ".dylib");
+        candidateFileNames.push_back(libraryName + ".cpulsar.macosx-" + architecture + ".so");
+        candidateFileNames.push_back(libraryName + ".cpulsar.macosx.dylib");
+        candidateFileNames.push_back(libraryName + ".cpulsar.macosx.so");
+#endif // PULSAR_PLATFORM_MACOSX
+
+#ifdef PULSAR_PLATFORM_LINUX
+        candidateFileNames.push_back(libraryName + ".cpulsar.linux-" + architecture + ".so");
+        candidateFileNames.push_back(libraryName + ".cpulsar.linux.so");
+#endif // PULSAR_PLATFORM_LINUX
+
+#if (!defined(PULSAR_PLATFORM_MACOSX) && !defined(PULSAR_PLATFORM_LINUX)) && defined(PULSAR_PLATFORM_UNIX)
+        candidateFileNames.push_back(libraryName + ".cpulsar.unix-" + architecture + ".so");
+        candidateFileNames.push_back(libraryName + ".cpulsar.unix.so");
+#endif // PULSAR_PLATFORM_UNIX
+
+#ifdef PULSAR_PLATFORM_WINDOWS
+        candidateFileNames.push_back(libraryName + ".cpulsar.windows-" + architecture + ".dll");
+        candidateFileNames.push_back(libraryName + ".cpulsar.windows.dll");
+#endif // PULSAR_PLATFORM_WINDOWS
+
+#ifdef PULSAR_PLATFORM_UNKNOWN
+        PULSAR_UNUSED(architecture);
+#endif // PULSAR_PLATFORM_UNKNOWN
+    }
+
+    candidateFileNames.push_back(libraryName);
+
+    std::vector<std::filesystem::path> candidateFilePaths;
+    candidateFilePaths.reserve(candidateFileNames.size());
+
+    std::filesystem::path basePath = libraryPath.parent_path();
+    bool isBasePathRelative = basePath.is_relative();
+    for (const auto& fileName : candidateFileNames) {
+        std::optional<std::filesystem::path> fullLibraryPath = std::nullopt;
+        fullLibraryPath = _TryLibraryPath(basePath / fileName, triedPaths);
+        if (fullLibraryPath) return fullLibraryPath;
+
+        if (isBasePathRelative) {
+            for (const auto& searchFolder : *runtimeOptions.LibraryFolders) {
+                fullLibraryPath = _TryLibraryPath(searchFolder / basePath / fileName, triedPaths);
+                if (fullLibraryPath) return fullLibraryPath;
+            }
+        }
+    }
+
+    return std::nullopt;
+}
+
 int PulsarTools::CLI::Action::LoadExternalBindings(const RuntimeOptions& runtimeOptions, ExternalBindings& out)
 {
     Logger& logger = GetLogger();
 
+    std::vector<std::filesystem::path> triedPaths;
     bool hasError = false;
-    for (const std::string& path : *runtimeOptions.ExtBindings) {
-        ExtBinding binding(path.c_str());
-        if (binding) {
-            out.emplace_back(std::move(binding));
-        } else {
-            logger.Error("Could not load external library '{}':\n{}", path, binding.GetErrorMessage());
+
+    for (const std::string& libraryPath : *runtimeOptions.Libraries) {
+        auto fullLibraryPath = SearchLibrary(runtimeOptions, libraryPath, &triedPaths);
+        if (!fullLibraryPath) {
             hasError = true;
+            if (triedPaths.size() > 0) {
+                std::string errorMessage = fmt::format("Could not find external library '{}':", libraryPath);
+                for (const auto& triedPath : triedPaths) {
+                    errorMessage += fmt::format("\n    at '{}'", triedPath.generic_string());
+                }
+                logger.Error(errorMessage);
+            } else {
+                logger.Error("Could not find external library '{}'.", libraryPath);
+            }
+            continue;
         }
+
+        ExtBinding binding(fullLibraryPath->generic_string().c_str());
+        if (!binding) {
+            hasError = true;
+            logger.Error("Could not load external library '{}' ('{}'):\n{}",
+                    libraryPath, fullLibraryPath->generic_string(),
+                    binding.GetErrorMessage());
+            continue;
+        }
+
+        out.emplace_back(std::move(binding));
     }
 
     return hasError;

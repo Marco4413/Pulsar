@@ -1,6 +1,7 @@
 #ifndef _PULSARTOOLS_CLI_H
 #define _PULSARTOOLS_CLI_H
 
+#include <optional>
 #include <filesystem>
 
 #include <argue.hpp>
@@ -211,7 +212,8 @@ namespace PulsarTools::CLI
                 "Sets the max depth of the printed stack-trace on error. (default: 10)",
                 10),
             EntryPoint(cmd, "entry-point", "E", "FUNC", "Set entry point. (default: main)", "main"),
-            ExtBindings(cmd, "ext-binding", "L", "PATH", "Imports bindings from the specified dll/so."),
+            LibraryFolders(cmd, "library-search", "L", "PATH", "Adds the path to the library search paths."),
+            Libraries(cmd, "library", "l", "PATH", "Loads the specified external library."),
             BindDebug(cmd, "bind-debug", "", "Bind debugging utilities."),
             BindError(cmd, "bind-error", "", "Bind error handling natives."),
             BindFileSystem(cmd, "bind-filesystem", "", "Bind file system natives."),
@@ -231,7 +233,8 @@ namespace PulsarTools::CLI
         Argue::IntOption  StackTraceDepth;
 
         Argue::StrOption EntryPoint;
-        Argue::CollectionOption ExtBindings;
+        Argue::CollectionOption LibraryFolders;
+        Argue::CollectionOption Libraries;
 
         Argue::FlagOption BindDebug;
         Argue::FlagOption BindError;
@@ -280,6 +283,8 @@ namespace PulsarTools::CLI
     bool LogParserErrors(const Pulsar::Parser& parser, const ParserOptions& parserOptions);
 
     using ExternalBindings = std::vector<ExtBinding>;
+
+    std::optional<std::filesystem::path> SearchLibrary(const PulsarTools::CLI::RuntimeOptions& runtimeOptions, const std::filesystem::path& libraryPath, std::vector<std::filesystem::path>* triedPaths=nullptr);
 
     namespace Action
     {
