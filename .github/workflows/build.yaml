@@ -70,12 +70,11 @@ jobs:
           if-no-files-found: error
 
   macosx:
-    if: false
     runs-on: macos-latest
     strategy:
       matrix:
         arch:   [ arm64 ]
-        cc:     [ gcc   ]
+        cc:     [ clang ]
         config: [ debug ]
 
     env:
@@ -102,14 +101,28 @@ jobs:
           make -j config?=${{ matrix.config }} pulsar pulsar-lsp pulsar-tools
       - name: Prepare Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
-        env:
-          PREMAKE_BUILD: macosx_${{ matrix.arch }}/${{ matrix.config == 'debug' && 'Debug' || 'Release' }}
         run: |
+          OS="$( basename build/pulsar/macosx_* )"
+          CONFIG='${{ matrix.config }}'
+          for config_dir in "build/pulsar/$OS"/*
+          do
+            config_name="$( basename $config_dir )"
+            if [ "$( echo "$config_name" | tr '[:upper:]' '[:lower:]' )" = '${{ matrix.config }}' ]; then
+              CONFIG="$config_name"
+              break
+            fi
+          done
+
+          PREMAKE_BUILD="$OS/$CONFIG"
+
           mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
-          cp    LICENSE.md                                               artifact/${{ env.ARTIFACT_NAME }}/
-          cp -R resources/**                                             artifact/${{ env.ARTIFACT_NAME }}/
-          cp    build/pulsar-lsp/${{ env.PREMAKE_BUILD }}/pulsar-lsp     artifact/${{ env.ARTIFACT_NAME }}/
-          cp    build/pulsar-tools/${{ env.PREMAKE_BUILD }}/pulsar-tools artifact/${{ env.ARTIFACT_NAME }}/
+          cp    LICENSE.md                                        artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R resources/**                                      artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R include/cpulsar                                   artifact/${{ env.ARTIFACT_NAME }}/include/
+          rm    artifact/${{ env.ARTIFACT_NAME }}/include/cpulsar/_* # Remove all private CPulsar header files
+          cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp"      artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools"  artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-tools/$PREMAKE_BUILD/libcpulsar.so" artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         uses: actions/upload-artifact@v4
