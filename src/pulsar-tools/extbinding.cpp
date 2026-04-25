@@ -48,9 +48,9 @@ PulsarTools::ExtBinding::ExtBinding(const char* path)
         return;
     }
 
-    GetCPulsarVersionFn getCPulsarVersion = (GetCPulsarVersionFn)m_Lib.GetSymbol("GetCPulsarVersion");
+    GetCPulsarVersionFn getCPulsarVersion = (GetCPulsarVersionFn)m_Lib.GetSymbol("PulsarExt_GetCPulsarVersion");
     if (!getCPulsarVersion) {
-        m_ErrorMessage = "Function GetCPulsarVersion not found.";
+        m_ErrorMessage = "Function PulsarExt_GetCPulsarVersion not found.";
         m_Lib.Unload();
         return;
     }
@@ -64,8 +64,8 @@ PulsarTools::ExtBinding::ExtBinding(const char* path)
         return;
     }
 
-    m_BindTypes = (BindTypesFn)m_Lib.GetSymbol("BindTypes");
-    m_BindFunctions = (BindFunctionsFn)m_Lib.GetSymbol("BindFunctions");
+    m_BindTypes = (BindTypesFn)m_Lib.GetSymbol("PulsarExt_BindTypes");
+    m_BindFunctions = (BindFunctionsFn)m_Lib.GetSymbol("PulsarExt_BindFunctions");
 }
 
 PulsarTools::ExtBinding::ExtBinding(ExtBinding&& other)
