@@ -25,10 +25,12 @@ namespace PulsarTools::CLI
     const std::filesystem::path& GetThisProcessExecutable();
     // If empty an error occurred. The path is computed once for each thread and stored in static storage.
     const std::filesystem::path& GetInterpreterIncludeFolder();
+    const std::filesystem::path& GetInterpreterLibrariesFolder();
 
     // This function calls GetInterpreterIncludeFolder() so that if any error occurs it also returns false.
     // If true is returned, the folder is not guaranteed to exist.
     inline bool HasInterpreterIncludeFolder() { return !GetInterpreterIncludeFolder().empty(); }
+    inline bool HasInterpreterLibrariesFolder() { return !GetInterpreterLibrariesFolder().empty(); }
 
     struct GeneralOptions
     {
@@ -213,6 +215,11 @@ namespace PulsarTools::CLI
                 10),
             EntryPoint(cmd, "entry-point", "E", "FUNC", "Set entry point. (default: main)", "main"),
             LibraryFolders(cmd, "library-search", "L", "PATH", "Adds the path to the library search paths."),
+            InterpreterLibrariesFolder(cmd, "interpreter-libraries", "",
+                HasInterpreterLibrariesFolder()
+                    ? "Automatically add '" + GetInterpreterLibrariesFolder().generic_string() + "' to the library search paths. (default: true)"
+                    : "This option does nothing because either your platform does not support it or the path to the interpreter could not be found.",
+                true),
             Libraries(cmd, "library", "l", "PATH", "Loads the specified external library."),
             BindDebug(cmd, "bind-debug", "", "Bind debugging utilities."),
             BindError(cmd, "bind-error", "", "Bind error handling natives."),
@@ -234,6 +241,7 @@ namespace PulsarTools::CLI
 
         Argue::StrOption EntryPoint;
         Argue::CollectionOption LibraryFolders;
+        Argue::FlagOption InterpreterLibrariesFolder;
         Argue::CollectionOption Libraries;
 
         Argue::FlagOption BindDebug;

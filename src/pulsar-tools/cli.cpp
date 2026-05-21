@@ -109,6 +109,16 @@ const std::filesystem::path& PulsarTools::CLI::GetInterpreterIncludeFolder()
     return s_InterpreterIncludeFolder->replace_filename("include");
 }
 
+const std::filesystem::path& PulsarTools::CLI::GetInterpreterLibrariesFolder()
+{
+    static thread_local std::optional<std::filesystem::path> s_InterpreterLibrariesFolder = std::nullopt;
+    if (s_InterpreterLibrariesFolder) return *s_InterpreterLibrariesFolder;
+
+    s_InterpreterLibrariesFolder = GetThisProcessExecutable();
+    if (s_InterpreterLibrariesFolder->empty()) return *s_InterpreterLibrariesFolder;
+    return s_InterpreterLibrariesFolder->replace_filename("libs");
+}
+
 Pulsar::ParseSettings PulsarTools::CLI::ParserOptions::ToParseSettings() const
 {
     Pulsar::ParseSettings settings = Pulsar::ParseSettings_Default;
@@ -217,6 +227,12 @@ std::optional<std::filesystem::path> PulsarTools::CLI::SearchLibrary(const Pulsa
         if (isBasePathRelative) {
             for (const auto& searchFolder : *runtimeOptions.LibraryFolders) {
                 fullLibraryPath = _TryLibraryPath(searchFolder / basePath / fileName, triedPaths);
+                if (fullLibraryPath) return fullLibraryPath;
+            }
+
+            if (*runtimeOptions.InterpreterLibrariesFolder) {
+                const auto& interpreterLibsFolder = GetInterpreterLibrariesFolder();
+                fullLibraryPath = _TryLibraryPath(interpreterLibsFolder / basePath / fileName, triedPaths);
                 if (fullLibraryPath) return fullLibraryPath;
             }
         }
