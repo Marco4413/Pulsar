@@ -315,7 +315,7 @@ std::optional<Debugger::LaunchError> DAPServer::Launch(
         const char* scriptPath, const dap::array<dap::string>& scriptArgs,
         const char* entryPoint, bool stopOnEntry)
 {
-    Pulsar::ValueList args;
+    Pulsar::Value::List args;
     for (const auto& arg : scriptArgs)
         args.Append()->Value().SetString(arg.c_str());
 

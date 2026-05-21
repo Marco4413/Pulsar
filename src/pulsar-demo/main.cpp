@@ -5,7 +5,7 @@ By reading this demo you should be able to get Pulsar up and running within your
 
 // fmt is just used for logging, use whatever logging library you have
 //   (or don't log at all, I won't judge you).
-#include "fmt/format.h"
+#include <fmt/format.h>
 
 // Both the Parser and all runtime structures are needed.
 // Pulsar is split into 4 parts: Lexer, Parser, Runtime and Binary.
@@ -14,6 +14,9 @@ By reading this demo you should be able to get Pulsar up and running within your
 // i.e. Runtime includes the Lexer to save debug information, that may change in the future (it may just include Token). 
 #include "pulsar/parser.h"
 #include "pulsar/runtime.h"
+
+// Utility which helps printing errors.
+#include "pulsar/sourceviewer.h"
 
 // Uncomment the following line if you want to read a Neutron file
 // #define READ_AS_NEUTRON_FILE
@@ -29,7 +32,7 @@ int main(int argc, const char** argv)
 {
     // This demo uses hard-coded paths.
     // argv is ignored.
-    (void)argc; (void)argv;
+    PULSAR_UNUSED(argc, argv);
 
 #ifdef READ_AS_NEUTRON_FILE
 
@@ -73,7 +76,7 @@ int main(int argc, const char** argv)
         // Pulsar::String is null-terminated, there's no need to worry about reading invalid memory.
         fmt::println("[PARSE ERROR]: {}: {}",
             Pulsar::ParseResultToString(parseResult),
-            parser.GetErrorMessage().CString());
+            parser.GetErrorMessage().Message.CString());
         return 1;
     }
 
@@ -100,16 +103,29 @@ int main(int argc, const char** argv)
         //   an "half-baked" representation of the file.
         // So its data is to be treated as invalid.
 
-        // Getting the Token where the error happened.
-        const Pulsar::Token& errorToken = parser.GetErrorToken();
+        // Get the error message.
+        const Pulsar::Parser::ErrorMessage& errorMessage = parser.GetErrorMessage();
         fmt::println("[PARSE ERROR]: {}:{}:{}: {}: {}",
             // The path of the file which caused the error.
-            parser.GetErrorPath()->CString(),
-            // Line and Char within the line were the error occurred.
-            errorToken.SourcePos.Line+1,
-            errorToken.SourcePos.Char,
+            parser.GetPathFromIndex(errorMessage.SourceIndex)->CString(),
+            // Line and Char within the line where the error occurred.
+            // NOTE: In editors like VSCode, cursor position is indexed from 1.
+            errorMessage.Token.SourcePos.Line+1,
+            errorMessage.Token.SourcePos.Char+1,
             Pulsar::ParseResultToString(parseResult),
-            parser.GetErrorMessage().CString());
+            errorMessage.Message.CString());
+
+        const Pulsar::String* source = parser.GetSourceFromIndex(errorMessage.SourceIndex);
+        // Make sure the source is available.
+        if (source) {
+            // Create a SourceViewer and generate a RangeView of the error.
+            Pulsar::SourceViewer sourceViewer(*source);
+            Pulsar::SourceViewer::RangeView errorView = sourceViewer.ComputeRangeView(
+                    errorMessage.Token.SourcePos, Pulsar::SourceViewer::Range{20,20});
+            fmt::println("{:.{}}", errorView.View.Data(), errorView.View.Length());
+            // Print ~~~ underneath the token which generated the error.
+            fmt::println("{0: ^{1}}{0:~^{2}}", "", errorView.WidthToTokenStart, errorView.TokenWidth);
+        }
         return 1;
     }
 
@@ -117,12 +133,10 @@ int main(int argc, const char** argv)
 
     // The logo example needs a native function called "println!" to be ran.
     // Module::BindNativeFunction returns how many definitions matched and, therefore, were bound.
-    module.BindNativeFunction({
+    module.BindNativeFunction(Pulsar::FunctionSignature{
         .Name = "println!",
         .Arity = 1,
         .Returns = 0,
-        // This is not necessary as by default it's the same as Arity.
-        .LocalsCount = 1,
     }, [](Pulsar::ExecutionContext& eContext) {
         // We get the frame of this function call.
         Pulsar::Frame& frame = eContext.CurrentFrame();
@@ -145,9 +159,8 @@ int main(int argc, const char** argv)
     Pulsar::ExecutionContext context(module);
     // We prepare the initial stack which must contain all arguments
     //   needed by the function to be called (main only needs a List).
-    Pulsar::ValueStack& stack = context.GetStack();
-    stack.EmplaceBack()
-        .SetList(Pulsar::ValueList());
+    Pulsar::Stack& stack = context.GetStack();
+    stack.EmplaceList();
     // Call the last function named "main". We can assume it accepts 1 argument (args) and returns anything.
     context.CallFunction("main");
     Pulsar::RuntimeState runtimeState = context.Run();

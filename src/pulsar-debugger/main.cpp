@@ -2,6 +2,7 @@
 
 #include <dap/io.h>
 
+#include "pulsar/platform.h"
 #include "pulsar-debugger/dapserver.h"
 
 #ifdef PULSAR_PLATFORM_WINDOWS

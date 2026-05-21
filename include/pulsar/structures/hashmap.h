@@ -120,6 +120,9 @@ namespace Pulsar
     public:
         using Self = HashMap<K, V>;
         using Bucket = HashMapBucket<K, V>;
+        // Forward Declarations
+        class ConstIterator;
+        class MutableIterator;
 
         struct Pair
         {
@@ -313,6 +316,111 @@ namespace Pulsar
             // See: https://en.wikipedia.org/wiki/Open_addressing
             return (keyHash + probeIdx) % Capacity();
         }
+
+        ConstIterator Begin() const
+        {
+            auto it = m_Buckets.Begin();
+            for (; it != m_Buckets.End() && !(*it).IsPopulated(); ++it);
+            return ConstIterator(it, m_Buckets.End());
+        }
+
+        ConstIterator End() const { return ConstIterator(m_Buckets.End(), m_Buckets.End()); }
+
+        MutableIterator Begin()
+        {
+            auto it = m_Buckets.Begin();
+            for (; it != m_Buckets.End() && !(*it).IsPopulated(); ++it);
+            return MutableIterator(it, m_Buckets.End());
+        }
+
+        MutableIterator End() { return MutableIterator(m_Buckets.End(), m_Buckets.End()); }
+
+        PULSAR_ITERABLE_IMPL(Self, ConstIterator, MutableIterator)
+
+    public:
+        class ConstIterator
+        {
+        public:
+            using BucketIterator = List<Bucket>::ConstIterator;
+            struct Pair
+            {
+                const K& Key;
+                const V& Value;
+            };
+
+            explicit ConstIterator(BucketIterator begin, BucketIterator end)
+                : m_Begin(begin), m_End(end) {}
+
+            bool operator==(const ConstIterator& other) const = default;
+            bool operator!=(const ConstIterator& other) const = default;
+            Pair operator*() const
+            {
+                PULSAR_ASSERT(m_Begin && m_Begin->IsPopulated(), "Called *HashMap<K, V>::ConstIterator on invalid data.");
+                return { m_Begin->Key(), m_Begin->Value() };
+            }
+
+            ConstIterator& operator++()
+            {
+                PULSAR_ASSERT(m_Begin != m_End, "Called ++HashMap<K, V>::ConstIterator on complete iterator.");
+                for (++m_Begin; m_Begin != m_End && !m_Begin->IsPopulated(); ++m_Begin);
+                return *this;
+            }
+
+            ConstIterator operator++(int)
+            {
+                ConstIterator ret = *this;
+                ++(*this);
+                return ret;
+            }
+        private:
+            BucketIterator m_Begin;
+            BucketIterator m_End;
+        };
+
+        class MutableIterator
+        {
+        public:
+            using BucketIterator = List<Bucket>::MutableIterator;
+            struct Pair
+            {
+                const K& Key;
+                V& Value;
+            };
+
+            explicit MutableIterator(BucketIterator begin, BucketIterator end)
+                : m_Begin(begin), m_End(end) {}
+
+            bool operator==(const MutableIterator& other) const = default;
+            bool operator!=(const MutableIterator& other) const = default;
+            Pair operator*()
+            {
+                PULSAR_ASSERT(m_Begin && m_Begin->IsPopulated(), "Called *HashMap<K, V>::MutableIterator on invalid data.");
+                return { m_Begin->Key(), m_Begin->Value() };
+            }
+            ConstIterator::Pair operator*() const
+            {
+                PULSAR_ASSERT(m_Begin && m_Begin->IsPopulated(), "Called *HashMap<K, V>::MutableIterator on invalid data.");
+                return { m_Begin->Key(), m_Begin->Value() };
+            }
+
+            MutableIterator& operator++()
+            {
+                PULSAR_ASSERT(m_Begin != m_End, "Called ++HashMap<K, V>::MutableIterator on complete iterator.");
+                for (++m_Begin; m_Begin != m_End && !m_Begin->IsPopulated(); ++m_Begin);
+                return *this;
+            }
+
+            MutableIterator operator++(int)
+            {
+                MutableIterator ret = *this;
+                ++(*this);
+                return ret;
+            }
+        private:
+            BucketIterator m_Begin;
+            BucketIterator m_End;
+        };
+
     private:
         List<Bucket> m_Buckets;
     };

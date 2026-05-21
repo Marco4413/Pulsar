@@ -14,7 +14,7 @@ Debugger::Debugger()
     , m_MainThread{ .Continue = ContinuePolicy{}, .Thread = nullptr }
 {}
 
-std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pulsar::ValueList&& args, const char* entryPoint)
+std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pulsar::Value::List&& args, const char* entryPoint)
 {
     DebuggerScopeLock _lock(*this);
 
@@ -31,7 +31,8 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pu
     // FIXME: AddSourceFile doesn't like when the cwd of the debugger is in a different drive on Windows
     parseResult = parser.AddSourceFile(scriptPath);
     if (parseResult != Pulsar::ParseResult::OK) {
-        return "Parser Error: " + parser.GetErrorMessage();
+        const auto& errorMessage = parser.GetErrorMessage();
+        return "Parser Error: " + errorMessage.Message;
     }
 
     auto debuggableModule = std::make_shared<DebuggableModule>();
@@ -40,7 +41,8 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pu
 
     parseResult = parser.ParseIntoModule(debuggableModule->GetModule(), parseSettings);
     if (parseResult != Pulsar::ParseResult::OK) {
-        return "Parser Error: " + parser.GetErrorMessage();
+        const auto& errorMessage = parser.GetErrorMessage();
+        return "Parser Error: " + errorMessage.Message;
     }
 
     m_DebuggableModule = debuggableModule;
@@ -50,7 +52,7 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pu
     ThreadScopeLock _threadLock(*m_MainThread.Thread);    
 
     args.Prepend()->Value().SetString(scriptPath);
-    m_MainThread.Thread->GetContext().GetStack().EmplaceBack().SetList(std::move(args));
+    m_MainThread.Thread->GetContext().GetStack().EmplaceList(std::move(args));
     Pulsar::RuntimeState runtimeState = m_MainThread.Thread->GetContext().CallFunction(entryPoint);
     if (runtimeState != Pulsar::RuntimeState::OK) {
         return LaunchError("Runtime Error: ") + Pulsar::RuntimeStateToString(runtimeState);

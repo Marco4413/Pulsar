@@ -319,24 +319,31 @@ std::optional<DebuggerContext::Scope> DebuggerContext::LoadScope(const LazyScope
         Scope scope;
 
         Variable::EVisibility defaultVisibility;
-        const Pulsar::List<Pulsar::Value>* values;
+
+        Pulsar::List<Pulsar::Value>::ConstIterator valuesBegin, valuesEnd;
+        // const Pulsar::List<Pulsar::Value>* values;
 
         if (lazyScope.Kind == LazyScope::EKind::Locals) {
             scope.Name = "Locals";
             defaultVisibility = Variable::EVisibility::Unbound;
-            values = &callFrame.Locals;
+            valuesBegin = callFrame.Locals.Begin();
+            valuesEnd   = callFrame.Locals.End();
         } else {
             scope.Name = "Stack";
             defaultVisibility = Variable::EVisibility::Visible;
-            values = &callFrame.Stack;
+            valuesBegin = callFrame.Stack.Begin();
+            valuesEnd   = callFrame.Stack.End();
         }
 
         scope.VariablesReference = m_Variables.Size();
         m_Variables.EmplaceBack();
 
-        for (size_t i = 0; i < values->Size(); ++i) {
-            Variable var = CreateVariable((*values)[i], Pulsar::UIntToString(i), defaultVisibility);
-            m_Variables[scope.VariablesReference].EmplaceBack(std::move(var));
+        {
+            size_t i = 0;
+            for (auto it = valuesBegin; it != valuesEnd; ++it, ++i) {
+                Variable var = CreateVariable(*it, Pulsar::UIntToString(i), defaultVisibility);
+                m_Variables[scope.VariablesReference].EmplaceBack(std::move(var));
+            }
         }
 
         if (lazyScope.Kind == LazyScope::EKind::Locals) {

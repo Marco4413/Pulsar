@@ -3,6 +3,8 @@
 #include <chrono>
 #include <optional>
 
+#include "pulsar/platform.h"
+
 #if defined(PULSAR_PLATFORM_MACOSX)
 #  include <mach-o/dyld.h>
 #  include <string>
@@ -16,6 +18,7 @@
 #include "pulsar/bytecode.h"
 #include "pulsar/binary/filereader.h"
 #include "pulsar/binary/filewriter.h"
+#include "pulsar/optimizer.h"
 
 #include "pulsar-tools/bindings.h"
 #include "pulsar-tools/views.h"
@@ -25,6 +28,18 @@ static PulsarTools::Logger g_Logger(stdout, stderr);
 PulsarTools::Logger& PulsarTools::CLI::GetLogger()
 {
     return g_Logger;
+}
+
+static PulsarTools::PositionSettings g_PreferredPositionSettings = PulsarTools::PositionSettings_Default;
+
+PulsarTools::PositionSettings PulsarTools::CLI::GetPreferredPositionSettings()
+{
+    return g_PreferredPositionSettings;
+}
+
+void PulsarTools::CLI::SetPreferredPositionSettings(PositionSettings settings)
+{
+    g_PreferredPositionSettings = settings;
 }
 
 const std::filesystem::path& PulsarTools::CLI::GetThisProcessExecutable()
@@ -93,37 +108,6 @@ const std::filesystem::path& PulsarTools::CLI::GetInterpreterIncludeFolder()
     return s_InterpreterIncludeFolder->replace_filename("include");
 }
 
-// TODO: Move into Pulsar so that it can be used by other projects
-using IncludePaths = std::vector<std::string>;
-
-static Pulsar::ParseSettings::IncludeResolverFn CreateIncludeResolver(const IncludePaths& includePaths)
-{
-    return [includePaths](Pulsar::Parser& parser, Pulsar::String cwf, Pulsar::Token token) {
-        std::filesystem::path targetPath(token.StringVal.CString());
-
-        Pulsar::ParseResult result;
-        { // Try relative path first
-            std::filesystem::path workingPath(cwf.CString());
-            std::filesystem::path filePath = workingPath.parent_path() / targetPath;
-            result = parser.AddSourceFile(filePath.generic_string().c_str());
-            if (result == Pulsar::ParseResult::OK) return result;
-        }
-
-        for (size_t i = includePaths.size(); i > 0; --i) {
-            std::filesystem::path workingPath(includePaths[i-1]);
-            std::filesystem::path filePath = workingPath / targetPath;
-            if (std::filesystem::exists(filePath) &&
-                std::filesystem::is_regular_file(filePath)
-            ) {
-                parser.ClearError();
-                return parser.AddSourceFile(filePath.generic_string().c_str());
-            }
-        }
-
-        return result;
-    };
-}
-
 Pulsar::ParseSettings PulsarTools::CLI::ParserOptions::ToParseSettings() const
 {
     Pulsar::ParseSettings settings = Pulsar::ParseSettings_Default;
@@ -132,17 +116,27 @@ Pulsar::ParseSettings PulsarTools::CLI::ParserOptions::ToParseSettings() const
     settings.AllowIncludeDirective     = *this->AllowInclude;
     settings.AllowLabels               = *this->AllowLabels;
 
-    auto includeFolders = *this->IncludeFolders;
+    Pulsar::ParseSettings::IncludePaths includePaths;
+    includePaths.Reserve((*this->IncludeFolders).size()+1);
+
+    for (const auto& includeFolder : *this->IncludeFolders) {
+        includePaths.EmplaceBack(includeFolder.c_str());
+    }
+
     if (*this->InterpreterIncludeFolder) {
-        const auto& interpreterIncludeFolderPath = PulsarTools::CLI::GetInterpreterIncludeFolder();
-        if (!interpreterIncludeFolderPath.empty() && std::filesystem::exists(interpreterIncludeFolderPath)) {
-            includeFolders.push_back(interpreterIncludeFolderPath.generic_string());
+        const auto& interpreterIncludeFolder = PulsarTools::CLI::GetInterpreterIncludeFolder();
+        if (!interpreterIncludeFolder.empty() && std::filesystem::exists(interpreterIncludeFolder)) {
+            includePaths.EmplaceBack(interpreterIncludeFolder.generic_string().c_str());
         }
     }
 
-    if (!includeFolders.empty()) {
-        settings.IncludeResolver = CreateIncludeResolver(includeFolders);
+    if (!includePaths.IsEmpty()) {
+        settings.IncludeResolver = Pulsar::ParseSettings::CreateFileSystemIncludeResolver(
+                std::move(includePaths), true);
     }
+
+    settings.Warnings.DuplicateFunctionNames = *this->WarnDuplicateFunctionNames;
+
     return settings;
 }
 
@@ -168,12 +162,8 @@ int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const In
     auto parseTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
     logger.Info("Parsing took: {}us", parseTime.count());
 
-    if (parseResult != Pulsar::ParseResult::OK) {
-        logger.Error("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
-        logger.Error(CreateParserErrorMessage(parser, logger.GetColor()));
+    if (LogParserErrors(parser, parserOptions))
         return 1;
-    }
-
     return 0;
 }
 
@@ -259,16 +249,87 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
     auto parseTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
     logger.Info("Parsing took: {}us", parseTime.count());
 
-    if (parseResult != Pulsar::ParseResult::OK) {
-        logger.Error("Parse Error: {}", Pulsar::ParseResultToString(parseResult));
-        logger.Error(CreateParserErrorMessage(parser, logger.GetColor()));
+    if (LogParserErrors(parser, parserOptions))
         return 1;
-    }
 
     if (!*parserOptions.DeclareBoundNatives) {
         BindNatives(module, runtimeOptions, false);
     }
 
+    return 0;
+}
+
+int PulsarTools::CLI::Action::Optimize(Pulsar::Module& module, const OptimizerOptions& optimizerOptions, const Argue::StrOption* entryPoint)
+{
+    if (!optimizerOptions.HasOptimizationsActive()) return 0;
+
+    Logger& logger = GetLogger();
+
+    size_t appliedOptimizations = 0;
+    std::chrono::microseconds totalOptimizeTime(0);
+
+    Pulsar::BaseOptimizerSettings optimizerSettings;
+    {
+        bool exportAllFunctions = false;
+        Pulsar::List<Pulsar::StringView> exportedFunctions;
+
+        if (entryPoint && *entryPoint) {
+            exportedFunctions.PushBack((**entryPoint).c_str());
+        }
+
+        if (optimizerOptions.Exports) {
+            const auto& exports = *optimizerOptions.Exports;
+            exportAllFunctions = exports.ExportAllFunctions;
+            if (!exportAllFunctions) {
+                for (size_t i = 0; i < exports.ExportedFunctions.Size(); ++i)
+                    exportedFunctions.PushBack(exports.ExportedFunctions[i]);
+            }
+
+            optimizerSettings.IsExportedNative = exports.ExportAllNatives
+                ? [](size_t, const auto&) { return true; }
+                : Pulsar::UnusedOptimizer::Settings::CreateReachableNativesFilter(module, exports.ExportedNatives);
+
+            optimizerSettings.IsExportedGlobal = exports.ExportAllGlobals
+                ? [](size_t, const auto&) { return true; }
+                : Pulsar::UnusedOptimizer::Settings::CreateReachableGlobalsFilter(module, exports.ExportedGlobals);
+        }
+
+        optimizerSettings.IsExportedFunction = exportAllFunctions
+            ? [](size_t, const auto&) { return true; }
+            : Pulsar::UnusedOptimizer::Settings::CreateReachableFunctionsFilter(module, exportedFunctions);
+    }
+
+    if (*optimizerOptions.OptimizeUnused) {
+        size_t initFunctions = module.Functions.Size()
+            ,  initNatives   = module.NativeBindings.Size()
+            ,  initGlobals   = module.Globals.Size()
+            ,  initConstants = module.Constants.Size();
+
+        auto startTime = std::chrono::steady_clock::now();
+
+        Pulsar::UnusedOptimizer optimizer;
+        bool ok = optimizer.Optimize(module, optimizerSettings);
+
+        auto endTime = std::chrono::steady_clock::now();
+        auto optimizeUnusedTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
+
+        if (ok) {
+            ++appliedOptimizations;
+            totalOptimizeTime += optimizeUnusedTime;
+
+            logger.Info("Optimize Unused:");
+            logger.Info("- Removed {}/{} functions.", initFunctions-module.Functions.Size(),    initFunctions);
+            logger.Info("- Removed {}/{} natives.",   initNatives-module.NativeBindings.Size(), initNatives);
+            logger.Info("- Removed {}/{} globals.",   initGlobals-module.Globals.Size(),        initGlobals);
+            logger.Info("- Removed {}/{} constants.", initConstants-module.Constants.Size(),    initConstants);
+            logger.Info("- Time: {}us", optimizeUnusedTime.count());
+        } else {
+            logger.Warn("Optimize Unused: Failed!");
+        }
+    }
+
+    if (appliedOptimizations > 0)
+        logger.Info("Optimizations took: {}us", totalOptimizeTime.count());
     return 0;
 }
 
@@ -285,13 +346,13 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
     auto startTime = std::chrono::steady_clock::now();
 
     Pulsar::ExecutionContext context(module);
-    Pulsar::ValueStack& stack = context.GetStack();
+    Pulsar::Stack& stack = context.GetStack();
     { // Push argv into the Stack.
-        Pulsar::ValueList argList;
+        Pulsar::Value::List argList;
         argList.Append()->Value().SetString((*input.FilePath).c_str());
         for (const std::string& arg : *input.Args)
             argList.Append()->Value().SetString(arg.c_str());
-        stack.EmplaceBack().SetList(std::move(argList));
+        stack.EmplaceList(std::move(argList));
     }
 
     auto functionCallState = context.CallFunction((*runtimeOptions.EntryPoint).c_str());
@@ -308,7 +369,8 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
         return 1;
     } else if (runtimeState != Pulsar::RuntimeState::OK) {
         logger.Error("Runtime Error: {}", Pulsar::RuntimeStateToString(runtimeState));
-        logger.Error(CreateRuntimeErrorMessage(context, stackTraceDepth, logger.GetColor()));
+        logger.Error(CreateRuntimeErrorMessageReport(context, stackTraceDepth,
+                GetPreferredPositionSettings(), logger.GetColor()));
         return 1;
     }
 
@@ -316,10 +378,112 @@ int PulsarTools::CLI::Action::Run(const Pulsar::Module& module, const RuntimeOpt
     if (stack.Size() > 0) {
         logger.Info("Stack after ({}) call:", *runtimeOptions.EntryPoint);
         for (size_t i = 0; i < stack.Size(); i++)
-            logger.Info("{}. {}", i+1, stack[i]);
+            logger.Info("{}. {}", i+1, stack[i].ToRepr({ .Module = &module }));
     } else {
         logger.Info("Stack after ({}) call: []", *runtimeOptions.EntryPoint);
     }
 
     return 0;
+}
+
+bool PulsarTools::CLI::LogParserErrors(const Pulsar::Parser& parser, const PulsarTools::CLI::ParserOptions& parserOptions)
+{
+    Logger& logger = GetLogger();
+
+    const auto& warningMessages = parser.GetWarningMessages();
+    bool warningError = *parserOptions.WarnAsError && !warningMessages.IsEmpty();
+    for (size_t i = 0; i < warningMessages.Size(); ++i) {
+        const auto& warningMessage = warningMessages[i];
+        auto reportKind = warningError
+                ? MessageReportKind_Error
+                : MessageReportKind_Warning;
+        auto name = fmt::format("{}({})",
+                MessageReportKind_Warning.Name,
+                Pulsar::ParseWarningToString(warningMessage.Reason));
+        reportKind.Name = name.c_str();
+
+        if (warningError) {
+            logger.Error(CreateParserMessageReport(
+                    parser, reportKind, warningMessage,
+                    GetPreferredPositionSettings(), logger.GetColor()));
+        } else {
+            logger.Warn(CreateParserMessageReport(
+                    parser, reportKind, warningMessage,
+                    GetPreferredPositionSettings(), logger.GetColor()));
+        }
+    }
+
+    const auto& errorMessage = parser.GetErrorMessage();
+    if (errorMessage.Reason != Pulsar::ParseResult::OK) {
+        auto reportKind = MessageReportKind_Error;
+        auto name = fmt::format("{}({})",
+                reportKind.Name,
+                Pulsar::ParseResultToString(errorMessage.Reason));
+        reportKind.Name = name.c_str();
+
+        logger.Error(CreateParserMessageReport(
+                parser, reportKind, parser.GetErrorMessage(),
+                GetPreferredPositionSettings(), logger.GetColor()));
+        return true;
+    }
+
+    return warningError;
+}
+
+void PulsarTools::CLI::ExportOption::WriteHint(Argue::ITextBuilder& hint) const
+{
+    const char* ARG_FORMAT = "f:<FUNC>|n:<NATIVE>|g:<GLOBAL>";
+
+    const auto& parser = GetParser();
+    if (parser.HasShortPrefix() && HasShortName()) {
+        hint.PutText(Argue::s(
+            parser.GetPrefix(), GetName(), '=', ARG_FORMAT, ", ",
+            parser.GetShortPrefix(), GetShortName(), ARG_FORMAT
+        ));
+    } else {
+        hint.PutText(Argue::s(
+            parser.GetPrefix(), GetName(), '=', ARG_FORMAT
+        ));
+    }
+}
+
+bool PulsarTools::CLI::ExportOption::ParseValue(std::string_view val)
+{
+    size_t idSeparatorIdx = val.find_first_of(':');
+    if (idSeparatorIdx == std::string_view::npos)
+        return SetError("Could not find ':' to separate export type from identifier.");
+
+    bool* exportAllRef = nullptr;
+    Pulsar::List<Pulsar::String>* exportedRef = nullptr;
+
+    std::string_view exportType = val.substr(0, idSeparatorIdx);
+    if (exportType == "f" || exportType == "function") {
+        exportAllRef = &m_Exports.ExportAllFunctions;
+        exportedRef  = &m_Exports.ExportedFunctions;
+    } else if (exportType == "n" || exportType == "native") {
+        exportAllRef = &m_Exports.ExportAllNatives;
+        exportedRef  = &m_Exports.ExportedNatives;
+    } else if (exportType == "g" || exportType == "global") {
+        exportAllRef = &m_Exports.ExportAllGlobals;
+        exportedRef  = &m_Exports.ExportedGlobals;
+    } else {
+        return SetError("Invalid export type, valid export types are 'f' (function), 'n' (native), or 'g' (global).");
+    }
+
+    std::string_view identifier = val.substr(idSeparatorIdx+1);
+    if (identifier.empty()) {
+        return SetError("Invalid identifier, identifier may not be empty. You may specify either a name or '*' to export everything.");
+    }
+
+    if (!*exportAllRef) {
+        if (identifier == "*") {
+            *exportAllRef = true;
+            if (exportedRef->Size() > 0)
+                exportedRef->Clear();
+        } else {
+            exportedRef->EmplaceBack(Pulsar::String(identifier.data(), identifier.length()));
+        }
+    }
+
+    return true;
 }

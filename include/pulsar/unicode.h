@@ -44,6 +44,26 @@ namespace Unicode
             ? code + ('a'-'A')
             : code;
     }
+
+    constexpr size_t GetUTF8EncodedSize(Codepoint code)
+    {
+        if (code <= 0x7F) return 1;
+        else if (code <= 0x7FF) return 2;
+        else if (code <= 0xFFFF) return 3;
+        return 4;
+    }
+
+    constexpr size_t GetUTF16EncodedSize(Codepoint code)
+    {
+        if (code <= 0xFFFF) return 1;
+        return 2;
+    }
+
+    constexpr size_t GetUTF32EncodedSize(Codepoint code)
+    {
+        PULSAR_UNUSED(code);
+        return 1;
+    }
 }
 }
 

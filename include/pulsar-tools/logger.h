@@ -4,13 +4,15 @@
 #include <cstdio>
 #include <string>
 
+#include <fmt/color.h>
+
 #include "pulsar-tools/fmt.h"
 
 namespace PulsarTools
 {
     enum class LogLevel
     {
-        All, Error
+        All, Warning, Error
     };
 
     class Logger
@@ -44,19 +46,25 @@ namespace PulsarTools
         void Info(fmt::format_string<Args...> format, Args&& ...args) const
         {
             if (!DoLogInfo()) return;
-            std::string msg = fmt::vformat(format, fmt::make_format_args(args...));
-            Info(msg);
+            Info(fmt::vformat(format, fmt::make_format_args(args...)));
+        }
+
+        template<typename ...Args>
+        void Warn(fmt::format_string<Args...> format, Args&& ...args) const
+        {
+            if (!DoLogWarn()) return;
+            Warn(fmt::vformat(format, fmt::make_format_args(args...)));
         }
 
         template<typename ...Args>
         void Error(fmt::format_string<Args...> format, Args&& ...args) const
         {
             if (!DoLogError()) return;
-            std::string msg = fmt::vformat(format, fmt::make_format_args(args...));
-            Error(msg);
+            Error(fmt::vformat(format, fmt::make_format_args(args...)));
         }
 
         void Info(const std::string& msg) const;
+        void Warn(const std::string& msg) const;
         void Error(const std::string& msg) const;
 
         void PutNewLine() const
@@ -65,7 +73,10 @@ namespace PulsarTools
         }
     private:
         bool DoLogInfo() const  { return m_LogLevel == LogLevel::All; }
+        bool DoLogWarn() const  { return m_LogLevel == LogLevel::All || m_LogLevel == LogLevel::Warning; }
         bool DoLogError() const { return true; }
+
+        void Log(FILE* file, fmt::color color, const char* prefix, const std::string& msg) const;
 
     private:
         bool m_Prefix;

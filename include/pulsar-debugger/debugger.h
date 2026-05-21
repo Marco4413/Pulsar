@@ -40,7 +40,7 @@ namespace PulsarDebugger
         Debugger& operator=(Debugger&&)      = delete;
 
         // The Debugger is paused by default on Launch
-        std::optional<LaunchError> Launch(const char* scriptPath, Pulsar::ValueList&& args, const char* entryPoint="main");
+        std::optional<LaunchError> Launch(const char* scriptPath, Pulsar::Value::List&& args, const char* entryPoint="main");
 
         void Continue(ThreadId threadId);
         void Pause(ThreadId threadId);

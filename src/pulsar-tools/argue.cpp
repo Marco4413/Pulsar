@@ -1,2 +1,2 @@
 #define ARGUE_IMPLEMENTATION
-#include "argue.hpp"
+#include <argue.hpp>

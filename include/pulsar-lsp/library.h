@@ -6,6 +6,7 @@
 #include <lsp/fileuri.h>
 #include <lsp/types.h>
 
+#include "pulsar/sourceviewer.h"
 #include "pulsar/utf8.h"
 #include "pulsar/structures/hashmap.h"
 #include "pulsar/structures/list.h"
@@ -36,6 +37,20 @@ namespace PulsarLSP
     using DocumentPatches = std::vector<lsp::TextDocumentContentChangeEvent>;
     using PositionEncodingKind = lsp::PositionEncodingKind;
 
+    constexpr Pulsar::SourceViewer::PositionEncoding ToPulsarPositionEncoding(PositionEncodingKind encodingKind)
+    {
+        switch (encodingKind) {
+        case PositionEncodingKind::UTF8:
+            return Pulsar::SourceViewer::PositionEncoding::UTF8;
+        case PositionEncodingKind::UTF16:
+            return Pulsar::SourceViewer::PositionEncoding::UTF16;
+        case PositionEncodingKind::UTF32:
+            return Pulsar::SourceViewer::PositionEncoding::UTF32;
+        default:
+            return Pulsar::SourceViewer::PositionEncoding::UTF32;
+        }
+    }
+
     namespace Unicode
     {
         using Codepoint = Pulsar::Unicode::Codepoint;
@@ -46,12 +61,6 @@ namespace PulsarLSP
     {
         using Decoder = Pulsar::UTF8::Decoder;
         using Codepoint = Pulsar::UTF8::Codepoint;
-
-        namespace DecoderExt
-        {
-            void AdvanceToLine(Decoder& decoder, size_t startLine, size_t line);
-            void AdvanceToChar(Decoder& decoder, size_t startChar, size_t character, PositionEncodingKind encodingKind);
-        }
     }
 
     // A class which stores documents and can apply changes to them

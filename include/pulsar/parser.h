@@ -5,6 +5,7 @@
 
 #include "pulsar/lexer.h"
 #include "pulsar/runtime.h"
+#include "pulsar/parser/scopes.h"
 #include "pulsar/structures/hashmap.h"
 #include "pulsar/structures/list.h"
 
@@ -52,56 +53,6 @@ namespace Pulsar
         { "jlez!",      { InstructionCode::JLEZ      } },
     };
 
-    struct SkippableBlock
-    {
-        const bool AllowBreak = false;
-        const bool AllowContinue = false;
-        // Used for back-patching jump addresses.
-        List<size_t> BreakStatements = List<size_t>();
-        List<size_t> ContinueStatements = List<size_t>();
-    };
-
-    struct GlobalScope
-    {
-        // Path -> Idx map
-        HashMap<String, size_t> SourceDebugSymbols;
-        // Name -> Idx maps
-        HashMap<String, size_t> Functions;
-        HashMap<String, size_t> NativeFunctions;
-        HashMap<String, size_t> Globals;
-    };
-
-    struct FunctionScope
-    {
-        struct Label
-        {
-            Token Label;
-            size_t CodeDstIdx;
-        };
-
-        struct LabelBackPatch
-        {
-            Token Label;
-            size_t CodeIdx;
-        };
-
-        HashMap<String, Label> Labels;
-        List<LabelBackPatch> LabelUsages;
-    };
-
-    struct LocalScope
-    {
-        struct LocalVar
-        {
-            String Name;
-            SourcePosition DeclaredAt;
-        };
-
-        const GlobalScope& Global;
-        FunctionScope* const Function;
-        List<LocalVar> Locals = List<LocalVar>();
-    };
-
     enum class ParseResult
     {
         OK = 0,
@@ -126,7 +77,14 @@ namespace Pulsar
         TerminatedByNotification,
     };
 
-    const char* ParseResultToString(ParseResult presult);
+    enum class ParseWarning
+    {
+        None = 0,
+        DuplicateFunctionNames,
+    };
+
+    const char* ParseResultToString(ParseResult result);
+    const char* ParseWarningToString(ParseWarning warning);
 
     struct ParserNotifications
     {
@@ -231,6 +189,11 @@ namespace Pulsar
          */
         using IncludeResolverFn = std::function<ParseResult(Parser&, String, Token)>;
 
+        struct WarningFlags
+        {
+            bool DuplicateFunctionNames = false;
+        };
+
         bool StoreDebugSymbols              = true;
         bool AppendStackTraceToErrorMessage = true;
         size_t StackTraceMaxDepth           = 10;
@@ -242,12 +205,38 @@ namespace Pulsar
         bool MapGlobalProducersToVoid       = false;
         IncludeResolverFn IncludeResolver   = nullptr;
         ParserNotifications Notifications   = {};
+        WarningFlags Warnings               = {};
+
+        // The list is iterated in reverse order so that the last path is the most specific one.
+        using IncludePaths = List<String>;
+        // Returns nullptr if PULSAR_NO_FILESYSTEM is defined.
+        static IncludeResolverFn CreateFileSystemIncludeResolver(IncludePaths&& includePaths, bool showPathsInErrorMessage=false);
     };
 
     inline const ParseSettings ParseSettings_Default{};
 
     class Parser
     {
+    public:
+        static constexpr auto INVALID_INDEX = Module::INVALID_INDEX;
+
+        struct Message
+        {
+            size_t SourceIndex;
+            Pulsar::Token Token;
+            String Message;
+        };
+
+        struct ErrorMessage : Message
+        {
+            ParseResult Reason;
+        };
+
+        struct WarningMessage : Message
+        {
+            ParseWarning Reason;
+        };
+
     public:
         Parser() = default;
         ~Parser() = default;
@@ -257,15 +246,21 @@ namespace Pulsar
         ParseResult AddSourceFile(const String& path);
 
         ParseResult ParseIntoModule(Module& module, const ParseSettings& settings=ParseSettings_Default);
-        void Reset(); // Call Reset after ParseIntoModule to reuse the Parser
 
-        const String* GetErrorSource() const  { return m_ErrorSource; }
-        const String* GetErrorPath() const    { return m_ErrorPath; }
-        ParseResult GetError() const          { return m_Error; }
-        const String& GetErrorMessage() const { return m_ErrorMsg; }
-        const Token& GetErrorToken() const    { return m_ErrorToken; }
-        ParseResult SetError(ParseResult errorType, const Token& token, const String& errorMsg);
+        const List<WarningMessage>& GetWarningMessages() const { return m_WarningMessages; }
+        const ErrorMessage& GetErrorMessage() const { return m_ErrorMessage; }
+        // Use these method to retrieve Source and Path given a sourceIndex within a Message.
+        const String* GetSourceFromIndex(size_t sourceIndex) const;
+        const String* GetPathFromIndex(size_t sourceIndex) const;
+
+        void EmitWarning(ParseWarning reason, const Token& token, const String& message);
+        ParseResult SetError(ParseResult reason, const Token& token, const String& message);
         void ClearError();
+
+    public:
+        // If false is returned, normalized was not modified.
+        // Always returns false if PULSAR_NO_FILESYSTEM is defined.
+        static bool PathToNormalizedFileSystemPath(const String& path, String& outNormalized);
 
     private:
         ParseResult ParseModuleStatement(Module& module, GlobalScope& globalScope, const ParseSettings& settings);
@@ -283,29 +278,31 @@ namespace Pulsar
         const Token& CurrentToken() const;
         bool IsEndOfFile() const;
 
-        // Pointers are guaranteed to be valid until m_LexerPool changes.
+        size_t CurrentSourceIndex() const;
+        // Pointers are guaranteed to be valid until m_Lexers changes.
         // i.e. If parsing is on hold or has been aborted, they're safe to use.
         const String* CurrentPath() const;
         const String* CurrentSource() const;
+
+        bool HasMessages() const;
+        void StripUnusedSources();
+
     private:
         struct LexerSource
         {
-            String Path;
-            String Source;
+            size_t SourceIndex;
             Pulsar::Lexer Lexer;
         };
 
         HashMap<String, std::nullptr_t> m_ParsedSources;
-        List<LexerSource> m_LexerPool;
+        List<LexerSource> m_Lexers;
 
         Lexer* m_Lexer = nullptr;
         Token m_CurrentToken = Token(TokenType::None);
 
-        const String* m_ErrorSource = nullptr;
-        const String* m_ErrorPath = nullptr;
-        ParseResult m_Error = ParseResult::OK;
-        Token m_ErrorToken = Token(TokenType::None);
-        String m_ErrorMsg = "";
+        List<SourceDebugSymbol> m_SourceDebugSymbols;
+        ErrorMessage m_ErrorMessage;
+        List<WarningMessage> m_WarningMessages;
     };
 }
 

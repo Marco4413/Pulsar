@@ -19,8 +19,8 @@ Pulsar::RuntimeState PulsarTools::Bindings::FileSystem::FExists(Pulsar::Executio
         return Pulsar::RuntimeState::TypeError;
 
     bool fileExists = std::filesystem::exists(filePath.AsString().CString());
-    frame.Stack.EmplaceBack(std::move(filePath));
-    frame.Stack.EmplaceBack().SetInteger(fileExists ? 1 : 0);
+    frame.Stack.Push(std::move(filePath));
+    frame.Stack.EmplaceInteger(fileExists ? 1 : 0);
     return Pulsar::RuntimeState::OK;
 }
 
@@ -43,7 +43,6 @@ Pulsar::RuntimeState PulsarTools::Bindings::FileSystem::FReadAll(Pulsar::Executi
     if (!file.read(contents.Data(), fileSize))
         contents.Resize(0);
 
-    frame.Stack.EmplaceBack()
-        .SetString(std::move(contents));
+    frame.Stack.EmplaceString(std::move(contents));
     return Pulsar::RuntimeState::OK;
 }

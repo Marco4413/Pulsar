@@ -204,3 +204,27 @@ Pulsar::UTF8::Codepoint Pulsar::UTF8::Decoder::Peek()
     return m_PeekedCodepoint;
     // == PEEK CACHE == //
 }
+
+Pulsar::UTF8::Codepoint Pulsar::UTF8::Decoder::Peek() const
+{
+    // == PEEK CACHE == //
+    if (m_PeekedCodepoint != 0)
+        return m_PeekedCodepoint;
+    // == PEEK CACHE == //
+    Decoder decoder = *this;
+    return decoder.Next();
+}
+
+Pulsar::UTF8::Codepoint Pulsar::UTF8::Decoder::Peek(size_t lookAhead) const
+{
+    if (lookAhead == 0) {
+        return '\0';
+    } else if (lookAhead == 1) {
+        return Peek();
+    }
+
+    Decoder decoder = *this;
+    for (size_t i = 1; i < lookAhead && decoder; ++i)
+        decoder.Skip();
+    return decoder.Next();
+}

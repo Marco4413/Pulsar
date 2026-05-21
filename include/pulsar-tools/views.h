@@ -3,39 +3,76 @@
 
 #include <string>
 
-#include "pulsar/lexer.h"
+#include <fmt/color.h>
+
+#include "pulsar/lexer/token.h"
 #include "pulsar/parser.h"
 #include "pulsar/runtime.h"
 
+#include "pulsar/sourceviewer.h"
+
 namespace PulsarTools
 {
-    struct TokenViewRange { size_t Before; size_t After; };
-    constexpr TokenViewRange TokenViewRange_Default{20, 20};
-
-    struct TokenViewLine
+    using PositionEncoding = Pulsar::SourceViewer::PositionEncoding;
+    struct PositionSettings
     {
-        std::string Contents;
-        size_t TokenStart;
+        PositionEncoding Encoding;
+        size_t LineIndexedFrom;
+        size_t CharIndexedFrom;
     };
 
-    TokenViewLine CreateTokenView(const Pulsar::String& source, const Pulsar::Token& token, TokenViewRange viewRange = TokenViewRange_Default);
-    // TODO: Add option to disable colors
-    std::string CreateSourceErrorMessage(
+    constexpr PositionSettings PositionSettings_Default{
+        .Encoding        = PositionEncoding::UTF32,
+        .LineIndexedFrom = 1,
+        .CharIndexedFrom = 1,
+    };
+
+    using TokenViewRange = Pulsar::SourceViewer::Range;
+    constexpr TokenViewRange TokenViewRange_Default = {20,20};
+
+    struct TokenView
+    {
+        std::string Contents;
+        size_t WidthToTokenStart;
+        size_t TokenWidth;
+    };
+
+    struct MessageReportKind
+    {
+        const char* Name;
+        fmt::color Color;
+    };
+
+    constexpr auto MessageReportKind_Error   = MessageReportKind{ "Error",   fmt::color::red    };
+    constexpr auto MessageReportKind_Warning = MessageReportKind{ "Warning", fmt::color::orange };
+
+    TokenView CreateTokenView(
+            const Pulsar::String& source,
+            const Pulsar::Token& token,
+            TokenViewRange viewRange = TokenViewRange_Default);
+
+    std::string CreateSourceMessageReport(
+            MessageReportKind reportKind,
             const Pulsar::String* source, const Pulsar::String* filepath,
             const Pulsar::Token& token, const Pulsar::String& message,
+            PositionSettings outPositionSettings=PositionSettings_Default,
             bool enableColors=true,
-            TokenViewRange viewRange = TokenViewRange_Default);
+            TokenViewRange viewRange=TokenViewRange_Default);
 
-    std::string CreateParserErrorMessage(
+    std::string CreateParserMessageReport(
             const Pulsar::Parser& parser,
+            MessageReportKind reportKind,
+            const Pulsar::Parser::Message& message,
+            PositionSettings outPositionSettings=PositionSettings_Default,
             bool enableColors=true,
-            TokenViewRange viewRange = TokenViewRange_Default);
+            TokenViewRange viewRange=TokenViewRange_Default);
 
-    std::string CreateRuntimeErrorMessage(
+    std::string CreateRuntimeErrorMessageReport(
             const Pulsar::ExecutionContext& context,
             size_t stackTraceDepth=10,
+            PositionSettings outPositionSettings=PositionSettings_Default,
             bool enableColors=true,
-            TokenViewRange viewRange = TokenViewRange_Default);
+            TokenViewRange viewRange=TokenViewRange_Default);
 }
 
 #endif // _PULSARTOOLS_VIEWS_H

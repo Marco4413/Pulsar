@@ -11,22 +11,21 @@ namespace Pulsar::Binary
     class ByteReader : public IReader
     {
     public:
-        ByteReader(uint64_t size, uint8_t* data)
-        {
-            m_Bytes.Resize((size_t)size);
-            PULSAR_MEMCPY((void*)m_Bytes.Data(), (void*)data, (size_t)size);
-        }
-
-        explicit ByteReader(List<uint8_t>&& bytes)
-            : m_Bytes(std::move(bytes)) { }
+        // ByteReader treats data as a view, which means
+        //  that the pointer must outlive the Reader.
+        ByteReader(uint64_t size, const uint8_t* data)
+            : m_Index(0)
+            , m_Data(data)
+            , m_Size(static_cast<size_t>(size))
+        {}
 
         bool ReadData(uint64_t size, uint8_t* data) override
         {
             if (size == 0)
                 return true;
-            if (IsAtEndOfFile() || (m_Index+(size_t)size) > m_Bytes.Size())
+            if (IsAtEndOfFile() || !m_Data || (m_Index+(size_t)size) > m_Size)
                 return false;
-            PULSAR_MEMCPY((void*)data, (void*)&m_Bytes[m_Index], (size_t)size);
+            PULSAR_MEMCPY((void*)data, (void*)&m_Data[m_Index], (size_t)size);
             m_Index += (size_t)size;
             return true;
         }
@@ -34,14 +33,16 @@ namespace Pulsar::Binary
         void DiscardBytes()
         {
             m_Index = 0;
-            m_Bytes.Clear();
+            m_Data  = nullptr;
+            m_Size  = 0;
         }
 
-        bool IsAtEndOfFile() const { return m_Index >= m_Bytes.Size(); }
+        bool IsAtEndOfFile() const { return !m_Data || m_Index >= m_Size; }
 
     private:
-        size_t m_Index = 0;
-        List<uint8_t> m_Bytes;
+        size_t m_Index;
+        const uint8_t* m_Data;
+        size_t m_Size;
     };
 }
 
