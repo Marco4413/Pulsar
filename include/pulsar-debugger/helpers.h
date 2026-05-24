@@ -9,7 +9,6 @@ namespace PulsarDebugger
 {
     // TODO: Add this to Pulsar (it's also used by the LSP)
     const char* ValueTypeToString(Pulsar::ValueType type);
-    Pulsar::String ValueToString(const Pulsar::Value& value, bool recursive=false);
 }
 
 #endif // _PULSARDEBUGGER_HELPERS_H

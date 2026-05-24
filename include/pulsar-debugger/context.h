@@ -115,7 +115,7 @@ namespace PulsarDebugger
         std::optional<Scope> LoadScope(const LazyScope& lazyScope);
 
         // Calling this function may invalidate any reference to data within m_Variables
-        Variable CreateVariable(const Pulsar::Value& value, Pulsar::String&& name, Variable::EVisibility visibility);
+        Variable CreateVariable(const Pulsar::Value& value, Pulsar::String&& name, Variable::EVisibility visibility, const Pulsar::Module* module=nullptr);
 
     private:
         Debugger& m_Debugger;

@@ -297,7 +297,7 @@ std::optional<DebuggerContext::Scope> DebuggerContext::LoadScope(const LazyScope
             if (globals[i].IsConstant)
                 varName += "const ";
             varName += m_DebuggableModule->GetModule().Globals[i].Name;
-            Variable var = CreateVariable(globals[i].Value, std::move(varName), Variable::EVisibility::Visible);
+            Variable var = CreateVariable(globals[i].Value, std::move(varName), Variable::EVisibility::Visible, &m_DebuggableModule->GetModule());
             m_Variables[scope.VariablesReference].EmplaceBack(std::move(var));
         }
 
@@ -341,7 +341,7 @@ std::optional<DebuggerContext::Scope> DebuggerContext::LoadScope(const LazyScope
         {
             size_t i = 0;
             for (auto it = valuesBegin; it != valuesEnd; ++it, ++i) {
-                Variable var = CreateVariable(*it, Pulsar::UIntToString(i), defaultVisibility);
+                Variable var = CreateVariable(*it, Pulsar::UIntToString(i), defaultVisibility, &m_DebuggableModule->GetModule());
                 m_Variables[scope.VariablesReference].EmplaceBack(std::move(var));
             }
         }
@@ -375,13 +375,17 @@ std::optional<DebuggerContext::Scope> DebuggerContext::LoadScope(const LazyScope
     }
 }
 
-DebuggerContext::Variable DebuggerContext::CreateVariable(const Pulsar::Value& value, Pulsar::String&& name, Variable::EVisibility visibility)
+DebuggerContext::Variable DebuggerContext::CreateVariable(const Pulsar::Value& value, Pulsar::String&& name, Variable::EVisibility visibility, const Pulsar::Module* module)
 {
+    Pulsar::Value::ToReprOptions reprOptions = Pulsar::Value::ToReprOptions_Default;
+    reprOptions.Module   = module;
+    reprOptions.MaxDepth = 0;
+
     Variable variable;
     variable.Visibility = visibility;
     variable.Name       = std::move(name);
     variable.Type       = value.Type();
-    variable.Value      = ValueToString(value, false);
+    variable.Value      = value.ToRepr(reprOptions);
     variable.VariablesReference = NULL_VARIABLES_REFERENCE;
 
     switch (value.Type()) {
@@ -391,7 +395,7 @@ DebuggerContext::Variable DebuggerContext::CreateVariable(const Pulsar::Value& v
 
         uint64_t idx = 0;
         for (const auto* node = value.AsList().Front(); node; node = node->Next()) {
-            Variable var = CreateVariable(node->Value(), Pulsar::UIntToString(idx++), Variable::EVisibility::Visible);
+            Variable var = CreateVariable(node->Value(), Pulsar::UIntToString(idx++), Variable::EVisibility::Visible, module);
             m_Variables[variable.VariablesReference].EmplaceBack(std::move(var));
         }
     } break;
