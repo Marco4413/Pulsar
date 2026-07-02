@@ -23,7 +23,7 @@ namespace Pulsar
 
         // Should cast to a derived of CustomDataHolder
         template<typename T>
-        SharedRef<T> As() { return Data.CastTo<T>(); }
+        SharedRef<T> As() const { return Data.CastTo<T>(); }
     };
 
     enum class ValueType
@@ -82,6 +82,20 @@ namespace Pulsar
         const String& AsString() const { return m_AsString; }
         CustomData& AsCustom()             { return m_AsCustom; }
         const CustomData& AsCustom() const { return m_AsCustom; }
+
+        template<typename T>
+        bool GetCustomAs(uint64_t typeId, SharedRef<T>& outRef) const
+        {
+            if (m_Type == ValueType::Custom) {
+                const auto& custom = m_AsCustom;
+                if (custom.Type == typeId) {
+                    outRef = custom.As<T>();
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         Value& SetVoid()                               { Reset(); m_Type = ValueType::Void;                    m_AsInteger = 0;              return *this; }
         Value& SetInteger(int64_t val)                 { Reset(); m_Type = ValueType::Integer;                 m_AsInteger = val;            return *this; }
