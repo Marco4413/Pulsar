@@ -24,7 +24,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Module::FFromFile(Pulsar::ExecutionC
         frame.Stack.EmplaceCustom({ moduleTypeId, nullptr });
         return Pulsar::RuntimeState::OK;
     }
-    
+
     ModuleType::Ref module = ModuleType::Ref::New();
     result = parser.ParseIntoModule(*module, Pulsar::ParseSettings_Default);
     if (result != Pulsar::ParseResult::OK) {
@@ -39,12 +39,12 @@ Pulsar::RuntimeState PulsarTools::Bindings::Module::FFromFile(Pulsar::ExecutionC
 Pulsar::RuntimeState PulsarTools::Bindings::Module::FRun(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
-    Pulsar::Value& moduleRef = frame.Locals[0];
-    if (moduleRef.Type() != Pulsar::ValueType::Custom
-        || moduleRef.AsCustom().Type != moduleTypeId)
+    Pulsar::Value& moduleReference = frame.Locals[0];
+
+    ModuleType::Ref module;
+    if (!moduleReference.GetCustomAs(moduleTypeId, module))
         return Pulsar::RuntimeState::TypeError;
-    
-    ModuleType::Ref module = moduleRef.AsCustom().As<ModuleType>();
+    if (!module) return Pulsar::RuntimeState::InvalidCustomTypeReference;
 
     Pulsar::ExecutionContext context(*module);
     context.CallFunction("main");
@@ -61,12 +61,12 @@ Pulsar::RuntimeState PulsarTools::Bindings::Module::FRun(Pulsar::ExecutionContex
 Pulsar::RuntimeState PulsarTools::Bindings::Module::FIsValid(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
-    Pulsar::Value& moduleRef = frame.Locals[0];
-    if (moduleRef.Type() != Pulsar::ValueType::Custom
-        || moduleRef.AsCustom().Type != moduleTypeId)
+    Pulsar::Value& moduleReference = frame.Locals[0];
+
+    ModuleType::Ref module;
+    if (!moduleReference.GetCustomAs(moduleTypeId, module))
         return Pulsar::RuntimeState::TypeError;
 
-    ModuleType::Ref module = moduleRef.AsCustom().As<ModuleType>();
     frame.Stack.EmplaceInteger(module ? 1 : 0);
     return Pulsar::RuntimeState::OK;
 }
