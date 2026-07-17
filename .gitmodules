@@ -1,7 +1,3 @@
-[submodule "libs/fmt"]
-	path = libs/fmt
-	url = https://github.com/Marco4413/fmt
-	shallow = true
 [submodule "libs/lsp-framework"]
 	path = libs/lsp-framework
 	url = https://github.com/Marco4413/cpp-lsp-framework

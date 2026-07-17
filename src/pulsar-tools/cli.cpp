@@ -397,7 +397,7 @@ bool PulsarTools::CLI::LogParserErrors(const Pulsar::Parser& parser, const Pulsa
         auto reportKind = warningError
                 ? MessageReportKind_Error
                 : MessageReportKind_Warning;
-        auto name = fmt::format("{}({})",
+        auto name = std::format("{}({})",
                 MessageReportKind_Warning.Name,
                 Pulsar::ParseWarningToString(warningMessage.Reason));
         reportKind.Name = name.c_str();
@@ -416,7 +416,7 @@ bool PulsarTools::CLI::LogParserErrors(const Pulsar::Parser& parser, const Pulsa
     const auto& errorMessage = parser.GetErrorMessage();
     if (errorMessage.Reason != Pulsar::ParseResult::OK) {
         auto reportKind = MessageReportKind_Error;
-        auto name = fmt::format("{}({})",
+        auto name = std::format("{}({})",
                 reportKind.Name,
                 Pulsar::ParseResultToString(errorMessage.Reason));
         reportKind.Name = name.c_str();

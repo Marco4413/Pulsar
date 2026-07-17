@@ -4,7 +4,6 @@ local buildpath = require "common/buildpath"
 local cflags    = require "common/cflags"
 
 include "pulsar"
-include "../libs/fmt/fmt"
 
 project "pulsar-tools"
   kind "ConsoleApp"
@@ -13,11 +12,11 @@ project "pulsar-tools"
 
   buildpath.setup("pulsar-tools")
 
-  includedirs { "../include", "../libs/fmt/include", "../libs/argue" }
+  includedirs { "../include", "../libs/argue" }
   files {
     "../src/pulsar-tools/**.cpp", "../include/pulsar-tools/**.h",
     "../libs/argue/argue.hpp"
   }
-  links { "pulsar", "fmt" }
+  links "pulsar"
 
   cflags()

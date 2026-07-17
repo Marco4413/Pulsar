@@ -17,16 +17,16 @@ Pulsar::RuntimeState PulsarTools::Bindings::Debug::FStackDump(Pulsar::ExecutionC
     std::string dump("Stack Dump: [");
     for (size_t i = 0; i < frame.Stack.Size(); i++) {
         if (i > 0) dump += ',';
-        dump += fmt::format(" {}", frame.Stack[i].ToRepr({ .Module = &eContext.GetModule() }));
+        dump += std::format(" {}", frame.Stack[i].ToRepr({ .Module = &eContext.GetModule() }));
     }
     dump += " ]";
-    fmt::println(stdout, "{}", dump);
+    std::fputs(dump.c_str(), stdout);
     return Pulsar::RuntimeState::OK;
 }
 
 Pulsar::RuntimeState PulsarTools::Bindings::Debug::FTraceCall(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::String stackTrace = eContext.GetStackTrace(~(size_t)0);
-    fmt::println(stdout, "Stack Trace:\n{}", stackTrace);
+    std::fputs(std::format("Stack Trace:\n{}", stackTrace).c_str(), stdout);
     return Pulsar::RuntimeState::OK;
 }

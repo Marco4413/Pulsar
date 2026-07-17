@@ -1,9 +1,8 @@
 #ifndef _PULSARTOOLS_VERSION_H
 #define _PULSARTOOLS_VERSION_H
 
+#include <format>
 #include <string>
-
-#include <fmt/format.h>
 
 #include "pulsar/binary.h"
 #include "pulsar/version.h"
@@ -16,12 +15,12 @@ namespace PulsarTools
 
         inline std::string ToString(SemVer v)
         {
-            std::string vstr = fmt::format("{}.{}.{}", v.Major, v.Minor, v.Patch);
+            std::string vstr = std::format("{}.{}.{}", v.Major, v.Minor, v.Patch);
             if (v.Pre.Kind != PreReleaseKind::None) {
-                vstr += fmt::format("-{}.{}", PreReleaseKindToString(v.Pre.Kind), v.Pre.Revision);
+                vstr += std::format("-{}.{}", PreReleaseKindToString(v.Pre.Kind), v.Pre.Revision);
             }
             if (v.Build != BuildKind::Release) {
-                vstr += fmt::format("+{}", BuildKindToString(v.Build));
+                vstr += std::format("+{}", BuildKindToString(v.Build));
             }
             return vstr;
         }

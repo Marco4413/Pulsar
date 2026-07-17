@@ -1,11 +1,9 @@
 #include "pulsar-tools/views.h"
 
-#include <fmt/format.h>
+#include <format>
 
 #include "pulsar/utf8.h"
 #include "pulsar/structures/stringview.h"
-
-#include "pulsar-tools/fmt.h"
 
 static Pulsar::SourcePosition ConvertDefaultPositionWith(
         const Pulsar::String& source,
@@ -53,12 +51,12 @@ std::string PulsarTools::CreateSourceMessageReport(
             ? ConvertDefaultPositionWith(*source, token.SourcePos, outPositionSettings)
             : token.SourcePos;
 
-        result += fmt::format(
+        result += std::format(
                 "{}:{}:{}: {}: {}\n",
                 *filepath, sourcePos.Line, sourcePos.Char,
                 reportKind.Name, message);
     } else {
-        result += fmt::format(
+        result += std::format(
                 "{}: {}\n",
                 reportKind.Name, message);
     }
@@ -68,10 +66,10 @@ std::string PulsarTools::CreateSourceMessageReport(
         result += '\n';
 
         size_t cursorWidth = tokenView.TokenWidth > 0 ? tokenView.TokenWidth : 1;
-        std::string tokenCursor = fmt::format("{0: ^{1}}^{0:~^{2}}", "", tokenView.WidthToTokenStart, cursorWidth-1);
+        std::string tokenCursor = std::format("{0: ^{1}}^{0:~^{2}}", "", tokenView.WidthToTokenStart, cursorWidth-1);
 
         if (enableColors) {
-            result += fmt::format(fmt::fg(reportKind.Color), "{}", tokenCursor);
+            result += std::format("{}{}{}", reportKind.Color, tokenCursor, PULSARTOOLS_FMT_RESET);
         } else {
             result += tokenCursor;
         }
@@ -121,11 +119,11 @@ std::string PulsarTools::CreateRuntimeErrorMessageReport(
     if (!module.HasSourceDebugSymbols()
         || !frame.Function->HasDebugSymbol()
         || frame.Function->DebugSymbol.SourceIdx >= module.SourceDebugSymbols.Size()) {
-        std::string result = fmt::format(
-                "Error: Within function {}",
-                frame.Function->Name, stackTrace);
+        std::string result = std::format(
+            "Error: Within function {}",
+            frame.Function->Name, stackTrace);
         if (stackTrace.Length() > 0)
-            result += fmt::format("\n{}", stackTrace);
+            result += std::format("\n{}", stackTrace);
         return result;
     } else if (!frame.Function->HasCodeDebugSymbols()) {
         const Pulsar::SourceDebugSymbol& srcSymbol = module.SourceDebugSymbols[frame.Function->DebugSymbol.SourceIdx];
@@ -137,7 +135,7 @@ std::string PulsarTools::CreateRuntimeErrorMessageReport(
                 outPositionSettings,
                 enableColors, viewRange);
         if (stackTrace.Length() > 0)
-            result += fmt::format("\n{}", stackTrace);
+            result += std::format("\n{}", stackTrace);
         return result;
     }
 
@@ -152,7 +150,7 @@ std::string PulsarTools::CreateRuntimeErrorMessageReport(
                 outPositionSettings,
                 enableColors, viewRange);
         if (stackTrace.Length() > 0)
-            result += fmt::format("\n{}", stackTrace);
+            result += std::format("\n{}", stackTrace);
         return result;
     }
 

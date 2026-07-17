@@ -4,8 +4,6 @@
 #include <cstdio>
 #include <string>
 
-#include <fmt/color.h>
-
 #include "pulsar-tools/fmt.h"
 
 namespace PulsarTools
@@ -43,24 +41,27 @@ namespace PulsarTools
         }
 
         template<typename ...Args>
-        void Info(fmt::format_string<Args...> format, Args&& ...args) const
+        void Info(std::format_string<Args...> format, Args&& ...args) const
         {
             if (!DoLogInfo()) return;
-            Info(fmt::vformat(format, fmt::make_format_args(args...)));
+            std::string msg = std::format(format, std::forward<Args>(args)...);
+            Info(msg);
         }
 
         template<typename ...Args>
-        void Warn(fmt::format_string<Args...> format, Args&& ...args) const
+        void Warn(std::format_string<Args...> format, Args&& ...args) const
         {
             if (!DoLogWarn()) return;
-            Warn(fmt::vformat(format, fmt::make_format_args(args...)));
+            std::string msg = std::format(format, std::forward<Args>(args)...);
+            Warn(msg);
         }
 
         template<typename ...Args>
-        void Error(fmt::format_string<Args...> format, Args&& ...args) const
+        void Error(std::format_string<Args...> format, Args&& ...args) const
         {
             if (!DoLogError()) return;
-            Error(fmt::vformat(format, fmt::make_format_args(args...)));
+            std::string msg = std::format(format, std::forward<Args>(args)...);
+            Error(msg);
         }
 
         void Info(const std::string& msg) const;
@@ -76,7 +77,7 @@ namespace PulsarTools
         bool DoLogWarn() const  { return m_LogLevel == LogLevel::All || m_LogLevel == LogLevel::Warning; }
         bool DoLogError() const { return true; }
 
-        void Log(FILE* file, fmt::color color, const char* prefix, const std::string& msg) const;
+        void Log(FILE* file, const char* color, const char* prefix, const std::string& msg) const;
 
     private:
         bool m_Prefix;
