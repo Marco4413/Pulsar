@@ -511,8 +511,10 @@ moved into the caller's stack.
 **Functions with the same name may exist. See below to understand
 what function will be called.**
 
-**NOTE: I don't know how to feel about this feature. I may either
-add Parser warnings or remove it entirely in the future.**
+**NOTE: Duplicate function names are considered bad practice and the
+Parser has warning messages about them (you can enable warnings in
+`pulsar-tools` by passing `--warn-duplicate-function-names`). Only
+main functions may have duplicates.**
 
 ### Function Calls
 
@@ -521,7 +523,7 @@ Functions are called by `(function)`.
 > It's like function definitions but without the `*` in front of
 it and the arguments within the parentheses.
 
-**If two functions have the same name, the most-recent one is used.**
+**If two functions have the same name, the most-recent redefinition is used.**
 
 ### Function Naming
 
