@@ -20,16 +20,23 @@ void PulsarTools::Logger::Error(const std::string& msg) const
 
 void PulsarTools::Logger::Log(FILE* file, const char* color, const char* prefix, const std::string& msg) const
 {
+    std::string fullMessage;
+    fullMessage.reserve(msg.size()+64);
+
     if (m_Prefix) {
-        std::string styledPrefix = m_Color
-            ? std::format("{}[{}]:{}", color, prefix, PULSARTOOLS_FMT_RESET)
-            : std::format("[{}]:", prefix);
-        if (msg.ends_with('\n')) {
-            std::fputs(std::format("{} {}", styledPrefix, msg).c_str(), file);
-        } else {
-            std::fputs(std::format("{} {}\n", styledPrefix, msg).c_str(), file);
-        }
+        if (m_Color) fullMessage += color;
+        fullMessage += "[";
+        fullMessage += prefix;
+        fullMessage += "]:";
+        if (m_Color) fullMessage += PULSARTOOLS_FMT_RESET;
+        fullMessage += ' ';
+        fullMessage += msg;
     } else {
-        std::fputs(std::format("{}\n", msg).c_str(), file);
+        fullMessage += msg;
     }
+
+    if (!fullMessage.ends_with('\n'))
+        fullMessage += '\n';
+
+    fputs(fullMessage.c_str(), file);
 }
