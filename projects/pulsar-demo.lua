@@ -4,7 +4,6 @@ local buildpath = require "common/buildpath"
 local cflags    = require "common/cflags"
 
 include "pulsar"
-include "../libs/fmt/fmt"
 
 project "pulsar-demo"
   kind "ConsoleApp"
@@ -13,10 +12,9 @@ project "pulsar-demo"
 
   buildpath.setup("pulsar-demo")
 
-  -- fmt is not needed by Pulsar, it's only used by pulsar-demo for logging
-  includedirs { "../include", "../libs/fmt/include" }
+  includedirs "../include"
   files "../src/pulsar-demo/main.cpp"
-  links { "pulsar", "fmt" }
+  links "pulsar"
 
   -- You can even tell Pulsar to not use the filesystem C++ header.
   -- Though it is used by pulsar-demo, so it would not work.

@@ -3,13 +3,13 @@
 
 #include <string>
 
-#include <fmt/color.h>
-
 #include "pulsar/lexer/token.h"
 #include "pulsar/parser.h"
 #include "pulsar/runtime.h"
 
 #include "pulsar/sourceviewer.h"
+
+#include "pulsar-tools/fmt.h"
 
 namespace PulsarTools
 {
@@ -40,11 +40,11 @@ namespace PulsarTools
     struct MessageReportKind
     {
         const char* Name;
-        fmt::color Color;
+        const char* Color;
     };
 
-    constexpr auto MessageReportKind_Error   = MessageReportKind{ "Error",   fmt::color::red    };
-    constexpr auto MessageReportKind_Warning = MessageReportKind{ "Warning", fmt::color::orange };
+    constexpr auto MessageReportKind_Error   = MessageReportKind{ "Error",   PULSARTOOLS_FMT_RED    };
+    constexpr auto MessageReportKind_Warning = MessageReportKind{ "Warning", PULSARTOOLS_FMT_ORANGE };
 
     TokenView CreateTokenView(
             const Pulsar::String& source,

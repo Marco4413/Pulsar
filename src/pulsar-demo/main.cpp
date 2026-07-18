@@ -3,9 +3,9 @@ This file will teach you how to read a Pulsar source file and run it!
 By reading this demo you should be able to get Pulsar up and running within your project.
 */
 
-// fmt is just used for logging, use whatever logging library you have
-//   (or don't log at all, I won't judge you).
-#include <fmt/format.h>
+// Using C++20's format and iostream to log.
+#include <iostream>
+#include <format>
 
 // Both the Parser and all runtime structures are needed.
 // Pulsar is split into 4 parts: Lexer, Parser, Runtime and Binary.
@@ -55,8 +55,8 @@ int main(int argc, const char** argv)
         //   "half-baked" representation of the file.
         // So its data is to be treated as invalid.
 
-        fmt::println("[READ ERROR]: {}",
-            Pulsar::Binary::ReadResultToString(readResult));
+        std::cout << std::format("[READ ERROR]: {}",
+            Pulsar::Binary::ReadResultToString(readResult)) << std::endl;
         return 1;
     }
 
@@ -74,9 +74,9 @@ int main(int argc, const char** argv)
     parseResult = parser.AddSourceFile("examples/logo.pls");
     if (parseResult != Pulsar::ParseResult::OK) {
         // Pulsar::String is null-terminated, there's no need to worry about reading invalid memory.
-        fmt::println("[PARSE ERROR]: {}: {}",
+        std::cout << std::format("[PARSE ERROR]: {}: {}",
             Pulsar::ParseResultToString(parseResult),
-            parser.GetErrorMessage().Message.CString());
+            parser.GetErrorMessage().Message.CString()) << std::endl;
         return 1;
     }
 
@@ -105,7 +105,7 @@ int main(int argc, const char** argv)
 
         // Get the error message.
         const Pulsar::Parser::ErrorMessage& errorMessage = parser.GetErrorMessage();
-        fmt::println("[PARSE ERROR]: {}:{}:{}: {}: {}",
+        std::cout << std::format("[PARSE ERROR]: {}:{}:{}: {}: {}",
             // The path of the file which caused the error.
             parser.GetPathFromIndex(errorMessage.SourceIndex)->CString(),
             // Line and Char within the line where the error occurred.
@@ -113,7 +113,7 @@ int main(int argc, const char** argv)
             errorMessage.Token.SourcePos.Line+1,
             errorMessage.Token.SourcePos.Char+1,
             Pulsar::ParseResultToString(parseResult),
-            errorMessage.Message.CString());
+            errorMessage.Message.CString()) << std::endl;
 
         const Pulsar::String* source = parser.GetSourceFromIndex(errorMessage.SourceIndex);
         // Make sure the source is available.
@@ -122,9 +122,13 @@ int main(int argc, const char** argv)
             Pulsar::SourceViewer sourceViewer(*source);
             Pulsar::SourceViewer::RangeView errorView = sourceViewer.ComputeRangeView(
                     errorMessage.Token.SourcePos, Pulsar::SourceViewer::Range{20,20});
-            fmt::println("{:.{}}", errorView.View.Data(), errorView.View.Length());
+            std::cout << std::format("{:.{}}",
+                errorView.View.Data(),
+                errorView.View.Length()) << std::endl;
             // Print ~~~ underneath the token which generated the error.
-            fmt::println("{0: ^{1}}{0:~^{2}}", "", errorView.WidthToTokenStart, errorView.TokenWidth);
+            std::cout << std::format("{0: ^{1}}{0:~^{2}}",
+                "", errorView.WidthToTokenStart,
+                errorView.TokenWidth) << std::endl;
         }
         return 1;
     }
@@ -148,7 +152,7 @@ int main(int argc, const char** argv)
         //   pulsar-tools uses. pulsar-tools allows any value to be printed)
         if (str.Type() != Pulsar::ValueType::String)
             return Pulsar::RuntimeState::TypeError;
-        fmt::println("{}", str.AsString().CString());
+        std::cout << str.AsString().CString() << std::endl;
         return Pulsar::RuntimeState::OK;
     });
 
@@ -170,15 +174,15 @@ int main(int argc, const char** argv)
         // It accepts a single argument which is the depth of the trace (how many calls to show).
         // It works because ExecutionContext is not modified on error, so it is the last state the VM was in.
         Pulsar::String stackTrace = context.GetStackTrace(10);
-        fmt::println("[RUNTIME ERROR]: {}\n{}",
+        std::cout << std::format("[RUNTIME ERROR]: {}\n{}",
             Pulsar::RuntimeStateToString(runtimeState),
-            stackTrace.CString());
+            stackTrace.CString()) << std::endl;
         return 1;
     }
 
     // Now stack contains the values returned by the call.
     // In case "main" does not take any argument, whatever
     //   was put on top of the stack is not consumed.
-    fmt::println("Items on the Stack: {}", stack.Size());
+    std::cout << std::format("Items on the Stack: {}", stack.Size()) << std::endl;
     return 0;
 }

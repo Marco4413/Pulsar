@@ -191,6 +191,7 @@ namespace Pulsar
 
         struct WarningFlags
         {
+            // Duplicate main functions won't be reported.
             bool DuplicateFunctionNames = false;
         };
 

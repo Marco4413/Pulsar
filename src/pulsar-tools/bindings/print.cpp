@@ -1,7 +1,5 @@
 #include "pulsar-tools/bindings/print.h"
 
-#include <fmt/base.h>
-
 #include "pulsar-tools/fmt.h"
 
 PulsarTools::Bindings::Print::Print() :
@@ -15,7 +13,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Print::FPrint(Pulsar::ExecutionConte
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& val = frame.Locals[0];
-    fmt::print(stdout, "{}", val.ToString({ .Module = &eContext.GetModule() }));
+    fputs(std::format("{}", val.ToString({ .Module = &eContext.GetModule() })).c_str(), stdout);
     return Pulsar::RuntimeState::OK;
 }
 
@@ -23,6 +21,6 @@ Pulsar::RuntimeState PulsarTools::Bindings::Print::FPrintln(Pulsar::ExecutionCon
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& val = frame.Locals[0];
-    fmt::println(stdout, "{}", val.ToString({ .Module = &eContext.GetModule() }));
+    fputs(std::format("{}\n", val.ToString({ .Module = &eContext.GetModule() })).c_str(), stdout);
     return Pulsar::RuntimeState::OK;
 }

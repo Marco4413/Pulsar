@@ -253,9 +253,9 @@ int PulsarTools::CLI::Action::LoadExternalBindings(const RuntimeOptions& runtime
         if (!fullLibraryPath) {
             hasError = true;
             if (triedPaths.size() > 0) {
-                std::string errorMessage = fmt::format("Could not find external library '{}':", libraryPath);
+                std::string errorMessage = std::format("Could not find external library '{}':", libraryPath);
                 for (const auto& triedPath : triedPaths) {
-                    errorMessage += fmt::format("\n    at '{}'", triedPath.generic_string());
+                    errorMessage += std::format("\n    at '{}'", triedPath.generic_string());
                 }
                 logger.Error(errorMessage);
             } else {
@@ -542,7 +542,7 @@ bool PulsarTools::CLI::LogParserErrors(const Pulsar::Parser& parser, const Pulsa
         auto reportKind = warningError
                 ? MessageReportKind_Error
                 : MessageReportKind_Warning;
-        auto name = fmt::format("{}({})",
+        auto name = std::format("{}({})",
                 MessageReportKind_Warning.Name,
                 Pulsar::ParseWarningToString(warningMessage.Reason));
         reportKind.Name = name.c_str();
@@ -561,7 +561,7 @@ bool PulsarTools::CLI::LogParserErrors(const Pulsar::Parser& parser, const Pulsa
     const auto& errorMessage = parser.GetErrorMessage();
     if (errorMessage.Reason != Pulsar::ParseResult::OK) {
         auto reportKind = MessageReportKind_Error;
-        auto name = fmt::format("{}({})",
+        auto name = std::format("{}({})",
                 reportKind.Name,
                 Pulsar::ParseResultToString(errorMessage.Reason));
         reportKind.Name = name.c_str();

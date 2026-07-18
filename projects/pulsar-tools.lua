@@ -22,7 +22,6 @@ local function copy_slib(of, to)
 end
 
 include "pulsar"
-include "../libs/fmt/fmt"
 
 project "pulsar-tools"
   kind "ConsoleApp"
@@ -38,11 +37,11 @@ project "pulsar-tools"
     buildpath.of("pulsar-tools") .. "/" .. get_slib_filename("cpulsar")
   }
 
-  includedirs { "../include", "../libs/fmt/include", "../libs/argue" }
+  includedirs { "../include", "../libs/argue" }
   files {
     "../src/pulsar-tools/**.cpp", "../include/pulsar-tools/**.h",
     "../libs/argue/argue.hpp"
   }
-  links { "pulsar", "fmt" }
+  links "pulsar"
 
   cflags()

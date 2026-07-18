@@ -60,7 +60,7 @@ PulsarTools::ExtBinding::ExtBinding(const char* path)
     uint64_t pulsarVersion = getCPulsarVersion();
     if (!IsCPulsarVersionSupported(pulsarVersion)) {
         m_ErrorMessage  = "Binding was made for an unsupported CPulsar version (";
-        m_ErrorMessage += Version::ToString(Version::FromNumber(pulsarVersion)).c_str();
+        m_ErrorMessage += Pulsar::SemVer::FromNumber(pulsarVersion).ToString();
         m_ErrorMessage += ").";
         m_Lib.Unload();
         return;
@@ -128,12 +128,12 @@ bool PulsarTools::ExtBinding::IsCPulsarVersionSupported(uint64_t libVersionNumbe
         if (!s_GetCPulsarVersionNumber) return false;
     }
 
-    auto cpulsarVersion = Version::FromNumber(s_GetCPulsarVersionNumber());
+    auto cpulsarVersion = Pulsar::SemVer::FromNumber(s_GetCPulsarVersionNumber());
     // Require perfect match for in-dev builds
-    if (cpulsarVersion.Major == 0 || cpulsarVersion.Pre.Kind != Version::PreReleaseKind::None)
+    if (cpulsarVersion.Major == 0 || cpulsarVersion.Pre.Kind != Pulsar::PreReleaseKind::None)
         return cpulsarVersion.ToNumber() == libVersionNumber;
 
-    auto libVersion = Version::FromNumber(libVersionNumber);
+    auto libVersion = Pulsar::SemVer::FromNumber(libVersionNumber);
     return libVersion.Major == cpulsarVersion.Major;
 }
 

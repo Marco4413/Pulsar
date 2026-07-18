@@ -35,11 +35,10 @@ on VSCode for the Pulsar Language, you can download and package the official ext
 - Pulsar:
   - **None!**
 - Pulsar-Demo:
-  - [`{fmt}`](https://github.com/fmtlib/fmt)
+  - **None!**
 - Pulsar-LSP:
   - [`lsp-framework`](https://github.com/leon-bckl/lsp-framework)
 - Pulsar-Tools:
-  - [`{fmt}`](https://github.com/fmtlib/fmt)
   - [`Argue`](https://github.com/Marco4413/Argue)
 
 ## Building
