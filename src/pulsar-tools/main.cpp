@@ -55,8 +55,8 @@ int main(int argc, const char** argv)
     }
 
     if (*program.Options.Version) {
-        logger.Info("Pulsar-Tools v{}", PulsarTools::Version::ToString(PulsarTools::GetToolsVersion()));
-        logger.Info("Pulsar v{}", PulsarTools::Version::ToString(PulsarTools::GetPulsarVersion()));
+        logger.Info("Pulsar-Tools v{}", PulsarTools::GetToolsVersion().ToString());
+        logger.Info("Pulsar v{}", PulsarTools::GetPulsarVersion().ToString());
         logger.Info("Neutron v{}", PulsarTools::GetNeutronVersion());
         return 0;
     } else if (program.CmdCheck) {
