@@ -22,6 +22,7 @@ local function copy_slib(of, to)
 end
 
 include "pulsar"
+include "pulsar-bindings"
 
 project "pulsar-tools"
   kind "ConsoleApp"
@@ -42,6 +43,6 @@ project "pulsar-tools"
     "../src/pulsar-tools/**.cpp", "../include/pulsar-tools/**.h",
     "../libs/argue/argue.hpp"
   }
-  links "pulsar"
+  links { "pulsar-bindings", "pulsar" }
 
   cflags()

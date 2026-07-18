@@ -1,12 +1,14 @@
-#ifndef _PULSARTOOLS_EXTBINDING_H
-#define _PULSARTOOLS_EXTBINDING_H
+#ifndef _PULSARBINDINGS_EXTBINDING_H
+#define _PULSARBINDINGS_EXTBINDING_H
 
+#include <filesystem> // std::filesystem::path
 #include <memory> // std::unique_ptr
+#include <string> // std::string
 
 // We need to specifically check for CPulsar's platform
 #include "cpulsar/platform.h"
 
-#include "pulsar-tools/binding.h"
+#include "pulsar/runtime/module.h"
 
 #if defined(CPULSAR_PLATFORM_WINDOWS)
 #  define CPULSAR_CALL __cdecl
@@ -14,8 +16,14 @@
 #  define CPULSAR_CALL
 #endif
 
-namespace PulsarTools
+namespace PulsarBindings
 {
+    bool InitCPulsar(const std::filesystem::path& fromDirectory);
+    bool GetCPulsarLoadError(std::string& error);
+
+    bool GetCPulsarVersionNumber(uint64_t& cpulsarVersionNumber);
+    bool IsCPulsarVersionSupported(uint64_t libVersionNumber);
+
     typedef struct DynamicLibraryData DynamicLibraryData;
 
     struct DynamicLibraryFlags
@@ -27,7 +35,7 @@ namespace PulsarTools
     class DynamicLibrary final
     {
     public:
-        DynamicLibrary(const char* path, DynamicLibraryFlags flags={});
+        DynamicLibrary(const std::filesystem::path& path, DynamicLibraryFlags flags={});
 
         DynamicLibrary(DynamicLibrary&&);
         DynamicLibrary(const DynamicLibrary&) = delete;
@@ -42,16 +50,14 @@ namespace PulsarTools
         void* GetSymbol(const char* name);
 
         bool IsLoaded() const;
-
-        bool HasError() const;
-        const Pulsar::String& GetErrorMessage() const;
+        const std::string& GetErrorMessage() const;
 
     private:
-        Pulsar::String m_LibraryPath;
+        std::filesystem::path m_LibraryPath;
         DynamicLibraryFlags m_Flags;
 
         std::unique_ptr<DynamicLibraryData> m_Data;
-        Pulsar::String m_ErrorMessage;
+        std::string m_ErrorMessage;
     };
 
     // Any instance of this class must be deleted
@@ -63,11 +69,8 @@ namespace PulsarTools
         using BindTypesFn         = void(CPULSAR_CALL *)(Pulsar::Module*);
         using BindFunctionsFn     = void(CPULSAR_CALL *)(Pulsar::Module*, int);
 
-        static bool GetCPulsarVersionNumber(uint64_t& cpulsarVersionNumber);
-        static bool IsCPulsarVersionSupported(uint64_t libVersionNumber);
-
     public:
-        ExtBinding(const char* path);
+        ExtBinding(const std::filesystem::path& path);
 
         ExtBinding(ExtBinding&&);
         ExtBinding(const ExtBinding&) = delete;
@@ -86,17 +89,17 @@ namespace PulsarTools
         void BindTypes(Pulsar::Module& module) const;
         void BindFunctions(Pulsar::Module& module, bool declareAndBind) const;
 
-        const Pulsar::String& GetErrorMessage() const { return m_ErrorMessage; }
+        const std::string& GetErrorMessage() const { return m_ErrorMessage; }
 
         operator bool() const { return (bool)m_Lib.IsLoaded(); }
 
     private:
         DynamicLibrary m_Lib;
-        Pulsar::String m_ErrorMessage;
+        std::string m_ErrorMessage;
 
         BindTypesFn m_BindTypes = nullptr;
         BindFunctionsFn m_BindFunctions = nullptr;
     };
 }
 
-#endif // _PULSARTOOLS_EXTBINDING_H
+#endif // _PULSARBINDINGS_EXTBINDING_H

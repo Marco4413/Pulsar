@@ -264,7 +264,7 @@ int PulsarTools::CLI::Action::LoadExternalBindings(const RuntimeOptions& runtime
             continue;
         }
 
-        ExtBinding binding(fullLibraryPath->generic_string().c_str());
+        PulsarBindings::ExtBinding binding(*fullLibraryPath);
         if (!binding) {
             hasError = true;
             logger.Error("Could not load external library '{}' ('{}'):\n{}",
@@ -329,7 +329,7 @@ int PulsarTools::CLI::Action::Read(Pulsar::Module& module, const ExternalBinding
     logger.Info("Reading took: {}us", readTime.count());
 
     BindNatives(module, runtimeOptions, false);
-    for (const ExtBinding& binding : extBindings)
+    for (const PulsarBindings::ExtBinding& binding : extBindings)
         binding.BindAll(module, false);
     return 0;
 }
@@ -367,7 +367,7 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ExternalBindin
 
     if (*parserOptions.DeclareBoundNatives) {
         BindNatives(module, runtimeOptions, true);
-        for (const ExtBinding& binding : extBindings)
+        for (const PulsarBindings::ExtBinding& binding : extBindings)
             binding.BindAll(module, true);
     } else if (*parserOptions.Debug) {
         Bindings::Debug debug;
@@ -397,7 +397,7 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ExternalBindin
 
     if (!*parserOptions.DeclareBoundNatives) {
         BindNatives(module, runtimeOptions, false);
-        for (const ExtBinding& binding : extBindings)
+        for (const PulsarBindings::ExtBinding& binding : extBindings)
             binding.BindAll(module, false);
     }
 
