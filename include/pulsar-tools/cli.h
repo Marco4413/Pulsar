@@ -298,11 +298,12 @@ namespace PulsarTools::CLI
     namespace Action
     {
         int LoadExternalBindings(const RuntimeOptions& runtimeOptions, ExternalBindings& out);
+        int BindNatives(Pulsar::Module& module, const ExternalBindings& extBindings, const RuntimeOptions& runtimeOptions, bool declareAndBind=false);
 
         int Check(const ParserOptions& parserOptions, const InputFileArgs& input);
-        int Read(Pulsar::Module& module, const ExternalBindings& extBindings, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input);
+        int Read(Pulsar::Module& module, const ParserOptions& parserOptions, const InputFileArgs& input);
         int Write(const Pulsar::Module& module, const CompilerOptions& compilerOptions, const InputFileArgs& input);
-        int Parse(Pulsar::Module& module, const ExternalBindings& extBindings, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input);
+        int Parse(Pulsar::Module& module, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input);
         int Optimize(Pulsar::Module& module, const OptimizerOptions& optimizerOptions, const Argue::StrOption* entryPoint);
         int Run(const Pulsar::Module& module, const RuntimeOptions& runtimeOptions, const InputProgramArgs& input);
     }
@@ -317,10 +318,7 @@ namespace PulsarTools::CLI
         {}
 
         operator bool() const { return m_Command; }
-        int operator()() const
-        {
-            return Action::Check(m_ParserOptions, m_Input);
-        }
+        int operator()() const;
 
     private:
         Argue::CommandParser m_Command;
@@ -341,22 +339,7 @@ namespace PulsarTools::CLI
         {}
 
         operator bool() const { return m_Command; }
-        int operator()() const
-        {
-            ExternalBindings extBindings;
-            { // Make sure extBindings is deleted after module
-                int exitCode = Action::LoadExternalBindings(m_RuntimeOptions, extBindings);
-                if (exitCode) return exitCode;
-                Pulsar::Module module;
-                exitCode = IsNeutronFile(*m_Input.FilePath)
-                    ? Action::Read(module, extBindings, m_ParserOptions, m_RuntimeOptions, m_Input)
-                    : Action::Parse(module, extBindings, m_ParserOptions, m_RuntimeOptions, m_Input);
-                if (exitCode) return exitCode;
-                exitCode = Action::Optimize(module, m_OptimizerOptions, &m_RuntimeOptions.EntryPoint);
-                if (exitCode) return exitCode;
-                return Action::Write(module, m_CompilerOptions, m_Input);
-            }
-        }
+        int operator()() const;
 
     private:
         Argue::CommandParser m_Command;
@@ -379,22 +362,7 @@ namespace PulsarTools::CLI
         {}
 
         operator bool() const { return m_Command; }
-        int operator()() const
-        {
-            ExternalBindings extBindings;
-            { // Make sure extBindings is deleted after module
-                int exitCode = Action::LoadExternalBindings(m_RuntimeOptions, extBindings);
-                if (exitCode) return exitCode;
-                Pulsar::Module module;
-                exitCode = IsNeutronFile(*m_Input.FilePath)
-                    ? Action::Read(module, extBindings, m_ParserOptions, m_RuntimeOptions, m_Input)
-                    : Action::Parse(module, extBindings, m_ParserOptions, m_RuntimeOptions, m_Input);
-                if (exitCode) return exitCode;
-                exitCode = Action::Optimize(module, m_OptimizerOptions, &m_RuntimeOptions.EntryPoint);
-                if (exitCode) return exitCode;
-                return Action::Run(module, m_RuntimeOptions, m_Input);
-            }
-        }
+        int operator()() const;
 
     private:
         Argue::CommandParser m_Command;
@@ -430,7 +398,7 @@ namespace PulsarTools::CLI
             CmdCheck(Parser),
             CmdCompile(Parser)
         {}
-        
+
         Argue::ArgParser Parser;
         GeneralOptions Options;
         Argue::HelpCommand CmdHelp;

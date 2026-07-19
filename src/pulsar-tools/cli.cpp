@@ -21,7 +21,8 @@
 #include "pulsar/binary/filewriter.h"
 #include "pulsar/optimizer.h"
 
-#include "pulsar-tools/bindings.h"
+#include "pulsar-bindings/std.h"
+
 #include "pulsar-tools/views.h"
 
 static PulsarTools::Logger g_Logger(stdout, stderr);
@@ -62,7 +63,7 @@ const std::filesystem::path& PulsarTools::CLI::GetThisProcessExecutable()
             s_ThisProcessExecutable = std::filesystem::canonical(pathBuffer, ec);
         }
     }
-    
+
     if (ec) s_ThisProcessExecutable = std::filesystem::path();
 #elif defined(PULSAR_PLATFORM_UNIX)
     // TODO: Maybe add implementations specific to BSD and Solaris (I've read that BSD may not have the proc fs)
@@ -279,6 +280,26 @@ int PulsarTools::CLI::Action::LoadExternalBindings(const RuntimeOptions& runtime
     return hasError;
 }
 
+int PulsarTools::CLI::Action::BindNatives(Pulsar::Module& module, const ExternalBindings& extBindings, const RuntimeOptions& runtimeOptions, bool declareAndBind)
+{
+    #define X(name) \
+        if (*runtimeOptions.Bind##name) {             \
+            PulsarBindings::Std::name __##name;       \
+            __##name.BindAll(module, declareAndBind); \
+        }
+
+    {
+        PULSARBINDINGS_STD_X
+    }
+
+    #undef X
+
+    for (const PulsarBindings::ExtBinding& binding : extBindings)
+        binding.BindAll(module, false);
+
+    return 0;
+}
+
 int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const InputFileArgs& input)
 {
     Logger& logger = GetLogger();
@@ -306,7 +327,7 @@ int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const In
     return 0;
 }
 
-int PulsarTools::CLI::Action::Read(Pulsar::Module& module, const ExternalBindings& extBindings, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input)
+int PulsarTools::CLI::Action::Read(Pulsar::Module& module, const ParserOptions& parserOptions, const InputFileArgs& input)
 {
     Logger& logger = GetLogger();
 
@@ -328,9 +349,6 @@ int PulsarTools::CLI::Action::Read(Pulsar::Module& module, const ExternalBinding
     auto readTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
     logger.Info("Reading took: {}us", readTime.count());
 
-    BindNatives(module, runtimeOptions, false);
-    for (const PulsarBindings::ExtBinding& binding : extBindings)
-        binding.BindAll(module, false);
     return 0;
 }
 
@@ -361,15 +379,11 @@ int PulsarTools::CLI::Action::Write(const Pulsar::Module& module, const Compiler
     return 0;
 }
 
-int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ExternalBindings& extBindings, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input)
+int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input)
 {
     Logger& logger = GetLogger();
 
-    if (*parserOptions.DeclareBoundNatives) {
-        BindNatives(module, runtimeOptions, true);
-        for (const PulsarBindings::ExtBinding& binding : extBindings)
-            binding.BindAll(module, true);
-    } else if (*parserOptions.Debug) {
+    if (*parserOptions.Debug) {
         PulsarBindings::Std::Debug debug;
         debug.BindAll(module, true);
     }
@@ -394,12 +408,6 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ExternalBindin
 
     if (LogParserErrors(parser, parserOptions))
         return 1;
-
-    if (!*parserOptions.DeclareBoundNatives) {
-        BindNatives(module, runtimeOptions, false);
-        for (const PulsarBindings::ExtBinding& binding : extBindings)
-            binding.BindAll(module, false);
-    }
 
     return 0;
 }
@@ -631,4 +639,67 @@ bool PulsarTools::CLI::ExportOption::ParseValue(std::string_view val)
     }
 
     return true;
+}
+
+#define _ACTION_RUN_CHECKED(...) \
+    do {                                    \
+        int exitCode = ( __VA_ARGS__ );     \
+        if (exitCode) return exitCode;      \
+    } while(false)
+
+int PulsarTools::CLI::CheckCommand::operator()() const
+{
+    return Action::Check(m_ParserOptions, m_Input);
+}
+
+int PulsarTools::CLI::CompileCommand::operator()() const
+{
+    ExternalBindings extBindings;
+    { // Make sure extBindings is deleted after module
+        _ACTION_RUN_CHECKED(Action::LoadExternalBindings(m_RuntimeOptions, extBindings));
+
+        Pulsar::Module module;
+        if (*m_ParserOptions.DeclareBoundNatives) {
+            _ACTION_RUN_CHECKED(Action::BindNatives(module, extBindings, m_RuntimeOptions, true));
+        }
+
+        _ACTION_RUN_CHECKED(IsNeutronFile(*m_Input.FilePath)
+                ? Action::Read(module, m_ParserOptions, m_Input)
+                : Action::Parse(module, m_ParserOptions, m_RuntimeOptions, m_Input));
+
+        if (!*m_ParserOptions.DeclareBoundNatives) {
+            _ACTION_RUN_CHECKED(Action::BindNatives(module, extBindings, m_RuntimeOptions, false));
+        }
+
+        _ACTION_RUN_CHECKED(Action::Optimize(module, m_OptimizerOptions, &m_RuntimeOptions.EntryPoint));
+        _ACTION_RUN_CHECKED(Action::Write(module, m_CompilerOptions, m_Input));
+    }
+    return 0;
+}
+
+int PulsarTools::CLI::RunCommand::operator()() const
+{
+    ExternalBindings extBindings;
+    { // Make sure extBindings is deleted after module
+        _ACTION_RUN_CHECKED(Action::LoadExternalBindings(m_RuntimeOptions, extBindings));
+
+        Pulsar::Module module;
+        if (*m_ParserOptions.DeclareBoundNatives) {
+            _ACTION_RUN_CHECKED(
+                    Action::BindNatives(module, extBindings, m_RuntimeOptions, true));
+        }
+
+        _ACTION_RUN_CHECKED(IsNeutronFile(*m_Input.FilePath)
+                ? Action::Read(module, m_ParserOptions, m_Input)
+                : Action::Parse(module, m_ParserOptions, m_RuntimeOptions, m_Input));
+
+        if (!*m_ParserOptions.DeclareBoundNatives) {
+            _ACTION_RUN_CHECKED(
+                    Action::BindNatives(module, extBindings, m_RuntimeOptions, false));
+        }
+
+        _ACTION_RUN_CHECKED(Action::Optimize(module, m_OptimizerOptions, &m_RuntimeOptions.EntryPoint));
+        _ACTION_RUN_CHECKED(Action::Run(module, m_RuntimeOptions, m_Input));
+    }
+    return 0;
 }
