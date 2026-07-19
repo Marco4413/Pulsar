@@ -1,8 +1,8 @@
-#include "pulsar-tools/bindings/stdio.h"
+#include "pulsar-bindings/std/stdio.h"
 
 #include <iostream>
 
-PulsarTools::Bindings::Stdio::Stdio() :
+PulsarBindings::Std::Stdio::Stdio() :
     IBinding()
 {
     BindNativeFunction({ "stdin/read",      0, 1 }, FInRead);
@@ -10,7 +10,7 @@ PulsarTools::Bindings::Stdio::Stdio() :
     BindNativeFunction({ "stdout/writeln!", 1, 0 }, FOutWriteLn);
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Stdio::FInRead(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarBindings::Std::Stdio::FInRead(Pulsar::ExecutionContext& eContext)
 {
     constexpr size_t BUFFER_CAPACITY = 256;
     char buffer[BUFFER_CAPACITY];
@@ -28,7 +28,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Stdio::FInRead(Pulsar::ExecutionCont
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Stdio::FOutWrite(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarBindings::Std::Stdio::FOutWrite(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& message = frame.Locals[0];
@@ -38,7 +38,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Stdio::FOutWrite(Pulsar::ExecutionCo
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Stdio::FOutWriteLn(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarBindings::Std::Stdio::FOutWriteLn(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& message = frame.Locals[0];

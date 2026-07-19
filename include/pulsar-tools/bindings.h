@@ -4,39 +4,20 @@
 #include "pulsar/runtime.h"
 
 #include "pulsar-tools/cli.h"
-#include "pulsar-tools/bindings/debug.h"
-#include "pulsar-tools/bindings/error.h"
-#include "pulsar-tools/bindings/filesystem.h"
-#include "pulsar-tools/bindings/lexer.h"
-#include "pulsar-tools/bindings/module.h"
-#include "pulsar-tools/bindings/print.h"
-#include "pulsar-tools/bindings/stdio.h"
-#include "pulsar-tools/bindings/thread.h"
-#include "pulsar-tools/bindings/time.h"
-
-#define __PULSARTOOLS_BINDINGS \
-    X(Debug)                   \
-    X(Error)                   \
-    X(FileSystem)              \
-    X(Lexer)                   \
-    X(Module)                  \
-    X(Print)                   \
-    X(Stdio)                   \
-    X(Thread)                  \
-    X(Time)
+#include "pulsar-bindings/std.h"
 
 namespace PulsarTools
 {
     inline void BindNatives(Pulsar::Module& module, const CLI::RuntimeOptions& runtimeOptions, bool declareNatives)
     {
-        #define X(name)                          \
-            if (*runtimeOptions.Bind##name) {    \
-                Bindings::name __##name;         \
-                __##name.BindAll(                \
-                        module, declareNatives); \
+        #define X(name)                             \
+            if (*runtimeOptions.Bind##name) {       \
+                PulsarBindings::Std::name __##name; \
+                __##name.BindAll(                   \
+                        module, declareNatives);    \
             }
 
-        __PULSARTOOLS_BINDINGS
+        PULSARBINDINGS_STD_X
 
         #undef X
     }

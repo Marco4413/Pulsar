@@ -1,12 +1,12 @@
-#ifndef _PULSARTOOLS_BINDINGS_LEXER_H
-#define _PULSARTOOLS_BINDINGS_LEXER_H
+#ifndef _PULSARBINDINGS_STD_LEXER_H
+#define _PULSARBINDINGS_STD_LEXER_H
 
 #include "pulsar/lexer.h"
 #include "pulsar/structures/string.h"
 
-#include "pulsar-tools/binding.h"
+#include "pulsar-bindings/binding.h"
 
-namespace PulsarTools::Bindings
+namespace PulsarBindings::Std
 {
     class Lexer :
         public IBinding
@@ -44,4 +44,4 @@ namespace PulsarTools::Bindings
     };
 }
 
-#endif // _PULSARTOOLS_BINDINGS_LEXER_H
+#endif // _PULSARBINDINGS_STD_LEXER_H

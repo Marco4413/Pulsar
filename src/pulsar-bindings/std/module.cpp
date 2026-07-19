@@ -1,8 +1,8 @@
-#include "pulsar-tools/bindings/module.h"
+#include "pulsar-bindings/std/module.h"
 
 #include "pulsar/parser.h"
 
-PulsarTools::Bindings::Module::Module() :
+PulsarBindings::Std::Module::Module() :
     IBinding()
 {
     BindCustomType("Pulsar-Tools/Module");
@@ -11,7 +11,7 @@ PulsarTools::Bindings::Module::Module() :
     BindNativeFunction({ "module/valid?",    1, 1 }, CreateTypeBoundFactory(FIsValid,  "Pulsar-Tools/Module"));
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Module::FFromFile(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId)
+Pulsar::RuntimeState PulsarBindings::Std::Module::FFromFile(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& modulePath = frame.Locals[0];
@@ -36,7 +36,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Module::FFromFile(Pulsar::ExecutionC
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Module::FRun(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId)
+Pulsar::RuntimeState PulsarBindings::Std::Module::FRun(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& moduleReference = frame.Locals[0];
@@ -58,7 +58,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Module::FRun(Pulsar::ExecutionContex
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Module::FIsValid(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId)
+Pulsar::RuntimeState PulsarBindings::Std::Module::FIsValid(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& moduleReference = frame.Locals[0];

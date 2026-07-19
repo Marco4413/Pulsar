@@ -370,7 +370,7 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ExternalBindin
         for (const PulsarBindings::ExtBinding& binding : extBindings)
             binding.BindAll(module, true);
     } else if (*parserOptions.Debug) {
-        Bindings::Debug debug;
+        PulsarBindings::Std::Debug debug;
         debug.BindAll(module, true);
     }
 

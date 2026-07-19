@@ -1,9 +1,9 @@
-#ifndef _PULSARTOOLS_BINDINGS_TIME_H
-#define _PULSARTOOLS_BINDINGS_TIME_H
+#ifndef _PULSARBINDINGS_STD_TIME_H
+#define _PULSARBINDINGS_STD_TIME_H
 
-#include "pulsar-tools/binding.h"
+#include "pulsar-bindings/binding.h"
 
-namespace PulsarTools::Bindings
+namespace PulsarBindings::Std
 {
     class Time :
         public IBinding
@@ -18,4 +18,4 @@ namespace PulsarTools::Bindings
     };
 }
 
-#endif // _PULSARTOOLS_BINDINGS_TIME_H
+#endif // _PULSARBINDINGS_STD_TIME_H

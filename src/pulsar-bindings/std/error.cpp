@@ -1,6 +1,6 @@
-#include "pulsar-tools/bindings/error.h"
+#include "pulsar-bindings/std/error.h"
 
-PulsarTools::Bindings::Error::Error() :
+PulsarBindings::Std::Error::Error() :
     IBinding()
 {
     BindNativeFunction({ "error!",      0, 0 }, FError);
@@ -9,19 +9,19 @@ PulsarTools::Bindings::Error::Error() :
     BindNativeFunction({ "tcall",       2, 2 }, FTryCall);
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Error::FError(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarBindings::Std::Error::FError(Pulsar::ExecutionContext& eContext)
 {
     eContext.GetCallStack().PopFrame();
     return Pulsar::RuntimeState::Error;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Error::FType(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarBindings::Std::Error::FType(Pulsar::ExecutionContext& eContext)
 {
     eContext.GetCallStack().PopFrame();
     return Pulsar::RuntimeState::TypeError;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Error::FSafeCall(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarBindings::Std::Error::FSafeCall(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
 
@@ -52,7 +52,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Error::FSafeCall(Pulsar::ExecutionCo
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Error::FTryCall(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarBindings::Std::Error::FTryCall(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
 

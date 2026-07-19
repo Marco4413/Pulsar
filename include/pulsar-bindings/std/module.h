@@ -1,9 +1,9 @@
-#ifndef _PULSARTOOLS_BINDINGS_MODULE_H
-#define _PULSARTOOLS_BINDINGS_MODULE_H
+#ifndef _PULSARBINDINGS_STD_MODULE_H
+#define _PULSARBINDINGS_STD_MODULE_H
 
-#include "pulsar-tools/binding.h"
+#include "pulsar-bindings/binding.h"
 
-namespace PulsarTools::Bindings
+namespace PulsarBindings::Std
 {
     class Module :
         public IBinding
@@ -28,4 +28,4 @@ namespace PulsarTools::Bindings
     };
 }
 
-#endif // _PULSARTOOLS_BINDINGS_MODULE_H
+#endif // _PULSARBINDINGS_STD_MODULE_H

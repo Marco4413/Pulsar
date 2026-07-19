@@ -1,5 +1,5 @@
-#ifndef _PULSARTOOLS_BINDINGS_THREAD_H
-#define _PULSARTOOLS_BINDINGS_THREAD_H
+#ifndef _PULSARBINDINGS_STD_THREAD_H
+#define _PULSARBINDINGS_STD_THREAD_H
 
 #include <atomic>
 #include <condition_variable>
@@ -8,9 +8,9 @@
 
 #include <iostream>
 
-#include "pulsar-tools/binding.h"
+#include "pulsar-bindings/binding.h"
 
-namespace PulsarTools::Bindings
+namespace PulsarBindings::Std
 {
     class Channel :
         public IBinding
@@ -88,4 +88,4 @@ namespace PulsarTools::Bindings
     };
 }
 
-#endif // _PULSARTOOLS_BINDINGS_THREAD_H
+#endif // _PULSARBINDINGS_STD_THREAD_H

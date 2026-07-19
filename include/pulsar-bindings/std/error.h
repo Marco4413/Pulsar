@@ -1,9 +1,9 @@
-#ifndef _PULSARTOOLS_BINDINGS_ERROR_H
-#define _PULSARTOOLS_BINDINGS_ERROR_H
+#ifndef _PULSARBINDINGS_STD_ERROR_H
+#define _PULSARBINDINGS_STD_ERROR_H
 
-#include "pulsar-tools/binding.h"
+#include "pulsar-bindings/binding.h"
 
-namespace PulsarTools::Bindings
+namespace PulsarBindings::Std
 {
     class Error :
         public IBinding
@@ -19,4 +19,4 @@ namespace PulsarTools::Bindings
     };
 }
 
-#endif // _PULSARTOOLS_BINDINGS_ERROR_H
+#endif // _PULSARBINDINGS_STD_ERROR_H

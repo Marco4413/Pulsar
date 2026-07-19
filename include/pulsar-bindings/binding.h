@@ -1,15 +1,16 @@
-#ifndef _PULSARTOOLS_BINDING_H
-#define _PULSARTOOLS_BINDING_H
+#ifndef _PULSARBINDINGS_BINDING_H
+#define _PULSARBINDINGS_BINDING_H
 
 #include <array>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <type_traits>
 #include <vector>
 
 #include "pulsar/runtime.h"
 
-namespace PulsarTools
+namespace PulsarBindings
 {
     class CustomTypeResolver
     {
@@ -37,7 +38,7 @@ namespace PulsarTools
 
     public:
         IBinding() = default;
-        virtual ~IBinding();
+        virtual ~IBinding() = default;
 
         void BindAll(Pulsar::Module& module, bool declareAndBind=false) const
         {
@@ -53,7 +54,7 @@ namespace PulsarTools
          * Given a function and some type names, this function creates a NativeFunctionFactoryFn
          * that will generate a NativeFunction which calls nativeFn with the ExecutionContext
          * and the resolved type ids of the specified type names.
-         * 
+         *
          * See Thread bindings for examples.
          */
         template<typename Fn, typename ...Args>
@@ -85,13 +86,12 @@ namespace PulsarTools
 
     protected:
         // Dependencies are IBindings which are bound before this
-        template<typename T>
-        void AddDependency(T&& dep)
+        template<typename T, typename ...Args>
+        void CreateDependency(Args&& ...args)
             requires(std::is_base_of_v<IBinding, T>)
         {
-            T* depPtr = new T(std::forward<T>(dep));
-            PULSAR_ASSERT(depPtr, "Failed to allocate memory.");
-            m_Dependencies.push_back(depPtr);
+            m_Dependencies.emplace_back(
+                    std::make_unique<T>(std::forward<Args>(args)...));
         }
 
         void BindCustomType(Pulsar::StringView name, Pulsar::CustomType::GlobalDataFactoryFn globalDataFactory=nullptr)
@@ -110,10 +110,10 @@ namespace PulsarTools
         }
 
     private:
-        std::vector<IBinding*> m_Dependencies;
+        std::vector<std::unique_ptr<IBinding>> m_Dependencies;
         std::vector<Pulsar::CustomType> m_CustomTypesPool;
         std::vector<NativeFunctionBinding> m_NativeFunctionsPool;
     };
 }
 
-#endif // _PULSARTOOLS_BINDING_H
+#endif // _PULSARBINDINGS_BINDING_H

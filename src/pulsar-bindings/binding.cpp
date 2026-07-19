@@ -1,6 +1,6 @@
-#include "pulsar-tools/binding.h"
+#include "pulsar-bindings/binding.h"
 
-std::optional<uint64_t> PulsarTools::CustomTypeResolver::ResolveType(const Pulsar::String& typeName) const
+std::optional<uint64_t> PulsarBindings::CustomTypeResolver::ResolveType(const Pulsar::String& typeName) const
 {
     std::optional<uint64_t> result = std::nullopt;
     m_Module.CustomTypes.ForEach([&result, &typeName](const auto& idTypePair) {
@@ -11,15 +11,9 @@ std::optional<uint64_t> PulsarTools::CustomTypeResolver::ResolveType(const Pulsa
     return result;
 }
 
-PulsarTools::IBinding::~IBinding()
+void PulsarBindings::IBinding::BindTypes(Pulsar::Module& module) const
 {
-    for (IBinding* dep : m_Dependencies)
-        delete dep;
-}
-
-void PulsarTools::IBinding::BindTypes(Pulsar::Module& module) const
-{
-    for (IBinding* dep : m_Dependencies) {
+    for (const auto& dep : m_Dependencies) {
         dep->BindTypes(module);
     }
     for (const auto& customType : m_CustomTypesPool) {
@@ -27,9 +21,9 @@ void PulsarTools::IBinding::BindTypes(Pulsar::Module& module) const
     }
 }
 
-void PulsarTools::IBinding::BindFunctions(Pulsar::Module& module, bool declareAndBind) const
+void PulsarBindings::IBinding::BindFunctions(Pulsar::Module& module, bool declareAndBind) const
 {
-    for (IBinding* dep : m_Dependencies) {
+    for (const auto& dep : m_Dependencies) {
         dep->BindFunctions(module, declareAndBind);
     }
 

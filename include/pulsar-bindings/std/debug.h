@@ -1,9 +1,9 @@
-#ifndef _PULSARTOOLS_BINDINGS_DEBUG_H
-#define _PULSARTOOLS_BINDINGS_DEBUG_H
+#ifndef _PULSARBINDINGS_STD_DEBUG_H
+#define _PULSARBINDINGS_STD_DEBUG_H
 
-#include "pulsar-tools/binding.h"
+#include "pulsar-bindings/binding.h"
 
-namespace PulsarTools::Bindings
+namespace PulsarBindings::Std
 {
     class Debug :
         public IBinding
@@ -17,4 +17,4 @@ namespace PulsarTools::Bindings
     };
 }
 
-#endif // _PULSARTOOLS_BINDINGS_DEBUG_H
+#endif // _PULSARBINDINGS_STD_DEBUG_H

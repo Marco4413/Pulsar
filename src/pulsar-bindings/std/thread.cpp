@@ -1,12 +1,11 @@
-#include "pulsar-tools/bindings/thread.h"
+#include "pulsar-bindings/std/thread.h"
 
 #include <chrono>
-#include <iostream>
 
-PulsarTools::Bindings::Thread::Thread() :
+PulsarBindings::Std::Thread::Thread() :
     IBinding()
 {
-    AddDependency(Channel());
+    CreateDependency<Channel>();
 
     BindCustomType("Pulsar-Tools/Thread");
 
@@ -19,7 +18,7 @@ PulsarTools::Bindings::Thread::Thread() :
     BindNativeFunction({ "thread/valid?",   1, 1 }, CreateTypeBoundFactory(FIsValid, "Pulsar-Tools/Thread"));
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Thread::FThisSleep(Pulsar::ExecutionContext& eContext)
+Pulsar::RuntimeState PulsarBindings::Std::Thread::FThisSleep(Pulsar::ExecutionContext& eContext)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& delay = frame.Locals[0];
@@ -32,7 +31,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Thread::FThisSleep(Pulsar::Execution
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Thread::FRun(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId)
+Pulsar::RuntimeState PulsarBindings::Std::Thread::FRun(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId)
 {
     const Pulsar::Module& module = eContext.GetModule();
     Pulsar::Frame& frame = eContext.CurrentFrame();
@@ -67,7 +66,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Thread::FRun(Pulsar::ExecutionContex
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Thread::FJoin(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId)
+Pulsar::RuntimeState PulsarBindings::Std::Thread::FJoin(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& threadReference = frame.Locals[0];
@@ -81,7 +80,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Thread::FJoin(Pulsar::ExecutionConte
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Thread::FJoinAll(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId)
+Pulsar::RuntimeState PulsarBindings::Std::Thread::FJoinAll(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& threadReferencesList = frame.Locals[0];
@@ -107,7 +106,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Thread::FJoinAll(Pulsar::ExecutionCo
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Thread::FIsAlive(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId)
+Pulsar::RuntimeState PulsarBindings::Std::Thread::FIsAlive(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& threadReference = frame.Locals[0];
@@ -121,7 +120,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Thread::FIsAlive(Pulsar::ExecutionCo
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Thread::FIsValid(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId)
+Pulsar::RuntimeState PulsarBindings::Std::Thread::FIsValid(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& threadReference = frame.Locals[0];
@@ -134,7 +133,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Thread::FIsValid(Pulsar::ExecutionCo
     return Pulsar::RuntimeState::OK;
 }
 
-void PulsarTools::Bindings::Thread::Join(Pulsar::SharedRef<ThreadData> thread, Pulsar::Stack& stack)
+void PulsarBindings::Std::Thread::Join(Pulsar::SharedRef<ThreadData> thread, Pulsar::Stack& stack)
 {
     thread->Thread.join();
     Pulsar::Value::List threadResult;
@@ -154,7 +153,7 @@ void PulsarTools::Bindings::Thread::Join(Pulsar::SharedRef<ThreadData> thread, P
     stack.EmplaceInteger(0);
 }
 
-PulsarTools::Bindings::Channel::Channel() :
+PulsarBindings::Std::Channel::Channel() :
     IBinding()
 {
     BindCustomType("Pulsar-Tools/Channel");
@@ -168,7 +167,7 @@ PulsarTools::Bindings::Channel::Channel() :
     BindNativeFunction({ "channel/valid?",  1, 1 }, CreateTypeBoundFactory(FIsValid,  "Pulsar-Tools/Channel"));
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Channel::FNew(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId)
+Pulsar::RuntimeState PulsarBindings::Std::Channel::FNew(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
 
@@ -177,7 +176,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Channel::FNew(Pulsar::ExecutionConte
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Channel::FSend(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId)
+Pulsar::RuntimeState PulsarBindings::Std::Channel::FSend(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& channelReference = frame.Locals[1];
@@ -197,7 +196,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Channel::FSend(Pulsar::ExecutionCont
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Channel::FReceive(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId)
+Pulsar::RuntimeState PulsarBindings::Std::Channel::FReceive(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& channelReference = frame.Locals[0];
@@ -223,7 +222,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Channel::FReceive(Pulsar::ExecutionC
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Channel::FClose(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId)
+Pulsar::RuntimeState PulsarBindings::Std::Channel::FClose(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& channelReference = frame.Locals[0];
@@ -239,7 +238,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Channel::FClose(Pulsar::ExecutionCon
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Channel::FIsEmpty(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId)
+Pulsar::RuntimeState PulsarBindings::Std::Channel::FIsEmpty(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& channelReference = frame.Locals[0];
@@ -254,7 +253,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Channel::FIsEmpty(Pulsar::ExecutionC
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Channel::FIsClosed(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId)
+Pulsar::RuntimeState PulsarBindings::Std::Channel::FIsClosed(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& channelReference = frame.Locals[0];
@@ -269,7 +268,7 @@ Pulsar::RuntimeState PulsarTools::Bindings::Channel::FIsClosed(Pulsar::Execution
     return Pulsar::RuntimeState::OK;
 }
 
-Pulsar::RuntimeState PulsarTools::Bindings::Channel::FIsValid(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId)
+Pulsar::RuntimeState PulsarBindings::Std::Channel::FIsValid(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId)
 {
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& channelReference = frame.Locals[0];
