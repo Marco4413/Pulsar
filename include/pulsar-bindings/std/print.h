@@ -5,8 +5,7 @@
 
 namespace PulsarBindings::Std
 {
-    class Print :
-        public IBinding
+    class Print : public Binding
     {
     public:
         Print();

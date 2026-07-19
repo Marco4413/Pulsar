@@ -5,8 +5,7 @@
 
 namespace PulsarBindings::Std
 {
-    class FileSystem :
-        public IBinding
+    class FileSystem : public Binding
     {
     public:
         FileSystem();

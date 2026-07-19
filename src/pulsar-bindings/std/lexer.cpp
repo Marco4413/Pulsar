@@ -3,8 +3,8 @@
 #include <filesystem>
 #include <fstream>
 
-PulsarBindings::Std::Lexer::Lexer() :
-    IBinding()
+PulsarBindings::Std::Lexer::Lexer()
+    : Binding()
 {
     BindCustomType("Pulsar-Tools/Lexer");
     BindNativeFunction({ "lexer/from-file",  1, 1 }, CreateTypeBoundFactory(FFromFile,  "Pulsar-Tools/Lexer"));

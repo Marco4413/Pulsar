@@ -2,8 +2,8 @@
 
 #include <iostream>
 
-PulsarBindings::Std::Stdio::Stdio() :
-    IBinding()
+PulsarBindings::Std::Stdio::Stdio()
+    : Binding()
 {
     BindNativeFunction({ "stdin/read",      0, 1 }, FInRead);
     BindNativeFunction({ "stdout/write!",   1, 0 }, FOutWrite);

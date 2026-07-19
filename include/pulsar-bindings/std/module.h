@@ -5,8 +5,7 @@
 
 namespace PulsarBindings::Std
 {
-    class Module :
-        public IBinding
+    class Module : public Binding
     {
     public:
         class ModuleType :

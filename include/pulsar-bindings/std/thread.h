@@ -12,8 +12,7 @@
 
 namespace PulsarBindings::Std
 {
-    class Channel :
-        public IBinding
+    class Channel : public Binding
     {
     public:
         struct ChannelData
@@ -47,8 +46,7 @@ namespace PulsarBindings::Std
         static Pulsar::RuntimeState FIsValid(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId);
     };
 
-    class Thread :
-        public IBinding
+    class Thread : public Binding
     {
     public:
         struct ThreadContext

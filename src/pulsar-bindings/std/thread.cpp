@@ -2,8 +2,8 @@
 
 #include <chrono>
 
-PulsarBindings::Std::Thread::Thread() :
-    IBinding()
+PulsarBindings::Std::Thread::Thread()
+    : Binding()
 {
     CreateDependency<Channel>();
 
@@ -153,8 +153,8 @@ void PulsarBindings::Std::Thread::Join(Pulsar::SharedRef<ThreadData> thread, Pul
     stack.EmplaceInteger(0);
 }
 
-PulsarBindings::Std::Channel::Channel() :
-    IBinding()
+PulsarBindings::Std::Channel::Channel()
+    : Binding()
 {
     BindCustomType("Pulsar-Tools/Channel");
 

@@ -1,7 +1,7 @@
 #include "pulsar-bindings/std/print.h"
 
-PulsarBindings::Std::Print::Print() :
-    IBinding()
+PulsarBindings::Std::Print::Print()
+    : Binding()
 {
     BindNativeFunction({ "print!",   1, 0 }, FPrint);
     BindNativeFunction({ "println!", 1, 0 }, FPrintln);

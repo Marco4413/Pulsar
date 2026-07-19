@@ -1,7 +1,7 @@
 #include "pulsar-bindings/std/error.h"
 
-PulsarBindings::Std::Error::Error() :
-    IBinding()
+PulsarBindings::Std::Error::Error()
+    : Binding()
 {
     BindNativeFunction({ "error!",      0, 0 }, FError);
     BindNativeFunction({ "error/type!", 0, 0 }, FType);

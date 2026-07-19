@@ -5,8 +5,7 @@
 
 namespace PulsarBindings::Std
 {
-    class Stdio :
-        public IBinding
+    class Stdio : public Binding
     {
     public:
         Stdio();

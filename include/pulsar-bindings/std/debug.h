@@ -5,8 +5,7 @@
 
 namespace PulsarBindings::Std
 {
-    class Debug :
-        public IBinding
+    class Debug : public Binding
     {
     public:
         Debug();

@@ -2,8 +2,8 @@
 
 #include "pulsar/parser.h"
 
-PulsarBindings::Std::Module::Module() :
-    IBinding()
+PulsarBindings::Std::Module::Module()
+    : Binding()
 {
     BindCustomType("Pulsar-Tools/Module");
     BindNativeFunction({ "module/from-file", 1, 1 }, CreateTypeBoundFactory(FFromFile, "Pulsar-Tools/Module"));

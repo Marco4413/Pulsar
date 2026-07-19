@@ -3,8 +3,8 @@
 #include <chrono>
 #include <ctime>
 
-PulsarBindings::Std::Time::Time() :
-    IBinding()
+PulsarBindings::Std::Time::Time()
+    : Binding()
 {
     BindNativeFunction({ "time", 0, 1 }, FTime);
     BindNativeFunction({ "time/steady", 0, 1 }, FSteady);

@@ -1,7 +1,7 @@
 #include "pulsar-bindings/std/debug.h"
 
-PulsarBindings::Std::Debug::Debug() :
-    IBinding()
+PulsarBindings::Std::Debug::Debug()
+    : Binding()
 {
     BindNativeFunction({ "stack-dump!", 0, 0 }, FStackDump);
     BindNativeFunction({ "trace-call!", 0, 0 }, FTraceCall);

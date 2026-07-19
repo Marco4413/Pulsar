@@ -5,8 +5,7 @@
 
 namespace PulsarBindings::Std
 {
-    class Error :
-        public IBinding
+    class Error : public Binding
     {
     public:
         Error();

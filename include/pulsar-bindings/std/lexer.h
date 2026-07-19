@@ -8,8 +8,7 @@
 
 namespace PulsarBindings::Std
 {
-    class Lexer :
-        public IBinding
+    class Lexer : public Binding
     {
     public:
         class LexerType :

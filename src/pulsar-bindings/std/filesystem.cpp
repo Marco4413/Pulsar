@@ -4,8 +4,8 @@
 #include <filesystem>
 #include <fstream>
 
-PulsarBindings::Std::FileSystem::FileSystem() :
-    IBinding()
+PulsarBindings::Std::FileSystem::FileSystem()
+    : Binding()
 {
     BindNativeFunction({ "fs/exists?", 1, 2 }, FExists);
     BindNativeFunction({ "fs/read-all", 1, 1 }, FReadAll);

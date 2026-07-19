@@ -5,8 +5,7 @@
 
 namespace PulsarBindings::Std
 {
-    class Time :
-        public IBinding
+    class Time : public Binding
     {
     public:
         Time();

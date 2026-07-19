@@ -11,7 +11,7 @@ std::optional<uint64_t> PulsarBindings::CustomTypeResolver::ResolveType(const Pu
     return result;
 }
 
-void PulsarBindings::IBinding::BindTypes(Pulsar::Module& module) const
+void PulsarBindings::Binding::BindTypes(Pulsar::Module& module) const
 {
     for (const auto& dep : m_Dependencies) {
         dep->BindTypes(module);
@@ -21,7 +21,7 @@ void PulsarBindings::IBinding::BindTypes(Pulsar::Module& module) const
     }
 }
 
-void PulsarBindings::IBinding::BindFunctions(Pulsar::Module& module, bool declareAndBind) const
+void PulsarBindings::Binding::BindFunctions(Pulsar::Module& module, bool declareAndBind) const
 {
     for (const auto& dep : m_Dependencies) {
         dep->BindFunctions(module, declareAndBind);

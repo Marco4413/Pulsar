@@ -10,6 +10,8 @@
 
 #include "pulsar/runtime.h"
 
+#include "pulsar-bindings/ibinding.h"
+
 namespace PulsarBindings
 {
     class CustomTypeResolver
@@ -24,7 +26,11 @@ namespace PulsarBindings
         Pulsar::Module& m_Module;
     };
 
-    class IBinding
+    /**
+     * Helper class that can be inherited to create Bindings.
+     * See Std bindings as examples.
+     */
+    class Binding : public IBinding
     {
     public:
         using NativeFunction = Pulsar::Module::NativeFunction;
@@ -37,17 +43,11 @@ namespace PulsarBindings
         };
 
     public:
-        IBinding() = default;
-        virtual ~IBinding() = default;
+        Binding() = default;
+        virtual ~Binding() = default;
 
-        void BindAll(Pulsar::Module& module, bool declareAndBind=false) const
-        {
-            BindTypes(module);
-            BindFunctions(module, declareAndBind);
-        }
-
-        void BindTypes(Pulsar::Module& module) const;
-        void BindFunctions(Pulsar::Module& module, bool declareAndBind) const;
+        virtual void BindTypes(Pulsar::Module& module) const override;
+        virtual void BindFunctions(Pulsar::Module& module, bool declareAndBind) const override;
 
     public:
         /**
