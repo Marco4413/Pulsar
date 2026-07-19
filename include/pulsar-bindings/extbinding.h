@@ -8,13 +8,13 @@
 // We need to specifically check for CPulsar's platform
 #include "cpulsar/platform.h"
 
-#include "pulsar/runtime/module.h"
-
 #if defined(CPULSAR_PLATFORM_WINDOWS)
 #  define CPULSAR_CALL __cdecl
 #else // CPULSAR_PLATFORM_*
 #  define CPULSAR_CALL
 #endif
+
+#include "pulsar-bindings/ibinding.h"
 
 namespace PulsarBindings
 {
@@ -60,9 +60,7 @@ namespace PulsarBindings
         std::string m_ErrorMessage;
     };
 
-    // Any instance of this class must be deleted
-    //  AFTER any module it was bound to.
-    class ExtBinding final
+    class ExtBinding final : public IBinding
     {
     public:
         using GetCPulsarVersionFn = uint64_t(CPULSAR_CALL *)(void);
@@ -80,14 +78,8 @@ namespace PulsarBindings
         ExtBinding& operator=(ExtBinding&&) = delete;
         ExtBinding& operator=(const ExtBinding&) = delete;
 
-        void BindAll(Pulsar::Module& module, bool declareAndBind=false) const
-        {
-            BindTypes(module);
-            BindFunctions(module, declareAndBind);
-        }
-
-        void BindTypes(Pulsar::Module& module) const;
-        void BindFunctions(Pulsar::Module& module, bool declareAndBind) const;
+        void BindTypes(Pulsar::Module& module) const override;
+        void BindFunctions(Pulsar::Module& module, bool declareAndBind) const override;
 
         const std::string& GetErrorMessage() const { return m_ErrorMessage; }
 
