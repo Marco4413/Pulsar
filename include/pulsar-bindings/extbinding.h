@@ -5,14 +5,11 @@
 #include <memory> // std::unique_ptr
 #include <string> // std::string
 
-// We need to specifically check for CPulsar's platform
-#include "cpulsar/platform.h"
+#if !__has_include("cpulsar/core.h")
+#  error "cpulsar/core.h" not found, it is required by ExtBinding(s)
+#endif // "cpulsar/core.h"
 
-#if defined(CPULSAR_PLATFORM_WINDOWS)
-#  define CPULSAR_CALL __cdecl
-#else // CPULSAR_PLATFORM_*
-#  define CPULSAR_CALL
-#endif
+#include "cpulsar/core.h" // CPULSAR_CALL
 
 #include "pulsar-bindings/ibinding.h"
 
