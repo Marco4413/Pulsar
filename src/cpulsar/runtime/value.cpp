@@ -17,7 +17,7 @@ CPULSAR_API void CPULSAR_CALL CPulsar_Value_Delete(CPulsar_Value* _self)
     PULSAR_DELETE(Pulsar::Value, &CPULSAR_UNWRAP(_self));
 }
 
-CPULSAR_API int CPULSAR_CALL CPulsar_Value_IsInteger(const CPulsar_Value* _self)
+CPULSAR_API bool CPULSAR_CALL CPulsar_Value_IsInteger(const CPulsar_Value* _self)
 {
     return CPULSAR_UNWRAP(_self).Type() == Pulsar::ValueType::Integer;
 }
@@ -32,7 +32,7 @@ CPULSAR_API void CPULSAR_CALL CPulsar_Value_SetInteger(CPulsar_Value* _self, int
     CPULSAR_UNWRAP(_self).SetInteger(value);
 }
 
-CPULSAR_API int CPULSAR_CALL CPulsar_Value_IsDouble(const CPulsar_Value* _self)
+CPULSAR_API bool CPULSAR_CALL CPulsar_Value_IsDouble(const CPulsar_Value* _self)
 {
     return CPULSAR_UNWRAP(_self).Type() == Pulsar::ValueType::Double;
 }
@@ -47,7 +47,7 @@ CPULSAR_API void CPULSAR_CALL CPulsar_Value_SetDouble(CPulsar_Value* _self, doub
     CPULSAR_UNWRAP(_self).SetDouble(value);
 }
 
-CPULSAR_API int CPULSAR_CALL CPulsar_Value_IsNumber(const CPulsar_Value* self)
+CPULSAR_API bool CPULSAR_CALL CPulsar_Value_IsNumber(const CPulsar_Value* self)
 {
     return CPulsar_Value_IsInteger(self) || CPulsar_Value_IsDouble(self);
 }
@@ -66,7 +66,7 @@ CPULSAR_API double CPULSAR_CALL CPulsar_Value_AsDoubleNumber(const CPulsar_Value
         : (double)CPulsar_Value_AsInteger(self);
 }
 
-CPULSAR_API int CPULSAR_CALL CPulsar_Value_IsString(const CPulsar_Value* _self)
+CPULSAR_API bool CPULSAR_CALL CPulsar_Value_IsString(const CPulsar_Value* _self)
 {
     return CPULSAR_UNWRAP(_self).Type() == Pulsar::ValueType::String;
 }
@@ -81,7 +81,7 @@ CPULSAR_API void CPULSAR_CALL CPulsar_Value_SetString(CPulsar_Value* _self, cons
     CPULSAR_UNWRAP(_self).SetString(value);
 }
 
-CPULSAR_API int CPULSAR_CALL CPulsar_Value_IsList(const CPulsar_Value* _self)
+CPULSAR_API bool CPULSAR_CALL CPulsar_Value_IsList(const CPulsar_Value* _self)
 {
     return CPULSAR_UNWRAP(_self).Type() == Pulsar::ValueType::List;
 }
@@ -97,7 +97,7 @@ CPULSAR_API CPulsar_ValueList* CPULSAR_CALL CPulsar_Value_SetEmptyList(CPulsar_V
     return CPulsar_Value_AsList(_self);
 }
 
-CPULSAR_API int CPULSAR_CALL CPulsar_Value_IsCustom(const CPulsar_Value* _self)
+CPULSAR_API bool CPULSAR_CALL CPulsar_Value_IsCustom(const CPulsar_Value* _self)
 {
     return CPULSAR_UNWRAP(_self).Type() == Pulsar::ValueType::Custom;
 }

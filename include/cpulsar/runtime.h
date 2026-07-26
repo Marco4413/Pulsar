@@ -65,7 +65,7 @@ CPULSAR_API int64_t CPULSAR_CALL CPulsar_Module_DeclareAndBindNativeFunction(
 CPULSAR_API void CPULSAR_CALL CPulsar_Module_BindNativeFunctionEx(
         CPulsar_Module* self, CPulsar_FunctionSignature fnSig,
         CPulsar_NativeFunction nativeFn, CPulsar_CBuffer nativeFnArgs,
-        int declareAndBind);
+        bool declareAndBind);
 
 CPULSAR_API uint64_t CPULSAR_CALL CPulsar_Module_BindCustomType(CPulsar_Module* self, const char* typeName, CPulsar_CustomType_DataFactoryFn dataFactory);
 // HACK: Returns 0 if the type could not be found. It's safe but not documented within Pulsar.

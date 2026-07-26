@@ -87,7 +87,7 @@ CPULSAR_API int64_t CPULSAR_CALL CPulsar_Module_DeclareAndBindNativeFunction(
 CPULSAR_API void CPULSAR_CALL CPulsar_Module_BindNativeFunctionEx(
         CPulsar_Module* self, CPulsar_FunctionSignature fnSig,
         CPulsar_NativeFunction nativeFn, CPulsar_CBuffer nativeFnArgs,
-        int declareAndBind)
+        bool declareAndBind)
 {
     if (declareAndBind) {
         CPulsar_Module_DeclareAndBindNativeFunction(self, fnSig, nativeFn, nativeFnArgs);

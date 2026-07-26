@@ -2,6 +2,7 @@
 #define _CPULSAR_CORE_H
 
 #include <stddef.h> // size_t
+#include <stdbool.h> // bool
 #include <inttypes.h> // int64_t
 
 #include "cpulsar/opaque.h"

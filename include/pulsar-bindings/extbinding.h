@@ -9,7 +9,7 @@
 #  error "cpulsar/core.h" not found, it is required by ExtBinding(s)
 #endif // "cpulsar/core.h"
 
-#include "cpulsar/core.h" // CPULSAR_CALL
+#include "cpulsar/core.h" // CPULSAR_CALL, CPulsar_Module
 
 #include "pulsar-bindings/ibinding.h"
 
@@ -61,8 +61,8 @@ namespace PulsarBindings
     {
     public:
         using GetCPulsarVersionFn = uint64_t(CPULSAR_CALL *)(void);
-        using BindTypesFn         = void(CPULSAR_CALL *)(Pulsar::Module*);
-        using BindFunctionsFn     = void(CPULSAR_CALL *)(Pulsar::Module*, int);
+        using BindTypesFn         = void(CPULSAR_CALL *)(CPulsar_Module*);
+        using BindFunctionsFn     = void(CPULSAR_CALL *)(CPulsar_Module*, bool);
 
     public:
         ExtBinding(const std::filesystem::path& path);

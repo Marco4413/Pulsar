@@ -11,29 +11,29 @@ extern "C" {
 CPULSAR_API CPulsar_Value* CPULSAR_CALL CPulsar_Value_Create(void);
 CPULSAR_API void           CPULSAR_CALL CPulsar_Value_Delete(CPulsar_Value* self);
 
-CPULSAR_API int     CPULSAR_CALL CPulsar_Value_IsInteger(const CPulsar_Value* self);
+CPULSAR_API bool    CPULSAR_CALL CPulsar_Value_IsInteger(const CPulsar_Value* self);
 CPULSAR_API int64_t CPULSAR_CALL CPulsar_Value_AsInteger(const CPulsar_Value* self);
 CPULSAR_API void    CPULSAR_CALL CPulsar_Value_SetInteger(CPulsar_Value* self, int64_t value);
 
-CPULSAR_API int    CPULSAR_CALL CPulsar_Value_IsDouble(const CPulsar_Value* self);
+CPULSAR_API bool   CPULSAR_CALL CPulsar_Value_IsDouble(const CPulsar_Value* self);
 CPULSAR_API double CPULSAR_CALL CPulsar_Value_AsDouble(const CPulsar_Value* self);
 CPULSAR_API void   CPULSAR_CALL CPulsar_Value_SetDouble(CPulsar_Value* self, double value);
 
 // Methods that check if Value is a numeric and auto-casts to either integer or double
-CPULSAR_API int     CPULSAR_CALL CPulsar_Value_IsNumber(const CPulsar_Value* self);
+CPULSAR_API bool    CPULSAR_CALL CPulsar_Value_IsNumber(const CPulsar_Value* self);
 CPULSAR_API int64_t CPULSAR_CALL CPulsar_Value_AsIntegerNumber(const CPulsar_Value* self);
 CPULSAR_API double  CPULSAR_CALL CPulsar_Value_AsDoubleNumber(const CPulsar_Value* self);
 
 // TODO: Maybe add a CPulsar_String type
-CPULSAR_API int         CPULSAR_CALL CPulsar_Value_IsString(const CPulsar_Value* self);
+CPULSAR_API bool        CPULSAR_CALL CPulsar_Value_IsString(const CPulsar_Value* self);
 CPULSAR_API const char* CPULSAR_CALL CPulsar_Value_AsString(const CPulsar_Value* self);
 CPULSAR_API void        CPULSAR_CALL CPulsar_Value_SetString(CPulsar_Value* self, const char* value);
 
-CPULSAR_API int                CPULSAR_CALL CPulsar_Value_IsList(const CPulsar_Value* self);
+CPULSAR_API bool               CPULSAR_CALL CPulsar_Value_IsList(const CPulsar_Value* self);
 CPULSAR_API CPulsar_ValueList* CPULSAR_CALL CPulsar_Value_AsList(CPulsar_Value* self);
 CPULSAR_API CPulsar_ValueList* CPULSAR_CALL CPulsar_Value_SetEmptyList(CPulsar_Value* self);
 
-CPULSAR_API int                 CPULSAR_CALL CPulsar_Value_IsCustom(const CPulsar_Value* self);
+CPULSAR_API bool                CPULSAR_CALL CPulsar_Value_IsCustom(const CPulsar_Value* self);
 CPULSAR_API CPulsar_CustomData* CPULSAR_CALL CPulsar_Value_AsCustom(CPulsar_Value* self);
 // Returns NULL if `typeId` does not match the type of this value or the stored type is not a CBuffer.
 CPULSAR_API CPulsar_CBuffer* CPULSAR_CALL CPulsar_Value_AsCustomBuffer(CPulsar_Value* self, uint64_t typeId);
