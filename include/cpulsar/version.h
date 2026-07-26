@@ -10,11 +10,12 @@
 #endif // PULSAR_DEBUG
 
 // Returns the version of CPulsar referenced by this header file.
-#define CPULSAR_VERSION_CURRENT() CPULSAR_LITERAL_S( \
-        CPulsar_SemVer,                              \
-        .Major = 0, .Minor = 1, .Patch = 0,          \
-        .Pre   = {CPulsar_PreReleaseKind_Alpha, 0},  \
-        .Build = CPULSAR_VERSION_CURRENT_BUILD_KIND())
+#define CPULSAR_VERSION_CURRENT() \
+        (CPULSAR_LIT(CPulsar_SemVer){                     \
+            .Major = 0, .Minor = 1, .Patch = 0,           \
+            .Pre   = {CPulsar_PreReleaseKind_Alpha, 0},   \
+            .Build = CPULSAR_VERSION_CURRENT_BUILD_KIND() \
+        })
 
 // Returns the version number of CPulsar referenced by this header file.
 #define CPULSAR_VERSION_NUMBER_CURRENT() (CPulsar_SemVer_ToNumber(CPULSAR_VERSION_CURRENT()))

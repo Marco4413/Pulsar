@@ -24,9 +24,9 @@
 #endif // CPULSAR_DEPRECATED
 
 #ifdef CPULSAR_CPP
-#  define CPULSAR_LITERAL_S(structType, ...) (structType { __VA_ARGS__ })
+#  define CPULSAR_LIT(structType) structType
 #else // CPULSAR_CPP
-#  define CPULSAR_LITERAL_S(structType, ...) ((structType){ __VA_ARGS__ })
+#  define CPULSAR_LIT(structType) (structType)
 #endif // CPULSAR_CPP
 
 #if defined(CPULSAR_PLATFORM_WINDOWS)
