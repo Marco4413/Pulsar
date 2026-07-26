@@ -98,6 +98,8 @@ CPULSAR_API void CPULSAR_CALL CPulsar_Module_BindNativeFunctionEx(
 
 CPULSAR_API uint64_t CPULSAR_CALL CPulsar_Module_BindCustomType(CPulsar_Module* _self, const char* typeName, CPulsar_CustomType_DataFactoryFn dataFactory)
 {
+    if (!dataFactory) return CPULSAR_UNWRAP(_self).BindCustomType(typeName);
+
     return CPULSAR_UNWRAP(_self)
         .BindCustomType(
             typeName,
