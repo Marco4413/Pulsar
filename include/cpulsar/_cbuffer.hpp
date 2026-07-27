@@ -31,6 +31,14 @@ namespace CPulsar
             }
         }
 
+        bool Copy(CBufferOwner& out) const
+        {
+            if (m_Buffer.Copy == NULL) return false;
+            out.Get() = m_Buffer;
+            out->Data = m_Buffer.Copy(m_Buffer.Data);
+            return true;
+        }
+
         CPulsar_CBuffer& Get()             { return m_Buffer; }
         const CPulsar_CBuffer& Get() const { return m_Buffer; }
 

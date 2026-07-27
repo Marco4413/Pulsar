@@ -8,53 +8,35 @@ class CustomTypeGlobalDataBuffer final :
     public Pulsar::CustomTypeGlobalData
 {
 public:
-    CustomTypeGlobalDataBuffer(CPulsar_CBuffer buffer) :
-        m_Buffer(buffer)
-    {}
-
-    ~CustomTypeGlobalDataBuffer()
-    {
-        if (m_Buffer.Free) {
-            m_Buffer.Free(m_Buffer.Data);
-        }
-    }
+    CustomTypeGlobalDataBuffer(CPulsar_CBuffer buffer)
+        : m_BufferOwner(buffer) {}
+    ~CustomTypeGlobalDataBuffer() = default;
 
     Ref Fork() const override
     {
-        if (!m_Buffer.Copy)
-            return nullptr;
-        return Pulsar::SharedRef<CustomTypeGlobalDataBuffer>::New(CPulsar_CBuffer{
-            .Data = m_Buffer.Copy(m_Buffer.Data),
-            .Free = m_Buffer.Free,
-            .Copy = m_Buffer.Copy,
-        });
+        auto fork = Pulsar::SharedRef<CustomTypeGlobalDataBuffer>::New(CPULSAR_CBUFFER_NULL);
+        if (!m_BufferOwner.Copy(fork->m_BufferOwner)) return nullptr;
+        return fork;
     }
 
-    CPulsar_CBuffer& GetBuffer() { return m_Buffer; }
+    CPulsar_CBuffer& GetBuffer() { return *m_BufferOwner; }
 
 private:
-    CPulsar_CBuffer m_Buffer;
+    CPulsar::CBufferOwner m_BufferOwner;
 };
 
 class CustomDataHolderBuffer final :
     public Pulsar::CustomDataHolder
 {
 public:
-    CustomDataHolderBuffer(CPulsar_CBuffer buffer) :
-        m_Buffer(buffer)
-    {}
+    CustomDataHolderBuffer(CPulsar_CBuffer buffer)
+        : m_BufferOwner(buffer) {}
+    ~CustomDataHolderBuffer() = default;
 
-    ~CustomDataHolderBuffer()
-    {
-        if (m_Buffer.Free) {
-            m_Buffer.Free(m_Buffer.Data);
-        }
-    }
-
-    CPulsar_CBuffer& GetBuffer() { return m_Buffer; }
+    CPulsar_CBuffer& GetBuffer() { return *m_BufferOwner; }
 
 private:
-    CPulsar_CBuffer m_Buffer;
+    CPulsar::CBufferOwner m_BufferOwner;
 };
 
 extern "C"
