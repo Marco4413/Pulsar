@@ -15,4 +15,6 @@ typedef struct _CPulsar_ExecutionContext         CPulsar_ExecutionContext;
 typedef struct _CPulsar_CustomDataHolder_Ref     CPulsar_CustomDataHolder_Ref;
 typedef struct _CPulsar_CustomTypeGlobalData_Ref CPulsar_CustomTypeGlobalData_Ref;
 
+typedef struct _CPulsar_CBuffer_Ref CPulsar_CBuffer_Ref;
+
 #endif // _CPULSAR_OPAQUE_H

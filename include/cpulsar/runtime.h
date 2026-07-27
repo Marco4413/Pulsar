@@ -49,22 +49,22 @@ CPULSAR_API CPulsar_Module* CPULSAR_CALL CPulsar_Module_Create(void);
 CPULSAR_API void            CPULSAR_CALL CPulsar_Module_Delete(CPulsar_Module* self);
 
 // `nativeFnArgs.Data` will be passed to `nativeFn` on each call.
-// The lifecycle of `nativeFnArgs` will be managed by Pulsar.
+// `nativeFnArgs` is copied, you must decrease the ref count yourself.
 // Returns how many functions were bound.
 CPULSAR_API size_t CPULSAR_CALL CPulsar_Module_BindNativeFunction(
         CPulsar_Module* self, CPulsar_FunctionSignature fnSig,
-        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer nativeFnArgs);
+        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer_Ref* nativeFnArgs);
 // `nativeFnArgs.Data` will be passed to `nativeFn` on each call.
-// The lifecycle of `nativeFnArgs` will be managed by Pulsar.
+// `nativeFnArgs` is copied, you must decrease the ref count yourself.
 // Returns the index at which the function was declared
 CPULSAR_API int64_t CPULSAR_CALL CPulsar_Module_DeclareAndBindNativeFunction(
         CPulsar_Module* self, CPulsar_FunctionSignature fnSig,
-        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer nativeFnArgs);
+        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer_Ref* nativeFnArgs);
 
 // Calls the above functions depending on declareAndBind
 CPULSAR_API void CPULSAR_CALL CPulsar_Module_BindNativeFunctionEx(
         CPulsar_Module* self, CPulsar_FunctionSignature fnSig,
-        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer nativeFnArgs,
+        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer_Ref* nativeFnArgs,
         bool declareAndBind);
 
 CPULSAR_API uint64_t CPULSAR_CALL CPulsar_Module_BindCustomType(CPulsar_Module* self, const char* typeName, CPulsar_CustomType_DataFactoryFn dataFactory);

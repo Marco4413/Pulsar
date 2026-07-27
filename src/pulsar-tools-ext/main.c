@@ -57,13 +57,14 @@ CPULSAR_EXPORT void CPULSAR_CALL PulsarExt_BindFunctions(CPulsar_Module* module,
             .Returns = 0,
         },
         NativePrintln,
-        CPULSAR_CBUFFER_NULL,
+        NULL,
         declareAndBind
     );
 
-    CustomTypeIds typeIds = {
+    CPulsar_CBuffer_Ref* typeIds = CPulsar_CBuffer_Ref_Create(CustomTypeIdsToBuffer((CustomTypeIds){
         .ExtIntegerId = CPulsar_Module_FindCustomType(module, "Ext/Integer"),
-    };
+    }));
+
     CPulsar_Module_BindNativeFunctionEx(
         module,
         (CPulsar_FunctionSignature){
@@ -72,7 +73,7 @@ CPULSAR_EXPORT void CPULSAR_CALL PulsarExt_BindFunctions(CPulsar_Module* module,
             .Returns = 1,
         },
         NativeExtIntegerCreate,
-        CustomTypeIdsToBuffer(typeIds),
+        typeIds,
         declareAndBind
     );
     CPulsar_Module_BindNativeFunctionEx(
@@ -83,7 +84,7 @@ CPULSAR_EXPORT void CPULSAR_CALL PulsarExt_BindFunctions(CPulsar_Module* module,
             .Returns = 1,
         },
         NativeExtIntegerSet,
-        CustomTypeIdsToBuffer(typeIds),
+        typeIds,
         declareAndBind
     );
     CPulsar_Module_BindNativeFunctionEx(
@@ -94,9 +95,11 @@ CPULSAR_EXPORT void CPULSAR_CALL PulsarExt_BindFunctions(CPulsar_Module* module,
             .Returns = 2,
         },
         NativeExtIntegerGet,
-        CustomTypeIdsToBuffer(typeIds),
+        typeIds,
         declareAndBind
     );
+
+    CPulsar_CBuffer_Ref_Delete(typeIds);
 }
 
 void CPULSAR_CALL ExtIntegerData_Free(void* data)

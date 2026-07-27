@@ -21,4 +21,17 @@ typedef struct {
 
 #define CPULSAR_CBUFFER_NULL (CPULSAR_LIT(CPulsar_CBuffer){0})
 
+#ifdef CPULSAR_CPP
+extern "C" {
+#endif
+
+// Takes ownership of buffer.
+CPULSAR_API CPulsar_CBuffer_Ref* CPULSAR_CALL CPulsar_CBuffer_Ref_Create(CPulsar_CBuffer buffer);
+CPULSAR_API void                 CPULSAR_CALL CPulsar_CBuffer_Ref_Delete(CPulsar_CBuffer_Ref* self);
+CPULSAR_API CPulsar_CBuffer*     CPULSAR_CALL CPulsar_CBuffer_Ref_Get(CPulsar_CBuffer_Ref* self);
+
+#ifdef CPULSAR_CPP
+}
+#endif
+
 #endif // _CPULSAR_CBUFFER_H

@@ -6,26 +6,6 @@
 
 static_assert(sizeof(CPulsar_RuntimeState) >= sizeof(Pulsar::RuntimeState));
 
-class CBufferWrapper
-{
-public:
-    CBufferWrapper(CPulsar_CBuffer buf) :
-        m_Buffer(buf)
-    {}
-
-    ~CBufferWrapper()
-    {
-        if (m_Buffer.Free) {
-            m_Buffer.Free(m_Buffer.Data);
-        }
-    }
-
-    CPulsar_CBuffer& GetBuffer() { return m_Buffer; }
-
-private:
-    CPulsar_CBuffer m_Buffer;
-};
-
 static Pulsar::RuntimeState CRuntimeStateToCppRuntimeState(CPulsar_RuntimeState cstate);
 
 extern "C"
@@ -48,9 +28,13 @@ CPULSAR_API void CPULSAR_CALL CPulsar_Module_Delete(CPulsar_Module* _self)
 
 CPULSAR_API size_t CPULSAR_CALL CPulsar_Module_BindNativeFunction(
         CPulsar_Module* _self, CPulsar_FunctionSignature fnSig,
-        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer _nativeFnArgs)
+        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer_Ref* _nativeFnArgs)
 {
-    auto nativeFnArgs = Pulsar::SharedRef<CBufferWrapper>::New(_nativeFnArgs);
+    Pulsar::SharedRef<CPulsar::CBufferOwner> nativeFnArgs = nullptr;
+    if (_nativeFnArgs != NULL) {
+        nativeFnArgs = CPULSAR_UNWRAP(_nativeFnArgs);
+    }
+
     return CPULSAR_UNWRAP(_self)
         .BindNativeFunction(Pulsar::FunctionSignature{
             .Name = fnSig.Name,
@@ -60,16 +44,20 @@ CPULSAR_API size_t CPULSAR_CALL CPulsar_Module_BindNativeFunction(
         }, [nativeFn, nativeFnArgs](Pulsar::ExecutionContext& context) {
             return CRuntimeStateToCppRuntimeState(nativeFn(
                 CPULSAR_WRAP(context),
-                nativeFnArgs->GetBuffer().Data
+                nativeFnArgs ? nativeFnArgs->Get().Data : NULL
             ));
         });
 }
 
 CPULSAR_API int64_t CPULSAR_CALL CPulsar_Module_DeclareAndBindNativeFunction(
         CPulsar_Module* _self, CPulsar_FunctionSignature fnSig,
-        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer _nativeFnArgs)
+        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer_Ref* _nativeFnArgs)
 {
-    auto nativeFnArgs = Pulsar::SharedRef<CBufferWrapper>::New(_nativeFnArgs);
+    Pulsar::SharedRef<CPulsar::CBufferOwner> nativeFnArgs = nullptr;
+    if (_nativeFnArgs != NULL) {
+        nativeFnArgs = CPULSAR_UNWRAP(_nativeFnArgs);
+    }
+
     return CPULSAR_UNWRAP(_self)
         .DeclareAndBindNativeFunction(Pulsar::FunctionSignature{
             .Name = fnSig.Name,
@@ -79,14 +67,14 @@ CPULSAR_API int64_t CPULSAR_CALL CPulsar_Module_DeclareAndBindNativeFunction(
         }, [nativeFn, nativeFnArgs](Pulsar::ExecutionContext& context) {
             return CRuntimeStateToCppRuntimeState(nativeFn(
                 CPULSAR_WRAP(context),
-                nativeFnArgs->GetBuffer().Data
+                nativeFnArgs ? nativeFnArgs->Get().Data : NULL
             ));
         });
 }
 
 CPULSAR_API void CPULSAR_CALL CPulsar_Module_BindNativeFunctionEx(
         CPulsar_Module* self, CPulsar_FunctionSignature fnSig,
-        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer nativeFnArgs,
+        CPulsar_NativeFunction nativeFn, CPulsar_CBuffer_Ref* nativeFnArgs,
         bool declareAndBind)
 {
     if (declareAndBind) {

@@ -14,6 +14,8 @@
 #  error Included "cpulsar/_opaque.hpp" in non-C++ file.
 #endif // CPULSAR_CPP
 
+#include "cpulsar/_cbuffer.hpp"
+
 // Forward declarations for Pulsar
 
 namespace Pulsar
@@ -69,6 +71,8 @@ namespace CPulsar::Opaque
 
     CPULSAR_OPAQUE_IMPL(CPulsar_CustomDataHolder_Ref,     Pulsar::SharedRef<Pulsar::CustomDataHolder>)
     CPULSAR_OPAQUE_IMPL(CPulsar_CustomTypeGlobalData_Ref, Pulsar::SharedRef<Pulsar::CustomTypeGlobalData>)
+
+    CPULSAR_OPAQUE_IMPL(CPulsar_CBuffer_Ref, Pulsar::SharedRef<CPulsar::CBufferOwner>)
 }
 
 #endif // __CPULSAR__OPAQUE_HPP
