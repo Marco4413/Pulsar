@@ -19,7 +19,7 @@ typedef struct {
     CPulsar_CBuffer_Copy Copy;
 } CPulsar_CBuffer;
 
-#define CPULSAR_CBUFFER_NULL (CPULSAR_LIT(CPulsar_CBuffer){0})
+#define CPULSAR_CBUFFER_NULL (CPULSAR_LIT(CPulsar_CBuffer){NULL,NULL,NULL})
 
 #ifdef CPULSAR_CPP
 extern "C" {
