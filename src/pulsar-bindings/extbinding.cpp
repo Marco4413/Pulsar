@@ -147,7 +147,7 @@ namespace PulsarBindings
 {
     struct DynamicLibraryData
     {
-        void* Handle = nullptr;
+        void* Handle = NULL;
     };
 }
 
@@ -170,7 +170,7 @@ namespace PulsarBindings
 {
     struct DynamicLibraryData
     {
-        void* Handle = nullptr;
+        void* Handle = NULL;
     };
 }
 
@@ -203,7 +203,7 @@ PulsarBindings::DynamicLibrary::~DynamicLibrary()
 
 bool PulsarBindings::DynamicLibrary::IsLoaded() const
 {
-    return (bool)m_Data->Handle;
+    return m_Data->Handle != NULL;
 }
 
 const std::string& PulsarBindings::DynamicLibrary::GetErrorMessage() const
@@ -216,32 +216,34 @@ const std::string& PulsarBindings::DynamicLibrary::GetErrorMessage() const
 void PulsarBindings::DynamicLibrary::Load()
 {
     m_ErrorMessage.clear();
-    if (m_Data->Handle) return;
+    if (IsLoaded()) return;
+
     int dlFlags = RTLD_NOW | (m_Flags.GlobalSymbols ? RTLD_GLOBAL : RTLD_LOCAL);
     m_Data->Handle = dlopen(m_LibraryPath.c_str(), dlFlags);
-    if (!m_Data->Handle)
+    if (m_Data->Handle == NULL) {
         m_ErrorMessage = dlerror();
+    }
 }
 
 void PulsarBindings::DynamicLibrary::Unload()
 {
     m_ErrorMessage.clear();
-    if (!m_Data->Handle) return;
+    if (!IsLoaded()) return;
+
     dlclose(m_Data->Handle);
-    m_Data->Handle = nullptr;
+    m_Data->Handle = NULL;
 }
 
 void* PulsarBindings::DynamicLibrary::GetSymbol(const char* symbolName)
 {
-    if (!m_Data->Handle) {
+    if (!IsLoaded()) {
         m_ErrorMessage = "Trying to get symbol of not loaded Dynamic Library.";
         return nullptr;
     }
 
     m_ErrorMessage.clear();
     void* symbol = dlsym(m_Data->Handle, symbolName);
-    const char* error = dlerror();
-    if (error) m_ErrorMessage = error;
+    if (symbol == NULL) return nullptr;
     return symbol;
 }
 
@@ -250,9 +252,10 @@ void* PulsarBindings::DynamicLibrary::GetSymbol(const char* symbolName)
 void PulsarBindings::DynamicLibrary::Load()
 {
     m_ErrorMessage.clear();
-    if (m_Data->Handle) return;
+    if (IsLoaded()) return;
+
     m_Data->Handle = LoadLibraryW(m_LibraryPath.c_str());
-    if (!m_Data->Handle) {
+    if (m_Data->Handle == NULL) {
         DWORD errorCode = GetLastError();
         LPSTR msgBuffer = NULL;
         DWORD fmAlloc = FormatMessageA(
@@ -277,20 +280,23 @@ void PulsarBindings::DynamicLibrary::Load()
 void PulsarBindings::DynamicLibrary::Unload()
 {
     m_ErrorMessage.clear();
-    if (!m_Data->Handle) return;
+    if (!IsLoaded()) return;
+
     FreeLibrary(m_Data->Handle);
     m_Data->Handle = NULL;
 }
 
 void* PulsarBindings::DynamicLibrary::GetSymbol(const char* symbolName)
 {
-    if (!m_Data->Handle) {
+    if (!IsLoaded()) {
         m_ErrorMessage = "Trying to get symbol of not loaded Dynamic Library.";
         return nullptr;
     }
 
     m_ErrorMessage.clear();
-    return (void*)GetProcAddress(m_Data->Handle, symbolName);
+    FARPROC proc = GetProcAddress(m_Data->Handle, symbolName);
+    if (proc == NULL) return nullptr;
+    return (void*)proc;
 }
 
 #else // Unsupported Platform
