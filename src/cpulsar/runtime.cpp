@@ -31,8 +31,11 @@ CPULSAR_API size_t CPULSAR_CALL CPulsar_Module_BindNativeFunction(
         CPulsar_NativeFunction nativeFn, CPulsar_CBuffer_Ref* _nativeFnArgs)
 {
     Pulsar::SharedRef<CPulsar::CBufferOwner> nativeFnArgs = nullptr;
+    void* nativeFnArgsData = NULL;
+
     if (_nativeFnArgs != NULL) {
         nativeFnArgs = CPULSAR_UNWRAP(_nativeFnArgs);
+        nativeFnArgsData = nativeFnArgs->Get().Data;
     }
 
     return CPULSAR_UNWRAP(_self)
@@ -41,10 +44,9 @@ CPULSAR_API size_t CPULSAR_CALL CPulsar_Module_BindNativeFunction(
             .Arity = fnSig.Arity,
             .Returns = fnSig.Returns,
             .StackArity = fnSig.StackArity,
-        }, [nativeFn, nativeFnArgs](Pulsar::ExecutionContext& context) {
+        }, [nativeFn, nativeFnArgs, nativeFnArgsData](Pulsar::ExecutionContext& context) {
             return CRuntimeStateToCppRuntimeState(nativeFn(
-                CPULSAR_WRAP(context),
-                nativeFnArgs ? nativeFnArgs->Get().Data : NULL
+                CPULSAR_WRAP(context), nativeFnArgsData
             ));
         });
 }
@@ -54,8 +56,11 @@ CPULSAR_API int64_t CPULSAR_CALL CPulsar_Module_DeclareAndBindNativeFunction(
         CPulsar_NativeFunction nativeFn, CPulsar_CBuffer_Ref* _nativeFnArgs)
 {
     Pulsar::SharedRef<CPulsar::CBufferOwner> nativeFnArgs = nullptr;
+    void* nativeFnArgsData = NULL;
+
     if (_nativeFnArgs != NULL) {
         nativeFnArgs = CPULSAR_UNWRAP(_nativeFnArgs);
+        nativeFnArgsData = nativeFnArgs->Get().Data;
     }
 
     return CPULSAR_UNWRAP(_self)
@@ -64,10 +69,9 @@ CPULSAR_API int64_t CPULSAR_CALL CPulsar_Module_DeclareAndBindNativeFunction(
             .Arity = fnSig.Arity,
             .Returns = fnSig.Returns,
             .StackArity = fnSig.StackArity,
-        }, [nativeFn, nativeFnArgs](Pulsar::ExecutionContext& context) {
+        }, [nativeFn, nativeFnArgs, nativeFnArgsData](Pulsar::ExecutionContext& context) {
             return CRuntimeStateToCppRuntimeState(nativeFn(
-                CPULSAR_WRAP(context),
-                nativeFnArgs ? nativeFnArgs->Get().Data : NULL
+                CPULSAR_WRAP(context), nativeFnArgsData
             ));
         });
 }
