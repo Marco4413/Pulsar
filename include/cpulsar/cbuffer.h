@@ -28,7 +28,9 @@ extern "C" {
 // Takes ownership of buffer.
 CPULSAR_API CPulsar_CBuffer_Ref* CPULSAR_CALL CPulsar_CBuffer_Ref_Create(CPulsar_CBuffer buffer);
 CPULSAR_API void                 CPULSAR_CALL CPulsar_CBuffer_Ref_Delete(CPulsar_CBuffer_Ref* self);
-CPULSAR_API CPulsar_CBuffer*     CPULSAR_CALL CPulsar_CBuffer_Ref_Get(CPulsar_CBuffer_Ref* self);
+// Copies the Ref.
+CPULSAR_API CPulsar_CBuffer_Ref* CPULSAR_CALL CPulsar_CBuffer_Ref_Copy(CPulsar_CBuffer_Ref* self);
+CPULSAR_API CPulsar_CBuffer*     CPULSAR_CALL CPulsar_CBuffer_Ref_GetBuffer(CPulsar_CBuffer_Ref* self);
 
 #ifdef CPULSAR_CPP
 }
