@@ -3,8 +3,8 @@
 
 #include "cpulsar/core.h"
 
-typedef void(CPULSAR_CALL *CPulsar_CBuffer_Free)(void*);
-typedef void*(CPULSAR_CALL *CPulsar_CBuffer_Copy)(void*);
+typedef void(CPULSAR_CALL *CPulsar_CBuffer_FreeFn)(void*);
+typedef void*(CPULSAR_CALL *CPulsar_CBuffer_CopyFn)(void*);
 
 // Represents a generic portion of memory
 typedef struct {
@@ -13,10 +13,10 @@ typedef struct {
     // This function will be called to free `Data`
     // It should free both the Data pointer and its contents.
     // If NULL, nothing will be done to `Data` so make sure that no memory was allocated.
-    CPulsar_CBuffer_Free Free;
+    CPulsar_CBuffer_FreeFn Free;
     // This function will be called to copy `Data`
     // If NULL, copying `Data` is not supported.
-    CPulsar_CBuffer_Copy Copy;
+    CPulsar_CBuffer_CopyFn Copy;
 } CPulsar_CBuffer;
 
 #define CPULSAR_CBUFFER_NULL (CPULSAR_LIT(CPulsar_CBuffer){NULL,NULL,NULL})
