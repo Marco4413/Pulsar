@@ -7,6 +7,30 @@
 extern "C"
 {
 
+CPULSAR_API bool CPULSAR_CALL CPulsar_CBuffer_TryCopy(CPulsar_CBuffer self, CPulsar_CBuffer* out)
+{
+    if (self.Copy == NULL) return false;
+    if (out == NULL) return true;
+    CPulsar_CBuffer_Free(out);
+    *out = self;
+    out->Data = self.Copy(self.Data);
+    return true;
+}
+
+CPULSAR_API CPulsar_CBuffer CPULSAR_CALL CPulsar_CBuffer_Copy(CPulsar_CBuffer self)
+{
+    CPulsar_CBuffer buffer = CPULSAR_CBUFFER_NULL;
+    CPulsar_CBuffer_TryCopy(self, &buffer);
+    return buffer;
+}
+
+CPULSAR_API void CPULSAR_CALL CPulsar_CBuffer_Free(CPulsar_CBuffer* self)
+{
+    if (self == NULL || self->Free == NULL) return;
+    self->Free(self->Data);
+    *self = CPULSAR_CBUFFER_NULL;
+}
+
 CPULSAR_API CPulsar_CBuffer_Ref* CPULSAR_CALL CPulsar_CBuffer_Ref_Create(CPulsar_CBuffer buffer)
 {
     auto bufferOwner = PULSAR_NEW(Pulsar::SharedRef<CPulsar::CBufferOwner>);

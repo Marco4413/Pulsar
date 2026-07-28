@@ -26,17 +26,12 @@ namespace CPulsar
 
         ~CBufferOwner()
         {
-            if (m_Buffer.Free) {
-                m_Buffer.Free(m_Buffer.Data);
-            }
+            CPulsar_CBuffer_Free(&m_Buffer);
         }
 
-        bool Copy(CBufferOwner& out) const
+        bool TryCopy(CBufferOwner& out) const
         {
-            if (m_Buffer.Copy == NULL) return false;
-            out.Get() = m_Buffer;
-            out->Data = m_Buffer.Copy(m_Buffer.Data);
-            return true;
+            return CPulsar_CBuffer_TryCopy(m_Buffer, &out.m_Buffer);
         }
 
         CPulsar_CBuffer& Get()             { return m_Buffer; }

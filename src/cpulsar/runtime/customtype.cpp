@@ -15,7 +15,7 @@ public:
     Ref Fork() const override
     {
         auto fork = Pulsar::SharedRef<CustomTypeGlobalDataBuffer>::New(CPULSAR_CBUFFER_NULL);
-        if (!m_BufferOwner.Copy(fork->m_BufferOwner)) return nullptr;
+        if (!m_BufferOwner.TryCopy(fork->m_BufferOwner)) return nullptr;
         return fork;
     }
 

@@ -25,6 +25,15 @@ typedef struct {
 extern "C" {
 #endif
 
+// `out` may be NULL, in which case this function only returns whether the operation is supported.
+// Returns false if the operation is not supported.
+// If false, `out` is unchanged.
+// If true, `out` is freed and replaced by the copy.
+CPULSAR_API bool            CPULSAR_CALL CPulsar_CBuffer_TryCopy(CPulsar_CBuffer self, CPulsar_CBuffer* out);
+// Returns CPULSAR_CBUFFER_NULL if the operation is not supported.
+CPULSAR_API CPulsar_CBuffer CPULSAR_CALL CPulsar_CBuffer_Copy(CPulsar_CBuffer self);
+CPULSAR_API void            CPULSAR_CALL CPulsar_CBuffer_Free(CPulsar_CBuffer* self);
+
 // Takes ownership of buffer.
 CPULSAR_API CPulsar_CBuffer_Ref* CPULSAR_CALL CPulsar_CBuffer_Ref_Create(CPulsar_CBuffer buffer);
 CPULSAR_API void                 CPULSAR_CALL CPulsar_CBuffer_Ref_Delete(CPulsar_CBuffer_Ref* self);
