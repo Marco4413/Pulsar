@@ -7,15 +7,15 @@ PulsarBindings::Std::Thread::Thread()
 {
     CreateDependency<Channel>();
 
-    BindCustomType("Pulsar-Tools/Thread");
+    BindCustomType("Pulsar-Std/Thread");
 
     BindNativeFunction({ "this-thread/sleep!", 1, 0 }, FThisSleep);
 
-    BindNativeFunction({ "thread/run",      2, 1 }, CreateTypeBoundFactory(FRun,     "Pulsar-Tools/Thread"));
-    BindNativeFunction({ "thread/join",     1, 2 }, CreateTypeBoundFactory(FJoin,    "Pulsar-Tools/Thread"));
-    BindNativeFunction({ "thread/join-all", 1, 1 }, CreateTypeBoundFactory(FJoinAll, "Pulsar-Tools/Thread"));
-    BindNativeFunction({ "thread/alive?",   1, 1 }, CreateTypeBoundFactory(FIsAlive, "Pulsar-Tools/Thread"));
-    BindNativeFunction({ "thread/valid?",   1, 1 }, CreateTypeBoundFactory(FIsValid, "Pulsar-Tools/Thread"));
+    BindNativeFunction({ "thread/run",      2, 1 }, CreateTypeBoundFactory(FRun,     "PulsarStd/Thread"));
+    BindNativeFunction({ "thread/join",     1, 2 }, CreateTypeBoundFactory(FJoin,    "PulsarStd/Thread"));
+    BindNativeFunction({ "thread/join-all", 1, 1 }, CreateTypeBoundFactory(FJoinAll, "PulsarStd/Thread"));
+    BindNativeFunction({ "thread/alive?",   1, 1 }, CreateTypeBoundFactory(FIsAlive, "PulsarStd/Thread"));
+    BindNativeFunction({ "thread/valid?",   1, 1 }, CreateTypeBoundFactory(FIsValid, "PulsarStd/Thread"));
 }
 
 Pulsar::RuntimeState PulsarBindings::Std::Thread::FThisSleep(Pulsar::ExecutionContext& eContext)
@@ -156,15 +156,15 @@ void PulsarBindings::Std::Thread::Join(Pulsar::SharedRef<ThreadData> thread, Pul
 PulsarBindings::Std::Channel::Channel()
     : Binding()
 {
-    BindCustomType("Pulsar-Tools/Channel");
+    BindCustomType("PulsarStd/Channel");
 
-    BindNativeFunction({ "channel/new",     0, 1 }, CreateTypeBoundFactory(FNew,      "Pulsar-Tools/Channel"));
-    BindNativeFunction({ "channel/send!",   2, 0 }, CreateTypeBoundFactory(FSend,     "Pulsar-Tools/Channel"));
-    BindNativeFunction({ "channel/receive", 1, 1 }, CreateTypeBoundFactory(FReceive,  "Pulsar-Tools/Channel"));
-    BindNativeFunction({ "channel/close!",  1, 0 }, CreateTypeBoundFactory(FClose,    "Pulsar-Tools/Channel"));
-    BindNativeFunction({ "channel/empty?",  1, 1 }, CreateTypeBoundFactory(FIsEmpty,  "Pulsar-Tools/Channel"));
-    BindNativeFunction({ "channel/closed?", 1, 1 }, CreateTypeBoundFactory(FIsClosed, "Pulsar-Tools/Channel"));
-    BindNativeFunction({ "channel/valid?",  1, 1 }, CreateTypeBoundFactory(FIsValid,  "Pulsar-Tools/Channel"));
+    BindNativeFunction({ "channel/new",     0, 1 }, CreateTypeBoundFactory(FNew,      "PulsarStd/Channel"));
+    BindNativeFunction({ "channel/send!",   2, 0 }, CreateTypeBoundFactory(FSend,     "PulsarStd/Channel"));
+    BindNativeFunction({ "channel/receive", 1, 1 }, CreateTypeBoundFactory(FReceive,  "PulsarStd/Channel"));
+    BindNativeFunction({ "channel/close!",  1, 0 }, CreateTypeBoundFactory(FClose,    "PulsarStd/Channel"));
+    BindNativeFunction({ "channel/empty?",  1, 1 }, CreateTypeBoundFactory(FIsEmpty,  "PulsarStd/Channel"));
+    BindNativeFunction({ "channel/closed?", 1, 1 }, CreateTypeBoundFactory(FIsClosed, "PulsarStd/Channel"));
+    BindNativeFunction({ "channel/valid?",  1, 1 }, CreateTypeBoundFactory(FIsValid,  "PulsarStd/Channel"));
 }
 
 Pulsar::RuntimeState PulsarBindings::Std::Channel::FNew(Pulsar::ExecutionContext& eContext, uint64_t channelTypeId)

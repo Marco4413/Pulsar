@@ -5,10 +5,10 @@
 PulsarBindings::Std::Module::Module()
     : Binding()
 {
-    BindCustomType("Pulsar-Tools/Module");
-    BindNativeFunction({ "module/from-file", 1, 1 }, CreateTypeBoundFactory(FFromFile, "Pulsar-Tools/Module"));
-    BindNativeFunction({ "module/run",       1, 1 }, CreateTypeBoundFactory(FRun,      "Pulsar-Tools/Module"));
-    BindNativeFunction({ "module/valid?",    1, 1 }, CreateTypeBoundFactory(FIsValid,  "Pulsar-Tools/Module"));
+    BindCustomType("PulsarStd/Module");
+    BindNativeFunction({ "module/from-file", 1, 1 }, CreateTypeBoundFactory(FFromFile, "PulsarStd/Module"));
+    BindNativeFunction({ "module/run",       1, 1 }, CreateTypeBoundFactory(FRun,      "PulsarStd/Module"));
+    BindNativeFunction({ "module/valid?",    1, 1 }, CreateTypeBoundFactory(FIsValid,  "PulsarStd/Module"));
 }
 
 Pulsar::RuntimeState PulsarBindings::Std::Module::FFromFile(Pulsar::ExecutionContext& eContext, uint64_t moduleTypeId)
