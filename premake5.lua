@@ -9,13 +9,18 @@ newoption {
   category = "Build Options"
 }
 
--- HACK: On my machine os.hostarch() returns x86 and not x86_64
-local _desiredarch = _OPTIONS["arch"] or (os.hostarch() == "x86" and os.is64bit() and "x86_64")
+local _arch = _OPTIONS["arch"]
+if not _arch then
+  _arch = os.hostarch()
+  -- HACK: On my machine os.hostarch() returns x86 and not x86_64,
+  --       probably related to Windows.
+  if _arch == "x86" and os.is64bit() then
+    _arch = "x86_64"
+  end
+end
 
 workspace "pulsar"
-if _desiredarch then
-  architecture (_desiredarch)
-end
+  architecture (_arch)
   configurations { "Debug", "Release" }
   startproject "pulsar-tools"
 

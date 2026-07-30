@@ -1,6 +1,13 @@
 name: Build
 
-on: [ push, pull_request ]
+on:
+  push:
+  pull_request:
+  workflow_call:
+    outputs:
+      workflow-run-id:
+        value: ${{ github.run_id }}
+        description: The run id of this workflow
 
 defaults:
   run:
@@ -22,9 +29,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
-          submodules: recursive
+          fetch-depth: 1
+          submodules: true
       - name: Install Dependencies
         run: |
           sudo apt-get update -q
@@ -63,7 +71,7 @@ jobs:
           cp    "build/pulsar-tools/$PREMAKE_BUILD/libcpulsar.so" artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: artifact
@@ -84,9 +92,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
-          submodules: recursive
+          fetch-depth: 1
+          submodules: true
       - name: Install Dependencies
         run: |
           brew update -q
@@ -125,7 +134,7 @@ jobs:
           cp    "build/pulsar-tools/$PREMAKE_BUILD/libcpulsar.dylib" artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: artifact
@@ -146,9 +155,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
-          submodules: recursive
+          fetch-depth: 1
+          submodules: true
       - name: Install Dependencies
         run: |
           curl -Lo premake5.zip ${{ env.PREMAKE_INSTALL_URL }}
@@ -193,7 +203,7 @@ jobs:
           cp    "build/pulsar-tools/$PREMAKE_BUILD/cpulsar.dll"      artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: artifact

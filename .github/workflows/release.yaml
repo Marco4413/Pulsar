@@ -1,0 +1,71 @@
+name: Release
+
+on: workflow_dispatch
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yaml
+
+  release:
+    runs-on: ubuntu-slim
+    needs: build
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          merge-multiple: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ needs.build.outputs.workflow-run-id }}
+          skip-decompress: true
+      - id: release-info
+        name: Release Info
+        # outputs: [ pulsar-version, short-sha, build-date ]
+        run: |
+          set -xe
+
+          PULSAR="$( basename -a -s .zip pulsar-linux_x86_64-gcc_*.zip | tail -n 1 )"
+          7z x -aoa "$PULSAR.zip"
+          PULSAR_VERSION="$( "$PULSAR/pulsar-tools" --no-prefix --no-color --version )"
+
+          BRANCH='${{ github.ref_name }}'
+          BRANCH="${BRANCH:-HEAD}"
+          FULL_SHA='${{ github.sha }}'
+          SHORT_SHA="${FULL_SHA::7}"
+          BUILD_DATE="$( date +'%Y-%m' )"
+
+          printf 'pulsar-version<<EOF\n%s\nEOF\n' "$PULSAR_VERSION" >> "$GITHUB_OUTPUT"
+          printf 'branch=%s\n'     "$BRANCH"     >> "$GITHUB_OUTPUT"
+          printf 'short-sha=%s\n'  "$SHORT_SHA"  >> "$GITHUB_OUTPUT"
+          printf 'build-date=%s\n' "$BUILD_DATE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v3
+        env:
+          BRANCH:     ${{ steps.release-info.outputs.branch     }}
+          SHORT_SHA:  ${{ steps.release-info.outputs.short-sha  }}
+          BUILD_DATE: ${{ steps.release-info.outputs.build-date }}
+          PULSAR_VERSION: ${{ steps.release-info.outputs.pulsar-version }}
+        with:
+          draft: false
+          prerelease: true
+          make_latest: false
+          tag_name: ci/build/${{ env.BUILD_DATE }}/${{ env.SHORT_SHA }}
+          target_commitish: ${{ github.sha }}
+          name: Pulsar (${{ env.BRANCH }}) - CI Build (${{ env.SHORT_SHA }})
+          body: |
+            CI Build (${{ env.SHORT_SHA }})
+            ```
+            ${{ env.PULSAR_VERSION }}
+            ```
+          files: '*.zip'
+          overwrite_files: false
+          fail_on_unmatched_files: true
+          token: ${{ secrets.GITHUB_TOKEN }}
