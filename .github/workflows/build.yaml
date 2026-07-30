@@ -2,7 +2,20 @@ name: Build
 
 on:
   push:
+    paths:
+      - include/**
+      - libs/**
+      - projects/**
+      - src/**
+      - premake5.lua
   pull_request:
+    paths:
+      - include/**
+      - libs/**
+      - projects/**
+      - src/**
+      - premake5.lua
+  workflow_dispatch:
   workflow_call:
     outputs:
       workflow-run-id:
