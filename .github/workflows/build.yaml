@@ -1,13 +1,17 @@
 name: Build
 
-on: [ push, pull_request ]
+on:
+  push:
+  pull_request:
+  workflow_call:
+    outputs:
+      workflow-run-id:
+        value: ${{ github.run_id }}
+        description: The run id of this workflow
 
 defaults:
   run:
     shell: bash
-
-permissions:
-  contents: write
 
 jobs:
   linux:
@@ -195,59 +199,3 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: artifact
           if-no-files-found: error
-
-  release:
-    if: github.ref == 'refs/heads/master'
-    runs-on: ubuntu-slim
-    needs:
-      - linux
-      - macosx
-      - windows
-
-    steps:
-      - name: Download Artifacts
-        uses: actions/download-artifact@v8
-        with:
-          merge-multiple: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.run_id }}
-          skip-decompress: true
-      - id: release-info
-        name: Release Info
-        # outputs: [ pulsar-version, short-sha, build-date ]
-        run: |
-          set -xe
-
-          PULSAR="$( basename -a -s .zip pulsar-linux_x86_64-gcc_*.zip | tail -n 1 )"
-          7z x -aoa "$PULSAR.zip"
-          PULSAR_VERSION="$( "$PULSAR/pulsar-tools" --no-prefix --no-color --version )"
-
-          COMMIT_SHA='${{ github.sha }}'
-          BUILD_DATE="$( date +'%Y-%m' )"
-
-          printf 'pulsar-version<<EOF\n%s\nEOF\n' "$PULSAR_VERSION" >> "$GITHUB_OUTPUT"
-          printf "short-sha=%s\n"  "${COMMIT_SHA::7}" >> "$GITHUB_OUTPUT"
-          printf "build-date=%s\n" "$BUILD_DATE"      >> "$GITHUB_OUTPUT"
-
-      - name: Upload Release
-        uses: softprops/action-gh-release@v3
-        env:
-          SHORT_SHA:  ${{ steps.release-info.outputs.short-sha  }}
-          BUILD_DATE: ${{ steps.release-info.outputs.build-date }}
-          PULSAR_VERSION: ${{ steps.release-info.outputs.pulsar-version }}
-        with:
-          draft: false
-          prerelease: true
-          make_latest: false
-          tag_name: ci/build/${{ env.BUILD_DATE }}/${{ env.SHORT_SHA }}
-          target_commitish: ${{ github.sha }}
-          name: Pulsar (${{ github.ref_name }}) - CI Build (${{ env.SHORT_SHA }})
-          body: |
-            CI Build (${{ env.SHORT_SHA }})
-            ```
-            ${{ env.PULSAR_VERSION }}
-            ```
-          files: '*.zip'
-          overwrite_files: false
-          fail_on_unmatched_files: true
-          token: ${{ secrets.GITHUB_TOKEN }}
