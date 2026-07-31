@@ -93,12 +93,11 @@ In fact, it's the CLI tool for Pulsar.
 
 You can obtain `pulsar-tools` with these methods:
 - [Building it yourself](#building).
-- From the [Build GitHub Action](./actions/workflows/build.yaml) artifacts.
-- From [GitHub Releases](./releases).
+- From the [Build GitHub Action](https://github.com/Marco4413/Pulsar/actions/workflows/build.yaml) artifacts.
+- From [GitHub Releases](https://github.com/Marco4413/Pulsar/releases).
 
 After obtaining `pulsar-tools`, you'll be able to run it with no arguments to
 print its usage. The default settings are the ones used for the examples.
-
 
 ```sh
 $ pulsar-tools run -- path/to/pulsar/file.pls scriptArg1 scriptArg2
@@ -109,3 +108,8 @@ $ pulsar-tools run -- path/to/pulsar/file.pls scriptArg1 scriptArg2
 There's a fully working demo within the `pulsar-demo` project.
 You can check out the `projects/pulsar-demo.lua` and `projects/common/cflags.lua`
 scripts and the source code within `src/pulsar-demo`
+
+### Creating C Native Bindings
+
+Use the [`raylib-pulsar`](https://github.com/Marco4413/raylib-pulsar) project
+as an example.
