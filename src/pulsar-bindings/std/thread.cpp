@@ -7,7 +7,7 @@ PulsarBindings::Std::Thread::Thread()
 {
     CreateDependency<Channel>();
 
-    BindCustomType("Pulsar-Std/Thread");
+    BindCustomType("PulsarStd/Thread");
 
     BindNativeFunction({ "this-thread/sleep!", 1, 0 }, FThisSleep);
 
