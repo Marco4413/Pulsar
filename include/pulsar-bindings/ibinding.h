@@ -7,6 +7,7 @@ namespace PulsarBindings
 {
     /**
      * An instance of this class MAY be bound to multiple modules.
+     * Any instance of this class MUST be fixed in memory.
      * Any instance of this class MUST outlive all modules it was bound to.
      */
     class IBinding

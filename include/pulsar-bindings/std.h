@@ -1,8 +1,6 @@
 #ifndef _PULSARBINDINGS_STD_H
 #define _PULSARBINDINGS_STD_H
 
-#include "pulsar/runtime/module.h"
-
 #include "pulsar-bindings/std/debug.h"
 #include "pulsar-bindings/std/error.h"
 #include "pulsar-bindings/std/filesystem.h"
@@ -23,10 +21,5 @@
     X(Stdio)                 \
     X(Thread)                \
     X(Time)
-
-namespace PulsarBindings::Std
-{
-    void BindAll(Pulsar::Module& module);
-}
 
 #endif // _PULSARBINDINGS_STD_H

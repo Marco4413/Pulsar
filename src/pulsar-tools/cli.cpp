@@ -21,6 +21,7 @@
 #include "pulsar/binary/filewriter.h"
 #include "pulsar/optimizer.h"
 
+#include "pulsar-bindings/extbinding.h"
 #include "pulsar-bindings/std.h"
 
 #include "pulsar-tools/views.h"
@@ -242,7 +243,15 @@ std::optional<std::filesystem::path> PulsarTools::CLI::SearchLibrary(const Pulsa
     return std::nullopt;
 }
 
-int PulsarTools::CLI::Action::LoadExternalBindings(const RuntimeOptions& runtimeOptions, ExternalBindings& out)
+int PulsarTools::CLI::Action::LoadStdBindings(const RuntimeOptions& runtimeOptions, PulsarBindings::BindingsRegister& reg)
+{
+    #define X(name) if (*runtimeOptions.Bind##name) reg.Add<PulsarBindings::Std::name>();
+    PULSARBINDINGS_STD_X
+    #undef X
+    return 0;
+}
+
+int PulsarTools::CLI::Action::LoadExternalBindings(const RuntimeOptions& runtimeOptions, PulsarBindings::BindingsRegister& reg)
 {
     Logger& logger = GetLogger();
 
@@ -265,7 +274,7 @@ int PulsarTools::CLI::Action::LoadExternalBindings(const RuntimeOptions& runtime
             continue;
         }
 
-        PulsarBindings::ExtBinding binding(*fullLibraryPath);
+        PulsarBindings::ExtBinding& binding = reg.Add<PulsarBindings::ExtBinding>(*fullLibraryPath);
         if (!binding) {
             hasError = true;
             logger.Error("Could not load external library '{}' ('{}'):\n{}",
@@ -273,31 +282,9 @@ int PulsarTools::CLI::Action::LoadExternalBindings(const RuntimeOptions& runtime
                     binding.GetErrorMessage());
             continue;
         }
-
-        out.emplace_back(std::move(binding));
     }
 
-    return hasError;
-}
-
-int PulsarTools::CLI::Action::BindNatives(Pulsar::Module& module, const ExternalBindings& extBindings, const RuntimeOptions& runtimeOptions)
-{
-    #define X(name) \
-        if (*runtimeOptions.Bind##name) {       \
-            PulsarBindings::Std::name __##name; \
-            __##name.BindAll(module);           \
-        }
-
-    {
-        PULSARBINDINGS_STD_X
-    }
-
-    #undef X
-
-    for (const PulsarBindings::ExtBinding& binding : extBindings)
-        binding.BindAll(module);
-
-    return 0;
+    return hasError ? 1 : 0;
 }
 
 int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const InputFileArgs& input)
@@ -654,12 +641,13 @@ int PulsarTools::CLI::CheckCommand::operator()() const
 
 int PulsarTools::CLI::CompileCommand::operator()() const
 {
-    ExternalBindings extBindings;
+    PulsarBindings::BindingsRegister bindings;
     { // Make sure extBindings is deleted after module
-        _ACTION_RUN_CHECKED(Action::LoadExternalBindings(m_RuntimeOptions, extBindings));
+        _ACTION_RUN_CHECKED(Action::LoadStdBindings(m_RuntimeOptions, bindings));
+        _ACTION_RUN_CHECKED(Action::LoadExternalBindings(m_RuntimeOptions, bindings));
 
         Pulsar::Module module;
-        _ACTION_RUN_CHECKED(Action::BindNatives(module, extBindings, m_RuntimeOptions));
+        bindings.BindAll(module);
 
         _ACTION_RUN_CHECKED(IsNeutronFile(*m_Input.FilePath)
                 ? Action::Read(module, m_ParserOptions, m_Input)
@@ -673,12 +661,13 @@ int PulsarTools::CLI::CompileCommand::operator()() const
 
 int PulsarTools::CLI::RunCommand::operator()() const
 {
-    ExternalBindings extBindings;
+    PulsarBindings::BindingsRegister bindings;
     { // Make sure extBindings is deleted after module
-        _ACTION_RUN_CHECKED(Action::LoadExternalBindings(m_RuntimeOptions, extBindings));
+        _ACTION_RUN_CHECKED(Action::LoadStdBindings(m_RuntimeOptions, bindings));
+        _ACTION_RUN_CHECKED(Action::LoadExternalBindings(m_RuntimeOptions, bindings));
 
         Pulsar::Module module;
-        _ACTION_RUN_CHECKED(Action::BindNatives(module, extBindings, m_RuntimeOptions));
+        bindings.BindAll(module);
 
         _ACTION_RUN_CHECKED(IsNeutronFile(*m_Input.FilePath)
                 ? Action::Read(module, m_ParserOptions, m_Input)

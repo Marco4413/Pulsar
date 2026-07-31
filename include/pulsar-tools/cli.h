@@ -9,7 +9,7 @@
 #include "pulsar/parser.h"
 #include "pulsar/runtime.h"
 
-#include "pulsar-bindings/extbinding.h"
+#include "pulsar-bindings/bindingsregister.h"
 
 #include "pulsar-tools/logger.h"
 #include "pulsar-tools/views.h"
@@ -287,14 +287,12 @@ namespace PulsarTools::CLI
     // Returns true if an error was encountered.
     bool LogParserErrors(const Pulsar::Parser& parser, const ParserOptions& parserOptions);
 
-    using ExternalBindings = std::vector<PulsarBindings::ExtBinding>;
-
     std::optional<std::filesystem::path> SearchLibrary(const PulsarTools::CLI::RuntimeOptions& runtimeOptions, const std::filesystem::path& libraryPath, std::vector<std::filesystem::path>* triedPaths=nullptr);
 
     namespace Action
     {
-        int LoadExternalBindings(const RuntimeOptions& runtimeOptions, ExternalBindings& out);
-        int BindNatives(Pulsar::Module& module, const ExternalBindings& extBindings, const RuntimeOptions& runtimeOptions);
+        int LoadStdBindings(const RuntimeOptions& runtimeOptions, PulsarBindings::BindingsRegister& reg);
+        int LoadExternalBindings(const RuntimeOptions& runtimeOptions, PulsarBindings::BindingsRegister& reg);
 
         int Check(const ParserOptions& parserOptions, const InputFileArgs& input);
         int Read(Pulsar::Module& module, const ParserOptions& parserOptions, const InputFileArgs& input);

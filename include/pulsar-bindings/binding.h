@@ -87,11 +87,11 @@ namespace PulsarBindings
     protected:
         // Dependencies are IBindings which are bound before this
         template<typename T, typename ...Args>
-        void CreateDependency(Args&& ...args)
+        T& CreateDependency(Args&& ...args)
             requires(std::is_base_of_v<IBinding, T>)
         {
-            m_Dependencies.emplace_back(
-                    std::make_unique<T>(std::forward<Args>(args)...));
+            return reinterpret_cast<T&>(m_Dependencies.emplace_back(
+                    std::make_unique<T>(std::forward<Args>(args)...)));
         }
 
         void BindCustomType(Pulsar::StringView name, Pulsar::CustomType::GlobalDataFactoryFn globalDataFactory=nullptr)
