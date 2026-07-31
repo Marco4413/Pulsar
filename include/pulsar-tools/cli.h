@@ -1,12 +1,15 @@
 #ifndef _PULSARTOOLS_CLI_H
 #define _PULSARTOOLS_CLI_H
 
+#include <optional>
 #include <filesystem>
 
 #include <argue.hpp>
 
 #include "pulsar/parser.h"
 #include "pulsar/runtime.h"
+
+#include "pulsar-bindings/bindingsregister.h"
 
 #include "pulsar-tools/logger.h"
 #include "pulsar-tools/views.h"
@@ -23,10 +26,12 @@ namespace PulsarTools::CLI
     const std::filesystem::path& GetThisProcessExecutable();
     // If empty an error occurred. The path is computed once for each thread and stored in static storage.
     const std::filesystem::path& GetInterpreterIncludeFolder();
+    const std::filesystem::path& GetInterpreterLibrariesFolder();
 
     // This function calls GetInterpreterIncludeFolder() so that if any error occurs it also returns false.
     // If true is returned, the folder is not guaranteed to exist.
     inline bool HasInterpreterIncludeFolder() { return !GetInterpreterIncludeFolder().empty(); }
+    inline bool HasInterpreterLibrariesFolder() { return !GetInterpreterLibrariesFolder().empty(); }
 
     struct GeneralOptions
     {
@@ -87,9 +92,6 @@ namespace PulsarTools::CLI
                     ? "Automatically add '" + GetInterpreterIncludeFolder().generic_string() + "' to the include paths. (default: true)"
                     : "This option does nothing because either your platform does not support it or the path to the interpreter could not be found.",
                 true),
-            DeclareBoundNatives(cmd, "declare-natives", "n",
-                "Automatically declare bound natives so that they can be used in global producers. (default: false)",
-                false),
             Debug(cmd, "debug", "g",
                 "Generate debug symbols for better runtime errors. (default: true)",
                 true),
@@ -119,7 +121,6 @@ namespace PulsarTools::CLI
         Argue::CollectionOption IncludeFolders;
         Argue::FlagOption InterpreterIncludeFolder;
 
-        Argue::FlagOption DeclareBoundNatives;
         Argue::FlagOption Debug;
         Argue::FlagOption ErrorNotes;
         Argue::FlagOption AllowInclude;
@@ -210,6 +211,13 @@ namespace PulsarTools::CLI
                 "Sets the max depth of the printed stack-trace on error. (default: 10)",
                 10),
             EntryPoint(cmd, "entry-point", "E", "FUNC", "Set entry point. (default: main)", "main"),
+            LibraryFolders(cmd, "library-search", "L", "PATH", "Adds the path to the library search paths."),
+            InterpreterLibrariesFolder(cmd, "interpreter-libraries", "",
+                HasInterpreterLibrariesFolder()
+                    ? "Automatically add '" + GetInterpreterLibrariesFolder().generic_string() + "' to the library search paths. (default: true)"
+                    : "This option does nothing because either your platform does not support it or the path to the interpreter could not be found.",
+                true),
+            Libraries(cmd, "library", "l", "PATH", "Loads the specified external library."),
             BindDebug(cmd, "bind-debug", "", "Bind debugging utilities."),
             BindError(cmd, "bind-error", "", "Bind error handling natives."),
             BindFileSystem(cmd, "bind-filesystem", "", "Bind file system natives."),
@@ -229,6 +237,9 @@ namespace PulsarTools::CLI
         Argue::IntOption  StackTraceDepth;
 
         Argue::StrOption EntryPoint;
+        Argue::CollectionOption LibraryFolders;
+        Argue::FlagOption InterpreterLibrariesFolder;
+        Argue::CollectionOption Libraries;
 
         Argue::FlagOption BindDebug;
         Argue::FlagOption BindError;
@@ -276,10 +287,15 @@ namespace PulsarTools::CLI
     // Returns true if an error was encountered.
     bool LogParserErrors(const Pulsar::Parser& parser, const ParserOptions& parserOptions);
 
+    std::optional<std::filesystem::path> SearchLibrary(const PulsarTools::CLI::RuntimeOptions& runtimeOptions, const std::filesystem::path& libraryPath, std::vector<std::filesystem::path>* triedPaths=nullptr);
+
     namespace Action
     {
+        int LoadStdBindings(const RuntimeOptions& runtimeOptions, PulsarBindings::BindingsRegister& reg);
+        int LoadExternalBindings(const RuntimeOptions& runtimeOptions, PulsarBindings::BindingsRegister& reg);
+
         int Check(const ParserOptions& parserOptions, const InputFileArgs& input);
-        int Read(Pulsar::Module& module, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input);
+        int Read(Pulsar::Module& module, const ParserOptions& parserOptions, const InputFileArgs& input);
         int Write(const Pulsar::Module& module, const CompilerOptions& compilerOptions, const InputFileArgs& input);
         int Parse(Pulsar::Module& module, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input);
         int Optimize(Pulsar::Module& module, const OptimizerOptions& optimizerOptions, const Argue::StrOption* entryPoint);
@@ -296,10 +312,7 @@ namespace PulsarTools::CLI
         {}
 
         operator bool() const { return m_Command; }
-        int operator()() const
-        {
-            return Action::Check(m_ParserOptions, m_Input);
-        }
+        int operator()() const;
 
     private:
         Argue::CommandParser m_Command;
@@ -320,17 +333,7 @@ namespace PulsarTools::CLI
         {}
 
         operator bool() const { return m_Command; }
-        int operator()() const
-        {
-            Pulsar::Module module;
-            int exitCode = IsNeutronFile(*m_Input.FilePath)
-                ? Action::Read(module, m_ParserOptions, m_RuntimeOptions, m_Input)
-                : Action::Parse(module, m_ParserOptions, m_RuntimeOptions, m_Input);
-            if (exitCode) return exitCode;
-            exitCode = Action::Optimize(module, m_OptimizerOptions, &m_RuntimeOptions.EntryPoint);
-            if (exitCode) return exitCode;
-            return Action::Write(module, m_CompilerOptions, m_Input);
-        }
+        int operator()() const;
 
     private:
         Argue::CommandParser m_Command;
@@ -353,17 +356,7 @@ namespace PulsarTools::CLI
         {}
 
         operator bool() const { return m_Command; }
-        int operator()() const
-        {
-            Pulsar::Module module;
-            int exitCode = IsNeutronFile(*m_Input.FilePath)
-                ? Action::Read(module, m_ParserOptions, m_RuntimeOptions, m_Input)
-                : Action::Parse(module, m_ParserOptions, m_RuntimeOptions, m_Input);
-            if (exitCode) return exitCode;
-            exitCode = Action::Optimize(module, m_OptimizerOptions, &m_RuntimeOptions.EntryPoint);
-            if (exitCode) return exitCode;
-            return Action::Run(module, m_RuntimeOptions, m_Input);
-        }
+        int operator()() const;
 
     private:
         Argue::CommandParser m_Command;
@@ -399,7 +392,7 @@ namespace PulsarTools::CLI
             CmdCheck(Parser),
             CmdCompile(Parser)
         {}
-        
+
         Argue::ArgParser Parser;
         GeneralOptions Options;
         Argue::HelpCommand CmdHelp;

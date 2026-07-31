@@ -38,13 +38,16 @@ namespace Pulsar
         Module& operator=(Module&&) = default;
 
         using NativeFunction = std::function<RuntimeState(ExecutionContext&)>;
-        // Returns how many definitions were bound.
-        size_t BindNativeFunction(const FunctionDefinition& def, NativeFunction func);
-        size_t BindNativeFunction(FunctionSignature sig, NativeFunction func);
-        // Returns the index of the newly declared function.
-        size_t DeclareAndBindNativeFunction(const FunctionDefinition& def, NativeFunction func);
-        size_t DeclareAndBindNativeFunction(FunctionDefinition&& def, NativeFunction func);
-        size_t DeclareAndBindNativeFunction(FunctionSignature sig, NativeFunction func);
+
+        // Returns the index of the declared function.
+        size_t DeclareNativeFunction(FunctionSignature signature);
+        size_t DeclareNativeFunction(const FunctionDefinition& definition);
+        size_t DeclareNativeFunction(FunctionDefinition&& definition);
+
+        // Returns the index of the declared and bound function.
+        size_t BindNativeFunction(FunctionSignature signature, NativeFunction function);
+        size_t BindNativeFunction(const FunctionDefinition& definition, NativeFunction function);
+        size_t BindNativeFunction(FunctionDefinition&& definition, NativeFunction function);
 
         uint64_t BindCustomType(const String& name, CustomType::GlobalDataFactoryFn globalDataFactory=nullptr);
 
@@ -62,7 +65,9 @@ namespace Pulsar
         size_t FindNativeByName(const String& name)   const { return FindDefinitionByName(NativeBindings, name); }
         size_t FindGlobalByName(const String& name)   const { return FindDefinitionByName(Globals, name); }
 
-        size_t FindFunctionBySignature(FunctionSignature sig) const;
+        size_t FindFunctionDefinitionBySignature(const List<FunctionDefinition>& definitions, FunctionSignature signature) const;
+        size_t FindFunctionBySignature(FunctionSignature signature) const { return FindFunctionDefinitionBySignature(Functions, signature); }
+        size_t FindNativeBySignature(FunctionSignature signature)   const { return FindFunctionDefinitionBySignature(NativeBindings, signature); }
 
     public:
         // Access these member variables only for:

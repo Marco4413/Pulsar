@@ -68,6 +68,7 @@ namespace Pulsar
         GlobalEvaluationError,
         IllegalDirective,
         NativeFunctionRedeclaration,
+        NativeFunctionDeclarationMismatch,
         UnsafeChainedIfStatement,
         FileSystemNotAvailable,
         UsageOfUndeclaredLabel,
@@ -191,6 +192,7 @@ namespace Pulsar
 
         struct WarningFlags
         {
+            // Duplicate main functions won't be reported.
             bool DuplicateFunctionNames = false;
         };
 

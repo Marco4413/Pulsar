@@ -3,6 +3,7 @@
 #include <chrono>
 #include <optional>
 
+#include "pulsar/architecture.h"
 #include "pulsar/platform.h"
 
 #if defined(PULSAR_PLATFORM_MACOSX)
@@ -20,7 +21,9 @@
 #include "pulsar/binary/filewriter.h"
 #include "pulsar/optimizer.h"
 
-#include "pulsar-tools/bindings.h"
+#include "pulsar-bindings/extbinding.h"
+#include "pulsar-bindings/std.h"
+
 #include "pulsar-tools/views.h"
 
 static PulsarTools::Logger g_Logger(stdout, stderr);
@@ -61,7 +64,7 @@ const std::filesystem::path& PulsarTools::CLI::GetThisProcessExecutable()
             s_ThisProcessExecutable = std::filesystem::canonical(pathBuffer, ec);
         }
     }
-    
+
     if (ec) s_ThisProcessExecutable = std::filesystem::path();
 #elif defined(PULSAR_PLATFORM_UNIX)
     // TODO: Maybe add implementations specific to BSD and Solaris (I've read that BSD may not have the proc fs)
@@ -108,6 +111,16 @@ const std::filesystem::path& PulsarTools::CLI::GetInterpreterIncludeFolder()
     return s_InterpreterIncludeFolder->replace_filename("include");
 }
 
+const std::filesystem::path& PulsarTools::CLI::GetInterpreterLibrariesFolder()
+{
+    static thread_local std::optional<std::filesystem::path> s_InterpreterLibrariesFolder = std::nullopt;
+    if (s_InterpreterLibrariesFolder) return *s_InterpreterLibrariesFolder;
+
+    s_InterpreterLibrariesFolder = GetThisProcessExecutable();
+    if (s_InterpreterLibrariesFolder->empty()) return *s_InterpreterLibrariesFolder;
+    return s_InterpreterLibrariesFolder->replace_filename("libs");
+}
+
 Pulsar::ParseSettings PulsarTools::CLI::ParserOptions::ToParseSettings() const
 {
     Pulsar::ParseSettings settings = Pulsar::ParseSettings_Default;
@@ -140,6 +153,140 @@ Pulsar::ParseSettings PulsarTools::CLI::ParserOptions::ToParseSettings() const
     return settings;
 }
 
+static std::optional<std::filesystem::path> _TryLibraryPath(const std::filesystem::path& libraryPath, std::vector<std::filesystem::path>* triedPaths)
+{
+    std::error_code ec;
+    std::filesystem::path canonicalLibraryPath = std::filesystem::weakly_canonical(libraryPath, ec);
+    if (ec) return std::nullopt;
+
+    if (std::filesystem::is_regular_file(canonicalLibraryPath))
+        return canonicalLibraryPath;
+
+    if (triedPaths) {
+        triedPaths->emplace_back(std::move(canonicalLibraryPath));
+    }
+
+    return std::nullopt;
+}
+
+std::optional<std::filesystem::path> PulsarTools::CLI::SearchLibrary(const PulsarTools::CLI::RuntimeOptions& runtimeOptions, const std::filesystem::path& libraryPath, std::vector<std::filesystem::path>* triedPaths)
+{
+    if (triedPaths) triedPaths->clear();
+    if (libraryPath.empty()) return std::nullopt;
+
+    std::string libraryName = libraryPath.filename().generic_string();
+    std::vector<std::string> candidateFileNames;
+
+    if (!libraryPath.has_parent_path()) {
+        std::string architecture;
+#if defined(PULSAR_ARCHITECTURE_AMD64)
+        architecture = "amd64";
+#elif defined(PULSAR_ARCHITECTURE_ARM64)
+        architecture = "arm64";
+#else
+        architecture = "unknown";
+#endif
+
+#ifdef PULSAR_PLATFORM_MACOSX
+        candidateFileNames.push_back(libraryName + ".cpulsar.macosx-" + architecture + ".dylib");
+        candidateFileNames.push_back(libraryName + ".cpulsar.macosx-" + architecture + ".so");
+        candidateFileNames.push_back(libraryName + ".cpulsar.macosx.dylib");
+        candidateFileNames.push_back(libraryName + ".cpulsar.macosx.so");
+#endif // PULSAR_PLATFORM_MACOSX
+
+#ifdef PULSAR_PLATFORM_LINUX
+        candidateFileNames.push_back(libraryName + ".cpulsar.linux-" + architecture + ".so");
+        candidateFileNames.push_back(libraryName + ".cpulsar.linux.so");
+#endif // PULSAR_PLATFORM_LINUX
+
+#if (!defined(PULSAR_PLATFORM_MACOSX) && !defined(PULSAR_PLATFORM_LINUX)) && defined(PULSAR_PLATFORM_UNIX)
+        candidateFileNames.push_back(libraryName + ".cpulsar.unix-" + architecture + ".so");
+        candidateFileNames.push_back(libraryName + ".cpulsar.unix.so");
+#endif // PULSAR_PLATFORM_UNIX
+
+#ifdef PULSAR_PLATFORM_WINDOWS
+        candidateFileNames.push_back(libraryName + ".cpulsar.windows-" + architecture + ".dll");
+        candidateFileNames.push_back(libraryName + ".cpulsar.windows.dll");
+#endif // PULSAR_PLATFORM_WINDOWS
+
+#ifdef PULSAR_PLATFORM_UNKNOWN
+        PULSAR_UNUSED(architecture);
+#endif // PULSAR_PLATFORM_UNKNOWN
+    }
+
+    candidateFileNames.push_back(libraryName);
+
+    std::vector<std::filesystem::path> candidateFilePaths;
+    candidateFilePaths.reserve(candidateFileNames.size());
+
+    std::filesystem::path basePath = libraryPath.parent_path();
+    bool isBasePathRelative = basePath.is_relative();
+    for (const auto& fileName : candidateFileNames) {
+        std::optional<std::filesystem::path> fullLibraryPath = std::nullopt;
+        fullLibraryPath = _TryLibraryPath(basePath / fileName, triedPaths);
+        if (fullLibraryPath) return fullLibraryPath;
+
+        if (isBasePathRelative) {
+            for (const auto& searchFolder : *runtimeOptions.LibraryFolders) {
+                fullLibraryPath = _TryLibraryPath(searchFolder / basePath / fileName, triedPaths);
+                if (fullLibraryPath) return fullLibraryPath;
+            }
+
+            if (*runtimeOptions.InterpreterLibrariesFolder) {
+                const auto& interpreterLibsFolder = GetInterpreterLibrariesFolder();
+                fullLibraryPath = _TryLibraryPath(interpreterLibsFolder / basePath / fileName, triedPaths);
+                if (fullLibraryPath) return fullLibraryPath;
+            }
+        }
+    }
+
+    return std::nullopt;
+}
+
+int PulsarTools::CLI::Action::LoadStdBindings(const RuntimeOptions& runtimeOptions, PulsarBindings::BindingsRegister& reg)
+{
+    #define X(name) if (*runtimeOptions.Bind##name) reg.Add<PulsarBindings::Std::name>();
+    PULSARBINDINGS_STD_X
+    #undef X
+    return 0;
+}
+
+int PulsarTools::CLI::Action::LoadExternalBindings(const RuntimeOptions& runtimeOptions, PulsarBindings::BindingsRegister& reg)
+{
+    Logger& logger = GetLogger();
+
+    std::vector<std::filesystem::path> triedPaths;
+    bool hasError = false;
+
+    for (const std::string& libraryPath : *runtimeOptions.Libraries) {
+        auto fullLibraryPath = SearchLibrary(runtimeOptions, libraryPath, &triedPaths);
+        if (!fullLibraryPath) {
+            hasError = true;
+            if (triedPaths.size() > 0) {
+                std::string errorMessage = std::format("Could not find external library '{}':", libraryPath);
+                for (const auto& triedPath : triedPaths) {
+                    errorMessage += std::format("\n    at '{}'", triedPath.generic_string());
+                }
+                logger.Error(errorMessage);
+            } else {
+                logger.Error("Could not find external library '{}'.", libraryPath);
+            }
+            continue;
+        }
+
+        PulsarBindings::ExtBinding& binding = reg.Add<PulsarBindings::ExtBinding>(*fullLibraryPath);
+        if (!binding) {
+            hasError = true;
+            logger.Error("Could not load external library '{}' ('{}'):\n{}",
+                    libraryPath, fullLibraryPath->generic_string(),
+                    binding.GetErrorMessage());
+            continue;
+        }
+    }
+
+    return hasError ? 1 : 0;
+}
+
 int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const InputFileArgs& input)
 {
     Logger& logger = GetLogger();
@@ -167,7 +314,7 @@ int PulsarTools::CLI::Action::Check(const ParserOptions& parserOptions, const In
     return 0;
 }
 
-int PulsarTools::CLI::Action::Read(Pulsar::Module& module, const ParserOptions& parserOptions, const RuntimeOptions& runtimeOptions, const InputFileArgs& input)
+int PulsarTools::CLI::Action::Read(Pulsar::Module& module, const ParserOptions& parserOptions, const InputFileArgs& input)
 {
     Logger& logger = GetLogger();
 
@@ -189,7 +336,6 @@ int PulsarTools::CLI::Action::Read(Pulsar::Module& module, const ParserOptions& 
     auto readTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
     logger.Info("Reading took: {}us", readTime.count());
 
-    BindNatives(module, runtimeOptions, false);
     return 0;
 }
 
@@ -224,11 +370,9 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
 {
     Logger& logger = GetLogger();
 
-    if (*parserOptions.DeclareBoundNatives) {
-        BindNatives(module, runtimeOptions, true);
-    } else if (*parserOptions.Debug) {
-        Bindings::Debug debug;
-        debug.BindAll(module, true);
+    if (*parserOptions.Debug) {
+        PulsarBindings::Std::Debug debug;
+        debug.BindAll(module);
     }
 
     Pulsar::ParseSettings parserSettings = parserOptions.ToParseSettings();
@@ -251,10 +395,6 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
 
     if (LogParserErrors(parser, parserOptions))
         return 1;
-
-    if (!*parserOptions.DeclareBoundNatives) {
-        BindNatives(module, runtimeOptions, false);
-    }
 
     return 0;
 }
@@ -397,7 +537,7 @@ bool PulsarTools::CLI::LogParserErrors(const Pulsar::Parser& parser, const Pulsa
         auto reportKind = warningError
                 ? MessageReportKind_Error
                 : MessageReportKind_Warning;
-        auto name = fmt::format("{}({})",
+        auto name = std::format("{}({})",
                 MessageReportKind_Warning.Name,
                 Pulsar::ParseWarningToString(warningMessage.Reason));
         reportKind.Name = name.c_str();
@@ -416,7 +556,7 @@ bool PulsarTools::CLI::LogParserErrors(const Pulsar::Parser& parser, const Pulsa
     const auto& errorMessage = parser.GetErrorMessage();
     if (errorMessage.Reason != Pulsar::ParseResult::OK) {
         auto reportKind = MessageReportKind_Error;
-        auto name = fmt::format("{}({})",
+        auto name = std::format("{}({})",
                 reportKind.Name,
                 Pulsar::ParseResultToString(errorMessage.Reason));
         reportKind.Name = name.c_str();
@@ -486,4 +626,55 @@ bool PulsarTools::CLI::ExportOption::ParseValue(std::string_view val)
     }
 
     return true;
+}
+
+#define _ACTION_RUN_CHECKED(...) \
+    do {                                    \
+        int exitCode = ( __VA_ARGS__ );     \
+        if (exitCode) return exitCode;      \
+    } while(false)
+
+int PulsarTools::CLI::CheckCommand::operator()() const
+{
+    return Action::Check(m_ParserOptions, m_Input);
+}
+
+int PulsarTools::CLI::CompileCommand::operator()() const
+{
+    PulsarBindings::BindingsRegister bindings;
+    { // Make sure extBindings is deleted after module
+        _ACTION_RUN_CHECKED(Action::LoadStdBindings(m_RuntimeOptions, bindings));
+        _ACTION_RUN_CHECKED(Action::LoadExternalBindings(m_RuntimeOptions, bindings));
+
+        Pulsar::Module module;
+        bindings.BindAll(module);
+
+        _ACTION_RUN_CHECKED(IsNeutronFile(*m_Input.FilePath)
+                ? Action::Read(module, m_ParserOptions, m_Input)
+                : Action::Parse(module, m_ParserOptions, m_RuntimeOptions, m_Input));
+
+        _ACTION_RUN_CHECKED(Action::Optimize(module, m_OptimizerOptions, &m_RuntimeOptions.EntryPoint));
+        _ACTION_RUN_CHECKED(Action::Write(module, m_CompilerOptions, m_Input));
+    }
+    return 0;
+}
+
+int PulsarTools::CLI::RunCommand::operator()() const
+{
+    PulsarBindings::BindingsRegister bindings;
+    { // Make sure extBindings is deleted after module
+        _ACTION_RUN_CHECKED(Action::LoadStdBindings(m_RuntimeOptions, bindings));
+        _ACTION_RUN_CHECKED(Action::LoadExternalBindings(m_RuntimeOptions, bindings));
+
+        Pulsar::Module module;
+        bindings.BindAll(module);
+
+        _ACTION_RUN_CHECKED(IsNeutronFile(*m_Input.FilePath)
+                ? Action::Read(module, m_ParserOptions, m_Input)
+                : Action::Parse(module, m_ParserOptions, m_RuntimeOptions, m_Input));
+
+        _ACTION_RUN_CHECKED(Action::Optimize(module, m_OptimizerOptions, &m_RuntimeOptions.EntryPoint));
+        _ACTION_RUN_CHECKED(Action::Run(module, m_RuntimeOptions, m_Input));
+    }
+    return 0;
 }

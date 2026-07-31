@@ -34,15 +34,16 @@ on VSCode for the Pulsar Language, you can download and package the official ext
 
 - Pulsar:
   - **None!**
+- Pulsar-Bindings:
+  - **None!**
 - Pulsar-Demo:
-  - [`{fmt}`](https://github.com/fmtlib/fmt)
+  - **None!**
 - Pulsar-Debugger:
   - [`nlohmann/json`](https://github.com/nlohmann/json)
   - [`cppdap`](https://github.com/google/cppdap)
 - Pulsar-LSP:
   - [`lsp-framework`](https://github.com/leon-bckl/lsp-framework)
 - Pulsar-Tools:
-  - [`{fmt}`](https://github.com/fmtlib/fmt)
   - [`Argue`](https://github.com/Marco4413/Argue)
 
 ## Building
@@ -60,11 +61,13 @@ C++20 is the standard used by the project.
 Supported compilers are `gcc` and `msvc`.
 
 **Compiler Versions:**
+- clang 18.1.3
 - gcc 13.3.0
 - msvc from vs2022
 
-*`clang` should also work but it's not my go-to compiler,
-so it may break between commits.*
+*I usually test builds with `gcc`, builds with other compilers may
+break between commits. See the Build GitHub Action to check which
+compilers work.*
 
 [![Build](https://github.com/Marco4413/Pulsar/actions/workflows/build.yaml/badge.svg)](https://github.com/Marco4413/Pulsar/actions/workflows/build.yaml)
 
@@ -91,21 +94,25 @@ They're within the [examples](examples) folder.
 The new `pulsar-tools` project is the preferred way of running examples.
 In fact, it's the CLI tool for Pulsar.
 
-See the [Building](#building) section.
+You can obtain `pulsar-tools` with these methods:
+- [Building it yourself](#building).
+- From the [Build GitHub Action](https://github.com/Marco4413/Pulsar/actions/workflows/build.yaml) artifacts.
+- From [GitHub Releases](https://github.com/Marco4413/Pulsar/releases).
 
-After building `pulsar-tools`, you'll be able to run it with no arguments to
+After obtaining `pulsar-tools`, you'll be able to run it with no arguments to
 print its usage. The default settings are the ones used for the examples.
 
-**TL;DR: After building `pulsar-tools`, you'll be able to:**
-
 ```sh
-$ pulsar-tools run path/to/pulsar/file.pls
+$ pulsar-tools run -- path/to/pulsar/file.pls scriptArg1 scriptArg2
 ```
-
-If an example requires external arguments, just append them to the command.
 
 ### Including Pulsar in your Project
 
 There's a fully working demo within the `pulsar-demo` project.
 You can check out the `projects/pulsar-demo.lua` and `projects/common/cflags.lua`
 scripts and the source code within `src/pulsar-demo`
+
+### Creating C Native Bindings
+
+Use the [`raylib-pulsar`](https://github.com/Marco4413/raylib-pulsar) project
+as an example.
