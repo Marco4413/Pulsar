@@ -62,7 +62,7 @@ namespace PulsarBindings
     public:
         using GetCPulsarVersionFn = uint64_t(CPULSAR_CALL *)(void);
         using BindTypesFn         = void(CPULSAR_CALL *)(CPulsar_Module*);
-        using BindFunctionsFn     = void(CPULSAR_CALL *)(CPulsar_Module*, bool);
+        using BindFunctionsFn     = void(CPULSAR_CALL *)(CPulsar_Module*);
 
     public:
         ExtBinding(const std::filesystem::path& path);
@@ -76,7 +76,7 @@ namespace PulsarBindings
         ExtBinding& operator=(const ExtBinding&) = delete;
 
         void BindTypes(Pulsar::Module& module) const override;
-        void BindFunctions(Pulsar::Module& module, bool declareAndBind) const override;
+        void BindFunctions(Pulsar::Module& module) const override;
 
         const std::string& GetErrorMessage() const { return m_ErrorMessage; }
 

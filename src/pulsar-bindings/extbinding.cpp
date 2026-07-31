@@ -132,10 +132,10 @@ void PulsarBindings::ExtBinding::BindTypes(Pulsar::Module& module) const
     }
 }
 
-void PulsarBindings::ExtBinding::BindFunctions(Pulsar::Module& module, bool declareAndBind) const
+void PulsarBindings::ExtBinding::BindFunctions(Pulsar::Module& module) const
 {
     if (m_Lib.IsLoaded() && m_BindFunctions) {
-        m_BindFunctions(reinterpret_cast<CPulsar_Module*>(&module), declareAndBind);
+        m_BindFunctions(reinterpret_cast<CPulsar_Module*>(&module));
     }
 }
 

@@ -26,7 +26,7 @@
 
 namespace PulsarBindings::Std
 {
-    void BindAll(Pulsar::Module& module, bool declareAndBind=false);
+    void BindAll(Pulsar::Module& module);
 }
 
 #endif // _PULSARBINDINGS_STD_H

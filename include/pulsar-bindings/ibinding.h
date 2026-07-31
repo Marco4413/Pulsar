@@ -15,14 +15,14 @@ namespace PulsarBindings
         IBinding() = default;
         virtual ~IBinding() = default;
 
-        void BindAll(Pulsar::Module& module, bool declareAndBind=false) const
+        void BindAll(Pulsar::Module& module) const
         {
             BindTypes(module);
-            BindFunctions(module, declareAndBind);
+            BindFunctions(module);
         }
 
         virtual void BindTypes(Pulsar::Module& module) const = 0;
-        virtual void BindFunctions(Pulsar::Module& module, bool declareAndBind) const = 0;
+        virtual void BindFunctions(Pulsar::Module& module) const = 0;
     };
 }
 

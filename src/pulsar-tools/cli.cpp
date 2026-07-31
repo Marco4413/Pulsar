@@ -280,12 +280,12 @@ int PulsarTools::CLI::Action::LoadExternalBindings(const RuntimeOptions& runtime
     return hasError;
 }
 
-int PulsarTools::CLI::Action::BindNatives(Pulsar::Module& module, const ExternalBindings& extBindings, const RuntimeOptions& runtimeOptions, bool declareAndBind)
+int PulsarTools::CLI::Action::BindNatives(Pulsar::Module& module, const ExternalBindings& extBindings, const RuntimeOptions& runtimeOptions)
 {
     #define X(name) \
-        if (*runtimeOptions.Bind##name) {             \
-            PulsarBindings::Std::name __##name;       \
-            __##name.BindAll(module, declareAndBind); \
+        if (*runtimeOptions.Bind##name) {       \
+            PulsarBindings::Std::name __##name; \
+            __##name.BindAll(module);           \
         }
 
     {
@@ -295,7 +295,7 @@ int PulsarTools::CLI::Action::BindNatives(Pulsar::Module& module, const External
     #undef X
 
     for (const PulsarBindings::ExtBinding& binding : extBindings)
-        binding.BindAll(module, false);
+        binding.BindAll(module);
 
     return 0;
 }
@@ -385,7 +385,7 @@ int PulsarTools::CLI::Action::Parse(Pulsar::Module& module, const ParserOptions&
 
     if (*parserOptions.Debug) {
         PulsarBindings::Std::Debug debug;
-        debug.BindAll(module, true);
+        debug.BindAll(module);
     }
 
     Pulsar::ParseSettings parserSettings = parserOptions.ToParseSettings();
@@ -659,17 +659,11 @@ int PulsarTools::CLI::CompileCommand::operator()() const
         _ACTION_RUN_CHECKED(Action::LoadExternalBindings(m_RuntimeOptions, extBindings));
 
         Pulsar::Module module;
-        if (*m_ParserOptions.DeclareBoundNatives) {
-            _ACTION_RUN_CHECKED(Action::BindNatives(module, extBindings, m_RuntimeOptions, true));
-        }
+        _ACTION_RUN_CHECKED(Action::BindNatives(module, extBindings, m_RuntimeOptions));
 
         _ACTION_RUN_CHECKED(IsNeutronFile(*m_Input.FilePath)
                 ? Action::Read(module, m_ParserOptions, m_Input)
                 : Action::Parse(module, m_ParserOptions, m_RuntimeOptions, m_Input));
-
-        if (!*m_ParserOptions.DeclareBoundNatives) {
-            _ACTION_RUN_CHECKED(Action::BindNatives(module, extBindings, m_RuntimeOptions, false));
-        }
 
         _ACTION_RUN_CHECKED(Action::Optimize(module, m_OptimizerOptions, &m_RuntimeOptions.EntryPoint));
         _ACTION_RUN_CHECKED(Action::Write(module, m_CompilerOptions, m_Input));
@@ -684,19 +678,11 @@ int PulsarTools::CLI::RunCommand::operator()() const
         _ACTION_RUN_CHECKED(Action::LoadExternalBindings(m_RuntimeOptions, extBindings));
 
         Pulsar::Module module;
-        if (*m_ParserOptions.DeclareBoundNatives) {
-            _ACTION_RUN_CHECKED(
-                    Action::BindNatives(module, extBindings, m_RuntimeOptions, true));
-        }
+        _ACTION_RUN_CHECKED(Action::BindNatives(module, extBindings, m_RuntimeOptions));
 
         _ACTION_RUN_CHECKED(IsNeutronFile(*m_Input.FilePath)
                 ? Action::Read(module, m_ParserOptions, m_Input)
                 : Action::Parse(module, m_ParserOptions, m_RuntimeOptions, m_Input));
-
-        if (!*m_ParserOptions.DeclareBoundNatives) {
-            _ACTION_RUN_CHECKED(
-                    Action::BindNatives(module, extBindings, m_RuntimeOptions, false));
-        }
 
         _ACTION_RUN_CHECKED(Action::Optimize(module, m_OptimizerOptions, &m_RuntimeOptions.EntryPoint));
         _ACTION_RUN_CHECKED(Action::Run(module, m_RuntimeOptions, m_Input));

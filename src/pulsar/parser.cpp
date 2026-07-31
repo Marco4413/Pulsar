@@ -160,8 +160,9 @@ Pulsar::ParseResult Pulsar::Parser::ParseIntoModule(Module& module, const ParseS
     }
     for (size_t i = 0; i < module.Functions.Size(); i++)
         globalScope.Functions.Insert(module.Functions[i].Name, i);
-    for (size_t i = 0; i < module.NativeBindings.Size(); i++)
-        globalScope.NativeFunctions.Insert(module.NativeBindings[i].Name, i);
+    // This was commented out so that the file MUST declare used natives itself
+    // for (size_t i = 0; i < module.NativeBindings.Size(); i++)
+    //     globalScope.NativeFunctions.Insert(module.NativeBindings[i].Name, i);
     for (size_t i = 0; i < module.Globals.Size(); i++)
         globalScope.Globals.Insert(module.Globals[i].Name, i);
 
@@ -249,7 +250,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
     const Token& curToken = CurrentToken();
     if (curToken.Type != TokenType::KW_Global)
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'global' to begin global definition.");
-    
+
     NextToken();
     Token constToken = curToken;
     bool isConstant = constToken.Type == TokenType::KW_Const;
@@ -278,7 +279,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
             return result;
         NextToken();
     }
-    
+
     if (curToken.Type != TokenType::RightArrow)
         return SetError(ParseResult::UnexpectedToken, curToken, "Expected '->' to assign global value.");
     NextToken();
@@ -342,9 +343,6 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
         String errorMsg = String("Error while evaluating value of global (") + RuntimeStateToString(evalResult) + ").";
         if (settings.AppendStackTraceToErrorMessage)
             errorMsg += "\n" + context.GetStackTrace(settings.StackTraceMaxDepth);
-        if (settings.AppendNotesToErrorMessage
-            && evalResult == RuntimeState::NativeFunctionBindingsMismatch)
-            errorMsg += "\nNote: Native functions may not be bound during parsing.";
         return SetError(
             ParseResult::GlobalEvaluationError,
             dummyFunc.CodeDebugSymbols[symbolIdx].Token,
@@ -352,7 +350,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
     }
 
     PULSAR_ASSERT(stack.Size() > 0, "Global producer did not match return count.");
-    
+
     GlobalDefinition* globalDef;
     if (!globalNameIdxPair) {
         globalScope.Globals.Emplace(identToken.StringVal, module.Globals.Size());
@@ -437,20 +435,33 @@ Pulsar::ParseResult Pulsar::Parser::ParseFunctionDefinition(Module& module, Glob
         if (curToken.Type != TokenType::FullStop)
             return SetError(ParseResult::UnexpectedToken, curToken,
                 "Expected '.' to complete native function declaration. Native functions can't have a body.");
-        // If the native already exists push symbols (the function may have been defined outside the Parser)
-        auto nameIdxPair = globalScope.NativeFunctions.Find(def.Name);
-        if (!nameIdxPair) {
-            NOTIFY_FUNCTION_DEFINITION(false, true, module.NativeBindings.Size(), def, identToken, args, settings);
-            globalScope.NativeFunctions.Emplace(def.Name, module.NativeBindings.Size());
-            module.NativeBindings.EmplaceBack(std::move(def));
+
+        bool isRedeclaration = false;
+        size_t nativeIdx = Module::INVALID_INDEX;
+        if (auto nameIdxPair = globalScope.NativeFunctions.Find(def.Name); nameIdxPair) {
+            isRedeclaration = true;
+            nativeIdx = nameIdxPair->Value();
         } else {
-            size_t nativeIdx = (int64_t)nameIdxPair->Value();
-            FunctionDefinition& nativeFunc = module.NativeBindings[nativeIdx];
-            if (!nativeFunc.DeclarationMatches(def))
-                return SetError(ParseResult::NativeFunctionRedeclaration, identToken, "Redeclaration of Native Function with different signature.");
-            nativeFunc.DebugSymbol = def.DebugSymbol;
-            NOTIFY_FUNCTION_DEFINITION(true, true, nativeIdx, nativeFunc, identToken, args, settings);
+            isRedeclaration = false;
+            nativeIdx = module.FindNativeByName(def.Name);
+            if (nativeIdx == Module::INVALID_INDEX) {
+                nativeIdx = module.DeclareNativeFunction(def);
+            }
         }
+
+        // If the native already exists push symbols (the function may have been defined outside the Parser)
+        const FunctionDefinition& binding = module.NativeBindings[nativeIdx];
+        if (!binding.DeclarationMatches(def)) {
+            // TODO: EmitError() would be cool so a message could point to the previous declaration
+            if (isRedeclaration) {
+                return SetError(ParseResult::NativeFunctionRedeclaration, identToken, "Redeclaration of Native Function with different signature.");
+            } else {
+                return SetError(ParseResult::NativeFunctionDeclarationMismatch, identToken, "Declaration of Native Function with different signature.");
+            }
+        }
+
+        globalScope.NativeFunctions.Emplace(std::move(def.Name), nativeIdx);
+        NOTIFY_FUNCTION_DEFINITION(isRedeclaration, true, nativeIdx, binding, identToken, args, settings);
     } else {
         if (curToken.Type != TokenType::Colon)
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected '->' for return count declaration or ':' to begin function body.");
@@ -871,7 +882,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseIfStatement(
     if (invertedJump)
         jmpInstrCode = InvertJump(jmpInstrCode);
     func.Code.EmplaceBack(jmpInstrCode, 0);
-    
+
     auto res = ParseFunctionBody(module, func, localScope, skippableBlock, true, settings);
     func.Code[ifIdx].Arg0 = func.Code.Size() - ifIdx;
     if (res == ParseResult::UnexpectedToken) {
@@ -1130,7 +1141,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
             jmpInstrCode = InvertJump(jmpInstrCode);
         func.Code.EmplaceBack(jmpInstrCode, 0);
     }
-    
+
     auto res = ParseFunctionBody(module, func, localScope, &block, true, settings);
     if (res != ParseResult::OK)
         return res;
@@ -1140,7 +1151,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseWhileLoop(Module& module, FunctionDefin
         if (curToken.Type != TokenType::KW_End)
             return SetError(ParseResult::UnexpectedToken, curToken, "Expected 'end' to close while loop body.");
     }
-    
+
     for (size_t i = 0; i < block.ContinueStatements.Size(); i++)
         func.Code[block.ContinueStatements[i]].Arg0 = (int64_t)(whileIdx-block.ContinueStatements[i]);
 
@@ -1245,7 +1256,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
             NextToken();
             if (curToken.Type != TokenType::CloseParenth)
                 return SetError(ParseResult::UnexpectedToken, curToken, "Expected ')' to close function reference.");
-        
+
             if (isNative) {
                 auto nativeNameIdxPair = localScope.Global.NativeFunctions.Find(identToken.StringVal);
                 if (!nativeNameIdxPair)
@@ -1316,7 +1327,7 @@ Pulsar::ParseResult Pulsar::Parser::PushLValue(Module& module, FunctionDefinitio
             default:
                 return SetError(ParseResult::UnexpectedToken, curToken, "Expected lvalue.");
             }
-            
+
             NextToken();
             if (curToken.Type == TokenType::Comma) {
                 NextToken();
@@ -1537,6 +1548,8 @@ const char* Pulsar::ParseResultToString(ParseResult result)
         return "IllegalDirective";
     case ParseResult::NativeFunctionRedeclaration:
         return "NativeFunctionRedeclaration";
+    case ParseResult::NativeFunctionDeclarationMismatch:
+        return "NativeFunctionDeclarationMismatch";
     case ParseResult::UnsafeChainedIfStatement:
         return "UnsafeChainedIfStatement";
     case ParseResult::FileSystemNotAvailable:

@@ -47,7 +47,7 @@ namespace PulsarBindings
         virtual ~Binding() = default;
 
         virtual void BindTypes(Pulsar::Module& module) const override;
-        virtual void BindFunctions(Pulsar::Module& module, bool declareAndBind) const override;
+        virtual void BindFunctions(Pulsar::Module& module) const override;
 
     public:
         /**

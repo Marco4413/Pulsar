@@ -92,9 +92,6 @@ namespace PulsarTools::CLI
                     ? "Automatically add '" + GetInterpreterIncludeFolder().generic_string() + "' to the include paths. (default: true)"
                     : "This option does nothing because either your platform does not support it or the path to the interpreter could not be found.",
                 true),
-            DeclareBoundNatives(cmd, "declare-natives", "n",
-                "Automatically declare bound natives so that they can be used in global producers. (default: false)",
-                false),
             Debug(cmd, "debug", "g",
                 "Generate debug symbols for better runtime errors. (default: true)",
                 true),
@@ -124,7 +121,6 @@ namespace PulsarTools::CLI
         Argue::CollectionOption IncludeFolders;
         Argue::FlagOption InterpreterIncludeFolder;
 
-        Argue::FlagOption DeclareBoundNatives;
         Argue::FlagOption Debug;
         Argue::FlagOption ErrorNotes;
         Argue::FlagOption AllowInclude;
@@ -298,7 +294,7 @@ namespace PulsarTools::CLI
     namespace Action
     {
         int LoadExternalBindings(const RuntimeOptions& runtimeOptions, ExternalBindings& out);
-        int BindNatives(Pulsar::Module& module, const ExternalBindings& extBindings, const RuntimeOptions& runtimeOptions, bool declareAndBind=false);
+        int BindNatives(Pulsar::Module& module, const ExternalBindings& extBindings, const RuntimeOptions& runtimeOptions);
 
         int Check(const ParserOptions& parserOptions, const InputFileArgs& input);
         int Read(Pulsar::Module& module, const ParserOptions& parserOptions, const InputFileArgs& input);

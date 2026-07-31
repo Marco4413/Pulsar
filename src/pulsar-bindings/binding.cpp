@@ -21,24 +21,16 @@ void PulsarBindings::Binding::BindTypes(Pulsar::Module& module) const
     }
 }
 
-void PulsarBindings::Binding::BindFunctions(Pulsar::Module& module, bool declareAndBind) const
+void PulsarBindings::Binding::BindFunctions(Pulsar::Module& module) const
 {
     for (const auto& dep : m_Dependencies) {
-        dep->BindFunctions(module, declareAndBind);
+        dep->BindFunctions(module);
     }
 
     CustomTypeResolver typeResolver(module);
-    if (declareAndBind) {
-        for (const auto& nativeFnBinding : m_NativeFunctionsPool) {
-            module.DeclareAndBindNativeFunction(
-                    nativeFnBinding.Definition,
-                    nativeFnBinding.CreateFunction(typeResolver));
-        }
-    } else {
-        for (const auto& nativeFnBinding : m_NativeFunctionsPool) {
-            module.BindNativeFunction(
-                    nativeFnBinding.Definition,
-                    nativeFnBinding.CreateFunction(typeResolver));
-        }
+    for (const auto& nativeFnBinding : m_NativeFunctionsPool) {
+        module.BindNativeFunction(
+                nativeFnBinding.Definition,
+                nativeFnBinding.CreateFunction(typeResolver));
     }
 }
