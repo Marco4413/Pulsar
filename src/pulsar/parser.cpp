@@ -316,7 +316,7 @@ Pulsar::ParseResult Pulsar::Parser::ParseGlobalDefinition(Module& module, Global
     }
 
     // Assign name after ParseFunctionBody to prevent self-recursion
-    dummyFunc.Name = "{g";
+    dummyFunc.Name  = "{global/";
     dummyFunc.Name += identToken.StringVal;
     dummyFunc.Name += '}';
 
