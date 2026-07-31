@@ -58,11 +58,13 @@ C++20 is the standard used by the project.
 Supported compilers are `gcc` and `msvc`.
 
 **Compiler Versions:**
+- clang 18.1.3
 - gcc 13.3.0
 - msvc from vs2022
 
-*`clang` should also work but it's not my go-to compiler,
-so it may break between commits.*
+*I usually test builds with `gcc`, builds with other compilers may
+break between commits. See the Build GitHub Action to check which
+compilers work.*
 
 [![Build](https://github.com/Marco4413/Pulsar/actions/workflows/build.yaml/badge.svg)](https://github.com/Marco4413/Pulsar/actions/workflows/build.yaml)
 
@@ -89,18 +91,18 @@ They're within the [examples](examples) folder.
 The new `pulsar-tools` project is the preferred way of running examples.
 In fact, it's the CLI tool for Pulsar.
 
-See the [Building](#building) section.
+You can obtain `pulsar-tools` with these methods:
+- [Building it yourself](#building).
+- From the [Build GitHub Action](./actions/workflows/build.yaml) artifacts.
+- From [GitHub Releases](./releases).
 
-After building `pulsar-tools`, you'll be able to run it with no arguments to
+After obtaining `pulsar-tools`, you'll be able to run it with no arguments to
 print its usage. The default settings are the ones used for the examples.
 
-**TL;DR: After building `pulsar-tools`, you'll be able to:**
 
 ```sh
-$ pulsar-tools run path/to/pulsar/file.pls
+$ pulsar-tools run -- path/to/pulsar/file.pls scriptArg1 scriptArg2
 ```
-
-If an example requires external arguments, just append them to the command.
 
 ### Including Pulsar in your Project
 
