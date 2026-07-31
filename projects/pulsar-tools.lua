@@ -3,7 +3,26 @@ require("premake", ">=5.0.0-beta4")
 local buildpath = require "common/buildpath"
 local cflags    = require "common/cflags"
 
+local function get_slib_filename(basename)
+  if os.target() == "windows" then
+    return basename .. ".dll"
+  elseif os.target() == "macosx" then
+    return "lib" .. basename .. ".dylib"
+  else
+    return "lib" .. basename .. ".so"
+  end
+end
+
+local function get_slib_path(projectName)
+  return buildpath.of(projectName) .. "/" .. get_slib_filename(projectName)
+end
+
+local function copy_slib(of, to)
+  return "{COPYFILE} %[" .. get_slib_path(of) .. "] %[" .. buildpath.of(to) .. "/" .. get_slib_filename(of) .. "]"
+end
+
 include "pulsar"
+include "pulsar-bindings"
 
 project "pulsar-tools"
   kind "ConsoleApp"
@@ -12,11 +31,18 @@ project "pulsar-tools"
 
   buildpath.setup("pulsar-tools")
 
+  dependson "cpulsar"
+
+  prebuildcommands { copy_slib("cpulsar", "pulsar-tools") }
+  buildoutputs {
+    buildpath.of("pulsar-tools") .. "/" .. get_slib_filename("cpulsar")
+  }
+
   includedirs { "../include", "../libs/argue" }
   files {
     "../src/pulsar-tools/**.cpp", "../include/pulsar-tools/**.h",
     "../libs/argue/argue.hpp"
   }
-  links "pulsar"
+  links { "pulsar-bindings", "pulsar" }
 
   cflags()

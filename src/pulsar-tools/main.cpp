@@ -1,5 +1,6 @@
 #include "pulsar-tools/cli.h"
 
+#include "pulsar-bindings/extbinding.h"
 #include "pulsar-tools/version.h"
 
 int main(int argc, const char** argv)
@@ -47,6 +48,7 @@ int main(int argc, const char** argv)
         }
     }
 
+    PulsarBindings::InitCPulsar(PulsarTools::CLI::GetThisProcessExecutable().parent_path());
     PulsarTools::CLI::SetPreferredPositionSettings(positionSettings);
 
     if (!program.Parser) {
@@ -56,8 +58,16 @@ int main(int argc, const char** argv)
 
     if (*program.Options.Version) {
         logger.Info("Pulsar-Tools v{}", PulsarTools::GetToolsVersion().ToString());
+
+        uint64_t cpulsarVersionNumber = 0;
+        if (PulsarBindings::GetCPulsarVersionNumber(cpulsarVersionNumber)) {
+            auto cpulsarVersion = Pulsar::SemVer::FromNumber(cpulsarVersionNumber);
+            logger.Info("CPulsar v{}", cpulsarVersion.ToString());
+        }
+
         logger.Info("Pulsar v{}", PulsarTools::GetPulsarVersion().ToString());
         logger.Info("Neutron v{}", PulsarTools::GetNeutronVersion());
+
         return 0;
     } else if (program.CmdCheck) {
         return program.CmdCheck();

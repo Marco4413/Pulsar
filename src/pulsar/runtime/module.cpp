@@ -1,43 +1,63 @@
 #include "pulsar/runtime/module.h"
 
-size_t Pulsar::Module::BindNativeFunction(FunctionSignature sig, NativeFunction func)
+size_t Pulsar::Module::DeclareNativeFunction(FunctionSignature signature)
 {
-    if (NativeFunctions.Size() != NativeBindings.Size())
-        return 0;
-    size_t bound = 0;
-    for (size_t i = 0; i < NativeBindings.Size(); i++) {
-        const FunctionDefinition& binding = NativeBindings[i];
-        if (!sig.MatchesNative(binding))
+    return DeclareNativeFunction(signature.ToNativeDefinition());
+}
+
+size_t Pulsar::Module::DeclareNativeFunction(const FunctionDefinition& definition)
+{
+    return DeclareNativeFunction(std::forward<FunctionDefinition>(FunctionDefinition(definition)));
+}
+
+size_t Pulsar::Module::DeclareNativeFunction(FunctionDefinition&& definition)
+{
+    NativeFunctions.Resize(NativeBindings.Size(), nullptr);
+
+    size_t boundIndex = INVALID_INDEX;
+    for (size_t nativeIdx = 0; nativeIdx < NativeBindings.Size(); ++nativeIdx) {
+        FunctionDefinition& binding = NativeBindings[nativeIdx];
+        if (!definition.DeclarationMatches(binding))
             continue;
-        bound++;
-        NativeFunctions[i] = func;
+        if (definition.HasDebugSymbol())
+            binding.DebugSymbol = std::move(definition.DebugSymbol);
+        boundIndex = nativeIdx;
     }
-    return bound;
+
+    if (boundIndex == INVALID_INDEX) {
+        NativeBindings.EmplaceBack(std::move(definition));
+        NativeFunctions.Resize(NativeBindings.Size());
+        boundIndex = NativeBindings.Size()-1;
+    }
+
+    return boundIndex;
 }
 
-size_t Pulsar::Module::BindNativeFunction(const FunctionDefinition& def, NativeFunction func)
+size_t Pulsar::Module::BindNativeFunction(FunctionSignature signature, NativeFunction function)
 {
-    if (def.Arity != def.LocalsCount) return 0;
-    FunctionSignature sig{ def.Name, def.Arity, def.Returns, def.StackArity };
-    return BindNativeFunction(sig, func);
+    return BindNativeFunction(signature.ToNativeDefinition(), function);
 }
 
-size_t Pulsar::Module::DeclareAndBindNativeFunction(FunctionDefinition&& def, NativeFunction func)
+size_t Pulsar::Module::BindNativeFunction(const FunctionDefinition& definition, NativeFunction function)
 {
-    NativeBindings.EmplaceBack(std::move(def));
-    NativeFunctions.Resize(NativeBindings.Size());
-    NativeFunctions.Back() = func;
-    return NativeBindings.Size()-1;
+    return BindNativeFunction(std::forward<FunctionDefinition>(FunctionDefinition(definition)), function);
 }
 
-size_t Pulsar::Module::DeclareAndBindNativeFunction(const FunctionDefinition& def, NativeFunction func)
+size_t Pulsar::Module::BindNativeFunction(FunctionDefinition&& definition, NativeFunction function)
 {
-    return DeclareAndBindNativeFunction(std::forward<FunctionDefinition>(FunctionDefinition(def)), func);
-}
+    NativeFunctions.Resize(NativeBindings.Size(), nullptr);
 
-size_t Pulsar::Module::DeclareAndBindNativeFunction(FunctionSignature sig, NativeFunction func)
-{
-    return DeclareAndBindNativeFunction(std::forward<FunctionDefinition>(sig.ToNativeDefinition()), func);
+    size_t lastNativeIdx = DeclareNativeFunction(std::forward<FunctionDefinition>(definition));
+    const FunctionDefinition& definitionToMatch = NativeBindings[lastNativeIdx];
+
+    for (size_t nativeIdx = 0; nativeIdx <= lastNativeIdx; ++nativeIdx) {
+        const FunctionDefinition& binding = NativeBindings[nativeIdx];
+        if (!definitionToMatch.DeclarationMatches(binding))
+            continue;
+        NativeFunctions[nativeIdx] = function;
+    }
+
+    return lastNativeIdx;
 }
 
 uint64_t Pulsar::Module::BindCustomType(const String& name, CustomType::GlobalDataFactoryFn globalDataFactory)
@@ -47,11 +67,11 @@ uint64_t Pulsar::Module::BindCustomType(const String& name, CustomType::GlobalDa
     return m_LastTypeId;
 }
 
-size_t Pulsar::Module::FindFunctionBySignature(FunctionSignature sig) const
+size_t Pulsar::Module::FindFunctionDefinitionBySignature(const List<FunctionDefinition>& definitions, FunctionSignature signature) const
 {
-    for (size_t i = Functions.Size(); i > 0; --i) {
-        const auto& definition = Functions[i-1];
-        if (sig.Matches(definition))
+    for (size_t i = definitions.Size(); i > 0; --i) {
+        const auto& definition = definitions[i-1];
+        if (signature.Matches(definition))
             continue;
         return i-1;
     }

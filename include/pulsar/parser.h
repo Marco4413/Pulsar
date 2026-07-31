@@ -68,6 +68,7 @@ namespace Pulsar
         GlobalEvaluationError,
         IllegalDirective,
         NativeFunctionRedeclaration,
+        NativeFunctionDeclarationMismatch,
         UnsafeChainedIfStatement,
         FileSystemNotAvailable,
         UsageOfUndeclaredLabel,

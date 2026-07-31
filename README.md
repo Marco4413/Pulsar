@@ -34,6 +34,8 @@ on VSCode for the Pulsar Language, you can download and package the official ext
 
 - Pulsar:
   - **None!**
+- Pulsar-Bindings:
+  - **None!**
 - Pulsar-Demo:
   - **None!**
 - Pulsar-LSP:

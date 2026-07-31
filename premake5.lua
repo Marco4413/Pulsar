@@ -25,6 +25,9 @@ workspace "pulsar"
   startproject "pulsar-tools"
 
 include "projects/pulsar"
+include "projects/pulsar-bindings"
 include "projects/pulsar-demo"
 include "projects/pulsar-lsp"
 include "projects/pulsar-tools"
+
+include "projects/cpulsar"
