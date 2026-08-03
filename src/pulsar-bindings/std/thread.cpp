@@ -2,6 +2,38 @@
 
 #include <chrono>
 
+class ThreadTypeImpl final : public PulsarBindings::Std::Thread::IThreadType
+{
+public:
+    ThreadTypeImpl(const Pulsar::ExecutionContext& parentContext)
+        : m_Context(parentContext.Fork()) {}
+    virtual ~ThreadTypeImpl() = default;
+
+    bool IsRunning() const override { return m_IsRunning; }
+    void Join() override { m_Thread.join(); }
+
+    Pulsar::RuntimeState GetState() const override { return m_Context.GetState(); }
+    void PullStack(Pulsar::Stack& out) override { out = std::move(m_Context.GetStack()); }
+
+    Pulsar::ExecutionContext& GetContext() { return m_Context; }
+
+    void Run(const Pulsar::FunctionDefinition& function)
+    {
+        if (IsRunning()) return;
+        m_IsRunning.store(true);
+        m_Thread = std::thread([this, &function]() {
+            this->m_Context.CallFunction(function);
+            this->m_Context.Run();
+            this->m_IsRunning.store(false);
+        });
+    }
+
+private:
+    std::thread m_Thread;
+    Pulsar::ExecutionContext m_Context;
+    std::atomic_bool m_IsRunning;
+};
+
 PulsarBindings::Std::Thread::Thread()
     : Binding()
 {
@@ -11,7 +43,7 @@ PulsarBindings::Std::Thread::Thread()
 
     BindNativeFunction({ "this-thread/sleep!", 1, 0 }, FThisSleep);
 
-    BindNativeFunction({ "thread/run",      2, 1 }, CreateTypeBoundFactory(FRun,     "PulsarStd/Thread"));
+    BindNativeFunction({ "thread/run",      2, 1 }, CreateTypeBoundFactory([this](auto& eContext, uint64_t threadTypeId) { return this->FRun(eContext, threadTypeId); }, "PulsarStd/Thread"));
     BindNativeFunction({ "thread/join",     1, 2 }, CreateTypeBoundFactory(FJoin,    "PulsarStd/Thread"));
     BindNativeFunction({ "thread/join-all", 1, 1 }, CreateTypeBoundFactory(FJoinAll, "PulsarStd/Thread"));
     BindNativeFunction({ "thread/alive?",   1, 1 }, CreateTypeBoundFactory(FIsAlive, "PulsarStd/Thread"));
@@ -47,21 +79,8 @@ Pulsar::RuntimeState PulsarBindings::Std::Thread::FRun(Pulsar::ExecutionContext&
         return Pulsar::RuntimeState::TypeError;
 
     const Pulsar::FunctionDefinition& threadFn = module.Functions[(size_t)threadFnIdx];
-    Pulsar::SharedRef<ThreadContext> threadContext = Pulsar::SharedRef<ThreadContext>::New(eContext.Fork());
-
-    threadContext->Context.GetStack() = Pulsar::Stack(std::move(threadFnArgs.AsList()));
-
-    threadContext->IsRunning.store(true);
-    std::thread nativeThread = std::thread([threadFn, threadContext]() {
-        threadContext->Context.CallFunction(threadFn);
-        threadContext->Context.Run();
-        threadContext->IsRunning.store(false);
-    });
-
-    frame.Stack.EmplaceCustom({
-            .Type=threadTypeId,
-            .Data=ThreadType::Ref::New(std::move(nativeThread), std::move(threadContext))
-        });
+    IThreadType::Ref thread = CreateThread(eContext, threadFn, Pulsar::Stack(std::move(threadFnArgs.AsList())));
+    frame.Stack.EmplaceCustom({ .Type=threadTypeId, .Data=std::move(thread) });
 
     return Pulsar::RuntimeState::OK;
 }
@@ -71,7 +90,7 @@ Pulsar::RuntimeState PulsarBindings::Std::Thread::FJoin(Pulsar::ExecutionContext
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& threadReference = frame.Locals[0];
 
-    ThreadType::Ref thread;
+    IThreadType::Ref thread;
     if (!threadReference.GetCustomAs(threadTypeId, thread))
         return Pulsar::RuntimeState::TypeError;
     if (!thread) return Pulsar::RuntimeState::InvalidCustomTypeReference;
@@ -89,7 +108,7 @@ Pulsar::RuntimeState PulsarBindings::Std::Thread::FJoinAll(Pulsar::ExecutionCont
 
     Pulsar::Value::List threadResults;
     for (Pulsar::Value& threadReference : threadReferencesList.AsList()) {
-        ThreadType::Ref thread;
+        IThreadType::Ref thread;
         if (!threadReference.GetCustomAs(threadTypeId, thread))
             return Pulsar::RuntimeState::TypeError;
         if (!thread) return Pulsar::RuntimeState::InvalidCustomTypeReference;
@@ -111,12 +130,12 @@ Pulsar::RuntimeState PulsarBindings::Std::Thread::FIsAlive(Pulsar::ExecutionCont
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& threadReference = frame.Locals[0];
 
-    ThreadType::Ref thread;
+    IThreadType::Ref thread;
     if (!threadReference.GetCustomAs(threadTypeId, thread))
         return Pulsar::RuntimeState::TypeError;
     if (!thread) return Pulsar::RuntimeState::InvalidCustomTypeReference;
 
-    frame.Stack.EmplaceInteger(thread && thread->ThreadContext->IsRunning.load() ? 1 : 0);
+    frame.Stack.EmplaceInteger(thread && thread->IsRunning() ? 1 : 0);
     return Pulsar::RuntimeState::OK;
 }
 
@@ -125,7 +144,7 @@ Pulsar::RuntimeState PulsarBindings::Std::Thread::FIsValid(Pulsar::ExecutionCont
     Pulsar::Frame& frame = eContext.CurrentFrame();
     Pulsar::Value& threadReference = frame.Locals[0];
 
-    ThreadType::Ref thread;
+    IThreadType::Ref thread;
     if (!threadReference.GetCustomAs(threadTypeId, thread))
         return Pulsar::RuntimeState::TypeError;
 
@@ -133,11 +152,11 @@ Pulsar::RuntimeState PulsarBindings::Std::Thread::FIsValid(Pulsar::ExecutionCont
     return Pulsar::RuntimeState::OK;
 }
 
-void PulsarBindings::Std::Thread::Join(Pulsar::SharedRef<ThreadData> thread, Pulsar::Stack& stack)
+void PulsarBindings::Std::Thread::Join(IThreadType::Ref thread, Pulsar::Stack& stack)
 {
-    thread->Thread.join();
+    thread->Join();
     Pulsar::Value::List threadResult;
-    Pulsar::RuntimeState threadState = thread->ThreadContext->Context.GetState();
+    Pulsar::RuntimeState threadState = thread->GetState();
     if (threadState != Pulsar::RuntimeState::OK) {
         // An error occurred
         stack.EmplaceList();
@@ -146,11 +165,20 @@ void PulsarBindings::Std::Thread::Join(Pulsar::SharedRef<ThreadData> thread, Pul
     }
 
     Pulsar::Value::List returnValues;
-    Pulsar::Stack& threadStack = thread->ThreadContext->Context.GetStack();
+    Pulsar::Stack threadStack;
+    thread->PullStack(threadStack);
     for (Pulsar::Value& value : threadStack) returnValues.Append(std::move(value));
 
     stack.EmplaceList(std::move(returnValues));
     stack.EmplaceInteger(0);
+}
+
+PulsarBindings::Std::Thread::IThreadType::Ref PulsarBindings::Std::Thread::CreateThread(const Pulsar::ExecutionContext& parentContext, const Pulsar::FunctionDefinition& function, Pulsar::Stack&& initStack) const
+{
+    auto thread = Pulsar::SharedRef<ThreadTypeImpl>::New(parentContext);
+    thread->GetContext().GetStack() = std::move(initStack);
+    thread->Run(function);
+    return thread;
 }
 
 PulsarBindings::Std::Channel::Channel()

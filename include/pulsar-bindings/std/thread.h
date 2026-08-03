@@ -24,6 +24,7 @@ namespace PulsarBindings::Std
             std::condition_variable CV;
         };
 
+        // TODO: Rework to not require ChannelData, like Thread::IThreadType.
         class ChannelType :
             public Pulsar::CustomDataHolder,
             public ChannelData
@@ -49,40 +50,42 @@ namespace PulsarBindings::Std
     class Thread : public Binding
     {
     public:
-        struct ThreadContext
-        {
-            Pulsar::ExecutionContext Context;
-            std::atomic_bool IsRunning = false;
-        };
-
-        struct ThreadData
-        {
-            std::thread Thread;
-            Pulsar::SharedRef<Thread::ThreadContext> ThreadContext;
-        };
-
-        class ThreadType :
-            public Pulsar::CustomDataHolder,
-            public ThreadData
+        class IThreadType :
+            public Pulsar::CustomDataHolder
         {
         public:
-            using Ref = Pulsar::SharedRef<ThreadType>;
-            ThreadType(std::thread&& thread, Pulsar::SharedRef<Thread::ThreadContext>&& threadContext)
-                : ThreadData{ std::move(thread), std::move(threadContext) } { }
+            using Ref = Pulsar::SharedRef<IThreadType>;
+            virtual ~IThreadType() = default;
+
+            // If false after Join() is called, the thread is not and will no longer be running.
+            virtual bool IsRunning() const = 0;
+            virtual void Join() = 0;
+
+            // Safely accessible only if IsRunning() returns false
+            // virtual Pulsar::ExecutionContext& GetContext() = 0;
+
+            // These methods may only be called after Join().
+            virtual Pulsar::RuntimeState GetState() const = 0;
+            // Gets the stack from the context and clears it.
+            virtual void PullStack(Pulsar::Stack& out) = 0;
         };
 
     public:
         Thread();
+        virtual ~Thread() = default;
 
     public:
+        Pulsar::RuntimeState FRun(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
+
         static Pulsar::RuntimeState FThisSleep(Pulsar::ExecutionContext& eContext);
-        static Pulsar::RuntimeState FRun(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
         static Pulsar::RuntimeState FJoin(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
         static Pulsar::RuntimeState FJoinAll(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
         static Pulsar::RuntimeState FIsAlive(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
         static Pulsar::RuntimeState FIsValid(Pulsar::ExecutionContext& eContext, uint64_t threadTypeId);
 
-        static void Join(Pulsar::SharedRef<ThreadData> thread, Pulsar::Stack& stack);
+        static void Join(IThreadType::Ref thread, Pulsar::Stack& stack);
+
+        virtual IThreadType::Ref CreateThread(const Pulsar::ExecutionContext& parentContext, const Pulsar::FunctionDefinition& function, Pulsar::Stack&& initStack) const;
     };
 }
 
