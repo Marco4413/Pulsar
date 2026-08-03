@@ -58,7 +58,7 @@ jobs:
           ./premake5 --arch=${{ matrix.arch }} --cc=${{ matrix.cc }} gmake
       - name: Build
         run: |
-          make -j config?=${{ matrix.config }} pulsar pulsar-debugger pulsar-lsp pulsar-tools
+          make -j config?=${{ matrix.config }} pulsar pulsar-dap pulsar-lsp pulsar-tools
       - name: Prepare Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         run: |
@@ -76,14 +76,14 @@ jobs:
           PREMAKE_BUILD="$OS/$CONFIG"
 
           mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
-          cp    LICENSE.md                                             artifact/${{ env.ARTIFACT_NAME }}/
-          cp -R resources/**                                           artifact/${{ env.ARTIFACT_NAME }}/
-          cp -R include/cpulsar                                        artifact/${{ env.ARTIFACT_NAME }}/include/
+          cp    LICENSE.md                                        artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R resources/**                                      artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R include/cpulsar                                   artifact/${{ env.ARTIFACT_NAME }}/include/
           rm    artifact/${{ env.ARTIFACT_NAME }}/include/cpulsar/_* # Remove all private CPulsar header files
-          cp    "build/pulsar-debugger/$PREMAKE_BUILD/pulsar-debugger" artifact/${{ env.ARTIFACT_NAME }}/
-          cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp"           artifact/${{ env.ARTIFACT_NAME }}/
-          cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools"       artifact/${{ env.ARTIFACT_NAME }}/
-          cp    "build/pulsar-tools/$PREMAKE_BUILD/libcpulsar.so"      artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-dap/$PREMAKE_BUILD/pulsar-dap"      artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp"      artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools"  artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-tools/$PREMAKE_BUILD/libcpulsar.so" artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         uses: actions/upload-artifact@v7
@@ -122,7 +122,7 @@ jobs:
           ./premake5 --arch=${{ matrix.arch }} --cc=${{ matrix.cc }} gmake
       - name: Build
         run: |
-          make -j config?=${{ matrix.config }} pulsar pulsar-debugger pulsar-lsp pulsar-tools
+          make -j config?=${{ matrix.config }} pulsar pulsar-dap pulsar-lsp pulsar-tools
       - name: Prepare Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         run: |
@@ -140,14 +140,14 @@ jobs:
           PREMAKE_BUILD="$OS/$CONFIG"
 
           mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
-          cp    LICENSE.md                                             artifact/${{ env.ARTIFACT_NAME }}/
-          cp -R resources/**                                           artifact/${{ env.ARTIFACT_NAME }}/
-          cp -R include/cpulsar                                        artifact/${{ env.ARTIFACT_NAME }}/include/
+          cp    LICENSE.md                                           artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R resources/**                                         artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R include/cpulsar                                      artifact/${{ env.ARTIFACT_NAME }}/include/
           rm    artifact/${{ env.ARTIFACT_NAME }}/include/cpulsar/_* # Remove all private CPulsar header files
-          cp    "build/pulsar-debugger/$PREMAKE_BUILD/pulsar-debugger" artifact/${{ env.ARTIFACT_NAME }}/
-          cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp"           artifact/${{ env.ARTIFACT_NAME }}/
-          cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools"       artifact/${{ env.ARTIFACT_NAME }}/
-          cp    "build/pulsar-tools/$PREMAKE_BUILD/libcpulsar.dylib"   artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-dap/$PREMAKE_BUILD/pulsar-dap"         artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp"         artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools"     artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-tools/$PREMAKE_BUILD/libcpulsar.dylib" artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         uses: actions/upload-artifact@v7
@@ -192,7 +192,7 @@ jobs:
             echo 'msbuild not found!'
             exit 1;
           fi
-          "$MSBUILD" pulsar.sln -m -t:pulsar,pulsar-debugger,pulsar-lsp,pulsar-tools -p:Configuration=${{ matrix.config }} -p:Platform=${{ env.MSBUILD_PLATFORM }}
+          "$MSBUILD" pulsar.sln -m -t:pulsar,pulsar-dap,pulsar-lsp,pulsar-tools -p:Configuration=${{ matrix.config }} -p:Platform=${{ env.MSBUILD_PLATFORM }}
       - name: Prepare Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         run: |
@@ -210,14 +210,14 @@ jobs:
           PREMAKE_BUILD="$OS/$CONFIG"
 
           mkdir -p artifact/${{ env.ARTIFACT_NAME }}/
-          cp    LICENSE.md                                                 artifact/${{ env.ARTIFACT_NAME }}/
-          cp -R resources/**                                               artifact/${{ env.ARTIFACT_NAME }}/
-          cp -R include/cpulsar                                            artifact/${{ env.ARTIFACT_NAME }}/include/
+          cp    LICENSE.md                                           artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R resources/**                                         artifact/${{ env.ARTIFACT_NAME }}/
+          cp -R include/cpulsar                                      artifact/${{ env.ARTIFACT_NAME }}/include/
           rm    artifact/${{ env.ARTIFACT_NAME }}/include/cpulsar/_* # Remove all private CPulsar header files
-          cp    "build/pulsar-debugger/$PREMAKE_BUILD/pulsar-debugger.exe" artifact/${{ env.ARTIFACT_NAME }}/
-          cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp.exe"           artifact/${{ env.ARTIFACT_NAME }}/
-          cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools.exe"       artifact/${{ env.ARTIFACT_NAME }}/
-          cp    "build/pulsar-tools/$PREMAKE_BUILD/cpulsar.dll"            artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-dap/$PREMAKE_BUILD/pulsar-dap.exe"     artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-lsp/$PREMAKE_BUILD/pulsar-lsp.exe"     artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-tools/$PREMAKE_BUILD/pulsar-tools.exe" artifact/${{ env.ARTIFACT_NAME }}/
+          cp    "build/pulsar-tools/$PREMAKE_BUILD/cpulsar.dll"      artifact/${{ env.ARTIFACT_NAME }}/
       - name: Upload Artifact
         if: env.ARTIFACT_UPLOAD == 'yes'
         uses: actions/upload-artifact@v7
