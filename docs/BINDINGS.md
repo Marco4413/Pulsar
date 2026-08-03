@@ -288,7 +288,7 @@ all `RuntimeState`s and return values of the `Thread`s.
 
 ### thread/alive?
 
-`*(*thread/alive? thread) -> 2.`
+`*(*thread/alive? thread) -> 1.`
 
 Types: `Thread -> Integer`
 
@@ -297,7 +297,7 @@ is not running. Meaning that joining `thread` does not block.
 
 ### thread/valid?
 
-`*(*thread/valid? thread) -> 2.`
+`*(*thread/valid? thread) -> 1.`
 
 Types: `Thread -> Integer`
 
