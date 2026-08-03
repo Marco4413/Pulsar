@@ -144,9 +144,9 @@ const Pulsar::String* DebuggableModule::GetSourceContent(SourceReference sourceR
     return &m_Module.SourceDebugSymbols[sourceReference].Source;
 }
 
-SourceReference DebuggableModule::FindSourceReferenceForPath(const char* path) const
+SourceReference DebuggableModule::FindSourceReferenceForPath(Pulsar::StringView path) const
 {
-    std::filesystem::path pathToSearch(path);
+    std::filesystem::path pathToSearch(path.Begin(), path.End());
     for (size_t uSourceReference = 0; uSourceReference < m_Module.SourceDebugSymbols.Size(); ++uSourceReference) {
         std::filesystem::path candidatePath(m_Module.SourceDebugSymbols[uSourceReference].Path.CString());
 

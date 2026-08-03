@@ -86,7 +86,7 @@ namespace PulsarDebugger
         const Pulsar::String* GetSourcePath(SourceReference sourceReference) const;
         const Pulsar::String* GetSourceContent(SourceReference sourceReference) const;
 
-        SourceReference FindSourceReferenceForPath(const char* path) const;
+        SourceReference FindSourceReferenceForPath(Pulsar::StringView path) const;
 
         // TODO: This may be optimized by batching
         // void FilterReachableLines(SourceReference sourceReference, Pulsar::List<size_t>& lines) const;

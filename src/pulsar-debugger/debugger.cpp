@@ -112,7 +112,8 @@ Debugger::Debugger()
     , m_Threads()
 {}
 
-std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pulsar::Value::List&& args, const char* entryPoint)
+std::optional<Debugger::LaunchError> Debugger::Launch(
+        Pulsar::StringView scriptPath, Pulsar::Value::List&& args, Pulsar::StringView entryPoint)
 {
     // This is required because the Debugger is unlocked while parsing
     std::lock_guard _launchLock(m_LaunchMutex);
@@ -142,7 +143,7 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pu
     Pulsar::ParseResult parseResult;
     Pulsar::Parser parser;
 
-    parseResult = parser.AddSourceFile(scriptPath);
+    parseResult = parser.AddSourceFile(scriptPath.ToString());
     if (parseResult != Pulsar::ParseResult::OK) {
         const auto& errorMessage = parser.GetErrorMessage();
         return "Parser Error: " + errorMessage.Message;
@@ -164,7 +165,7 @@ std::optional<Debugger::LaunchError> Debugger::Launch(const char* scriptPath, Pu
 
     /* === Spawn Main Thread === */
     Pulsar::Stack initStack;
-    args.Prepend()->Value().SetString(scriptPath);
+    args.Prepend()->Value().SetString(scriptPath.ToString());
     initStack.EmplaceList(std::move(args));
     auto mainThread = SpawnThread("MainThread", entryPoint, std::move(initStack));
     m_MainThreadId = mainThread->GetId();
@@ -241,12 +242,13 @@ DebuggableModule::CRef Debugger::GetModule()
     return m_Module;
 }
 
-Ref<Thread> Debugger::SpawnThread(Pulsar::StringView name, const char* entryPoint, Pulsar::Stack&& initStack)
+Ref<Thread> Debugger::SpawnThread(Pulsar::StringView name, Pulsar::StringView entryPoint, Pulsar::Stack&& initStack)
 {
     ScopeLock _lock(*this);
     Pulsar::ExecutionContext eContext(m_Module->Get());
     eContext.GetStack() = std::move(initStack);
-    eContext.CallFunction(entryPoint);
+    // TODO: Use StringView more often in Pulsar
+    eContext.CallFunction(entryPoint.ToString());
     return SpawnThread(name, std::move(eContext));
 }
 

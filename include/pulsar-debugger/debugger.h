@@ -32,7 +32,10 @@ namespace PulsarDebugger
         Debugger& operator=(Debugger&&)      = delete;
 
         // The Debugger is paused by default on Launch
-        std::optional<LaunchError> Launch(const char* scriptPath, Pulsar::Value::List&& args, const char* entryPoint="main");
+        std::optional<LaunchError> Launch(
+                Pulsar::StringView scriptPath,
+                Pulsar::Value::List&& args,
+                Pulsar::StringView entryPoint="main");
 
         Ref<BreakpointRegister> GetBreakpoints();
 
@@ -51,7 +54,7 @@ namespace PulsarDebugger
         void SetEventHandler(EventHandler handler);
 
         DebuggableModule::CRef GetModule();
-        Ref<Thread> SpawnThread(Pulsar::StringView name, const char* entryPoint, Pulsar::Stack&& initStack);
+        Ref<Thread> SpawnThread(Pulsar::StringView name, Pulsar::StringView entryPoint, Pulsar::Stack&& initStack);
         Ref<Thread> SpawnThread(Pulsar::StringView name, const Pulsar::ExecutionContext& parentContext);
         // If the returned pointer is nullptr the Thread does not exist
         Ref<Thread> GetThread(ThreadId threadId);
