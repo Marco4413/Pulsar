@@ -23,6 +23,7 @@ end
 
 include "pulsar"
 include "pulsar-bindings"
+include "cpulsar"
 
 project "pulsar-tools"
   kind "ConsoleApp"
