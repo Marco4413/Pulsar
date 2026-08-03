@@ -33,12 +33,11 @@ on VSCode for the Pulsar Language, you can download and package the official ext
 > [Marco4413](https://github.com/Marco4413) of the projects specified here.
 
 - Pulsar:
-  - **None!**
 - Pulsar-Bindings:
-  - **None!**
+- Pulsar-Debugger:
 - Pulsar-Demo:
   - **None!**
-- Pulsar-Debugger:
+- Pulsar-DAP:
   - [`nlohmann/json`](https://github.com/nlohmann/json)
   - [`cppdap`](https://github.com/google/cppdap)
 - Pulsar-LSP:

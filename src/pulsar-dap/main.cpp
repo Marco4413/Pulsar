@@ -3,7 +3,7 @@
 #include <dap/io.h>
 
 #include "pulsar/platform.h"
-#include "pulsar-debugger/dapserver.h"
+#include "pulsar-dap/server.h"
 
 #ifdef PULSAR_PLATFORM_WINDOWS
 #include <fcntl.h>  // _O_BINARY
@@ -22,15 +22,15 @@ int main(int argc, const char** argv)
     if (argc <= 0) return 1;
     const char* program = argv[0];
 
-    std::filesystem::path              logFilePath = std::filesystem::path(program).replace_filename("pulsar-debugger.log");
-    PulsarDebugger::DAPServer::LogFile logFile     = nullptr;
+    std::filesystem::path logFilePath = std::filesystem::path(program).replace_filename("pulsar-dap.log");
+    PulsarDAP::Server::LogFile logFile = nullptr;
 
     if (std::filesystem::is_directory(logFilePath.parent_path()) && (!std::filesystem::exists(logFilePath) || std::filesystem::is_regular_file(logFilePath))) {
         logFile = dap::file(logFilePath.generic_string().c_str());
     }
 
     auto session = dap::Session::create();
-    PulsarDebugger::DAPServer dapServer(session, logFile);
+    PulsarDAP::Server server(session, logFile);
 
     std::shared_ptr<dap::Reader> in = dap::file(stdin, false);
     std::shared_ptr<dap::Writer> out = dap::file(stdout, false);
@@ -40,6 +40,6 @@ int main(int argc, const char** argv)
         session->bind(in, out);
     }
 
-    dapServer.ProcessEvents();
+    server.ProcessEvents();
     return 0;
 }

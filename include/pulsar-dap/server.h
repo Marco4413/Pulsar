@@ -1,5 +1,5 @@
-#ifndef _PULSARDEBUGGER_DAPSERVER_H
-#define _PULSARDEBUGGER_DAPSERVER_H
+#ifndef _PULSARDAP_SERVER_H
+#define _PULSARDAP_SERVER_H
 
 #include <atomic>
 #include <format>
@@ -12,7 +12,7 @@
 #include "pulsar-debugger/context.h"
 #include "pulsar-debugger/debugger.h"
 
-namespace PulsarDebugger
+namespace PulsarDAP
 {
     class DebugLaunchRequest
         : public dap::LaunchRequest
@@ -28,23 +28,23 @@ namespace PulsarDebugger
         dap::optional<dap::boolean> showAllVariables;
     };
 
-    class DAPServer
+    class Server
     {
     public:
         using Session = std::unique_ptr<dap::Session>;
         using LogFile = std::shared_ptr<dap::Writer>;
 
     public:
-        DAPServer(Session &session, LogFile logFile=nullptr);
-        ~DAPServer() = default;
+        Server(Session &session, LogFile logFile=nullptr);
+        ~Server() = default;
 
-        DAPServer(const DAPServer&)  = delete;
-        DAPServer(DAPServer&&)       = delete;
-        DAPServer& operator=(const DAPServer&)  = delete;
-        DAPServer& operator=(DAPServer&&)       = delete;
+        Server(const Server&)  = delete;
+        Server(Server&&)       = delete;
+        Server& operator=(const Server&)  = delete;
+        Server& operator=(Server&&)       = delete;
 
-        std::optional<Debugger::LaunchError> Launch(const DebugLaunchRequest& launchRequest);
-        std::optional<Debugger::LaunchError> Launch(
+        std::optional<PulsarDebugger::Debugger::LaunchError> Launch(const DebugLaunchRequest& launchRequest);
+        std::optional<PulsarDebugger::Debugger::LaunchError> Launch(
                 const char* scriptPath, const dap::array<dap::string>& scriptArgs,
                 const char* entryPoint="main", bool stopOnEntry=true);
 
@@ -68,7 +68,7 @@ namespace PulsarDebugger
         }
 
         // Make sure to lock the debugger before calling this
-        Ref<DebuggerContext> GetOrCreateContext();
+        PulsarDebugger::Ref<PulsarDebugger::DebuggerContext> GetOrCreateContext();
 
     private:
         std::atomic_bool m_Terminate;
@@ -79,15 +79,15 @@ namespace PulsarDebugger
 
         Session &m_Session;
         LogFile m_LogFile;
-        Debugger m_Debugger;
+        PulsarDebugger::Debugger m_Debugger;
 
-        LockedValue<Ref<DebuggerContext>> m_DebuggerContext;
+        PulsarDebugger::LockedValue<PulsarDebugger::Ref<PulsarDebugger::DebuggerContext>> m_DebuggerContext;
     };
 }
 
 namespace dap
 {
-    DAP_DECLARE_STRUCT_TYPEINFO(PulsarDebugger::DebugLaunchRequest);
+    DAP_DECLARE_STRUCT_TYPEINFO(PulsarDAP::DebugLaunchRequest);
 }
 
-#endif // _PULSARDEBUGGER_DAPSERVER_H
+#endif // _PULSARDAP_SERVER_H

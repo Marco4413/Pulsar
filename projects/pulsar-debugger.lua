@@ -8,16 +8,13 @@ include "pulsar-bindings"
 include "../libs/cppdap/cppdap"
 
 project "pulsar-debugger"
-  kind "ConsoleApp"
+  kind "StaticLib"
   language "C++"
   cppdialect "C++20"
 
   buildpath.setup("pulsar-debugger")
 
-  includedirs {
-    "../include",
-    "../libs/cppdap/include",
-  }
+  includedirs "../include"
   files { "../src/pulsar-debugger/**.cpp", "../include/pulsar-debugger/**.h" }
   links { "pulsar-bindings", "pulsar", "cppdap" }
 

@@ -28,6 +28,8 @@ include "projects/pulsar"
 include "projects/pulsar-bindings"
 include "projects/pulsar-debugger"
 include "projects/pulsar-demo"
+
+include "projects/pulsar-dap"
 include "projects/pulsar-lsp"
 include "projects/pulsar-tools"
 

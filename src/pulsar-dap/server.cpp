@@ -1,14 +1,14 @@
-#include "pulsar-debugger/dapserver.h"
+#include "pulsar-dap/server.h"
+
+#include <format>
 
 #include "pulsar-debugger/types.h"
 #include "pulsar-debugger/helpers.h"
 
-#include <format>
-
 namespace dap
 {
     DAP_IMPLEMENT_STRUCT_TYPEINFO_EXT(
-            PulsarDebugger::DebugLaunchRequest,
+            PulsarDAP::DebugLaunchRequest,
             LaunchRequest,
             "launch",
             DAP_FIELD(scriptPath, "scriptPath"),
@@ -18,49 +18,53 @@ namespace dap
             DAP_FIELD(showAllVariables, "showAllVariables"));
 }
 
-namespace PulsarDebugger
+namespace PulsarDAP
 {
 
-DAPServer::DAPServer(Session& session, LogFile logFile)
+Server::Server(Session& session, LogFile logFile)
     : m_Terminate(false)
     , m_LinesStartAt1(true)
     , m_ColumnsStartAt1(true)
     , m_Session(session)
     , m_LogFile(logFile)
 {
-    m_Debugger.SetEventHandler([this](ThreadId threadId, Debugger::EEventKind debugEv, Debugger& debugger)
+    m_Debugger.SetEventHandler([this](
+            PulsarDebugger::ThreadId threadId,
+            PulsarDebugger::Debugger::EEventKind eventKind,
+            PulsarDebugger::Debugger& debugger)
     {
+        using EEventKind = PulsarDebugger::Debugger::EEventKind;
         // Invalidate context
         this->m_DebuggerContext.Store(nullptr);
-        switch (debugEv) {
-        case Debugger::EEventKind::Step: {
+        switch (eventKind) {
+        case EEventKind::Step: {
             dap::StoppedEvent ev;
             ev.reason   = "step";
             ev.threadId = threadId;
             ev.allThreadsStopped = false;
             m_Session->send(ev);
         } break;
-        case Debugger::EEventKind::Breakpoint: {
+        case EEventKind::Breakpoint: {
             dap::StoppedEvent ev;
             ev.reason   = "breakpoint";
             ev.threadId = threadId;
             ev.allThreadsStopped = false;
             m_Session->send(ev);
         } break;
-        case Debugger::EEventKind::Continue: {
+        case EEventKind::Continue: {
             dap::ContinuedEvent ev;
             ev.threadId = threadId;
             ev.allThreadsContinued = false;
             m_Session->send(ev);
         } break;
-        case Debugger::EEventKind::Pause: {
+        case EEventKind::Pause: {
             dap::StoppedEvent ev;
             ev.reason   = "pause";
             ev.threadId = threadId;
             ev.allThreadsStopped = false;
             m_Session->send(ev);
         } break;
-        case Debugger::EEventKind::Done: {
+        case EEventKind::Done: {
             dap::ThreadEvent ev;
             ev.reason   = "exited";
             ev.threadId = threadId;
@@ -68,14 +72,14 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
             if (threadId == debugger.GetMainThreadId())
                 this->Terminate();
         } break;
-        case Debugger::EEventKind::Error: {
+        case EEventKind::Error: {
             dap::StoppedEvent ev;
             ev.reason   = "exception";
             ev.threadId = threadId;
             ev.allThreadsStopped = false;
             auto thread = debugger.GetThread(threadId);
             if (thread) {
-                ScopeLock _threadLock(*thread);
+                PulsarDebugger::ScopeLock _threadLock(*thread);
                 auto runtimeState = thread->GetContext().GetState();
                 ev.text = Pulsar::RuntimeStateToString(runtimeState);
             } else {
@@ -164,16 +168,17 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
         auto breakpoints = this->m_Debugger.GetBreakpoints();
         if (!breakpoints) return dap::SetBreakpointsResponse{};
 
-        ScopeLock _breakpointsLock(*breakpoints);
+        PulsarDebugger::ScopeLock _breakpointsLock(*breakpoints);
 
         auto module = this->m_Debugger.GetModule();
-        SourceReference sourceReference = req.source.sourceReference.value(INVALID_SOURCE_REFERENCE);
+        PulsarDebugger::SourceReference sourceReference = req.source.sourceReference.value(
+                PulsarDebugger::INVALID_SOURCE_REFERENCE);
         if (!req.source.sourceReference && req.source.path) {
             sourceReference = module->FindSourceReferenceForPath(req.source.path->c_str());
         }
 
         dap::SetBreakpointsResponse res;
-        if (sourceReference == INVALID_SOURCE_REFERENCE) {
+        if (sourceReference == PulsarDebugger::INVALID_SOURCE_REFERENCE) {
             if (req.breakpoints) {
                 res.breakpoints.resize(req.breakpoints->size());
 
@@ -255,7 +260,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
     {
         auto module = this->m_Debugger.GetModule();
 
-        SourceReference sourceReference = req.sourceReference;
+        PulsarDebugger::SourceReference sourceReference = req.sourceReference;
         if (req.source) {
             if (req.source->sourceReference) {
                 sourceReference = *req.source->sourceReference;
@@ -264,7 +269,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
             }
         }
 
-        if (sourceReference == INVALID_SOURCE_REFERENCE) {
+        if (sourceReference == PulsarDebugger::INVALID_SOURCE_REFERENCE) {
             return dap::Error("Could not find source.");
         }
 
@@ -294,7 +299,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
     });
 }
 
-std::optional<Debugger::LaunchError> DAPServer::Launch(const DebugLaunchRequest& req)
+std::optional<PulsarDebugger::Debugger::LaunchError> Server::Launch(const DebugLaunchRequest& req)
 {
     m_ShowAllVariables = req.showAllVariables && *req.showAllVariables;
     return Launch(
@@ -304,7 +309,7 @@ std::optional<Debugger::LaunchError> DAPServer::Launch(const DebugLaunchRequest&
             !req.stopOnEntry || *req.stopOnEntry);
 }
 
-std::optional<Debugger::LaunchError> DAPServer::Launch(
+std::optional<PulsarDebugger::Debugger::LaunchError> Server::Launch(
         const char* scriptPath, const dap::array<dap::string>& scriptArgs,
         const char* entryPoint, bool stopOnEntry)
 {
@@ -330,7 +335,7 @@ std::optional<Debugger::LaunchError> DAPServer::Launch(
     return std::nullopt;
 }
 
-std::optional<dap::string> DAPServer::GetSourceContent(dap::integer sourceReference)
+std::optional<dap::string> Server::GetSourceContent(dap::integer sourceReference)
 {
     auto module = m_Debugger.GetModule();
     auto source = module->GetSourceContent(sourceReference);
@@ -338,12 +343,14 @@ std::optional<dap::string> DAPServer::GetSourceContent(dap::integer sourceRefere
     return source->CString();
 }
 
-dap::array<dap::Thread> DAPServer::GetThreads()
+dap::array<dap::Thread> Server::GetThreads()
 {
-    ScopeLock _debuggerLock(m_Debugger);
+    PulsarDebugger::ScopeLock _debuggerLock(m_Debugger);
     dap::array<dap::Thread> dapThreads;
     auto debuggerContext = GetOrCreateContext();
-    debuggerContext->ForEachThread([&dapThreads](ThreadId threadId, const DebuggerContext::Thread& thread)
+    debuggerContext->ForEachThread([&dapThreads](
+            PulsarDebugger::ThreadId threadId,
+            const PulsarDebugger::DebuggerContext::Thread& thread)
     {
         dap::Thread dapThread;
         dapThread.id   = threadId;
@@ -353,9 +360,9 @@ dap::array<dap::Thread> DAPServer::GetThreads()
     return dapThreads;
 }
 
-std::optional<dap::array<dap::StackFrame>> DAPServer::GetStackFrames(dap::integer threadId, dap::integer startFrame, dap::integer levels, dap::integer* _totalFrames)
+std::optional<dap::array<dap::StackFrame>> Server::GetStackFrames(dap::integer threadId, dap::integer startFrame, dap::integer levels, dap::integer* _totalFrames)
 {
-    ScopeLock _debuggerLock(m_Debugger);
+    PulsarDebugger::ScopeLock _debuggerLock(m_Debugger);
     auto debuggerContext = GetOrCreateContext();
     size_t totalFrames = 0;
     auto debuggerStackFrames = debuggerContext->GetOrLoadStackFrames(
@@ -389,9 +396,9 @@ std::optional<dap::array<dap::StackFrame>> DAPServer::GetStackFrames(dap::intege
     return stackFrames;
 }
 
-std::optional<dap::array<dap::Scope>> DAPServer::GetScopes(dap::integer frameId)
+std::optional<dap::array<dap::Scope>> Server::GetScopes(dap::integer frameId)
 {
-    ScopeLock _debuggerLock(m_Debugger);
+    PulsarDebugger::ScopeLock _debuggerLock(m_Debugger);
     auto debuggerContext = GetOrCreateContext();
     auto debuggerScopes  = debuggerContext->GetOrLoadScopes(frameId);
     if (!debuggerScopes) return std::nullopt;
@@ -408,7 +415,7 @@ std::optional<dap::array<dap::Scope>> DAPServer::GetScopes(dap::integer frameId)
     return scopes;
 }
 
-std::optional<dap::array<dap::Variable>> DAPServer::GetVariables(dap::integer variablesReference, dap::integer start, dap::integer count)
+std::optional<dap::array<dap::Variable>> Server::GetVariables(dap::integer variablesReference, dap::integer start, dap::integer count)
 {
     auto debuggerContext   = GetOrCreateContext();
     auto debuggerVariables = debuggerContext->GetVariables(
@@ -421,11 +428,11 @@ std::optional<dap::array<dap::Variable>> DAPServer::GetVariables(dap::integer va
     dap::array<dap::Variable> variables;
     for (size_t i = 0; i < debuggerVariables->Size(); ++i) {
         const auto& debuggerVariable = (*debuggerVariables)[i];
-        if (m_ShowAllVariables || debuggerVariable.Visibility == DebuggerContext::Variable::EVisibility::Visible) {
+        if (m_ShowAllVariables || debuggerVariable.Visibility == PulsarDebugger::DebuggerContext::Variable::EVisibility::Visible) {
             dap::Variable var;
-            var.name = debuggerVariable.Visibility == DebuggerContext::Variable::EVisibility::Shadowed ? "//" : "";
+            var.name = debuggerVariable.Visibility == PulsarDebugger::DebuggerContext::Variable::EVisibility::Shadowed ? "//" : "";
             var.name              += debuggerVariable.Name.CString();
-            var.type               = ValueTypeToString(debuggerVariable.Type);
+            var.type               = PulsarDebugger::ValueTypeToString(debuggerVariable.Type);
             var.value              = debuggerVariable.Value.CString();
             var.variablesReference = debuggerVariable.VariablesReference;
             variables.emplace_back(std::move(var));
@@ -435,7 +442,7 @@ std::optional<dap::array<dap::Variable>> DAPServer::GetVariables(dap::integer va
     return variables;
 }
 
-void DAPServer::Terminate()
+void Server::Terminate()
 {
     if (m_Terminate) return;
     m_Terminate = true;
@@ -443,7 +450,7 @@ void DAPServer::Terminate()
     m_Session->send(dap::TerminatedEvent());
 }
 
-void DAPServer::ProcessEvents()
+void Server::ProcessEvents()
 {
     while (!m_Terminate) {
         m_Terminate.wait(false);
@@ -452,12 +459,12 @@ void DAPServer::ProcessEvents()
     m_Debugger.Terminate();
 }
 
-Ref<DebuggerContext> DAPServer::GetOrCreateContext()
+PulsarDebugger::Ref<PulsarDebugger::DebuggerContext> Server::GetOrCreateContext()
 {
-    ScopeLock _debuggerContextRefLock(m_DebuggerContext);
-    Ref<DebuggerContext> context = m_DebuggerContext.Load();
+    PulsarDebugger::ScopeLock _debuggerContextRefLock(m_DebuggerContext);
+    auto context = m_DebuggerContext.Load();
     if (!context) {
-        context = Ref<DebuggerContext>::New(m_Debugger);
+        context = PulsarDebugger::Ref<PulsarDebugger::DebuggerContext>::New(m_Debugger);
         m_DebuggerContext.Store(context);
     }
     return context;
