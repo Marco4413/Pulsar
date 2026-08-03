@@ -16,7 +16,6 @@
 
 namespace PulsarDebugger
 {
-    using DebuggerContextScopeLock = ScopeLock<std::recursive_mutex>;
     class DebuggerContext : public ILockable<std::recursive_mutex>
     {
     public:
@@ -66,7 +65,8 @@ namespace PulsarDebugger
         DebuggerContext& operator=(const DebuggerContext&) = delete;
         DebuggerContext& operator=(DebuggerContext&&)      = delete;
 
-        bool RegisterThread(ThreadId id, std::optional<Pulsar::String> name=std::nullopt);
+        bool RegisterThread(ThreadId id);
+        void ForEachThread(std::function<void(ThreadId, const Thread&)> fn);
 
         std::optional<Thread> GetThread(ThreadId threadId);
         std::optional<StackFrame> GetOrLoadStackFrame(FrameId frameId);
@@ -119,7 +119,7 @@ namespace PulsarDebugger
 
     private:
         Debugger& m_Debugger;
-        SharedDebuggableModule m_DebuggableModule;
+        DebuggableModule::CRef m_Module;
 
         Pulsar::HashMap<ThreadId, Thread> m_Threads;
         Pulsar::List<StackFrameOrLazy> m_StackFrames;

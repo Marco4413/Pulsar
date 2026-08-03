@@ -10,6 +10,16 @@ ThreadId ComputeThreadId(const Pulsar::ExecutionContext& thread)
     return static_cast<ThreadId>(reinterpret_cast<size_t>(&thread)) % MAX_SAFE_INTEGER;
 }
 
+Pulsar::Module& DebuggableModule::Get()
+{
+    return m_Module;
+}
+
+const Pulsar::Module& DebuggableModule::Get() const
+{
+    return m_Module;
+}
+
 Pulsar::ParserNotifications DebuggableModule::GetParserNotificationsListener()
 {
     Pulsar::ParserNotifications notifications;
@@ -68,14 +78,9 @@ Pulsar::ParserNotifications DebuggableModule::GetParserNotificationsListener()
     return notifications;
 }
 
-Pulsar::Module& DebuggableModule::GetModule()
+PulsarBindings::BindingsRegister& DebuggableModule::GetBindings()
 {
-    return m_Module;
-}
-
-const Pulsar::Module& DebuggableModule::GetModule() const
-{
-    return m_Module;
+    return m_Bindings;
 }
 
 const DebuggableModule::LocalScopeInfo* DebuggableModule::GetLocalScopeInfo(SourceReference sourceReference, size_t line) const

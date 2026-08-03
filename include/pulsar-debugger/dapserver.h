@@ -48,6 +48,7 @@ namespace PulsarDebugger
                 const char* scriptPath, const dap::array<dap::string>& scriptArgs,
                 const char* entryPoint="main", bool stopOnEntry=true);
 
+        dap::array<dap::Thread> GetThreads();
         std::optional<dap::array<dap::StackFrame>> GetStackFrames(dap::integer threadId, dap::integer startFrame, dap::integer levels, dap::integer* totalFrames);
         std::optional<dap::array<dap::Scope>> GetScopes(dap::integer frameId);
         std::optional<dap::array<dap::Variable>> GetVariables(dap::integer scopeId, dap::integer start, dap::integer count);
@@ -67,7 +68,7 @@ namespace PulsarDebugger
         }
 
         // Make sure to lock the debugger before calling this
-        std::shared_ptr<DebuggerContext> GetOrCreateContext();
+        Ref<DebuggerContext> GetOrCreateContext();
 
     private:
         std::atomic_bool m_Terminate;
@@ -79,7 +80,8 @@ namespace PulsarDebugger
         Session &m_Session;
         LogFile m_LogFile;
         Debugger m_Debugger;
-        std::shared_ptr<DebuggerContext> m_DebuggerContext;
+
+        LockedValue<Ref<DebuggerContext>> m_DebuggerContext;
     };
 }
 

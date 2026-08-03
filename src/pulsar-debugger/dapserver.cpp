@@ -31,29 +31,33 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
     m_Debugger.SetEventHandler([this](ThreadId threadId, Debugger::EEventKind debugEv, Debugger& debugger)
     {
         // Invalidate context
-        this->m_DebuggerContext = nullptr;
+        this->m_DebuggerContext.Store(nullptr);
         switch (debugEv) {
         case Debugger::EEventKind::Step: {
             dap::StoppedEvent ev;
             ev.reason   = "step";
             ev.threadId = threadId;
+            ev.allThreadsStopped = false;
             m_Session->send(ev);
         } break;
         case Debugger::EEventKind::Breakpoint: {
             dap::StoppedEvent ev;
             ev.reason   = "breakpoint";
             ev.threadId = threadId;
+            ev.allThreadsStopped = false;
             m_Session->send(ev);
         } break;
         case Debugger::EEventKind::Continue: {
             dap::ContinuedEvent ev;
             ev.threadId = threadId;
+            ev.allThreadsContinued = false;
             m_Session->send(ev);
         } break;
         case Debugger::EEventKind::Pause: {
             dap::StoppedEvent ev;
             ev.reason   = "pause";
             ev.threadId = threadId;
+            ev.allThreadsStopped = false;
             m_Session->send(ev);
         } break;
         case Debugger::EEventKind::Done: {
@@ -61,15 +65,18 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
             ev.reason   = "exited";
             ev.threadId = threadId;
             m_Session->send(ev);
-            this->Terminate();
+            if (threadId == debugger.GetMainThreadId())
+                this->Terminate();
         } break;
         case Debugger::EEventKind::Error: {
             dap::StoppedEvent ev;
             ev.reason   = "exception";
             ev.threadId = threadId;
+            ev.allThreadsStopped = false;
             auto thread = debugger.GetThread(threadId);
             if (thread) {
-                auto runtimeState = thread->GetCurrentState();
+                ScopeLock _threadLock(*thread);
+                auto runtimeState = thread->GetContext().GetState();
                 ev.text = Pulsar::RuntimeStateToString(runtimeState);
             } else {
                 ev.text = "Could not retrieve runtime state.";
@@ -93,6 +100,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
 
         dap::InitializeResponse res;
         res.supportsConfigurationDoneRequest = true;
+        res.supportsSingleThreadExecutionRequests = false;
         return res;
     });
 
@@ -109,20 +117,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
     m_Session->registerHandler([this](const dap::ThreadsRequest&)
     {
         dap::ThreadsResponse res;
-        ThreadId mainThreadId = m_Debugger.GetMainThreadId();
-        this->m_Debugger.ForEachThread([&res, mainThreadId](std::shared_ptr<Thread> thread)
-        {
-            ThreadId threadId = thread->GetId();
-
-            dap::Thread dapThread;
-            dapThread.id = threadId;
-            if (threadId != mainThreadId) {
-                dapThread.name = std::format("Thread-{}", thread->GetId());
-            } else {
-                dapThread.name = std::format("MainThread ({})", thread->GetId());
-            }
-            res.threads.push_back(dapThread);
-        });
+        res.threads = this->GetThreads();
         return res;
     });
 
@@ -137,7 +132,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
         res.scopes = std::move(*scopes);
         return res;
     });
-    
+
     m_Session->registerHandler([this](const dap::VariablesRequest& req) -> dap::ResponseOrError<dap::VariablesResponse>
     {
         auto variables = this->GetVariables(req.variablesReference, req.start.value(0), req.count.value(0));
@@ -166,19 +161,22 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
 
     m_Session->registerHandler([this](const dap::SetBreakpointsRequest& req) -> dap::ResponseOrError<dap::SetBreakpointsResponse>
     {
-        auto debuggableModule = this->m_Debugger.GetModule();
+        auto breakpoints = this->m_Debugger.GetBreakpoints();
+        if (!breakpoints) return dap::SetBreakpointsResponse{};
+
+        ScopeLock _breakpointsLock(*breakpoints);
+
+        auto module = this->m_Debugger.GetModule();
         SourceReference sourceReference = req.source.sourceReference.value(INVALID_SOURCE_REFERENCE);
         if (!req.source.sourceReference && req.source.path) {
-            if (debuggableModule) {
-                sourceReference = debuggableModule->FindSourceReferenceForPath(req.source.path->c_str());
-            }
+            sourceReference = module->FindSourceReferenceForPath(req.source.path->c_str());
         }
 
         dap::SetBreakpointsResponse res;
         if (sourceReference == INVALID_SOURCE_REFERENCE) {
             if (req.breakpoints) {
                 res.breakpoints.resize(req.breakpoints->size());
-    
+
                 for (size_t i = 0; i < req.breakpoints->size(); ++i) {
                     auto& resBreakpoint = res.breakpoints[i];
                     resBreakpoint.verified = false;
@@ -186,28 +184,26 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
                 }
             }
         } else {
-            this->m_Debugger.ClearBreakpoints(sourceReference);
+            breakpoints->Clear(sourceReference);
 
             if (req.breakpoints) {
                 res.breakpoints.resize(req.breakpoints->size());
-    
+
                 for (size_t i = 0; i < req.breakpoints->size(); ++i) {
                     const auto& reqBreakpoint = (*req.breakpoints)[i];
                     auto& resBreakpoint = res.breakpoints[i];
-    
-                    if (debuggableModule) {
-                        dap::Source breakpointSource;
-                        breakpointSource.path = debuggableModule->GetSourcePath(sourceReference)->CString();
-                        breakpointSource.sourceReference = sourceReference;
-                        resBreakpoint.source = std::move(breakpointSource);
-                    }
-    
-                    auto breakpointError = this->m_Debugger.SetBreakpoint(
+
+                    dap::Source breakpointSource;
+                    breakpointSource.path = module->GetSourcePath(sourceReference)->CString();
+                    breakpointSource.sourceReference = sourceReference;
+                    resBreakpoint.source = std::move(breakpointSource);
+
+                    auto breakpointError = breakpoints->Set(
                             sourceReference,
                             this->m_LinesStartAt1
                                 ? static_cast<size_t>(reqBreakpoint.line-1)
                                 : static_cast<size_t>(reqBreakpoint.line));
-    
+
                     resBreakpoint.verified = !breakpointError;
                     if (!resBreakpoint.verified) {
                         resBreakpoint.reason  = "failed";
@@ -230,7 +226,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
         this->m_Debugger.Continue(req.threadId);
         return dap::ContinueResponse();
     });
-    
+
     m_Session->registerHandler([this](const dap::PauseRequest& req)
     {
         this->m_Debugger.Pause(req.threadId);
@@ -257,17 +253,14 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
 
     m_Session->registerHandler([this](const dap::SourceRequest& req) -> dap::ResponseOrError<dap::SourceResponse>
     {
-        auto debuggableModule = this->m_Debugger.GetModule();
-        if (!debuggableModule) {
-            return dap::Error("No module is being debugged.");
-        }
+        auto module = this->m_Debugger.GetModule();
 
         SourceReference sourceReference = req.sourceReference;
         if (req.source) {
             if (req.source->sourceReference) {
                 sourceReference = *req.source->sourceReference;
             } else if (req.source->path) {
-                sourceReference = debuggableModule->FindSourceReferenceForPath(req.source->path->c_str());
+                sourceReference = module->FindSourceReferenceForPath(req.source->path->c_str());
             }
         }
 
@@ -275,7 +268,7 @@ DAPServer::DAPServer(Session& session, LogFile logFile)
             return dap::Error("Could not find source.");
         }
 
-        auto source = debuggableModule->GetSourceContent(sourceReference);
+        auto source = module->GetSourceContent(sourceReference);
         if (!source) {
             return dap::Error("Unknown source reference '%d'.", int(sourceReference));
         }
@@ -339,16 +332,30 @@ std::optional<Debugger::LaunchError> DAPServer::Launch(
 
 std::optional<dap::string> DAPServer::GetSourceContent(dap::integer sourceReference)
 {
-    auto debuggableModule = m_Debugger.GetModule();
-    if (!debuggableModule) return std::nullopt;
-    auto source = debuggableModule->GetSourceContent(sourceReference);
+    auto module = m_Debugger.GetModule();
+    auto source = module->GetSourceContent(sourceReference);
     if (!source) return std::nullopt;
     return source->CString();
 }
 
+dap::array<dap::Thread> DAPServer::GetThreads()
+{
+    ScopeLock _debuggerLock(m_Debugger);
+    dap::array<dap::Thread> dapThreads;
+    auto debuggerContext = GetOrCreateContext();
+    debuggerContext->ForEachThread([&dapThreads](ThreadId threadId, const DebuggerContext::Thread& thread)
+    {
+        dap::Thread dapThread;
+        dapThread.id   = threadId;
+        dapThread.name = thread.Name.CString();
+        dapThreads.emplace_back(std::move(dapThread));
+    });
+    return dapThreads;
+}
+
 std::optional<dap::array<dap::StackFrame>> DAPServer::GetStackFrames(dap::integer threadId, dap::integer startFrame, dap::integer levels, dap::integer* _totalFrames)
 {
-    DebuggerScopeLock _lock(m_Debugger);
+    ScopeLock _debuggerLock(m_Debugger);
     auto debuggerContext = GetOrCreateContext();
     size_t totalFrames = 0;
     auto debuggerStackFrames = debuggerContext->GetOrLoadStackFrames(
@@ -384,7 +391,7 @@ std::optional<dap::array<dap::StackFrame>> DAPServer::GetStackFrames(dap::intege
 
 std::optional<dap::array<dap::Scope>> DAPServer::GetScopes(dap::integer frameId)
 {
-    DebuggerScopeLock _lock(m_Debugger);
+    ScopeLock _debuggerLock(m_Debugger);
     auto debuggerContext = GetOrCreateContext();
     auto debuggerScopes  = debuggerContext->GetOrLoadScopes(frameId);
     if (!debuggerScopes) return std::nullopt;
@@ -432,21 +439,28 @@ void DAPServer::Terminate()
 {
     if (m_Terminate) return;
     m_Terminate = true;
+    m_Terminate.notify_all();
     m_Session->send(dap::TerminatedEvent());
 }
 
 void DAPServer::ProcessEvents()
 {
     while (!m_Terminate) {
-        m_Debugger.WaitForEvent();
-        m_Debugger.ProcessEvent();
+        m_Terminate.wait(false);
     }
+
+    m_Debugger.Terminate();
 }
 
-std::shared_ptr<DebuggerContext> DAPServer::GetOrCreateContext()
+Ref<DebuggerContext> DAPServer::GetOrCreateContext()
 {
-    if (!m_DebuggerContext) m_DebuggerContext = std::make_shared<DebuggerContext>(m_Debugger);
-    return m_DebuggerContext;
+    ScopeLock _debuggerContextRefLock(m_DebuggerContext);
+    Ref<DebuggerContext> context = m_DebuggerContext.Load();
+    if (!context) {
+        context = Ref<DebuggerContext>::New(m_Debugger);
+        m_DebuggerContext.Store(context);
+    }
+    return context;
 }
 
 }

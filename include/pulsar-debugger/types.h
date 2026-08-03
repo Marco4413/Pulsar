@@ -7,6 +7,10 @@
 #include <pulsar/parser.h>
 #include <pulsar/runtime.h>
 
+#include <pulsar/structures/ref.h>
+
+#include <pulsar-bindings/bindingsregister.h>
+
 namespace PulsarDebugger
 {
     constexpr int64_t MAX_SAFE_INTEGER = 0x1FFFFFFFFFFFFF;
@@ -29,11 +33,14 @@ namespace PulsarDebugger
     // So make sure not to move it in memory to keep the ThreadId valid.
     ThreadId ComputeThreadId(const Pulsar::ExecutionContext& thread);
 
-    using SharedDebuggableModule = std::shared_ptr<const class DebuggableModule>;
+    template <typename T>
+    using Ref = Pulsar::SharedRef<T>;
 
     class DebuggableModule
     {
     public:
+        using CRef = PulsarDebugger::Ref<const DebuggableModule>;
+
         struct LocalScopeInfo
         {
             using Local = Pulsar::LocalScope::LocalVar;
@@ -65,10 +72,11 @@ namespace PulsarDebugger
         DebuggableModule& operator=(const DebuggableModule&) = default;
         DebuggableModule& operator=(DebuggableModule&&)      = default;
 
-        Pulsar::ParserNotifications GetParserNotificationsListener();
+        Pulsar::Module& Get();
+        const Pulsar::Module& Get() const;
 
-        Pulsar::Module& GetModule();
-        const Pulsar::Module& GetModule() const;
+        Pulsar::ParserNotifications GetParserNotificationsListener();
+        PulsarBindings::BindingsRegister& GetBindings();
 
         // Any function which returns a pointer, the returned pointer, if not nullptr, is valid while this instance exists.
         const DebuggableModule::LocalScopeInfo* GetLocalScopeInfo(SourceReference sourceReference, size_t line) const;
@@ -84,6 +92,7 @@ namespace PulsarDebugger
         // void FilterReachableLines(SourceReference sourceReference, Pulsar::List<size_t>& lines) const;
 
     private:
+        PulsarBindings::BindingsRegister m_Bindings;
         Pulsar::Module m_Module;
         Pulsar::List<FunctionInfo> m_FunctionInfos;
     };

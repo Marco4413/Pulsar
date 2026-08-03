@@ -29,8 +29,37 @@ namespace PulsarDebugger
             : m_Lock(lockable.m_Mutex) { }
         ~ScopeLock() = default;
 
+        void Lock()   { m_Lock.lock();   }
+        void Unlock() { m_Lock.unlock(); }
+
     private:
         std::unique_lock<Mutex> m_Lock;
+    };
+
+    template<typename T>
+    class LockedValue : public ILockable<std::recursive_mutex>
+    {
+    public:
+        LockedValue() = default;
+        LockedValue(T initValue)
+            : m_Value(std::move(initValue)) {}
+        ~LockedValue() = default;
+
+        T Load()
+        {
+            ScopeLock _lock(*this);
+            T value = m_Value;
+            return value;
+        }
+
+        void Store(T newValue)
+        {
+            ScopeLock _lock(*this);
+            m_Value = std::move(newValue);
+        }
+
+    private:
+        T m_Value;
     };
 }
 

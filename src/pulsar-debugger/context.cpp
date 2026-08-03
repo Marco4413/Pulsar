@@ -11,40 +11,38 @@ namespace PulsarDebugger
 
 DebuggerContext::DebuggerContext(Debugger& debugger)
     : m_Debugger(debugger)
-    , m_DebuggableModule(nullptr)
+    , m_Module(nullptr)
 {
     // Null Variables
     m_Variables.EmplaceBack();
 
-    DebuggerScopeLock _lock(m_Debugger);
-    m_DebuggableModule = debugger.GetModule();
+    ScopeLock _debuggerLock(m_Debugger);
+    m_Module = debugger.GetModule();
 
-    ThreadId mainThreadId = m_Debugger.GetMainThreadId();
-    m_Debugger.ForEachThread([this, mainThreadId](std::shared_ptr<PulsarDebugger::Thread> thread)
+    m_Debugger.ForEachThread([this](Ref<PulsarDebugger::Thread> thread)
     {
         ThreadId threadId = thread->GetId();
-        if (threadId != mainThreadId) {
-            RegisterThread(threadId, std::format("Thread-{}", thread->GetId()).c_str());
-        } else {
-            RegisterThread(threadId, std::format("MainThread ({})", thread->GetId()).c_str());
-        }
+        RegisterThread(threadId);
     });
 }
 
-bool DebuggerContext::RegisterThread(ThreadId threadId, std::optional<Pulsar::String> name)
+bool DebuggerContext::RegisterThread(ThreadId threadId)
 {
     auto debuggerThread = m_Debugger.GetThread(threadId);
     if (!debuggerThread) return false;
 
-    DebuggerContextScopeLock _lock(*this);
-    ThreadScopeLock _threadLock(*debuggerThread);
-
+    ScopeLock _lock(*this);
     Thread& thread = m_Threads.Emplace(threadId).Value();
+    thread.Name  = debuggerThread->GetName();
+    thread.Name += '#';
+    thread.Name += Pulsar::IntToString(threadId);
+    if (!debuggerThread->IsPaused()) return true;
+
+    ScopeLock _threadLock(*debuggerThread);
     const auto& threadContext = debuggerThread->GetContext();
     ScopeId globalScopeId = CreateLazyScope(threadId, LazyScope::EKind::Globals);
     // ScopeId globalScopeId = CreateScope(threadContext.GetGlobals(), "Globals", Variable::EVisibility::Visible);
 
-    thread.Name = name ? std::move(*name) : Pulsar::String(std::format("Thread {}", threadId).c_str());
     for (size_t i = 1; i <= threadContext.GetCallStack().Size(); ++i) {
         size_t callIndex = threadContext.GetCallStack().Size() - i;
         FrameId frameId = CreateLazyStackFrame(
@@ -59,9 +57,17 @@ bool DebuggerContext::RegisterThread(ThreadId threadId, std::optional<Pulsar::St
     return true;
 }
 
+void DebuggerContext::ForEachThread(std::function<void(ThreadId, const Thread&)> fn)
+{
+    ScopeLock _lock(*this);
+    for (const auto& [ id, thread ] : m_Threads) {
+        fn(id, thread);
+    }
+}
+
 std::optional<DebuggerContext::Thread> DebuggerContext::GetThread(ThreadId threadId)
 {
-    DebuggerContextScopeLock _lock(*this);
+    ScopeLock _lock(*this);
     const Thread* thread = GetThreadPtr(threadId);
     if (!thread) return std::nullopt;
     return *thread;
@@ -69,7 +75,7 @@ std::optional<DebuggerContext::Thread> DebuggerContext::GetThread(ThreadId threa
 
 std::optional<DebuggerContext::StackFrame> DebuggerContext::GetOrLoadStackFrame(FrameId frameId)
 {
-    DebuggerContextScopeLock _lock(*this);
+    ScopeLock _lock(*this);
     const StackFrame* stackFrame = GetOrLoadStackFramePtr(frameId);
     if (!stackFrame) return std::nullopt;
     return *stackFrame;
@@ -77,7 +83,7 @@ std::optional<DebuggerContext::StackFrame> DebuggerContext::GetOrLoadStackFrame(
 
 std::optional<DebuggerContext::Scope> DebuggerContext::GetOrLoadScope(ScopeId scopeId)
 {
-    DebuggerContextScopeLock _lock(*this);
+    ScopeLock _lock(*this);
     const Scope* scope = GetOrLoadScopePtr(scopeId);
     if (!scope) return std::nullopt;
     return *scope;
@@ -85,7 +91,7 @@ std::optional<DebuggerContext::Scope> DebuggerContext::GetOrLoadScope(ScopeId sc
 
 std::optional<Pulsar::List<DebuggerContext::StackFrame>> DebuggerContext::GetOrLoadStackFrames(ThreadId threadId, size_t framesStart, size_t framesCount, size_t* totalFrames)
 {
-    DebuggerContextScopeLock _lock(*this);
+    ScopeLock _lock(*this);
 
     const Thread* maybeThread = GetThreadPtr(threadId);
     if (!maybeThread) return std::nullopt;
@@ -110,7 +116,7 @@ std::optional<Pulsar::List<DebuggerContext::StackFrame>> DebuggerContext::GetOrL
 
 std::optional<Pulsar::List<DebuggerContext::Scope>> DebuggerContext::GetOrLoadScopes(FrameId frameId, size_t scopesStart, size_t scopesCount, size_t* totalScopes)
 {
-    DebuggerContextScopeLock _lock(*this);
+    ScopeLock _lock(*this);
 
     const StackFrame* maybeFrame = GetOrLoadStackFramePtr(frameId);
     if (!maybeFrame) return std::nullopt;
@@ -135,7 +141,7 @@ std::optional<Pulsar::List<DebuggerContext::Scope>> DebuggerContext::GetOrLoadSc
 
 std::optional<Pulsar::List<DebuggerContext::Variable>> DebuggerContext::GetVariables(VariablesReference variablesReference, size_t variablesStart, size_t variablesCount, size_t* totalVariables)
 {
-    DebuggerContextScopeLock _lock(*this);
+    ScopeLock _lock(*this);
 
     const Pulsar::List<Variable>* maybeVariables = GetVariablesPtr(variablesReference);
     if (!maybeVariables) return std::nullopt;
@@ -159,8 +165,8 @@ std::optional<Pulsar::List<DebuggerContext::Variable>> DebuggerContext::GetVaria
 const Pulsar::SourceDebugSymbol* DebuggerContext::GetSource(SourceReference sourceReference) const
 {
     // No need to lock since module is constant
-    if (!m_DebuggableModule) return nullptr;
-    return m_DebuggableModule->GetSource(sourceReference);
+    if (!m_Module) return nullptr;
+    return m_Module->GetSource(sourceReference);
 }
 
 DebuggerContext::Thread* DebuggerContext::GetThreadPtr(ThreadId threadId)
@@ -231,8 +237,9 @@ std::optional<DebuggerContext::StackFrame> DebuggerContext::LoadStackFrame(Frame
 {
     auto debuggerThread = m_Debugger.GetThread(lazyFrame.ThreadId);
     if (!debuggerThread) return std::nullopt;
+    if (!debuggerThread->IsPaused()) return std::nullopt;
 
-    ThreadScopeLock _threadLock(*debuggerThread);
+    ScopeLock _threadLock(*debuggerThread);
     const Pulsar::CallStack& callStack = debuggerThread->GetContext().GetCallStack();
     if (lazyFrame.CallIndex >= callStack.Size()) return std::nullopt;
     const Pulsar::Frame& frame = callStack[lazyFrame.CallIndex];
@@ -282,7 +289,8 @@ std::optional<DebuggerContext::Scope> DebuggerContext::LoadScope(const LazyScope
     switch (lazyScope.Kind) {
     case LazyScope::EKind::Globals: {
         auto thread = m_Debugger.GetThread(lazyScope.ThreadOrFrameId);
-        ThreadScopeLock _threadLock(*thread);
+        if (!thread->IsPaused()) return std::nullopt;
+        ScopeLock _threadLock(*thread);
 
         const auto& globals = thread->GetContext().GetGlobals();
 
@@ -296,8 +304,8 @@ std::optional<DebuggerContext::Scope> DebuggerContext::LoadScope(const LazyScope
             Pulsar::String varName;
             if (globals[i].IsConstant)
                 varName += "const ";
-            varName += m_DebuggableModule->GetModule().Globals[i].Name;
-            Variable var = CreateVariable(globals[i].Value, std::move(varName), Variable::EVisibility::Visible, &m_DebuggableModule->GetModule());
+            varName += m_Module->Get().Globals[i].Name;
+            Variable var = CreateVariable(globals[i].Value, std::move(varName), Variable::EVisibility::Visible, &m_Module->Get());
             m_Variables[scope.VariablesReference].EmplaceBack(std::move(var));
         }
 
@@ -311,7 +319,8 @@ std::optional<DebuggerContext::Scope> DebuggerContext::LoadScope(const LazyScope
         const auto& stackFrame = std::get<StackFrame>(m_StackFrames[frameId]);
 
         auto thread = m_Debugger.GetThread(stackFrame.ThreadId);
-        ThreadScopeLock _threadLock(*thread);
+        if (!thread->IsPaused()) return std::nullopt;
+        ScopeLock _threadLock(*thread);
 
         if (stackFrame.CallIndex > thread->GetContext().GetCallStack().Size()) return std::nullopt;
         const auto& callFrame = thread->GetContext().GetCallStack()[stackFrame.CallIndex];
@@ -341,13 +350,13 @@ std::optional<DebuggerContext::Scope> DebuggerContext::LoadScope(const LazyScope
         {
             size_t i = 0;
             for (auto it = valuesBegin; it != valuesEnd; ++it, ++i) {
-                Variable var = CreateVariable(*it, Pulsar::UIntToString(i), defaultVisibility, &m_DebuggableModule->GetModule());
+                Variable var = CreateVariable(*it, Pulsar::UIntToString(i), defaultVisibility, &m_Module->Get());
                 m_Variables[scope.VariablesReference].EmplaceBack(std::move(var));
             }
         }
 
         if (lazyScope.Kind == LazyScope::EKind::Locals) {
-            auto scopeInfo = m_DebuggableModule->GetLocalScopeInfo(stackFrame.SourceReference, stackFrame.SourcePos.Line);
+            auto scopeInfo = m_Module->GetLocalScopeInfo(stackFrame.SourceReference, stackFrame.SourcePos.Line);
             if (scopeInfo) {
                 auto& variables = m_Variables[scope.VariablesReference];
 
