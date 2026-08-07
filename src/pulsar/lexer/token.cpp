@@ -50,6 +50,7 @@ const char* Pulsar::TokenTypeToString(TokenType ttype)
     case TokenType::KW_Local:          return "KW_Local";
     case TokenType::CompilerDirective: return "CompilerDirective";
     case TokenType::Label:             return "Label";
+    case TokenType::StringLiteralJoin: return "StringLiteralJoin";
     case TokenType::EndOfFile:         return "EndOfFile";
     }
     return "Unknown";

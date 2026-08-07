@@ -3,7 +3,7 @@
 bool Pulsar::Lexer::SkipShaBang()
 {
     Decoder decoder = m_Decoder;
-    
+
     if (decoder.Next() != '#' || decoder.Next() != '!')
         return false;
 
@@ -130,6 +130,12 @@ Pulsar::Token Pulsar::Lexer::NextToken()
             }
         }
         return PullToken(decoder, TokenType::More);
+    case '\\':
+        if (decoder.Peek() == 'n') {
+            decoder.Skip();
+            return PullToken(decoder, TokenType::StringLiteralJoin, '\n');
+        }
+        return PullToken(decoder, TokenType::StringLiteralJoin, '\0');
     default:
         return PullToken(decoder, TokenType::None);
     }
@@ -439,57 +445,8 @@ Pulsar::Token Pulsar::Lexer::ParseStringLiteral()
     }
     if (decoder.Next() != '"')
         return CreateNoneToken();
-    
-    Token strToken = PullToken(decoder, TokenType::StringLiteral, std::move(val));
 
-    // Multi-line String Literals (\ and \n)
-    bool isValidMultiLine = false;
-    Decoder oldDecoder = m_Decoder;
-    size_t oldLine = m_Line;
-    size_t oldLineStartCodepoint = m_LineStartCodepoint;
-
-    SkipWhiteSpaces();
-    if (m_Decoder.Next() == '\\') {
-        bool appendNewLine = m_Decoder.Peek() == 'n';
-        if (appendNewLine) m_Decoder.Skip();
-        SkipWhiteSpaces();
-        Token nextStrToken = ParseStringLiteral();
-        if (nextStrToken.Type != TokenType::None) {
-            isValidMultiLine = true;
-            if (appendNewLine)
-                strToken.StringVal += '\n';
-            strToken.StringVal += std::move(nextStrToken.StringVal);
-            if (strToken.SourcePos.Line == nextStrToken.SourcePos.Line) {
-                // Same line: Extend CharSpan to include the whole String
-                // "Foo" \ "Bar"
-                // ^       ^
-                // |       nextStrToken.Char
-                // strToken.Char
-                // ~~~~~~~~ = nextStrToken.Char - strToken.Char
-                //         ~~~~~ = nextStrToken.CharSpan
-                strToken.SourcePos.CharSpan = (
-                    nextStrToken.SourcePos.Char
-                    - strToken.SourcePos.Char
-                    + nextStrToken.SourcePos.CharSpan);
-            } else {
-                // If it's not the same line take the last SourcePos
-                strToken.SourcePos = nextStrToken.SourcePos;
-            }
-        }
-    }
-
-    // Restore Lexer Context
-    // TODO: Maybe add a proper way to do this
-    //   Lexer::SaveContext
-    //   Lexer::RestoreContext
-    //   Lexer::DropContext
-    if (!isValidMultiLine) {
-        m_Decoder = oldDecoder;
-        m_Line = oldLine;
-        m_LineStartCodepoint = oldLineStartCodepoint;
-    }
-
-    return strToken;
+    return PullToken(decoder, TokenType::StringLiteral, std::move(val));
 }
 
 Pulsar::Token Pulsar::Lexer::ParseCharacterLiteral()

@@ -269,16 +269,16 @@ namespace Pulsar
         ParseResult ParseGlobalDefinition(Module& module, GlobalScope& globalScope, const ParseSettings& settings);
         ParseResult ParseFunctionDefinition(Module& module, GlobalScope& globalScope, const ParseSettings& settings);
         ParseResult BackPatchFunctionLabels(FunctionDefinition& func, const FunctionScope& funcScope);
-        ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalScope& localScope, SkippableBlock* skippableBlock, bool allowEndKeyword, const ParseSettings& settings);
+        ParseResult ParseFunctionBody(Module& module, FunctionDefinition& func, const LocalScope& localScope, SkippableBlock* skippableBlock, Token* closingToken, const ParseSettings& settings);
         ParseResult ParseIfStatement(Module& module, FunctionDefinition& func, const LocalScope& localScope, SkippableBlock* skippableBlock, bool isChained, const ParseSettings& settings);
         ParseResult ParseLocalBlock(Module& module, FunctionDefinition& func, const LocalScope& localScope, SkippableBlock* skippableBlock, const ParseSettings& settings);
         ParseResult ParseWhileLoop(Module& module, FunctionDefinition& func, const LocalScope& localScope, const ParseSettings& settings);
         ParseResult ParseDoBlock(Module& module, FunctionDefinition& func, const LocalScope& localScope, const ParseSettings& settings);
-        ParseResult PushLValue(Module& module, FunctionDefinition& func, const LocalScope& localScope, const Token& lvalue, const ParseSettings& settings);
-    
-        const Token& NextToken();
+        ParseResult ParseLValue(Module& module, FunctionDefinition& func, const LocalScope& localScope, const ParseSettings& settings);
+        ParseResult ParseStringLiteral(Token& token);
+
+        void ConsumeToken();
         const Token& CurrentToken() const;
-        bool IsEndOfFile() const;
 
         size_t CurrentSourceIndex() const;
         // Pointers are guaranteed to be valid until m_Lexers changes.
@@ -294,13 +294,11 @@ namespace Pulsar
         {
             size_t SourceIndex;
             Pulsar::Lexer Lexer;
+            Pulsar::Token CurrentToken;
         };
 
         HashMap<String, std::nullptr_t> m_ParsedSources;
         List<LexerSource> m_Lexers;
-
-        Lexer* m_Lexer = nullptr;
-        Token m_CurrentToken = Token(TokenType::None);
 
         List<SourceDebugSymbol> m_SourceDebugSymbols;
         ErrorMessage m_ErrorMessage;

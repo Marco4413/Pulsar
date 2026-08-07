@@ -40,6 +40,7 @@ namespace Pulsar
         KW_Local,
         CompilerDirective,
         Label,
+        StringLiteralJoin,
     };
 
     constexpr int64_t TOKEN_CD_GENERIC = 0;
@@ -71,18 +72,24 @@ namespace Pulsar
         Token(TokenType type, String&& val)
             : Type(type), StringVal(val) { }
 
+        Token(TokenType type, char val)
+            : Type(type), CharVal(val) { }
         Token(TokenType type, int64_t val)
             : Type(type), IntegerVal(val) { }
         Token(TokenType type, double val)
             : Type(type), DoubleVal(val) { }
         Token(TokenType type)
             : Type(type), IntegerVal(0) { }
-    
+
     public:
         TokenType Type = TokenType::None;
         String StringVal = "";
+
+        // TODO: Turn into a union?
+        char CharVal = '\0';
         int64_t IntegerVal = 0;
         double DoubleVal = 0.0;
+
         SourcePosition SourcePos = {0,0,0,0};
     };
 }
