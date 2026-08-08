@@ -8,6 +8,13 @@
 
 namespace PulsarLSP
 {
+    template<typename TInt, typename ...Bits>
+        requires(std::is_integral_v<TInt>)
+    constexpr void AddToBitField(TInt& bitField, Bits ...bits)
+    {
+        bitField = (bitField | ... | static_cast<TInt>(bits));
+    }
+
     constexpr const char* ValueTypeToString(Pulsar::ValueType type)
     {
         switch (type) {

@@ -76,11 +76,217 @@ PulsarLSP::FunctionScope&& PulsarLSP::FunctionScopeBuilder::Build()
     return std::move(m_FunctionScope);
 }
 
+static void _SemanticTokens_InsertNonDuplicateSorted(Pulsar::List<PulsarLSP::SemanticToken>& semanticTokens, PulsarLSP::SemanticToken iToken)
+{
+    if (semanticTokens.IsEmpty()) {
+        semanticTokens.EmplaceBack(iToken);
+        return;
+    }
+
+    size_t i = semanticTokens.Size();
+    while (i > 0) {
+        size_t j = i-1;
+        const auto& jToken = semanticTokens[j];
+        if (iToken.Position == jToken.Position)
+            return;
+
+        if (jToken.Position.Line < iToken.Position.Line ||
+            (jToken.Position.Line == iToken.Position.Line && jToken.Position.Char < iToken.Position.Char)) {
+            break;
+        }
+
+        --i;
+    }
+
+    semanticTokens.Resize(semanticTokens.Size()+1);
+    for (size_t j = semanticTokens.Size()-1; j > i; --j)
+        semanticTokens[j] = semanticTokens[j-1];
+    semanticTokens[i] = iToken;
+}
+
+static void _ParsedDocument_SemanticTokens_Init(PulsarLSP::ParsedDocument& doc, const Pulsar::String& source)
+{
+    using namespace PulsarLSP;
+
+    Pulsar::Lexer lexer(source, true);
+    if (Pulsar::Token token; lexer.SkipShaBang(&token)) {
+        doc.SemanticTokens.EmplaceBack(SemanticToken{
+            .Type      = SemanticTokenType::Comment,
+            .Modifiers = 0,
+            .Position  = token.SourcePos,
+        });
+    }
+
+    while (true) {
+        Pulsar::Token token = lexer.NextToken();
+        if (token.Type == Pulsar::TokenType::EndOfFile || token.Type == Pulsar::TokenType::None)
+            break;
+
+        SemanticToken semanticToken{
+            .Type      = SemanticTokenType::None,
+            .Modifiers = 0,
+            .Position  = token.SourcePos,
+        };
+
+        using TokenType = Pulsar::TokenType;
+        switch (token.Type) {
+        case TokenType::None:
+        case TokenType::EndOfFile:
+        case TokenType::Identifier:
+            break;
+        case TokenType::OpenParenth: case TokenType::CloseParenth:
+        case TokenType::OpenBracket: case TokenType::CloseBracket:
+            doc.SemanticTokens.EmplaceBack(semanticToken);
+            break;
+        case TokenType::IntegerLiteral: case TokenType::DoubleLiteral:
+            semanticToken.Type = SemanticTokenType::Number;
+            doc.SemanticTokens.EmplaceBack(semanticToken);
+            break;
+        case TokenType::StringLiteral:
+            semanticToken.Type = SemanticTokenType::String;
+            doc.SemanticTokens.EmplaceBack(semanticToken);
+            break;
+        case TokenType::Plus:      case TokenType::Minus:        case TokenType::Star:          case TokenType::Slash:
+        case TokenType::Modulus:   case TokenType::BitAnd:       case TokenType::BitOr:         case TokenType::BitNot:
+        case TokenType::BitXor:    case TokenType::BitShiftLeft: case TokenType::BitShiftRight: case TokenType::FullStop:
+        case TokenType::Negate:    case TokenType::Colon:        case TokenType::Comma:         case TokenType::RightArrow:
+        case TokenType::LeftArrow: case TokenType::BothArrows:   case TokenType::Equals:        case TokenType::NotEquals:
+        case TokenType::Less:      case TokenType::LessOrEqual:  case TokenType::More:          case TokenType::MoreOrEqual:
+        case TokenType::PushReference: case TokenType::StringLiteralJoin:
+            semanticToken.Type = SemanticTokenType::Operator;
+            doc.SemanticTokens.EmplaceBack(semanticToken);
+            break;
+        case TokenType::KW_Not:    case TokenType::KW_If:       case TokenType::KW_Else: case TokenType::KW_End:
+        case TokenType::KW_Global: case TokenType::KW_Const:    case TokenType::KW_Do:   case TokenType::KW_While:
+        case TokenType::KW_Break:  case TokenType::KW_Continue: case TokenType::KW_Local:
+            semanticToken.Type = SemanticTokenType::Keyword;
+            doc.SemanticTokens.EmplaceBack(semanticToken);
+            break;
+        case TokenType::CompilerDirective: case TokenType::Label:
+            semanticToken.Type = SemanticTokenType::Keyword;
+            doc.SemanticTokens.EmplaceBack(semanticToken);
+            break;
+        case TokenType::Comment:
+            semanticToken.Type = SemanticTokenType::Comment;
+            doc.SemanticTokens.EmplaceBack(semanticToken);
+            break;
+        }
+    }
+}
+
+static void _ParsedDocument_SemanticTokens_ContextAware(PulsarLSP::ParsedDocument& doc, const Pulsar::String& rootPath)
+{
+    using namespace PulsarLSP;
+    // FIXME: There are a lot of String comparisons here.
+    //        SourceIndex is not available in FunctionScope.
+
+    /* === Globals === */
+    for (const auto& global : doc.Module.Globals) {
+        if (!global.HasDebugSymbol()) continue;
+        if (global.DebugSymbol.SourceIdx != 0) continue;
+
+        SemanticToken token{
+            .Type      = SemanticTokenType::Variable,
+            .Modifiers = 0,
+            .Position  = global.DebugSymbol.Token.SourcePos,
+        };
+
+        AddToBitField(token.Modifiers, SemanticTokenModifier::Declaration, SemanticTokenModifier::Definition);
+        if (global.IsConstant) AddToBitField(token.Modifiers, SemanticTokenModifier::ReadOnly);
+
+        _SemanticTokens_InsertNonDuplicateSorted(doc.SemanticTokens, token);
+    }
+
+    /* === Functions & Args === */
+    for (const auto& function : doc.FunctionDefinitions) {
+        if (!function.Definition.HasDebugSymbol()) continue;
+        if (function.FilePath != rootPath) continue;
+
+        SemanticToken fnToken{
+            .Type      = SemanticTokenType::Function,
+            .Modifiers = 0,
+            .Position  = function.Definition.DebugSymbol.Token.SourcePos,
+        };
+
+        AddToBitField(fnToken.Modifiers, SemanticTokenModifier::Declaration);
+        if (!function.IsNative) AddToBitField(fnToken.Modifiers, SemanticTokenModifier::Definition);
+
+        _SemanticTokens_InsertNonDuplicateSorted(doc.SemanticTokens, fnToken);
+
+        for (const auto& arg : function.Args) {
+            _SemanticTokens_InsertNonDuplicateSorted(doc.SemanticTokens, {
+                .Type      = SemanticTokenType::Parameter,
+                .Modifiers = 0,
+                .Position  = arg.DeclaredAt,
+            });
+        }
+    }
+
+    /* === Locals === */
+    for (const auto& scope : doc.FunctionScopes) {
+        if (scope.FilePath != rootPath) continue;
+
+        for (const auto& localScope : scope.LocalScopes) {
+            for (const auto& local : localScope.Locals) {
+                _SemanticTokens_InsertNonDuplicateSorted(doc.SemanticTokens, {
+                    .Type      = SemanticTokenType::Variable,
+                    .Modifiers = 0,
+                    .Position  = local.DeclaredAt,
+                });
+            }
+        }
+
+        for (const auto& identUsage : scope.UsedIdentifiers) {
+            SemanticToken token{
+                .Type      = SemanticTokenType::None,
+                .Modifiers = 0,
+                .Position  = identUsage.Identifier.SourcePos,
+            };
+
+            switch (identUsage.Type) {
+            case IdentifierUsageType::Global: {
+                const auto& global = doc.Module.Globals[identUsage.BoundIndex];
+
+                token.Type = SemanticTokenType::Variable;
+                if (global.IsConstant) AddToBitField(token.Modifiers, SemanticTokenModifier::ReadOnly);
+            } break;
+            case IdentifierUsageType::Local: {
+                token.Type = identUsage.IsArgument
+                    ? SemanticTokenType::Parameter
+                    : SemanticTokenType::Variable;
+            } break;
+            case IdentifierUsageType::Function:
+            case IdentifierUsageType::NativeFunction:
+                token.Type = SemanticTokenType::Function;
+                break;
+            }
+
+            if (token.Type != SemanticTokenType::None)
+                _SemanticTokens_InsertNonDuplicateSorted(doc.SemanticTokens, token);
+        }
+    }
+
+    /* === Instructions === */
+    for (const auto& function : doc.Module.Functions) {
+        if (!function.HasDebugSymbol()) continue;
+        if (!function.HasCodeDebugSymbols()) continue;
+        if (function.DebugSymbol.SourceIdx != 0) continue;
+
+        for (const auto& codeSymbol : function.CodeDebugSymbols) {
+            _SemanticTokens_InsertNonDuplicateSorted(doc.SemanticTokens, {
+                .Type      = SemanticTokenType::Operator,
+                .Modifiers = 0,
+                .Position  = codeSymbol.Token.SourcePos,
+            });
+        }
+    }
+}
+
 std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument(const lsp::FileUri& uri, const Pulsar::String& document, bool extractAll)
 {
     ParsedDocument parsedDocument;
 
-    Pulsar::String path = URIToNormalizedPath(uri);
+    const Pulsar::String path = URIToNormalizedPath(uri);
     Pulsar::Parser parser;
 
     using FunctionScopesMap = Pulsar::HashMap<Pulsar::String, FunctionScopeBuilder>;
@@ -219,8 +425,12 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
         }
 
         Pulsar::SourcePosition localDeclaredAt = NULL_SOURCE_POSITION;
-        if (params.Type == IdentifierUsageType::Local && params.BoundIdx < params.LocalScope.Locals.Size())
-            localDeclaredAt = params.LocalScope.Locals[params.BoundIdx].DeclaredAt;
+        bool isArgument = false;
+        if (params.Type == IdentifierUsageType::Local) {
+            if (params.BoundIdx < params.LocalScope.Locals.Size())
+                localDeclaredAt = params.LocalScope.Locals[params.BoundIdx].DeclaredAt;
+            isArgument = params.BoundIdx < params.FnDefinition.Arity;
+        }
 
         fnPair->Value()
             .AddIdentifierUsage(IdentifierUsage{
@@ -228,6 +438,7 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
                 .Type            = params.Type,
                 .BoundIndex      = params.BoundIdx,
                 .LocalDeclaredAt = localDeclaredAt,
+                .IsArgument      = isArgument,
             });
 
         return false;
@@ -256,12 +467,16 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
                 .Args       = params.Args,
             });
         }
-        
 
         return false;
     };
 
     if (!parser.AddSource(path, std::move(document))) return {};
+
+    if (const auto* source = parser.GetSourceFromIndex(0); source) {
+        _ParsedDocument_SemanticTokens_Init(parsedDocument, *source);
+    }
+
     parsedDocument.ParseResult = parser.ParseIntoModule(parsedDocument.Module, settings);
     if (parsedDocument.ParseResult != Pulsar::ParseResult::OK) {
         const auto& errorMessage = parser.GetErrorMessage();
@@ -273,6 +488,8 @@ std::optional<PulsarLSP::ParsedDocument> PulsarLSP::Server::CreateParsedDocument
     functionScopes.ForEach([&parsedDocument](FunctionScopesMap::Bucket& bucket) {
         parsedDocument.FunctionScopes.EmplaceBack(bucket.Value().Build());
     });
+
+    _ParsedDocument_SemanticTokens_ContextAware(parsedDocument, path);
 
     return parsedDocument;
 }
@@ -350,13 +567,13 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                 switch (identUsage.Type) {
                 case IdentifierUsageType::Global: {
                     if (identUsage.BoundIndex >= doc->Module.Globals.Size()) break;
-                    
+
                     const Pulsar::GlobalDefinition& global = doc->Module.Globals[identUsage.BoundIndex];
                     if (!global.HasDebugSymbol()) break;
-                    
+
                     if (global.DebugSymbol.SourceIdx >= doc->Module.SourceDebugSymbols.Size()) break;
                     const Pulsar::SourceDebugSymbol& sourceSymbol = doc->Module.SourceDebugSymbols[global.DebugSymbol.SourceIdx];
-                    
+
                     lsp::FileUri locUri = NormalizedPathToURI(sourceSymbol.Path);
                     return lsp::Location{
                         .uri = locUri,
@@ -365,13 +582,13 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                 }
                 case IdentifierUsageType::Function: {
                     if (identUsage.BoundIndex >= doc->Module.Functions.Size()) break;
-                    
+
                     const Pulsar::FunctionDefinition& func = doc->Module.Functions[identUsage.BoundIndex];
                     if (!func.HasDebugSymbol()) break;
-                    
+
                     if (func.DebugSymbol.SourceIdx >= doc->Module.SourceDebugSymbols.Size()) break;
                     const Pulsar::SourceDebugSymbol& sourceSymbol = doc->Module.SourceDebugSymbols[func.DebugSymbol.SourceIdx];
-                    
+
                     lsp::FileUri locUri = NormalizedPathToURI(sourceSymbol.Path);
                     return lsp::Location{
                         .uri = locUri,
@@ -380,13 +597,13 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDeclaration(const lsp::FileU
                 }
                 case IdentifierUsageType::NativeFunction: {
                     if (identUsage.BoundIndex >= doc->Module.NativeBindings.Size()) break;
-                    
+
                     const Pulsar::FunctionDefinition& func = doc->Module.NativeBindings[identUsage.BoundIndex];
                     if (!func.HasDebugSymbol()) break;
-                    
+
                     if (func.DebugSymbol.SourceIdx >= doc->Module.SourceDebugSymbols.Size()) break;
                     const Pulsar::SourceDebugSymbol& sourceSymbol = doc->Module.SourceDebugSymbols[func.DebugSymbol.SourceIdx];
-                    
+
                     lsp::FileUri locUri = NormalizedPathToURI(sourceSymbol.Path);
                     return lsp::Location{
                         .uri = locUri,
@@ -413,7 +630,7 @@ std::optional<lsp::Location> PulsarLSP::Server::FindDefinition(const lsp::FileUr
 {
     auto doc = GetOrParseDocument(uri);
     if (!doc) return {};
-    
+
     lsp::Position pos = EditorPositionToDocumentPosition(uri, editorPos);
 
     for (size_t i = 0; i < doc->IncludedFiles.Size(); ++i) {
@@ -462,6 +679,51 @@ std::vector<lsp::DocumentSymbol> PulsarLSP::Server::GetSymbols(const lsp::FileUr
         });
     }
     return result;
+}
+
+lsp::SemanticTokens PulsarLSP::Server::GetSemanticTokens(const lsp::FileUri& uri)
+{
+    lsp::SemanticTokens res;
+    auto doc = GetOrParseDocument(uri);
+    if (!doc) return res;
+
+    if (doc->SemanticTokens.Size() <= 0) return res;
+
+    auto text = m_Library.FindDocument(uri);
+    if (!text) return res;
+
+    lsp::Range prevTokenRange = lsp::Range{
+        .start = lsp::Position{0,0},
+        .end   = lsp::Position{0,0},
+    };
+
+    for (const auto& token : doc->SemanticTokens) {
+        if (token.Type == SemanticTokenType::None) continue;
+        // TODO: token.Position may target multiple lines for multi-line comments
+        //       this must be handled to support Clients that don't have the
+        //       multilineTokenSupport capability
+        // POSSIBLE FIX:
+        //   DocumentRangeToEditorRange already goes through source code to convert
+        //   positions between different encodings. this issue could be fixed by adding
+        //   some method which goes through each line of a SourcePosition
+        auto tokenRange = DocumentRangeToEditorRange(text, SourcePositionToRange(token.Position));
+        PULSAR_ASSERT(tokenRange.start.line == tokenRange.end.line, "Unsupported multi-line SourcePosition.");
+
+        lsp::uint deltaLine = tokenRange.start.line - prevTokenRange.start.line;
+        lsp::uint deltaChar = deltaLine == 0
+            ? tokenRange.start.character - prevTokenRange.start.character
+            : tokenRange.start.character;
+        lsp::uint length = tokenRange.end.character - tokenRange.start.character;
+        prevTokenRange = tokenRange;
+
+        res.data.push_back(deltaLine);
+        res.data.push_back(deltaChar);
+        res.data.push_back(length);
+        res.data.push_back(static_cast<lsp::uint>(token.Type));
+        res.data.push_back(static_cast<lsp::uint>(token.Modifiers));
+    }
+
+    return res;
 }
 
 lsp::CompletionItem PulsarLSP::CreateCompletionItemForBoundEntity(ParsedDocument::SharedRef doc, const BoundGlobal& global, lsp::Range replaceWithName)
@@ -1132,6 +1394,17 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
                 positionEncoding = PositionEncodingKind::UTF32;
             }
 
+            lsp::SemanticTokensLegend semanticTokensLegend;
+            for (int tokenType = 0; tokenType < static_cast<int>(SemanticTokenType::__Count); ++tokenType) {
+                semanticTokensLegend.tokenTypes.emplace_back(
+                    GetSemanticTokenTypeId(static_cast<SemanticTokenType>(tokenType)));
+            }
+
+            for (unsigned int tokenModifier = 1; (tokenModifier & static_cast<unsigned int>(SemanticTokenModifier::__Mask)) != 0; tokenModifier <<= 1) {
+                semanticTokensLegend.tokenModifiers.emplace_back(
+                    GetSemanticTokenModifierId(static_cast<SemanticTokenModifier>(tokenModifier)));
+            }
+
             this->m_Library.SetPositionEncoding(positionEncoding);
             return lsp::requests::Initialize::Result{
                 .capabilities = {
@@ -1146,6 +1419,13 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
                     .declarationProvider    = true,
                     .definitionProvider     = true,
                     .documentSymbolProvider = true,
+                    .semanticTokensProvider = lsp::SemanticTokensOptions{
+                        .legend = semanticTokensLegend,
+                        .range  = false,
+                        .full   = lsp::SemanticTokensOptionsFull{
+                            .delta = false,
+                        },
+                    },
                     .diagnosticProvider     = lsp::DiagnosticOptions{
                         .interFileDependencies = true,
                         .workspaceDiagnostics  = false,
@@ -1195,6 +1475,11 @@ PulsarLSP::Server::Server(lsp::Connection& connection)
             PULSAR_UNUSED(params);
             lsp::RelatedFullDocumentDiagnosticReport result;
             return result;
+        })
+        .add<lsp::requests::TextDocument_SemanticTokens_Full>([this](lsp::requests::TextDocument_SemanticTokens_Full::Params && params)
+            -> lsp::requests::TextDocument_SemanticTokens_Full::Result
+        {
+            return this->GetSemanticTokens(params.textDocument.uri);
         })
         .add<lsp::notifications::TextDocument_DidOpen>([this](lsp::notifications::TextDocument_DidOpen::Params&& params)
         {

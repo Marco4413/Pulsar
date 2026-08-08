@@ -14,6 +14,35 @@
 
 namespace PulsarLSP
 {
+    enum class SemanticTokenType
+    {
+        None = -1,
+        Parameter,
+        Variable,
+        Function,
+        Keyword,
+        Comment,
+        String,
+        Number,
+        Operator,
+
+        __Count,
+    };
+
+    constexpr const char* GetSemanticTokenTypeId(SemanticTokenType type);
+
+    enum class SemanticTokenModifier
+    {
+        None = 0,
+        Declaration = 1 << 0,
+        Definition  = 1 << 1,
+        ReadOnly    = 1 << 2,
+
+        __Mask = 0b111,
+    };
+
+    constexpr const char* GetSemanticTokenModifierId(SemanticTokenModifier type);
+
     struct LocalScope
     {
         using Local = Pulsar::LocalScope::LocalVar;
@@ -31,7 +60,8 @@ namespace PulsarLSP
         IdentifierUsageType Type;
         size_t BoundIndex;
         // This contains the position of the local this entity is bound to when Type == ::Local
-        Pulsar::SourcePosition LocalDeclaredAt = {};
+        Pulsar::SourcePosition LocalDeclaredAt;
+        bool IsArgument;
     };
 
     struct BoundGlobal
@@ -102,6 +132,13 @@ namespace PulsarLSP
         Pulsar::SourcePosition IncludedAt;
     };
 
+    struct SemanticToken
+    {
+        SemanticTokenType Type;
+        unsigned int Modifiers;
+        Pulsar::SourcePosition Position;
+    };
+
     struct UserProvidedOptions
     {
         // Send diagnostics on open
@@ -126,6 +163,9 @@ namespace PulsarLSP
         Pulsar::List<IncludedFile> IncludedFiles;
         Pulsar::List<FunctionScope> FunctionScopes;
         Pulsar::List<FunctionDefinition> FunctionDefinitions;
+
+        // Only the tokens found in the root document
+        Pulsar::List<SemanticToken> SemanticTokens;
 
         Pulsar::ParseResult ParseResult;
         Pulsar::String         ErrorFilePath;
@@ -174,6 +214,7 @@ namespace PulsarLSP
         std::optional<lsp::Location> FindDeclaration(const lsp::FileUri& uri, lsp::Position pos);
         std::optional<lsp::Location> FindDefinition(const lsp::FileUri& uri, lsp::Position pos);
         std::vector<lsp::DocumentSymbol> GetSymbols(const lsp::FileUri& uri);
+        lsp::SemanticTokens GetSemanticTokens(const lsp::FileUri& uri);
         std::vector<lsp::CompletionItem> GetCompletionItems(const lsp::FileUri& uri, lsp::Position pos);
         std::optional<lsp::Hover> GetHover(const lsp::FileUri& uri, lsp::Position pos);
         // Every element of the vector has a unique URI
@@ -216,6 +257,37 @@ namespace PulsarLSP
         UserProvidedOptions m_Options = UserProvidedOptions_Default;
     };
 
+}
+
+constexpr const char* PulsarLSP::GetSemanticTokenTypeId(SemanticTokenType type)
+{
+    switch (type) {
+    case SemanticTokenType::Parameter: return "parameter";
+    case SemanticTokenType::Variable:  return "variable";
+    case SemanticTokenType::Function:  return "function";
+    case SemanticTokenType::Keyword:   return "keyword";
+    case SemanticTokenType::Comment:   return "comment";
+    case SemanticTokenType::String:    return "string";
+    case SemanticTokenType::Number:    return "number";
+    case SemanticTokenType::Operator:  return "operator";
+    case SemanticTokenType::None:
+    case SemanticTokenType::__Count:
+        break;
+    }
+    return "unknown";
+}
+
+constexpr const char* PulsarLSP::GetSemanticTokenModifierId(SemanticTokenModifier type)
+{
+    switch (type) {
+    case SemanticTokenModifier::Declaration: return "declaration";
+    case SemanticTokenModifier::Definition:  return "definition";
+    case SemanticTokenModifier::ReadOnly:    return "readonly";
+    case SemanticTokenModifier::None:
+    case SemanticTokenModifier::__Mask:
+        break;
+    }
+    return "unknown";
 }
 
 #endif // _PULSARLSP_SERVER_H
