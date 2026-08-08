@@ -1,19 +1,59 @@
 #include "pulsar/lexer.h"
 
-bool Pulsar::Lexer::SkipShaBang()
+Pulsar::LexerDecoder::Codepoint Pulsar::LexerDecoder::Next()
 {
+    Codepoint ch = m_Decoder.Next();
+    if (ch == '\n') {
+        ++m_Line;
+        m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
+    } else if (ch == '\r') {
+        if (m_Decoder.Peek() == '\n')
+            m_Decoder.Skip();
+        ++m_Line;
+        m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
+        ch = '\n';
+    }
+    return ch;
+}
+
+size_t Pulsar::LexerDecoder::Skip()
+{
+    return UTF8::GetEncodedSize(Next());
+}
+
+void Pulsar::LexerDecoder::SkipUntilNewline()
+{
+    while (*this && Next() != '\n');
+}
+
+bool Pulsar::Lexer::SkipShaBang(Token* outToken)
+{
+    // TODO: Emit content of ShaBang.
     Decoder decoder = m_Decoder;
 
     if (decoder.Next() != '#' || decoder.Next() != '!')
         return false;
 
-    SkipUntilNewline();
+    decoder.SkipUntilNewline();
+
+    Token token = PullToken(decoder, TokenType::Comment);
+    if (outToken) *outToken = token;
+
     return true;
 }
 
 Pulsar::Token Pulsar::Lexer::NextToken()
 {
-    while (SkipWhiteSpaces() || SkipComments());
+    while (true) {
+        if (SkipWhiteSpaces()) continue;
+        if (!m_EmitComments) {
+            if (SkipComments(nullptr)) continue;
+        } else if (Token token; SkipComments(&token)) {
+            return token;
+        }
+
+        break;
+    }
 
     if (IsEndOfFile())
         return PullToken(m_Decoder, TokenType::EndOfFile);
@@ -509,79 +549,59 @@ Pulsar::Token Pulsar::Lexer::ParseCharacterLiteral()
     return PullToken(decoder, TokenType::IntegerLiteral, (int64_t)ch);
 }
 
-void Pulsar::Lexer::SkipUntilNewline()
-{
-    while (m_Decoder) {
-        Codepoint ch = m_Decoder.Next();
-        if (ch == '\n') {
-            break;
-        } else if (ch == '\r') {
-            if (m_Decoder.Peek() == '\n')
-                m_Decoder.Skip();
-            break;
-        }
-    }
-
-    ++m_Line;
-    m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
-}
-
 bool Pulsar::Lexer::SkipWhiteSpaces()
 {
-    bool hasSkipped = false;
-    for (Codepoint ch = m_Decoder.Peek(); m_Decoder && Unicode::IsWhiteSpace(ch); ch = m_Decoder.Peek()) {
-        hasSkipped = true;
-        m_Decoder.Skip();
-        if (ch == '\n') {
-            ++m_Line;
-            m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
-        } else if (ch == '\r') {
-            if (m_Decoder.Peek() == '\n')
-                m_Decoder.Skip();
-            ++m_Line;
-            m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
-        }
-    }
-    return hasSkipped;
-}
-
-bool Pulsar::Lexer::SkipComments()
-{
-    if (m_Decoder.Peek() == ';') {
-        m_Decoder.Skip();
-        return true;
-    }
-
-    if (m_Decoder.Peek() != '/')
+    if (!m_Decoder || !Unicode::IsWhiteSpace(m_Decoder.Peek()))
         return false;
 
-    if (m_Decoder.Peek(2) == '/') {
-        SkipUntilNewline();
+    while (m_Decoder && Unicode::IsWhiteSpace(m_Decoder.Peek()))
+        m_Decoder.Skip();
+    return true;
+}
+
+bool Pulsar::Lexer::SkipComments(Token* outToken)
+{
+    // TODO: Emit content of Comment.
+    Decoder decoder = m_Decoder;
+    if (decoder.Peek() == ';') {
+        decoder.Skip();
+        Token token = PullToken(decoder, TokenType::Comment);
+        if (outToken) *outToken = std::move(token);
         return true;
     }
 
-    if (m_Decoder.Peek(2) != '*')
+    if (decoder.Peek() != '/')
+        return false;
+
+    if (decoder.Peek(2) == '/') {
+        while (decoder) {
+            Codepoint ch = decoder.Next();
+            if (ch == '\r' || ch == '\n') {
+                break;
+            }
+        }
+
+        Token token = PullToken(decoder, TokenType::Comment);
+        if (outToken) *outToken = std::move(token);
+        return true;
+    }
+
+    if (decoder.Peek(2) != '*')
         return false;
 
     // We must skip "/*", otherwise "/*/" would be valid.
-    m_Decoder.Skip();
-    m_Decoder.Skip();
+    decoder.Skip();
+    decoder.Skip();
 
-    while (m_Decoder) {
-        Codepoint ch = m_Decoder.Next();
-        if (ch == '\n') {
-            ++m_Line;
-            m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
-        } else if (ch == '\r') {
-            if (m_Decoder.Peek() == '\n')
-                m_Decoder.Skip();
-            ++m_Line;
-            m_LineStartCodepoint = m_Decoder.GetDecodedCodepoints();
-        } else if (ch == '*' && m_Decoder.Peek() == '/') {
-            m_Decoder.Skip();
+    while (decoder) {
+        Codepoint ch = decoder.Next();
+        if (ch == '*' && decoder.Peek() == '/') {
+            decoder.Skip();
             break;
         }
     }
 
+    Token token = PullToken(decoder, TokenType::Comment);
+    if (outToken) *outToken = std::move(token);
     return true;
 }

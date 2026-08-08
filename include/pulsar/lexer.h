@@ -29,15 +29,60 @@ namespace Pulsar
         { "include", TOKEN_CD_INCLUDE },
     };
 
-    class Lexer
+    class LexerDecoder
     {
     public:
         using Decoder   = UTF8::Decoder;
         using Codepoint = UTF8::Codepoint;
 
     public:
-        Lexer(const String& src) :
-            m_Decoder(src)
+        LexerDecoder(StringView src)
+            : m_Decoder(src) {}
+
+        LexerDecoder(const LexerDecoder&) = default;
+
+        ~LexerDecoder() = default;
+
+        LexerDecoder& operator=(const LexerDecoder&) = default;
+
+        operator bool() const { return m_Decoder; }
+
+        bool HasData() const           { return m_Decoder.HasData(); }
+        bool IsInvalidEncoding() const { return m_Decoder.IsInvalidEncoding(); }
+
+        size_t GetDecodedBytes() const      { return m_Decoder.GetDecodedBytes(); }
+        size_t GetDecodedCodepoints() const { return m_Decoder.GetDecodedCodepoints(); }
+
+        StringView Data() const { return m_Decoder.Data(); }
+
+        // Normalizes line endings to '\n'
+        Codepoint Next();
+        Codepoint Peek() { return m_Decoder.Peek(); }
+        size_t Skip();
+
+        Codepoint Peek() const                 { return m_Decoder.Peek(); }
+        Codepoint Peek(size_t lookAhead) const { return m_Decoder.Peek(lookAhead); }
+
+        void SkipUntilNewline();
+        size_t GetLine() const               { return m_Line; }
+        size_t GetLineStartCodepoint() const { return m_LineStartCodepoint; }
+
+    private:
+        Decoder m_Decoder;
+
+        size_t m_Line = 0;
+        size_t m_LineStartCodepoint = 0;
+    };
+
+    class Lexer
+    {
+    public:
+        using Decoder   = LexerDecoder;
+        using Codepoint = LexerDecoder::Codepoint;
+
+    public:
+        Lexer(const String& src, bool emitComments=false)
+            : m_Decoder(src), m_EmitComments(emitComments)
         {}
 
         Lexer(const Lexer& other) = default;
@@ -48,7 +93,7 @@ namespace Pulsar
 
         // Skips a sha-bang at the current position
         // Use this after creating a Lexer to ignore it
-        bool SkipShaBang();
+        bool SkipShaBang(Token* token=nullptr);
 
         Token NextToken();
         bool IsEndOfFile() const { return !m_Decoder; }
@@ -65,9 +110,8 @@ namespace Pulsar
         Token ParseStringLiteral();
         Token ParseCharacterLiteral();
 
-        void SkipUntilNewline();
         bool SkipWhiteSpaces();
-        bool SkipComments();
+        bool SkipComments(Token* token);
 
         template<typename ...Args>
         Token PullToken(Decoder decoder, Args&& ...args)
@@ -77,8 +121,8 @@ namespace Pulsar
 
             Token token(std::forward<Args>(args)...);
             token.SourcePos = {
-                .Line = m_Line,
-                .Char = m_Decoder.GetDecodedCodepoints() - m_LineStartCodepoint,
+                .Line = m_Decoder.GetLine(),
+                .Char = m_Decoder.GetDecodedCodepoints() - m_Decoder.GetLineStartCodepoint(),
                 .Index = m_Decoder.GetDecodedBytes(),
                 .CharSpan = charSpan
             };
@@ -95,9 +139,7 @@ namespace Pulsar
         }
     private:
         Decoder m_Decoder;
-
-        size_t m_Line = 0;
-        size_t m_LineStartCodepoint = 0;
+        bool m_EmitComments;
     };
 }
 

@@ -41,6 +41,7 @@ namespace Pulsar
         CompilerDirective,
         Label,
         StringLiteralJoin,
+        Comment,
     };
 
     constexpr int64_t TOKEN_CD_GENERIC = 0;
